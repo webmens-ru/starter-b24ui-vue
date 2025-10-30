@@ -2,6 +2,7 @@
 import type { FormSubmitEvent } from '@bitrix24/b24ui-nuxt'
 import { reactive } from 'vue'
 import * as yup from 'yup'
+import api from '../app/api'
 
 const schema = yup.object({
   email: yup.string().email('Invalid email'),
@@ -17,12 +18,24 @@ const state = reactive({
 
 const toast = useToast()
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  toast.add({ title: 'Success', description: 'The form has been submitted.', color: 'air-primary-success' })
   console.log(event.data)
+  try {
+    await api.post('/send', event.data)
+    toast.add({ title: 'Success', description: 'The form has been submitted.', color: 'air-primary-success' })
+  } catch (error) {
+    toast.add({ title: 'Ошибка', description: 'Ошибка при сабмите', color: 'air-primary-alert' })
+  }
+
+}
+
+const showToast = () => {
+  console.log('TOAST')
+  toast.add({ title: 'Success', description: 'The form has been submitted.', color: 'air-primary-success' })
 }
 </script>
 
 <template>
+  <button @click="showToast">toast</button>
   <B24Form
     :schema="schema"
     :state="state"
