@@ -35,6 +35,7 @@ const showToast = () => {
 </script>
 
 <template>
+<B24App>
   <button @click="showToast">toast</button>
   <B24Form
     :schema="schema"
@@ -66,5 +67,6 @@ const showToast = () => {
       Submit
     </B24Button>
   </B24Form>
+  </B24App>
 </template>
 
