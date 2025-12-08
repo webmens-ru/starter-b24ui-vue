@@ -238,16 +238,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   border-color: #e53935 !important;
   color: #e53935 !important;
 }
-:deep(.b24-select__menu) {
-  max-width: none;
-}
+:deep(.b24-select__menu),
 :deep(.b24-select__option),
-:deep(.b24-select__option-label),
-:deep(.b24-select__value) {
+:deep(.b24-select__option-label) {
   white-space: normal;
-  word-break: break-word;
-  overflow: visible;
-  text-overflow: initial;
 }
 </style>
 
@@ -266,7 +260,17 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           :style="{width: '600px'}"
           v-model="state.product"
           :items="productItems"
-          placeholder="Выберите товар" />
+          placeholder="Выберите товар"
+          :b24ui="{
+        base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
+        trailingIcon: 'text-base-760 size-lg',
+        content: 'rounded-[18px] w-[calc(var(--reka-select-trigger-width)-2px)] shadow-lg ring-0 border-0',
+        viewport: 'ring-0 border-0',
+        group: 'p-0 my-[8px] -mx-1',
+        item: 'ps-[16px] pe-[16px] rounded-none before:rounded-none before:h-9',
+        itemTrailingIcon: 'hidden',
+      }"
+          />
       </B24FormField>
       <!-- Количество и ед. измерения в одну строку -->
       <div class="form-field-600px form-flex-row flex-align-bottom">
