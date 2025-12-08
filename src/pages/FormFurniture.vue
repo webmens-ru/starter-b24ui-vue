@@ -262,14 +262,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           :items="productItems"
           placeholder="Выберите товар"
           :b24ui="{
-        base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
-        trailingIcon: 'text-base-760 size-lg',
-        content: 'rounded-[18px] w-[calc(var(--reka-select-trigger-width)-2px)] shadow-lg ring-0 border-0',
-        viewport: 'ring-0 border-0',
-        group: 'p-0 my-[8px] -mx-1',
-        item: 'ps-[16px] pe-[16px] rounded-none before:rounded-none before:h-9',
-        itemTrailingIcon: 'hidden',
-      }"
+            base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
+            trailingIcon: 'text-base-760 size-lg',
+            content: 'rounded-[18px] min-w-[590px] shadow-lg ring-0 border-0',
+            viewport: 'ring-0 border-0',
+            group: 'p-0 my-[2px] -mx-1',
+            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start',
+            itemTrailingIcon: 'hidden',
+          }"
           />
       </B24FormField>
       <!-- Количество и ед. измерения в одну строку -->
