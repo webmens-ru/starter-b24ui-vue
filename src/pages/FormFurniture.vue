@@ -3,6 +3,7 @@ import type { SelectItem } from '@bitrix24/b24ui-nuxt'
 import { computed, reactive, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
+import Expand1Icon from '@bitrix24/b24icons-vue/actions/Expand1Icon'
 /*
  * import api from '../app/api'
  * Раскомментируйте, если нужно реальное API
@@ -80,6 +81,8 @@ setLocale({
   },
 })
 
+const trailingIcon = Expand1Icon
+
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),
   quantity: yup.number().required('Укажите количество').min(1),
@@ -110,8 +113,30 @@ const state = reactive({
   comment: '',
 })
 
+type ProductItem = {
+  value: string
+  label: string
+  goodType: string
+  unit: string
+  contractor: string
+  price: number
+  currency: Currency
+}
+
 const filteredGoods = computed(() => goods.filter(g => !dealType || g.type === dealType))
-const productItems = computed<SelectItem[]>(() => filteredGoods.value.map(g => ({ value: g.id.toString(), label: g.name })))
+const productItems = computed<SelectItem[]>(() => {
+  const currency = state.currency
+
+  return filteredGoods.value.map(g => ({
+    value: g.id.toString(),
+    label: g.name,
+    goodType: g.type,
+    unit: g.unit,
+    contractor: g.contractor,
+    price: g.priceByCurrency?.[currency] ?? g.base_price,
+    currency,
+  }))
+})
 const selectedProduct = computed(() => filteredGoods.value.find(g => g.id.toString() === String(state.product ?? '')))
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
@@ -260,17 +285,27 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           :style="{width: '600px'}"
           v-model="state.product"
           :items="productItems"
+          value-key="value"
+          label-key="label"
           placeholder="Выберите товар"
           :b24ui="{
             base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
             trailingIcon: 'text-base-760 size-lg',
             content: 'rounded-[18px] min-w-[590px] shadow-lg ring-0 border-0',
-            viewport: 'ring-0 border-0',
-            group: 'p-0 my-[2px] -mx-1',
-            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start',
+            viewport: 'relative scroll-py-1 w-[590px] max-h-[40vh] overflow-x-hidden overflow-y-auto scrollbar-thin ring-0 border-0',
+            group: 'p-0 my-[2px] -mx-1 w-full !max-w-none',
+            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start gap-1',
             itemTrailingIcon: 'hidden',
           }"
-          />
+        >
+          <template #item-label="{ item }">
+            <template v-if="item">
+              <div class="flex flex-col gap-1">
+                <span class="font-medium">{{ (item as ProductItem).label }}</span>
+              </div>
+            </template>
+          </template>
+        </B24Select>
       </B24FormField>
       <!-- Количество и ед. измерения в одну строку -->
       <div class="form-field-600px form-flex-row flex-align-bottom">
