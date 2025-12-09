@@ -38,6 +38,39 @@ const goods: Good[] = [
     costByCurrency: { руб: 8000, usd: 96, eur: 88 },
   },
   {
+    id: 4,
+    name: 'Услуга организации электроподключения 15 кВт, 220в/ 380в',
+    type: 'Жилой',
+    unit: 'шт',
+    base_price: 10000,
+    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
+    contractor: 'Поставщик А',
+    cost_per_unit: 8000,
+    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
+  },
+  {
+    id: 5,
+    name: 'Услуга организации электроподключения 20 кВт, 220в/ 380в',
+    type: 'Жилой',
+    unit: 'шт',
+    base_price: 10000,
+    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
+    contractor: 'Поставщик А',
+    cost_per_unit: 8000,
+    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
+  },
+  {
+    id: 6,
+    name: 'Услуга организации электроподключения 25 кВт, 220в/ 380в',
+    type: 'Жилой',
+    unit: 'шт',
+    base_price: 10000,
+    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
+    contractor: 'Поставщик А',
+    cost_per_unit: 8000,
+    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
+  },
+  {
     id: 3,
     name: 'Стул',
     type: 'Жилой',
@@ -62,8 +95,8 @@ const goods: Good[] = [
 ]
 const dealType = 'Жилой' // тип застройки сделки, пример
 const dealCurrency: Currency = 'руб' // валюта сделки (пример)
-const discountTypes = ['%', '₽']
-const markupTypes = ['%', '₽']
+const discountTypes = ['%', 'Сумма в валюте']
+const markupTypes = ['%', 'Сумма в валюте']
 
 setLocale({
   mixed: {
@@ -80,8 +113,6 @@ setLocale({
     email: 'Введите корректный email',
   },
 })
-
-const trailingIcon = Expand1Icon
 
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),
@@ -329,7 +360,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           />
         </B24FormField>
         <div style="width: 190px;">
-          <B24Select v-model="state.discountType" :items="discountTypes.map(t => ({ value: t, label: t }))" :style="{width: '190px'}" />
+          <B24Select
+            v-model="state.discountType"
+            :items="discountTypes.map(t => ({ value: t, label: t }))"
+            :style="{ width: '190px' }"
+            :b24ui="{
+              content: 'max-w-[185px]',
+              viewport: 'max-w-[185px]',
+              item: 'max-w-[185px]',
+            }"
+          />
         </div>
       </div>
       <!-- Наценка и тип наценки: выравнивание по нижнему краю -->
@@ -338,7 +378,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <B24Input type="number" min="0" v-model="state.markupValue" placeholder="0" style="width:400px" />
         </B24FormField>
         <div style="width: 190px;">
-          <B24Select v-model="state.markupType" :items="markupTypes.map(t => ({ value: t, label: t }))" :style="{width: '190px'}" />
+          <B24Select 
+          v-model="state.markupType" 
+          :items="markupTypes.map(t => ({ value: t, label: t }))" 
+          :style="{width: '190px'}" 
+          :b24ui="{
+              content: 'max-w-[185px]',
+              viewport: 'max-w-[185px]',
+              item: 'max-w-[185px]',
+            }"
+          />
         </div>
       </div>
       <div class="form-field-600px form-flex-row flex-align-bottom">
@@ -359,7 +408,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               :items="currencyList.map(c => ({ value: c, label: c }))"
               :class="isCurrencyMismatch ? 'input-danger' : ''"
               :style="{width:'190px'}"
-              placeholder="Валюта"
+              :b24ui="{
+              content: 'max-w-[185px]',
+              viewport: 'max-w-[185px]',
+              item: 'max-w-[185px]',
+            }"
             />
           </B24FormField>
         </div>
