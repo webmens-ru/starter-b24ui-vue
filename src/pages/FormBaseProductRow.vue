@@ -1,102 +1,106 @@
 <script setup lang="ts">
 import type { SelectItem } from '@bitrix24/b24ui-nuxt'
-import { computed, reactive, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
-import Expand1Icon from '@bitrix24/b24icons-vue/actions/Expand1Icon'
-/*
- * import api from '../app/api'
- * Раскомментируйте, если нужно реальное API
- */
+import { currencyList, type Currency, type Good, fetchGoods } from '../app/api/goods'
+import api from '../app/api'
 
-// Справочники (заглушки, заменить на реальные источники)
-const currencyList = ['руб', 'usd', 'eur'] as const
-type Currency = (typeof currencyList)[number]
+const widgetParams = typeof window !== 'undefined' ? (window as any)._PARAMS_ : undefined
+const placementParams = widgetParams?.placementOptions?.params ?? {}
+const dealTypeBuildingId = placementParams.dealTypeBuildingId ?? 1
+const productTypeId = placementParams.productTypeId
+const recordId = placementParams.recordId ?? placementParams.id
+const dealId = placementParams.dealId
 
-type Good = {
-  id: number
-  name: string
-  type: string
-  unit: string
-  base_price: number
-  priceByCurrency: Record<Currency, number>
-  contractor: string
-  cost_per_unit: number
-  costByCurrency: Record<Currency, number>
-}
-
-const goods: Good[] = [
+const goodsStub: Good[] = [
   {
     id: 1,
-    name: 'Услуга организации электроподключения 10 кВт, 220в/ 380в',
-    type: 'Жилой',
-    unit: 'шт',
-    base_price: 10000,
-    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
-    contractor: 'Поставщик А',
+    title: 'Услуга организации электроподключения 10 кВт, 220в/ 380в',
+    type: { id: 1, title: 'Жилой' },
+    unit: { id: 1, title: 'шт' },
+    price_rub: 0,
+    price_usd: 120,
+    price_eur: 110,
+    contractor: { id: 1, title: 'Поставщик А' },
     cost_per_unit: 8000,
-    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
   },
   {
     id: 4,
-    name: 'Услуга организации электроподключения 15 кВт, 220в/ 380в',
-    type: 'Жилой',
-    unit: 'шт',
-    base_price: 10000,
-    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
-    contractor: 'Поставщик А',
+    title: 'Услуга организации электроподключения 15 кВт, 220в/ 380в',
+    type: { id: 1, title: 'Жилой' },
+    unit: { id: 1, title: 'шт' },
+    price_rub: 10000,
+    price_usd: 0,
+    price_eur: 110,
+    contractor: { id: 1, title: 'Поставщик А' },
     cost_per_unit: 8000,
-    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
   },
   {
     id: 5,
-    name: 'Услуга организации электроподключения 20 кВт, 220в/ 380в',
-    type: 'Жилой',
-    unit: 'шт',
-    base_price: 10000,
-    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
-    contractor: 'Поставщик А',
+    title: 'Услуга организации электроподключения 20 кВт, 220в/ 380в',
+    type: { id: 1, title: 'Жилой' },
+    unit: { id: 1, title: 'шт' },
+    price_rub: 10000,
+    price_usd: 120,
+    price_eur: 0,
+    contractor: { id: 1, title: 'Поставщик А' },
     cost_per_unit: 8000,
-    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
   },
   {
     id: 6,
-    name: 'Услуга организации электроподключения 25 кВт, 220в/ 380в',
-    type: 'Жилой',
-    unit: 'шт',
-    base_price: 10000,
-    priceByCurrency: { руб: 10000, usd: 120, eur: 110 },
-    contractor: 'Поставщик А',
+    title: 'Услуга организации электроподключения 25 кВт, 220в/ 380в',
+    type: { id: 1, title: 'Жилой' },
+    unit: { id: 1, title: 'шт' },
+    price_rub: 10000,
+    price_usd: 120,
+    price_eur: 110,
+    contractor: { id: 1, title: 'Поставщик А' },
     cost_per_unit: 8000,
-    costByCurrency: { руб: 8000, usd: 96, eur: 88 },
   },
   {
     id: 3,
-    name: 'Стул',
-    type: 'Жилой',
-    unit: 'шт',
-    base_price: 1000,
-    priceByCurrency: { руб: 1000, usd: 12, eur: 11 },
-    contractor: 'Поставщик А',
+    title: 'Стул',
+    type: { id: 1, title: 'Жилой' },
+    unit: { id: 1, title: 'шт' },
+    price_rub: 1000,
+    price_usd: 12,
+    price_eur: 11,
+    contractor: { id: 1, title: 'Поставщик А' },
     cost_per_unit: 800,
-    costByCurrency: { руб: 800, usd: 9.6, eur: 8.8 },
   },
   {
     id: 2,
-    name: 'Стол',
-    type: 'Офис',
-    unit: 'компл',
-    base_price: 5000,
-    priceByCurrency: { руб: 5000, usd: 60, eur: 55 },
-    contractor: 'Поставщик Б',
+    title: 'Стол',
+    type: { id: 2, title: 'Офис' },
+    unit: { id: 2, title: 'компл' },
+    price_rub: 5000,
+    price_usd: 60,
+    price_eur: 55,
+    contractor: { id: 2, title: 'Поставщик Б' },
     cost_per_unit: 4000,
-    costByCurrency: { руб: 4000, usd: 48, eur: 44 },
   },
 ]
-const dealType = 'Жилой' // тип застройки сделки, пример
 const dealCurrency: Currency = 'руб' // валюта сделки (пример)
 const discountTypes = ['%', 'Сумма в валюте']
 const markupTypes = ['%', 'Сумма в валюте']
+
+// Получаем список товаров с бэка с резервной заглушкой
+// goodsFromApi = null означает, что запрос ещё не завершился, поэтому не показываем заглушку
+const goodsFromApi = ref<Good[] | null>(null)
+const detailLoading = ref(false)
+const submitLoading = ref(false)
+const isEdit = computed(() => Boolean(recordId))
+onMounted(async () => {
+  goodsFromApi.value = await fetchGoods({
+    dealTypeBuildingId,
+    productTypeId,
+  })
+
+  if (isEdit.value) {
+    await loadDetail()
+  }
+})
 
 setLocale({
   mixed: {
@@ -121,6 +125,7 @@ const schema = yup.object({
   discountType: yup.string().oneOf(discountTypes).required(),
   markupValue: yup.number().required().default(0),
   markupType: yup.string().oneOf(markupTypes).required(),
+  autoRecalc: yup.boolean().default(true),
   // остальные поля — не редактируемые или вычисляются автоматически
 })
 
@@ -142,6 +147,7 @@ const state = reactive({
   invoiceIssued: false,
   contractor: '',
   comment: '',
+  autoRecalc: true,
 })
 
 type ProductItem = {
@@ -154,27 +160,57 @@ type ProductItem = {
   currency: Currency
 }
 
-const filteredGoods = computed(() => goods.filter(g => !dealType || g.type === dealType))
+const allGoods = computed<Good[]>(() => {
+  if (goodsFromApi.value === null) return [] // ждём ответ
+  return goodsFromApi.value.length ? goodsFromApi.value : goodsStub
+})
+const filteredGoods = computed<Good[]>(() => allGoods.value)
 const productItems = computed<SelectItem[]>(() => {
   const currency = state.currency
 
-  return filteredGoods.value.map(g => ({
+  return filteredGoods.value.map((g: Good) => ({
     value: g.id.toString(),
-    label: g.name,
-    goodType: g.type,
-    unit: g.unit,
-    contractor: g.contractor,
-    price: g.priceByCurrency?.[currency] ?? g.base_price,
+    label: g.title,
+    goodType: g.type?.title ?? '',
+    unit: g.unit?.title ?? '',
+    contractor: g.contractor?.title ?? '',
+  price: currency === 'руб' ? g.price_rub : currency === 'usd' ? g.price_usd : g.price_eur,
     currency,
   }))
 })
-const selectedProduct = computed(() => filteredGoods.value.find(g => g.id.toString() === String(state.product ?? '')))
+const selectedProduct = computed<Good | undefined>(() =>
+  filteredGoods.value.find((g: Good) => g.id.toString() === String(state.product ?? '')),
+)
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
   const final = Number(state.finalPrice) || 0
   const cost = Number(state.totalCost) || 0
   return cost > 0 && final < cost
 })
+
+const currencyOptions = computed<SelectItem[]>(() => {
+  const product = selectedProduct.value
+  if (!product) return currencyList.map(c => ({ value: c, label: c }))
+
+  const options: SelectItem[] = []
+  if (product.price_rub > 0) options.push({ value: 'руб', label: 'руб' })
+  if (product.price_usd > 0) options.push({ value: 'usd', label: 'usd' })
+  if (product.price_eur > 0) options.push({ value: 'eur', label: 'eur' })
+
+  return options.length ? options : currencyList.map(c => ({ value: c, label: c }))
+})
+
+watch(
+  selectedProduct,
+  () => {
+    const options = currencyOptions.value ?? []
+    const first = options[0]
+    if (options.length && first && !options.some((o: SelectItem) => (o as any).value === state.currency)) {
+      state.currency = (first as any).value as Currency
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   () => state.quantity,
@@ -217,11 +253,12 @@ function recalcPrices() {
     return
   }
 
-  state.unit = product.unit
-  state.contractor = product.contractor
+  state.unit = product.unit?.title ?? ''
+  state.contractor = product.contractor?.title ?? ''
   const currency = state.currency
-  const basePrice = product.priceByCurrency?.[currency] ?? product.base_price
-  const costPerUnit = product.costByCurrency?.[currency] ?? product.cost_per_unit
+  const basePrice = currency === 'руб' ? product.price_rub : currency === 'usd' ? product.price_usd : product.price_eur
+  // Себестоимость у нас только в рублях, используем её без пересчёта
+  const costPerUnit = product.cost_per_unit
   state.costPerUnit = costPerUnit?.toString() ?? ''
 
   const quantity = Number(state.quantity) || 0
@@ -254,18 +291,100 @@ watch(
     () => state.markupType,
     () => state.currency,
   ],
-  recalcPrices,
+  () => {
+    if (!state.autoRecalc) return
+    recalcPrices()
+  },
   { immediate: true },
 )
 
+// Если автоперерасчёт включили — пересчитать сразу
+watch(
+  () => state.autoRecalc,
+  val => {
+    if (val) recalcPrices()
+  },
+)
+
 const toast = useToast()
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  console.log(event.data)
+async function loadDetail() {
+  if (!recordId) return
+
+  detailLoading.value = true
   try {
-    // await api.post('/furniture/send', event.data)
-    toast.add({ title: 'Готово', description: 'Форма отправлена', color: 'air-primary-success' })
+    const response = await api.get(`/api/sp1222/get/id=${recordId}`)
+    const detail = response.data ?? {}
+
+    // Заполняем состояние, если поля пришли
+    if (detail.product ?? detail.productId) {
+      state.product = Number(detail.product ?? detail.productId)
+    }
+    if (detail.quantity !== undefined) state.quantity = Number(detail.quantity) || 1
+    if (detail.discountValue !== undefined) state.discountValue = Number(detail.discountValue) || 0
+    if (detail.discountType) state.discountType = detail.discountType
+    if (detail.markupValue !== undefined) state.markupValue = Number(detail.markupValue) || 0
+    if (detail.markupType) state.markupType = detail.markupType
+    if (detail.currency) state.currency = detail.currency
+    if (detail.unit) state.unit = detail.unit
+    if (detail.contractor) state.contractor = detail.contractor
+    if (detail.comment) state.comment = detail.comment
+    if (detail.finalPrice !== undefined) state.finalPrice = Number(detail.finalPrice) || 0
+    if (detail.costPerUnit !== undefined) state.costPerUnit = String(detail.costPerUnit)
+    if (detail.totalCost !== undefined) state.totalCost = String(detail.totalCost)
+    if (detail.invoiceIssued !== undefined) state.invoiceIssued = Boolean(detail.invoiceIssued)
+    if (detail.autoRecalc !== undefined) state.autoRecalc = Boolean(detail.autoRecalc)
+
+    recalcPrices()
   } catch (error) {
+    console.warn('[load detail error]', error)
+    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить данные', color: 'air-primary-alert' })
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+async function onSubmit(event: FormSubmitEvent<Schema>) {
+  const product = selectedProduct.value
+  const currency = state.currency
+  const unitPrice =
+    currency === 'руб'
+      ? product?.price_rub ?? 0
+      : currency === 'usd'
+        ? product?.price_usd ?? 0
+        : product?.price_eur ?? 0
+  const costPerUnit = product?.cost_per_unit ?? 0
+  const requiresToApproval =
+    (product as any)?.requiresToApproval ??
+    (product as any)?.needToApprove ??
+    (product as any)?.need_approval ??
+    false
+
+  const payload = {
+    ...event.data,
+    productTypeId,
+    dealTypeBuildingId,
+    recordId: recordId ?? undefined,
+    dealId: dealId ?? undefined,
+    unitPrice,
+    costPerUnit,
+    requiresToApproval,
+  }
+
+  try {
+    submitLoading.value = true
+
+    if (isEdit.value && recordId) {
+      await api.put(`/api/sp1222/update?id=${recordId}`, payload)
+      toast.add({ title: 'Готово', description: 'Изменения сохранены', color: 'air-primary-success' })
+    } else {
+      await api.post('/api/sp1222/create', payload)
+      toast.add({ title: 'Готово', description: 'Форма отправлена', color: 'air-primary-success' })
+    }
+  } catch (error) {
+    console.warn('[form send error]', error)
     toast.add({ title: 'Ошибка', description: 'Ошибка при отправке', color: 'air-primary-alert' })
+  } finally {
+    submitLoading.value = false
   }
 }
 </script>
@@ -405,7 +524,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <B24FormField label="Валюта" name="currency" required>
             <B24Select
               v-model="state.currency"
-              :items="currencyList.map(c => ({ value: c, label: c }))"
+              :items="currencyOptions"
               :class="isCurrencyMismatch ? 'input-danger' : ''"
               :style="{width:'190px'}"
               :b24ui="{
@@ -425,6 +544,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <B24FormField label="Себестоимость" name="totalCost">
         <B24Input class="form-field-600px" v-model="state.totalCost" disabled placeholder="-" />
       </B24FormField>
+      <!-- Автоперерасчёт -->
+      <B24FormField label="Автоматический перерасчёт" name="autoRecalc">
+        <B24Checkbox class="form-field-600px" v-model="state.autoRecalc" />
+      </B24FormField>
       <!-- Был выставлен счет -->
       <B24FormField label="Был выставлен счет" name="invoiceIssued">
         <B24Checkbox class="form-field-600px" v-model="state.invoiceIssued" />
@@ -437,7 +560,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <B24FormField label="Комментарий" name="comment">
         <B24Textarea class="form-field-600px" v-model="state.comment" placeholder="Комментарий по заказу..." />
       </B24FormField>
-      <B24Button class="form-field-600px" color="air-primary" type="submit">Сохранить</B24Button>
+      <B24Button class="form-field-600px" color="air-primary" type="submit" :loading="submitLoading">
+        {{ isEdit ? 'Сохранить изменения' : 'Создать' }}
+      </B24Button>
     </B24Form>
   </B24App>
 </template>

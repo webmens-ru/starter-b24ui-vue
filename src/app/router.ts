@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import Main from "../pages/Main.vue"
 import Form from "../pages/Form.vue"
-import FormFurniture from "../pages/FormFurniture.vue"
+import FormBaseProductRow from "../pages/FormBaseProductRow.vue"
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Main },
   { path: '/form', component: Form },
-  { path: '/formfurniture', component: FormFurniture },
+  { path: '/formBaseProductRow', component: FormBaseProductRow },
 ]
 
 export const router = createRouter({

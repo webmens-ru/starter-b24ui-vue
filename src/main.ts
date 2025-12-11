@@ -10,8 +10,13 @@ const app = createApp(App)
 app.use(b24UiPlugin)
 app.use(router)
 
-if (window._PARAMS_.placementOptions.path && router.hasRoute(window._PARAMS_.placementOptions.path)) {
-  router.replace({ path: window._PARAMS_.placementOptions.path })
+const pathFromParams = typeof window !== 'undefined' ? (window as any)._PARAMS_?.placementOptions?.path : undefined
+
+if (pathFromParams) {
+  // path из параметров имеет приоритет, если соответствующий маршрут существует
+  const normalizedPath = pathFromParams.startsWith('/') ? pathFromParams : `/${pathFromParams}`
+  const routeExists = router.getRoutes().some(route => route.path === normalizedPath)
+  router.replace(routeExists ? normalizedPath : '/')
 }
 
 app.mount('#app')
