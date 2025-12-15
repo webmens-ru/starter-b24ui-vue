@@ -1,0 +1,69 @@
+[
+  {
+    "id": 1,
+    "title": "Услуга организации электроподключения 10 кВт, 220в/ 380в",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 0,
+    "price_usd": 120,
+    "price_eur": 110,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "cost_per_unit": 8000
+  },
+  {
+    "id": 4,
+    "title": "Услуга организации электроподключения 15 кВт, 220в/ 380в",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 10000,
+    "price_usd": 0,
+    "price_eur": 110,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "cost_per_unit": 8000
+  },
+  {
+    "id": 5,
+    "title": "Услуга организации электроподключения 20 кВт, 220в/ 380в",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 10000,
+    "price_usd": 120,
+    "price_eur": 0,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "cost_per_unit": 8000
+  },
+  {
+    "id": 6,
+    "title": "Услуга организации электроподключения 25 кВт, 220в/ 380в",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 10000,
+    "price_usd": 120,
+    "price_eur": 110,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "cost_per_unit": 8000
+  },
+  {
+    "id": 3,
+    "title": "Стул",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 1000,
+    "price_usd": 12,
+    "price_eur": 11,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "cost_per_unit": 800
+  },
+  {
+    "id": 2,
+    "title": "Стол",
+    "type": { "id": 2, "title": "Офис" },
+    "unit": { "id": 2, "title": "компл" },
+    "price_rub": 5000,
+    "price_usd": 60,
+    "price_eur": 55,
+    "contractor": { "id": 2, "title": "Поставщик Б" },
+    "cost_per_unit": 4000
+  }
+]
+

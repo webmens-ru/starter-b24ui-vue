@@ -5,6 +5,10 @@ import * as yup from 'yup'
 import { setLocale } from 'yup'
 import { currencyList, type Currency, type Good, fetchGoods } from '../app/api/goods'
 import api from '../app/api'
+import goodsStubJson from '../data/goodsStub.json'
+import discountTypeDirectoryJson from '../data/discountTypeDirectory.json'
+import markupTypeDirectoryJson from '../data/markupTypeDirectory.json'
+import currencyDirectoryJson from '../data/currencyDirectory.json'
 
 const widgetParams = typeof window !== 'undefined' ? (window as any)._PARAMS_ : undefined
 const placementParams = widgetParams?.placementOptions?.params ?? {}
@@ -13,77 +17,42 @@ const productTypeId = placementParams.productTypeId
 const recordId = placementParams.recordId ?? placementParams.id
 const dealId = placementParams.dealId
 
-const goodsStub: Good[] = [
-  {
-    id: 1,
-    title: 'Услуга организации электроподключения 10 кВт, 220в/ 380в',
-    type: { id: 1, title: 'Жилой' },
-    unit: { id: 1, title: 'шт' },
-    price_rub: 0,
-    price_usd: 120,
-    price_eur: 110,
-    contractor: { id: 1, title: 'Поставщик А' },
-    cost_per_unit: 8000,
-  },
-  {
-    id: 4,
-    title: 'Услуга организации электроподключения 15 кВт, 220в/ 380в',
-    type: { id: 1, title: 'Жилой' },
-    unit: { id: 1, title: 'шт' },
-    price_rub: 10000,
-    price_usd: 0,
-    price_eur: 110,
-    contractor: { id: 1, title: 'Поставщик А' },
-    cost_per_unit: 8000,
-  },
-  {
-    id: 5,
-    title: 'Услуга организации электроподключения 20 кВт, 220в/ 380в',
-    type: { id: 1, title: 'Жилой' },
-    unit: { id: 1, title: 'шт' },
-    price_rub: 10000,
-    price_usd: 120,
-    price_eur: 0,
-    contractor: { id: 1, title: 'Поставщик А' },
-    cost_per_unit: 8000,
-  },
-  {
-    id: 6,
-    title: 'Услуга организации электроподключения 25 кВт, 220в/ 380в',
-    type: { id: 1, title: 'Жилой' },
-    unit: { id: 1, title: 'шт' },
-    price_rub: 10000,
-    price_usd: 120,
-    price_eur: 110,
-    contractor: { id: 1, title: 'Поставщик А' },
-    cost_per_unit: 8000,
-  },
-  {
-    id: 3,
-    title: 'Стул',
-    type: { id: 1, title: 'Жилой' },
-    unit: { id: 1, title: 'шт' },
-    price_rub: 1000,
-    price_usd: 12,
-    price_eur: 11,
-    contractor: { id: 1, title: 'Поставщик А' },
-    cost_per_unit: 800,
-  },
-  {
-    id: 2,
-    title: 'Стол',
-    type: { id: 2, title: 'Офис' },
-    unit: { id: 2, title: 'компл' },
-    price_rub: 5000,
-    price_usd: 60,
-    price_eur: 55,
-    contractor: { id: 2, title: 'Поставщик Б' },
-    cost_per_unit: 4000,
-  },
-]
-const dealCurrency: Currency = 'руб' // валюта сделки (пример)
-const discountTypes = ['%', 'Сумма в валюте']
-const markupTypes = ['%', 'Сумма в валюте']
+type DirectoryItem = { id: number; title: string }
+
+const goodsStub = goodsStubJson as Good[]
+const discountTypeDirectory = discountTypeDirectoryJson as DirectoryItem[]
+const markupTypeDirectory = markupTypeDirectoryJson as DirectoryItem[]
+const currencyDirectory = currencyDirectoryJson as DirectoryItem[]
+const currencyCodeToTitle: Record<string, string> = {
+  руб: 'Рубль',
+  usd: 'Доллар США',
+  eur: 'Евро',
+  cny: 'Юань',
+  try: 'Турецкая лира',
+}
+const currencyTitleToCode: Record<string, string> = Object.fromEntries(
+  Object.entries(currencyCodeToTitle).map(([code, title]) => [title, code]),
+)
+const currencyCodeToId: Record<string, number> = Object.fromEntries(
+  currencyDirectory
+    .map(item => {
+      const code = currencyTitleToCode[item.title] ?? item.title
+      return [code, item.id] as const
+    })
+    .filter(([code]) => Boolean(code)),
+)
+const currencyIdToCode: Record<number, string> = Object.fromEntries(
+  currencyDirectory
+    .map(item => {
+      const code = currencyTitleToCode[item.title] ?? item.title
+      return [item.id, code] as const
+    })
+    .filter(([, code]) => Boolean(code)),
+)
+
+const dealCurrency: Currency | string = 'руб' // валюта сделки (пример)
+const discountTypes = discountTypeDirectory.map(i => i.title)
+const markupTypes = markupTypeDirectory.map(i => i.title)
 
 // Получаем список товаров с бэка с резервной заглушкой
 // goodsFromApi = null означает, что запрос ещё не завершился, поэтому не показываем заглушку
@@ -141,7 +110,7 @@ const state = reactive({
   markupValue: 0,
   markupType: '%',
   finalPrice: 0,
-  currency: 'руб' as Currency,
+  currency: 'руб' as Currency, // храним код валюты
   costPerUnit: '',
   totalCost: '',
   invoiceIssued: false,
@@ -166,16 +135,14 @@ const allGoods = computed<Good[]>(() => {
 })
 const filteredGoods = computed<Good[]>(() => allGoods.value)
 const productItems = computed<SelectItem[]>(() => {
-  const currency = state.currency
-
   return filteredGoods.value.map((g: Good) => ({
     value: g.id.toString(),
     label: g.title,
     goodType: g.type?.title ?? '',
     unit: g.unit?.title ?? '',
     contractor: g.contractor?.title ?? '',
-  price: currency === 'руб' ? g.price_rub : currency === 'usd' ? g.price_usd : g.price_eur,
-    currency,
+    price: state.currency === 'руб' ? g.price_rub : state.currency === 'usd' ? g.price_usd : g.price_eur,
+    currency: state.currency,
   }))
 })
 const selectedProduct = computed<Good | undefined>(() =>
@@ -189,15 +156,26 @@ const isFinalOverCost = computed(() => {
 })
 
 const currencyOptions = computed<SelectItem[]>(() => {
+  const baseCurrencies =
+    currencyDirectory.length > 0
+      ? currencyDirectory.map(c => {
+          const code = currencyTitleToCode[c.title] ?? c.title
+          return { value: code, label: c.title }
+        })
+      : currencyList.map(c => ({ value: c, label: c }))
+
   const product = selectedProduct.value
-  if (!product) return currencyList.map(c => ({ value: c, label: c }))
+  if (!product) return baseCurrencies
 
-  const options: SelectItem[] = []
-  if (product.price_rub > 0) options.push({ value: 'руб', label: 'руб' })
-  if (product.price_usd > 0) options.push({ value: 'usd', label: 'usd' })
-  if (product.price_eur > 0) options.push({ value: 'eur', label: 'eur' })
+  const allowedCodes: string[] = []
+  if (product.price_rub > 0 && currencyCodeToTitle.руб) allowedCodes.push('руб')
+  if (product.price_usd > 0 && currencyCodeToTitle.usd) allowedCodes.push('usd')
+  if (product.price_eur > 0 && currencyCodeToTitle.eur) allowedCodes.push('eur')
 
-  return options.length ? options : currencyList.map(c => ({ value: c, label: c }))
+  if (!allowedCodes.length) return baseCurrencies
+
+  const byCode = new Set(allowedCodes)
+  return baseCurrencies.filter(c => byCode.has((c as any).value as string))
 })
 
 watch(
@@ -325,6 +303,10 @@ async function loadDetail() {
     if (detail.markupValue !== undefined) state.markupValue = Number(detail.markupValue) || 0
     if (detail.markupType) state.markupType = detail.markupType
     if (detail.currency) state.currency = detail.currency
+    else if (detail.currencyId) {
+      const code = currencyIdToCode[Number(detail.currencyId)]
+      if (code) state.currency = code as Currency
+    }
     if (detail.unit) state.unit = detail.unit
     if (detail.contractor) state.contractor = detail.contractor
     if (detail.comment) state.comment = detail.comment
@@ -358,6 +340,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     (product as any)?.needToApprove ??
     (product as any)?.need_approval ??
     false
+  const unitId = product?.unit?.id ?? null
+  const contractorId = product?.contractor?.id ?? null
+  const discountTitleToId = Object.fromEntries(discountTypeDirectory.map(i => [i.title, i.id]))
+  const markupTitleToId = Object.fromEntries(markupTypeDirectory.map(i => [i.title, i.id]))
+  const currencyIdFromCode = currencyCodeToId
+  const discountTypeId = discountTitleToId[state.discountType] ?? null
+  const markupTypeId = markupTitleToId[state.markupType] ?? null
+  const currencyId = currencyIdFromCode[state.currency] ?? null
 
   const payload = {
     ...event.data,
@@ -368,6 +358,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     unitPrice,
     costPerUnit,
     requiresToApproval,
+    // передаём id единицы измерения
+    unitId: unitId ?? undefined,
+    contractorId: contractorId ?? undefined,
+    discountType: discountTypeId ?? undefined,
+    discountTypeTitle: state.discountType,
+    markupType: markupTypeId ?? undefined,
+    markupTypeTitle: state.markupType,
+    currencyId: currencyId ?? undefined,
+    currency: state.currency,
   }
 
   try {
