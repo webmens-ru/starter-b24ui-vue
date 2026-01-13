@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SelectItem } from '@bitrix24/b24ui-nuxt'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
 import { currencyList, type Currency, type Good, fetchGoods } from '../app/api/goods'
@@ -9,6 +9,7 @@ import goodsStubJson from '../data/goodsStub.json'
 import discountTypeDirectoryJson from '../data/discountTypeDirectory.json'
 import markupTypeDirectoryJson from '../data/markupTypeDirectory.json'
 import currencyDirectoryJson from '../data/currencyDirectory.json'
+import areaDirectoryJson from '../data/areaDirectory.json'
 
 const widgetParams = typeof window !== 'undefined' ? (window as any)._PARAMS_ : undefined
 const placementParams = widgetParams?.placementOptions?.params ?? {}
@@ -16,13 +17,37 @@ const dealTypeBuildingId = placementParams.dealTypeBuildingId ?? 1
 const productTypeId = placementParams.productTypeId
 const recordId = placementParams.recordId ?? placementParams.id
 const dealId = placementParams.dealId
+const dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
+const areasObj = placementParams.areas && !Array.isArray(placementParams.areas) ? placementParams.areas : {}
+const dealAreasArray = Array.isArray(placementParams.areas) ? placementParams.areas : []
+const dealAreaById: Record<number, number> = {}
+for (const a of dealAreasArray) {
+  const id = Number((a as any)?.id)
+  const value = Number((a as any)?.value)
+  if (!Number.isNaN(id) && !Number.isNaN(value)) {
+    dealAreaById[id] = value
+  }
+}
+// Поддержка альтернативного формата: значения площадей по ключам из справочника
+for (const item of areaDirectoryJson as any[]) {
+  const id = Number((item as any)?.id)
+  const key = (item as any)?.key
+  if (!id || !key) continue
+  const raw = (placementParams as any)[key] ?? (areasObj as any)?.[key]
+  const val = Number(raw)
+  if (!Number.isNaN(val)) {
+    dealAreaById[id] = val
+  }
+}
 
 type DirectoryItem = { id: number; title: string }
+type AreaDirectoryItem = { id: number; title: string; key?: string; editable?: boolean }
 
 const goodsStub = goodsStubJson as Good[]
 const discountTypeDirectory = discountTypeDirectoryJson as DirectoryItem[]
 const markupTypeDirectory = markupTypeDirectoryJson as DirectoryItem[]
 const currencyDirectory = currencyDirectoryJson as DirectoryItem[]
+const areaDirectory = areaDirectoryJson as AreaDirectoryItem[]
 const currencyCodeToTitle: Record<string, string> = {
   руб: 'Рубль',
   usd: 'Доллар США',
@@ -59,6 +84,7 @@ const markupTypes = markupTypeDirectory.map(i => i.title)
 const goodsFromApi = ref<Good[] | null>(null)
 const detailLoading = ref(false)
 const submitLoading = ref(false)
+const costUpdateGuard = ref(false)
 const isEdit = computed(() => Boolean(recordId))
 onMounted(async () => {
   goodsFromApi.value = await fetchGoods({
@@ -95,6 +121,7 @@ const schema = yup.object({
   markupValue: yup.number().required().default(0),
   markupType: yup.string().oneOf(markupTypes).required(),
   autoRecalc: yup.boolean().default(true),
+  serviceDates: yup.array().of(yup.string()).default([]),
   // остальные поля — не редактируемые или вычисляются автоматически
 })
 
@@ -105,6 +132,11 @@ const state = reactive({
   product: undefined as number | undefined, // id товара
   quantity: 1,
   unit: '', // единица измерения
+  totalQuantity: 0,
+  baseUnitPrice: '',
+  finalUnitPrice: '',
+  hoursCount: 0,
+  daysCount: 1,
   discountValue: 0,
   discountType: '%',
   markupValue: 0,
@@ -113,10 +145,18 @@ const state = reactive({
   currency: 'руб' as Currency, // храним код валюты
   costPerUnit: '',
   totalCost: '',
+  costCurrency: 'Рубль',
+  costSource: 'unit' as 'unit' | 'total',
   invoiceIssued: false,
   contractor: '',
   comment: '',
   autoRecalc: true,
+  areaTypeId: undefined as number | undefined,
+  areaValue: '',
+  serviceDates: [] as string[], // для посуточных
+  serviceDate: '' as string, // для почасовых
+  serviceTimeFrom: '' as string,
+  serviceTimeTo: '' as string,
 })
 
 type ProductItem = {
@@ -150,10 +190,103 @@ const selectedProduct = computed<Good | undefined>(() =>
 )
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
+  if (state.currency !== 'руб') return false
   const final = Number(state.finalPrice) || 0
   const cost = Number(state.totalCost) || 0
   return cost > 0 && final < cost
 })
+const isDailyService = computed(() => {
+  const period = selectedProduct.value?.servicePeriod
+  return period?.id === 3 || period?.title === 'Посуточно'
+})
+const isHourlyService = computed(() => {
+  const period = selectedProduct.value?.servicePeriod
+  return period?.id === 5 || period?.title === 'Почасовая'
+})
+const showTotalQuantity = computed(
+  () => selectedProduct.value?.quantityFactorArea || isDailyService.value || isHourlyService.value,
+)
+const hasCustomDayCount = computed(() => selectedProduct.value?.id === 1)
+const isDaysFieldReadOnly = computed(() => isDailyService.value)
+const areaTypeOptions = computed<SelectItem[]>(() => areaDirectory.map(a => ({ value: a.id, label: a.title })))
+const enabledAreaTypeOptions = computed<SelectItem[]>(() => {
+  const allowed = selectedProduct.value?.enableArea
+  if (!allowed || !allowed.length) return areaTypeOptions.value
+  const allowedSet = new Set(allowed.map(Number))
+  return areaTypeOptions.value.filter(opt => allowedSet.has(Number((opt as any).value)))
+})
+const selectedAreaType = computed(() => areaDirectory.find(a => Number(a.id) === Number(state.areaTypeId)))
+const selectedAreaEditable = computed(() => Boolean(selectedAreaType.value?.editable))
+function normalizeDateString(val: any): string {
+  if (!val) return ''
+  if (typeof val === 'string') {
+    // берём только YYYY-MM-DD, или парсим ISO с TZ
+    if (val.length >= 10) return val.slice(0, 10)
+    return val
+  }
+  if (typeof val.toString === 'function') {
+    const asString = val.toString()
+    if (asString.length >= 10) return asString.slice(0, 10)
+  }
+  try {
+    const d = new Date(val)
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10)
+  } catch (e) {
+    // ignore
+  }
+  return ''
+}
+
+const allowedServiceDates = computed<string[]>(() =>
+  (selectedProduct.value?.enableDates ?? []).map(d => normalizeDateString(d)).filter(Boolean),
+)
+
+const serviceDateOptions = computed<SelectItem[]>(() =>
+  allowedServiceDates.value.map(d => ({
+    value: d,
+    label: formatDateDisplay(d),
+  })),
+)
+
+const costPerUnitLabel = computed(() =>
+  state.costSource === 'unit' ? '✔ Себестоимость ед.' : 'Себестоимость ед.',
+)
+const totalCostLabel = computed(() => (state.costSource === 'total' ? '✔ Себестоимость' : 'Себестоимость'))
+
+const timeOptions = computed<SelectItem[]>(() => {
+  const opts: SelectItem[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = h.toString().padStart(2, '0')
+      const mm = m.toString().padStart(2, '0')
+      const label = `${hh}:${mm}`
+      opts.push({ value: label, label })
+    }
+  }
+  return opts
+})
+
+const timeOptionsEnd = computed<SelectItem[]>(() => {
+  const base = [...timeOptions.value, { value: '24:00', label: '24:00' }]
+  if (!state.serviceTimeFrom) return base
+  const [fh, fm] = state.serviceTimeFrom.split(':').map(Number)
+  if (Number.isNaN(fh) || Number.isNaN(fm)) return base
+  const minMinutes = fh * 60 + fm + 1 // строго больше
+  return base.filter(opt => {
+    const val = (opt as any).value ?? opt
+    const [h, m] = String(val).split(':').map(Number)
+    if (Number.isNaN(h) || Number.isNaN(m)) return false
+    const minutes = h * 60 + m
+    return minutes > minMinutes - 1
+  })
+})
+
+function formatDateDisplay(val: string): string {
+  const norm = normalizeDateString(val)
+  if (!norm || norm.length < 10) return val ?? ''
+  const [y, m, d] = norm.split('-')
+  return `${d}.${m}.${y}`
+}
 
 const currencyOptions = computed<SelectItem[]>(() => {
   const baseCurrencies =
@@ -181,11 +314,45 @@ const currencyOptions = computed<SelectItem[]>(() => {
 watch(
   selectedProduct,
   () => {
+    costUpdateGuard.value = true
+    // сбрасываем площадь и тип при смене товара
+    state.areaTypeId = undefined
+    state.areaValue = ''
+    // подтягиваем себестоимость из товара по умолчанию
+    state.costPerUnit = selectedProduct.value?.cost_per_unit?.toString() ?? ''
+    state.costCurrency = 'Рубль'
+
+    if (!isDailyService.value) {
+      state.serviceDates = []
+    } else {
+      // оставляем только разрешённые даты, если справочник задан
+      const allowed = allowedServiceDates.value
+      if (allowed.length) {
+        state.serviceDates = state.serviceDates.filter(d => allowed.includes(d))
+      }
+    }
+    if (!isHourlyService.value) {
+      state.serviceDate = ''
+      state.serviceTimeFrom = ''
+      state.serviceTimeTo = ''
+    }
+    if (selectedProduct.value?.quantityFactorArea) {
+      const allowed = selectedProduct.value.enableArea ?? []
+      const firstAllowed = allowed.length ? allowed[0] : undefined
+      if (firstAllowed) {
+        state.areaTypeId = Number(firstAllowed)
+        const val = dealAreaById[state.areaTypeId]
+        state.areaValue = Number.isFinite(val) ? String(val) : ''
+      }
+    }
     const options = currencyOptions.value ?? []
     const first = options[0]
     if (options.length && first && !options.some((o: SelectItem) => (o as any).value === state.currency)) {
       state.currency = (first as any).value as Currency
     }
+    nextTick(() => {
+      costUpdateGuard.value = false
+    })
   },
   { immediate: true },
 )
@@ -220,26 +387,73 @@ watch(
   },
 )
 
-function recalcPrices() {
-  const product = selectedProduct.value
-  if (!product) {
-    state.unit = ''
-    state.finalPrice = 0
-    state.costPerUnit = ''
-    state.totalCost = ''
-    state.contractor = ''
-    return
+// Автопересчёт при изменении себестоимости
+watch(
+  () => state.costPerUnit,
+  () => {
+    if (costUpdateGuard.value) return
+    recalcPrices()
+  },
+)
+
+watch(
+  () => state.totalCost,
+  () => {
+    if (costUpdateGuard.value) return
+    recalcPrices()
+  },
+)
+
+function onCostPerUnitInput() {
+  state.costSource = 'unit'
+  recalcPrices()
+}
+
+function onTotalCostInput() {
+  state.costSource = 'total'
+  const total = Number(state.totalCost)
+  const qty =
+    showTotalQuantity.value ? state.totalQuantity || Number(state.quantity) || 0 : Number(state.quantity) || 0
+  if (qty > 0 && Number.isFinite(total)) {
+    costUpdateGuard.value = true
+    state.costPerUnit = Number((total / qty).toFixed(2)).toString()
+    costUpdateGuard.value = false
   }
+  recalcPrices()
+}
+
+function recalcPrices() {
+  costUpdateGuard.value = true
+  try {
+    const product = selectedProduct.value
+    if (!product) {
+      state.unit = ''
+      state.finalPrice = 0
+      state.costPerUnit = ''
+      state.totalCost = ''
+    state.costSource = 'unit'
+      state.contractor = ''
+      return
+    }
 
   state.unit = product.unit?.title ?? ''
   state.contractor = product.contractor?.title ?? ''
   const currency = state.currency
   const basePrice = currency === 'руб' ? product.price_rub : currency === 'usd' ? product.price_usd : product.price_eur
-  // Себестоимость у нас только в рублях, используем её без пересчёта
-  const costPerUnit = product.cost_per_unit
-  state.costPerUnit = costPerUnit?.toString() ?? ''
+  state.baseUnitPrice = Number(basePrice || 0).toFixed(2)
+  const costPerUnitRaw = Number(state.costPerUnit)
 
-  const quantity = Number(state.quantity) || 0
+  const quantityRaw = Number(state.quantity) || 0
+  const areaFactor = product.quantityFactorArea
+    ? Number(state.areaValue || dealArea || 1) || 1
+    : 1
+  const daysFactor = hasCustomDayCount.value
+    ? Number(state.daysCount) || 1
+    : isDailyService.value
+      ? state.daysCount || state.serviceDates.length || 0
+      : 1
+  const hoursFactor = isHourlyService.value ? (state.hoursCount || 0) : 1
+  const quantity = quantityRaw * areaFactor * daysFactor * hoursFactor
   let discountVal = Number(state.discountValue) || 0
   const markupVal = Number(state.markupValue) || 0
 
@@ -254,10 +468,52 @@ function recalcPrices() {
   const totalPrice = Math.max(baseTotal - discount + markup, 0)
 
   state.finalPrice = Number(totalPrice.toFixed(2))
-  state.totalCost = costPerUnit
-    ? Number((costPerUnit * quantity).toFixed(2)).toString()
-    : ''
+  const quantityForCost = showTotalQuantity.value ? (state.totalQuantity || quantity) : quantity
+
+  if (state.costSource === 'total') {
+    const totalCostNum = Number(state.totalCost)
+    if (quantityForCost > 0 && Number.isFinite(totalCostNum)) {
+      const cpu = totalCostNum / quantityForCost
+      state.costPerUnit = Number(cpu.toFixed(2)).toString()
+    }
+  } else {
+    if (Number.isFinite(costPerUnitRaw)) {
+      state.totalCost = Number((costPerUnitRaw * quantityForCost).toFixed(2)).toString()
+    } else {
+      state.totalCost = ''
+    }
+  }
+
+  if (showTotalQuantity.value) {
+    state.totalQuantity = quantity
+  }
+
+    const totalQty = quantity || quantityRaw || 0
+    state.finalUnitPrice = totalQty > 0 ? Number(totalPrice / totalQty).toFixed(2) : ''
+  } finally {
+    costUpdateGuard.value = false
+  }
 }
+
+function recalcHourlyQuantity() {
+  if (!isHourlyService.value) return
+  const from = state.serviceTimeFrom
+  const to = state.serviceTimeTo
+  if (!from || !to) return
+  const [fh, fm] = from.split(':').map(Number)
+  const [th, tm] = to.split(':').map(Number)
+  if (Number.isNaN(fh) || Number.isNaN(fm) || Number.isNaN(th) || Number.isNaN(tm)) return
+  const start = fh * 60 + fm
+  const end = th * 60 + tm
+  if (end <= start) {
+    state.hoursCount = 0
+    return
+  }
+  const diffMinutes = end - start
+  const hours = Math.ceil(diffMinutes / 60)
+  state.hoursCount = hours
+}
+
 
 watch(
   [
@@ -268,9 +524,16 @@ watch(
     () => state.markupValue,
     () => state.markupType,
     () => state.currency,
+    () => state.serviceDates.length,
+    () => state.serviceDate,
+    () => state.serviceTimeFrom,
+    () => state.serviceTimeTo,
   ],
   () => {
     if (!state.autoRecalc) return
+    if (isHourlyService.value) {
+      recalcHourlyQuantity()
+    }
     recalcPrices()
   },
   { immediate: true },
@@ -285,11 +548,69 @@ watch(
 )
 
 const toast = useToast()
+watch(
+  [isHourlyService, () => state.serviceDate, () => state.serviceTimeFrom, () => state.serviceTimeTo],
+  ([isHourly]) => {
+    if (isHourly) {
+      recalcHourlyQuantity()
+      // сбрасываем конец, если стал недопустим
+      if (state.serviceTimeFrom && state.serviceTimeTo) {
+        const [fh, fm] = state.serviceTimeFrom.split(':').map(Number)
+        const [th, tm] = state.serviceTimeTo.split(':').map(Number)
+        const start = fh * 60 + fm
+        const end = th * 60 + tm
+        if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+          state.serviceTimeTo = ''
+        }
+      }
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => state.daysCount,
+  () => {
+    if (hasCustomDayCount.value) {
+      recalcPrices()
+    }
+  },
+)
+
+watch(
+  () => state.serviceDates.length,
+  len => {
+    if (isDailyService.value) {
+      state.daysCount = len || 0
+      recalcPrices()
+    }
+  },
+)
+
+watch(
+  () => state.areaTypeId,
+  id => {
+    if (!selectedProduct.value?.quantityFactorArea) return
+    const val = id ? dealAreaById[Number(id)] : undefined
+    state.areaValue = Number.isFinite(val) ? String(val) : ''
+    recalcPrices()
+  },
+)
+
+watch(
+  () => state.areaValue,
+  () => {
+    if (!selectedProduct.value?.quantityFactorArea) return
+    if (!selectedAreaEditable.value) return
+    recalcPrices()
+  },
+)
 async function loadDetail() {
   if (!recordId) return
 
   detailLoading.value = true
   try {
+    costUpdateGuard.value = true
     const response = await api.get(`/api/sp1222/get/id=${recordId}`)
     const detail = response.data ?? {}
 
@@ -315,12 +636,19 @@ async function loadDetail() {
     if (detail.totalCost !== undefined) state.totalCost = String(detail.totalCost)
     if (detail.invoiceIssued !== undefined) state.invoiceIssued = Boolean(detail.invoiceIssued)
     if (detail.autoRecalc !== undefined) state.autoRecalc = Boolean(detail.autoRecalc)
+    if (Array.isArray(detail.serviceDates)) state.serviceDates = detail.serviceDates.filter(Boolean)
+    if (detail.serviceDate) state.serviceDate = normalizeDateString(detail.serviceDate)
+    if (detail.serviceTimeFrom) state.serviceTimeFrom = detail.serviceTimeFrom
+    if (detail.serviceTimeTo) state.serviceTimeTo = detail.serviceTimeTo
 
     recalcPrices()
   } catch (error) {
     console.warn('[load detail error]', error)
     toast.add({ title: 'Ошибка', description: 'Не удалось загрузить данные', color: 'air-primary-alert' })
   } finally {
+    nextTick(() => {
+      costUpdateGuard.value = false
+    })
     detailLoading.value = false
   }
 }
@@ -334,7 +662,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       : currency === 'usd'
         ? product?.price_usd ?? 0
         : product?.price_eur ?? 0
-  const costPerUnit = product?.cost_per_unit ?? 0
+  const costPerUnit = Number(state.costPerUnit) || 0
   const requiresToApproval =
     (product as any)?.requiresToApproval ??
     (product as any)?.needToApprove ??
@@ -348,6 +676,85 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const discountTypeId = discountTitleToId[state.discountType] ?? null
   const markupTypeId = markupTitleToId[state.markupType] ?? null
   const currencyId = currencyIdFromCode[state.currency] ?? null
+  const serviceDatesPayload = isDailyService.value ? state.serviceDates : null
+  const serviceDateSingle = isHourlyService.value ? state.serviceDate : null
+  const serviceTimeFromPayload = isHourlyService.value ? state.serviceTimeFrom : null
+  const serviceTimeToPayload = isHourlyService.value ? state.serviceTimeTo : null
+  const areaValueNumber = Number(state.areaValue || dealArea || 0) || 0
+  if (product?.quantityFactorArea) {
+    if (!state.areaTypeId) {
+      toast.add({ title: 'Укажите тип площади', description: 'Выберите тип площади', color: 'air-primary-alert' })
+      return
+    }
+    if (!areaValueNumber) {
+      toast.add({ title: 'Не указана площадь', description: 'Заполните площадь для расчёта', color: 'air-primary-alert' })
+      return
+    }
+  }
+  const quantityRaw = Number(state.quantity) || 0
+  const areaFactor = product?.quantityFactorArea ? (areaValueNumber || 1) : 1
+  const daysFactor = hasCustomDayCount.value
+    ? Number(state.daysCount) || 1
+    : isDailyService.value
+      ? state.daysCount || state.serviceDates.length || 0
+      : 1
+  const hoursFactor = isHourlyService.value ? (state.hoursCount || 0) : 1
+  const quantityWithArea = quantityRaw * areaFactor * daysFactor * hoursFactor
+  if (isDailyService.value) {
+    if (!serviceDatesPayload || serviceDatesPayload.length === 0) {
+      toast.add({ title: 'Укажите даты', description: 'Для посуточной услуги выберите даты', color: 'air-primary-alert' })
+      return
+    }
+    if (allowedServiceDates.value.length) {
+      const allAllowed = serviceDatesPayload?.every(d => allowedServiceDates.value.includes(d))
+      if (!allAllowed) {
+        toast.add({ title: 'Нельзя выбрать эту дату', description: 'Выберите дату из разрешённых', color: 'air-primary-alert' })
+        return
+      }
+    }
+  }
+  if (isHourlyService.value) {
+    if (!serviceDateSingle) {
+      toast.add({ title: 'Укажите дату', description: 'Для почасовой услуги выберите дату', color: 'air-primary-alert' })
+      return
+    }
+    if (allowedServiceDates.value.length && !allowedServiceDates.value.includes(serviceDateSingle)) {
+      toast.add({ title: 'Нельзя выбрать эту дату', description: 'Выберите дату из разрешённых', color: 'air-primary-alert' })
+      return
+    }
+    const from = state.serviceTimeFrom
+    const to = state.serviceTimeTo
+    if (!from || !to) {
+      toast.add({ title: 'Укажите время', description: 'Нужно выбрать начало и окончание', color: 'air-primary-alert' })
+      return
+    }
+    const [fh, fm] = from.split(':').map(Number)
+    const [th, tm] = to.split(':').map(Number)
+    if (Number.isNaN(fh) || Number.isNaN(fm) || Number.isNaN(th) || Number.isNaN(tm)) {
+      toast.add({ title: 'Неверный формат времени', description: 'Проверьте время', color: 'air-primary-alert' })
+      return
+    }
+    const start = fh * 60 + fm
+    const end = th * 60 + tm
+    if (end <= start) {
+      toast.add({ title: 'Время некорректно', description: 'Окончание должно быть позже начала', color: 'air-primary-alert' })
+      return
+    }
+    state.hoursCount = Math.ceil((end - start) / 60)
+  }
+
+  const hasTimeFlag = isHourlyService.value
+  const hasDaysFlag = isDailyService.value || hasCustomDayCount.value
+  const hasAreaFlag = !!product?.quantityFactorArea
+
+  const daysCountPayload = hasCustomDayCount.value
+    ? Number(state.daysCount) || 1
+    : isDailyService.value
+      ? state.daysCount || state.serviceDates.length || 0
+      : null
+  const hoursCountPayload = isHourlyService.value ? state.hoursCount : null
+  const areaTypeIdPayload = product?.quantityFactorArea ? state.areaTypeId ?? null : null
+  const areaValuePayload = product?.quantityFactorArea ? areaValueNumber : null
 
   const payload = {
     ...event.data,
@@ -367,6 +774,19 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     markupTypeTitle: state.markupType,
     currencyId: currencyId ?? undefined,
     currency: state.currency,
+    serviceDates: serviceDatesPayload,
+    serviceDate: serviceDateSingle,
+    serviceTimeFrom: serviceTimeFromPayload,
+    serviceTimeTo: serviceTimeToPayload,
+    quantityWithArea,
+    areaTypeId: areaTypeIdPayload,
+    areaValue: areaValuePayload,
+    daysCount: daysCountPayload,
+    hoursCount: hoursCountPayload,
+    costSource: state.costSource, // 'unit' | 'total'
+    hasTime: hasTimeFlag,
+    hasDays: hasDaysFlag,
+    hasArea: hasAreaFlag,
   }
 
   try {
@@ -456,15 +876,150 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </template>
         </B24Select>
       </B24FormField>
-      <!-- Количество и ед. измерения в одну строку -->
-      <div class="form-field-600px form-flex-row flex-align-bottom">
+      <!-- Даты предоставления услуги (посуточно) -->
+      <template v-if="isDailyService">
+        <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 12px;">
+          <B24FormField label="Даты" name="serviceDates" required style="flex:1;">
+            <B24Select
+              v-model="state.serviceDates"
+              :items="serviceDateOptions"
+              value-key="value"
+              label-key="label"
+              multiple
+              placeholder="Выберите даты"
+              :style="{ width: '400px' }"
+              :b24ui="{
+                base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
+                trailingIcon: 'text-base-760 size-lg',
+                content: 'rounded-[18px] min-w-[390px] shadow-lg ring-0 border-0',
+                viewport: 'relative scroll-py-1 w-[390px] max-h-[40vh] overflow-x-hidden overflow-y-auto scrollbar-thin ring-0 border-0',
+                group: 'p-0 my-[2px] -mx-1 w-full !max-w-none',
+                item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start gap-1',
+                itemTrailingIcon: 'hidden',
+              }"
+            />
+            <div v-if="!serviceDateOptions.length" class="text-sm text-slate-600">Нет доступных дат</div>
+          </B24FormField>
+          <B24FormField label="Количество дней" name="daysCount" style="width: 190px;">
+            <B24Input
+              type="number"
+              min="1"
+              v-model="state.daysCount"
+              placeholder="1"
+              :disabled="isDaysFieldReadOnly"
+            />
+          </B24FormField>
+        </div>
+      </template>
+      <!-- Даты/время для почасовой услуги -->
+      <template v-else-if="isHourlyService">
+        <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 10px;">
+          <B24FormField label="Дата" name="serviceDateSingle" style="flex:1;">
+            <B24Select
+              v-model="state.serviceDate"
+              :items="serviceDateOptions"
+              value-key="value"
+              label-key="label"
+              placeholder="Выберите дату"
+              :style="{ width: '150px' }"
+
+            />
+          </B24FormField>
+          <B24FormField label="Время начала" name="serviceTimeFrom" style="width: 150px;">
+            <B24Select
+              v-model="state.serviceTimeFrom"
+              :items="timeOptions"
+              value-key="value"
+              label-key="label"
+              placeholder="Выберите время"
+              :style="{ width: '150px' }"
+            />
+          </B24FormField>
+          <B24FormField label="Время окончания" name="serviceTimeTo" style="width: 150px;">
+            <B24Select
+              v-model="state.serviceTimeTo"
+              :items="timeOptionsEnd"
+              value-key="value"
+              label-key="label"
+              placeholder="Выберите время"
+              :style="{ width: '150px' }"
+            />
+          </B24FormField>
+          <B24FormField label="Количество часов" name="hoursCount" style="width: 150px;">
+            <B24Input :model-value="state.hoursCount" disabled placeholder="0" />
+          </B24FormField>
+        </div>
+        <div v-if="!serviceDateOptions.length" class="text-sm text-slate-600">Нет доступных дат</div>
+        
+      </template>
+      <template v-if="selectedProduct?.quantityFactorArea">
+        <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 12px; margin-top: 10px;">
+          <B24FormField label="Тип площади" name="areaTypeHourly" style="width: 400px;">
+            <B24Select
+              v-model="state.areaTypeId"
+              :items="enabledAreaTypeOptions"
+              value-key="value"
+              label-key="label"
+              placeholder="Выберите тип площади"
+              class="w-full"
+              :style="{ width: '400px' }"
+              required
+              :b24ui="{
+                base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
+                trailingIcon: 'text-base-760 size-lg',
+                content: 'rounded-[18px] min-w-[390px] shadow-lg ring-0 border-0',
+                viewport: 'relative scroll-py-1 w-[390px] max-h-[40vh] overflow-x-hidden overflow-y-auto scrollbar-thin ring-0 border-0',
+                group: 'p-0 my-[2px] -mx-1 w-full !max-w-none',
+                item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start gap-1',
+                itemTrailingIcon: 'hidden',
+              }"
+            />
+          </B24FormField>
+          <B24FormField label="Площадь" name="dealAreaHourly" style="width: 190px;">
+            <B24Input
+              v-model="state.areaValue"
+              :disabled="!selectedAreaEditable"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="-"
+            />
+          </B24FormField>
+        </div>
+        </template>
+
+
+
+      <div class="form-field-600px form-flex-row flex-align-bottom" v-if="showTotalQuantity">
         <B24FormField label="Количество" name="quantity" required style="flex:1;">
-          <B24Input type="number" min="1" v-model="state.quantity" placeholder="1" style="width: 400px" />
+          <B24Input
+            type="number"
+            min="1"
+            v-model="state.quantity"
+            placeholder="1"
+          />
+        </B24FormField>
+        <B24FormField label="Количество итого" name="totalQuantity" style="flex:1;">
+          <B24Input :model-value="state.totalQuantity" disabled placeholder="0" />
         </B24FormField>
         <B24FormField label="Ед. измерения" name="unit" style="flex:1;">
           <B24Input v-model="state.unit" disabled placeholder="Авто из товара" />
         </B24FormField>
       </div>
+      <div class="form-field-600px form-flex-row flex-align-bottom" v-else>
+        <B24FormField label="Количество" name="quantity" required style="flex:1;">
+          <B24Input
+            type="number"
+            min="1"
+            v-model="state.quantity"
+            placeholder="1"
+            style="width: 400px"
+          />
+        </B24FormField>
+        <B24FormField label="Ед. измерения" name="unit" style="flex:1;">
+          <B24Input v-model="state.unit" disabled placeholder="Авто из товара" />
+        </B24FormField>
+      </div>      
       <!-- Скидка и тип скидки: выравнивание по нижнему краю -->
       <div class="form-field-600px form-flex-row flex-align-bottom">
         <B24FormField label="Скидка" name="discountValue" required>
@@ -510,39 +1065,75 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       </div>
       <div class="form-field-600px form-flex-row flex-align-bottom">
         <!-- Стоимость итоговая -->
+        <B24FormField label="Стоимость ед. базовая" name="baseUnitPrice">
+          <B24Input 
+          :model-value="state.baseUnitPrice" 
+          disabled 
+          placeholder="0" 
+          style="width:140px"
+          />
+        </B24FormField>
+        <B24FormField label="Стоимость ед." name="finalUnitPrice">
+          <B24Input 
+          :model-value="state.finalUnitPrice" 
+          disabled 
+          placeholder="0" 
+          style="width:140px"
+          />
+        </B24FormField>
         <B24FormField label="Стоимость итог" name="finalPrice">
           <B24Input
             :class="isFinalOverCost ? 'input-danger' : ''"
             v-model="state.finalPrice"
             disabled
             placeholder="0"
-            style="width:400px"
+            style="width:140px"
           />
         </B24FormField>
-        <div style="flex:1;">
           <B24FormField label="Валюта" name="currency" required>
             <B24Select
               v-model="state.currency"
               :items="currencyOptions"
               :class="isCurrencyMismatch ? 'input-danger' : ''"
-              :style="{width:'190px'}"
+              :style="{width:'150px'}"
               :b24ui="{
-              content: 'max-w-[185px]',
-              viewport: 'max-w-[185px]',
-              item: 'max-w-[185px]',
+              content: 'max-w-[145px]',
+              viewport: 'max-w-[145px]',
+              item: 'max-w-[145px]',
             }"
             />
           </B24FormField>
-        </div>
       </div>
-      <!-- Себестоимость ед. -->
-      <B24FormField label="Себестоимость ед." name="costPerUnit">
-        <B24Input class="form-field-600px" v-model="state.costPerUnit" disabled placeholder="-" />
-      </B24FormField>
-      <!-- Себестоимость -->
-      <B24FormField label="Себестоимость" name="totalCost">
-        <B24Input class="form-field-600px" v-model="state.totalCost" disabled placeholder="-" />
-      </B24FormField>
+      <div class="form-field-600px form-flex-row flex-align-bottom">
+        <!-- Себестоимость ед. -->
+        <B24FormField :label="costPerUnitLabel" name="costPerUnit">
+          <B24Input
+            class="form-field-300px"
+            v-model="state.costPerUnit"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            @input="onCostPerUnitInput"
+          />
+        </B24FormField>
+        <!-- Себестоимость -->
+        <B24FormField :label="totalCostLabel" name="totalCost">
+          <B24Input
+            class="form-field-300px"
+            v-model="state.totalCost"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            @input="onTotalCostInput"
+          />
+        </B24FormField>
+        <B24FormField label="Валюта" name="costCurrency">
+          <B24Input class="form-field-300px" v-model="state.costCurrency" disabled placeholder="-" />
+        </B24FormField>
+      </div>
+      
       <!-- Автоперерасчёт -->
       <B24FormField label="Автоматический перерасчёт" name="autoRecalc">
         <B24Checkbox class="form-field-600px" v-model="state.autoRecalc" />

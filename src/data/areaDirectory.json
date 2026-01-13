@@ -1,0 +1,10 @@
+[
+  { "id": 1, "title": "По договору", "key": "areaContract", "editable": false },
+  { "id": 3, "title": "Объект (на карте)", "key": "areaOnMap", "editable": false },
+  { "id": 5, "title": "Застройка", "key": "areaBuilding", "editable": false },
+  { "id": 7, "title": "Застилка", "key": "areaCover", "editable": false },
+  { "id": 9, "title": "Первый этаж", "key": "areaFirstFloor", "editable": false },
+  { "id": 11, "title": "Второй этаж", "key": "areaSecondFloor", "editable": false },
+  { "id": 13, "title": "Произвольная площадь", "key": "areaCustom", "editable": true }
+]
+

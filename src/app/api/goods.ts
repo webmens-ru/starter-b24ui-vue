@@ -22,6 +22,13 @@ export type Good = {
     title: string
   }
   cost_per_unit: number // себестоимость всегда в рублях
+  quantityFactorArea?: boolean
+  enableDates?: string[]
+  enableArea?: number[]
+  servicePeriod?: {
+    id: number
+    title: string
+  }
 }
 
 type FetchGoodsParams = {
@@ -51,6 +58,22 @@ export async function fetchGoods(params: FetchGoodsParams = {}): Promise<Good[]>
       price_eur: (item as any).price_eur ?? (item as any).priceByCurrency?.eur ?? 0,
       contractor: (item as any).contractor ?? { id: 0, title: '' },
       cost_per_unit: item.cost_per_unit ?? 0,
+      quantityFactorArea: Boolean((item as any).quantityFactorArea),
+      enableArea: Array.isArray((item as any).enableArea)
+        ? (item as any).enableArea.map((v: unknown) => Number(v)).filter((v: number) => !Number.isNaN(v))
+        : [],
+      enableDates: Array.isArray((item as any).enableDates)
+        ? (item as any).enableDates.map((d: any) => {
+            try {
+              const parsed = new Date(d)
+              if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
+            } catch (e) {
+              /* ignore */
+            }
+            return typeof d === 'string' ? d.slice(0, 10) : ''
+          }).filter(Boolean)
+        : [],
+      servicePeriod: (item as any).servicePeriod ?? { id: 1, title: 'Весь период' },
     }))
   } catch (error) {
     console.warn('[fetch goods error]', error)
