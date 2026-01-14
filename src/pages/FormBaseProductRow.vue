@@ -15,6 +15,7 @@ const widgetParams = typeof window !== 'undefined' ? (window as any)._PARAMS_ : 
 const placementParams = widgetParams?.placementOptions?.params ?? {}
 const dealTypeBuildingId = placementParams.dealTypeBuildingId ?? 1
 const productTypeId = placementParams.productTypeId
+// recordId должен приходить явно, id слайдера использовать нельзя — иначе грузится чужая запись
 const recordId = placementParams.recordId ?? placementParams.id
 const dealId = placementParams.dealId
 const dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
@@ -175,8 +176,9 @@ const allGoods = computed<Good[]>(() => {
 })
 const filteredGoods = computed<Good[]>(() => allGoods.value)
 const productItems = computed<SelectItem[]>(() => {
+  // храним id товара числом, чтобы выборка по v-model работала сразу после загрузки деталей
   return filteredGoods.value.map((g: Good) => ({
-    value: g.id.toString(),
+    value: g.id,
     label: g.title,
     goodType: g.type?.title ?? '',
     unit: g.unit?.title ?? '',
@@ -186,7 +188,7 @@ const productItems = computed<SelectItem[]>(() => {
   }))
 })
 const selectedProduct = computed<Good | undefined>(() =>
-  filteredGoods.value.find((g: Good) => g.id.toString() === String(state.product ?? '')),
+  filteredGoods.value.find((g: Good) => Number(g.id) === Number(state.product ?? NaN)),
 )
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
@@ -361,9 +363,9 @@ watch(
   () => state.quantity,
   val => {
     const value = val as unknown
-    if ((typeof value === 'string' && value.trim() === '') || value === null || Number.isNaN(Number(value))) {
-      state.quantity = 1
-    }
+    // allow пустое значение пока пользователь печатает — нормализуем при blur
+    if (typeof value === 'string' && value.trim() === '') return
+    if (value === null || Number.isNaN(Number(value))) state.quantity = 1
   },
 )
 
@@ -403,6 +405,18 @@ watch(
     recalcPrices()
   },
 )
+
+function onQuantityBlur() {
+  const value = state.quantity as unknown
+  if (
+    (typeof value === 'string' && value.trim() === '') ||
+    value === null ||
+    Number.isNaN(Number(value)) ||
+    Number(value) < 1
+  ) {
+    state.quantity = 1
+  }
+}
 
 function onCostPerUnitInput() {
   state.costSource = 'unit'
@@ -611,7 +625,7 @@ async function loadDetail() {
   detailLoading.value = true
   try {
     costUpdateGuard.value = true
-    const response = await api.get(`/api/sp1222/get/id=${recordId}`)
+    const response = await api.get(`/api/sp1040/view?id=${recordId}`)
     const detail = response.data ?? {}
 
     // Заполняем состояние, если поля пришли
@@ -851,7 +865,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <B24FormField label="Товар" name="product" required>
         <B24Select
           class="form-field-600px"
-          :style="{width: '600px'}"
+          :style="{ width: '600px' }"
           v-model="state.product"
           :items="productItems"
           value-key="value"
@@ -997,6 +1011,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             min="1"
             v-model="state.quantity"
             placeholder="1"
+            @blur="onQuantityBlur"
           />
         </B24FormField>
         <B24FormField label="Количество итого" name="totalQuantity" style="flex:1;">
@@ -1014,6 +1029,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             v-model="state.quantity"
             placeholder="1"
             style="width: 400px"
+            @blur="onQuantityBlur"
           />
         </B24FormField>
         <B24FormField label="Ед. измерения" name="unit" style="flex:1;">
