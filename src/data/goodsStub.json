@@ -79,6 +79,23 @@
     "cost_per_unit": 8000
   },
   {
+    "id": 8,
+    "title": "Услуга по расписанию",
+    "type": { "id": 1, "title": "Жилой" },
+    "unit": { "id": 1, "title": "шт" },
+    "price_rub": 9000,
+    "price_usd": 0,
+    "price_eur": 0,
+    "contractor": { "id": 1, "title": "Поставщик А" },
+    "quantityFactorArea": false,
+    "enableArea": [],
+    "enableDates": ["2025-12-15", "2025-12-20", "2025-12-25"],
+    "serviceStartTimes": ["09:00", "11:00", "14:00", "16:00"],
+    "serviceDurationMinutes": 120,
+    "servicePeriod": { "id": 7, "title": "Согласно расписанию" },
+    "cost_per_unit": 7000
+  },
+  {
     "id": 6,
     "title": "Простая услуга все валюты",
     "type": { "id": 1, "title": "Жилой" },

@@ -229,6 +229,11 @@ const isHourlyService = computed(() => {
   const period = selectedProduct.value?.servicePeriod
   return period?.id === 5 || period?.title === 'Почасовая'
 })
+const isScheduledService = computed(() => {
+  const period = selectedProduct.value?.servicePeriod
+  return period?.id === 7 || period?.title === 'Согласно расписанию'
+})
+const isTimeService = computed(() => isHourlyService.value || isScheduledService.value)
 const showTotalQuantity = computed(
   () => selectedProduct.value?.quantityFactorArea || isDailyService.value || isHourlyService.value,
 )
@@ -327,7 +332,7 @@ const timeOptions = computed<SelectItem[]>(() => {
 })
 
 const timeOptionsStart = computed<SelectItem[]>(() => {
-  if (!isHourlyService.value) return timeOptions.value
+  if (!isTimeService.value) return timeOptions.value
   const list = allowedServiceStartTimes.value
   if (!list.length) return timeOptions.value
   return list.map(t => ({ value: t, label: t }))
@@ -403,7 +408,7 @@ watch(
         state.serviceDates = state.serviceDates.filter(d => allowed.includes(d))
       }
     }
-    if (!isHourlyService.value) {
+    if (!isTimeService.value) {
       state.serviceDate = ''
       state.serviceTimeFrom = ''
       state.serviceTimeTo = ''
@@ -632,9 +637,7 @@ watch(
   ],
   () => {
     if (!state.autoRecalc) return
-    if (isHourlyService.value) {
-      recalcHourlyQuantity()
-    }
+    if (isHourlyService.value) recalcHourlyQuantity()
     recalcPrices()
   },
   { immediate: true },
@@ -650,27 +653,28 @@ watch(
 
 const toast = useToast()
 watch(
-  [isHourlyService, () => state.serviceDate, () => state.serviceTimeFrom, () => state.serviceTimeTo],
-  ([isHourly]) => {
-    if (isHourly) {
+  [isTimeService, () => state.serviceDate, () => state.serviceTimeFrom, () => state.serviceTimeTo],
+  ([isTime]) => {
+    if (!isTime) return
+    if (isHourlyService.value) {
       recalcHourlyQuantity()
-      // сбрасываем конец, если стал недопустим
-      if (state.serviceTimeFrom && state.serviceTimeTo) {
-        const [fh, fm] = state.serviceTimeFrom.split(':').map(Number)
-        const [th, tm] = state.serviceTimeTo.split(':').map(Number)
-        const start = fh * 60 + fm
-        const end = th * 60 + tm
-        const fixedDuration = serviceDurationMinutes.value
-        if (fixedDuration > 0) {
-          if (Number.isNaN(start) || Number.isNaN(end) || end - start !== fixedDuration) {
-            state.serviceTimeTo = ''
-          }
-          return
-        }
-        const minDuration = minServiceDurationMinutes.value || 1
-        if (Number.isNaN(start) || Number.isNaN(end) || end - start < minDuration) {
+    }
+    // сбрасываем конец, если стал недопустим
+    if (state.serviceTimeFrom && state.serviceTimeTo) {
+      const [fh, fm] = state.serviceTimeFrom.split(':').map(Number)
+      const [th, tm] = state.serviceTimeTo.split(':').map(Number)
+      const start = fh * 60 + fm
+      const end = th * 60 + tm
+      const fixedDuration = serviceDurationMinutes.value
+      if (fixedDuration > 0) {
+        if (Number.isNaN(start) || Number.isNaN(end) || end - start !== fixedDuration) {
           state.serviceTimeTo = ''
         }
+        return
+      }
+      const minDuration = minServiceDurationMinutes.value || 1
+      if (Number.isNaN(start) || Number.isNaN(end) || end - start < minDuration) {
+        state.serviceTimeTo = ''
       }
     }
   },
@@ -678,9 +682,9 @@ watch(
 )
 
 watch(
-  [isHourlyService, allowedServiceStartTimes, () => state.serviceTimeFrom],
-  ([isHourly, allowed]) => {
-    if (!isHourly) return
+  [isTimeService, allowedServiceStartTimes, () => state.serviceTimeFrom],
+  ([isTime, allowed]) => {
+    if (!isTime) return
     if (!allowed.length) return
     if (state.serviceTimeFrom && !allowed.includes(state.serviceTimeFrom)) {
       state.serviceTimeFrom = ''
@@ -803,9 +807,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const markupTypeId = markupTitleToId[state.markupType] ?? null
   const currencyId = currencyIdFromCode[state.currency] ?? null
   const serviceDatesPayload = isDailyService.value ? state.serviceDates : null
-  const serviceDateSingle = isHourlyService.value ? state.serviceDate : null
-  const serviceTimeFromPayload = isHourlyService.value ? state.serviceTimeFrom : null
-  const serviceTimeToPayload = isHourlyService.value ? state.serviceTimeTo : null
+  const serviceDateSingle = isTimeService.value ? state.serviceDate : null
+  const serviceTimeFromPayload = isTimeService.value ? state.serviceTimeFrom : null
+  const serviceTimeToPayload = isTimeService.value ? state.serviceTimeTo : null
   const areaValueNumber = Number(state.areaValue || dealArea || 0) || 0
   if (product?.quantityFactorArea) {
     if (!state.areaTypeId) {
@@ -839,9 +843,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       }
     }
   }
-  if (isHourlyService.value) {
+  if (isTimeService.value) {
     if (!serviceDateSingle) {
-      toast.add({ title: 'Укажите дату', description: 'Для почасовой услуги выберите дату', color: 'air-primary-alert' })
+      toast.add({ title: 'Укажите дату', description: 'Выберите дату предоставления услуги', color: 'air-primary-alert' })
       return
     }
     if (allowedServiceDates.value.length && !allowedServiceDates.value.includes(serviceDateSingle)) {
@@ -884,10 +888,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       })
       return
     }
-    state.hoursCount = Math.ceil((end - start) / 60)
+    if (isHourlyService.value) {
+      state.hoursCount = Math.ceil((end - start) / 60)
+    }
   }
 
-  const hasTimeFlag = isHourlyService.value
+  const hasTimeFlag = isTimeService.value
   const hasDaysFlag = isDailyService.value || hasCustomDayCount.value
   const hasAreaFlag = !!product?.quantityFactorArea
 
@@ -1072,42 +1078,54 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </B24FormField>
         </div>
       </template>
-      <!-- Даты/время для почасовой услуги -->
-      <template v-else-if="isHourlyService">
+      <!-- Даты/время для почасовой услуги и расписания -->
+      <template v-else-if="isTimeService">
         <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 10px;">
-          <B24FormField label="Дата" name="serviceDateSingle" style="flex:1;">
+          <B24FormField
+            label="Дата"
+            name="serviceDateSingle"
+            :style="isScheduledService ? 'width: 200px;' : 'flex: 1;'"
+          >
             <B24Select
               v-model="state.serviceDate"
               :items="serviceDateOptions"
               value-key="value"
               label-key="label"
               placeholder="Выберите дату"
-              :style="{ width: '150px' }"
+              :style="isScheduledService ? 'width: 200px;' : 'width: 100%;'"
 
             />
           </B24FormField>
-          <B24FormField label="Время начала" name="serviceTimeFrom" style="width: 150px;">
+          <B24FormField
+            label="Время начала"
+            name="serviceTimeFrom"
+            :style="isScheduledService ? 'width: 190px;' : 'flex: 1;'"
+          >
             <B24Select
               v-model="state.serviceTimeFrom"
               :items="timeOptionsStart"
               value-key="value"
               label-key="label"
               placeholder="Выберите время"
-              :style="{ width: '150px' }"
+              :style="isScheduledService ? 'width: 190px;' : 'width: 100%;'"
             />
           </B24FormField>
-          <B24FormField label="Время окончания" name="serviceTimeTo" style="width: 150px;">
+          <B24FormField
+            label="Время окончания"
+            name="serviceTimeTo"
+            :style="isScheduledService ? 'width: 190px;' : 'flex: 1;'"
+          >
             <B24Select
               v-model="state.serviceTimeTo"
               :items="timeOptionsEnd"
               value-key="value"
               label-key="label"
               placeholder="Выберите время"
-              :style="{ width: '150px' }"
+              :style="isScheduledService ? 'width: 190px;' : 'width: 100%;'"
               :disabled="serviceDurationMinutes > 0"
             />
           </B24FormField>
-          <B24FormField label="Количество часов" name="hoursCount" style="width: 150px;">
+          <B24FormField v-if="isHourlyService" label="Количество часов" name="hoursCount" style="width: 150px;">
             <B24Input :model-value="state.hoursCount" disabled placeholder="0" />
           </B24FormField>
         </div>
