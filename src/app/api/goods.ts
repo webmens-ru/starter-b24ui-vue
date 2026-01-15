@@ -25,6 +25,9 @@ export type Good = {
   quantityFactorArea?: boolean
   enableDates?: string[]
   enableArea?: number[]
+  serviceStartTimes?: string[]
+  minServiceDurationMinutes?: number
+  serviceDurationMinutes?: number
   servicePeriod?: {
     id: number
     title: string
@@ -73,6 +76,21 @@ export async function fetchGoods(params: FetchGoodsParams = {}): Promise<Good[]>
             return typeof d === 'string' ? d.slice(0, 10) : ''
           }).filter(Boolean)
         : [],
+      serviceStartTimes: Array.isArray((item as any).serviceStartTimes)
+        ? (item as any).serviceStartTimes
+            .map((t: any) => (typeof t === 'string' ? t.trim() : ''))
+            .filter(Boolean)
+        : [],
+      minServiceDurationMinutes: Number.isFinite(
+        Number((item as any).minServiceDurationMinutes ?? (item as any).minDurationMinutes),
+      )
+        ? Number((item as any).minServiceDurationMinutes ?? (item as any).minDurationMinutes)
+        : undefined,
+      serviceDurationMinutes: Number.isFinite(
+        Number((item as any).serviceDurationMinutes ?? (item as any).durationMinutes),
+      )
+        ? Number((item as any).serviceDurationMinutes ?? (item as any).durationMinutes)
+        : undefined,
       servicePeriod: (item as any).servicePeriod ?? { id: 1, title: 'Весь период' },
     }))
   } catch (error) {

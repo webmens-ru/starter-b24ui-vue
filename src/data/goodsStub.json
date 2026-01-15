@@ -26,6 +26,8 @@
     "quantityFactorArea": true,
     "enableArea": [1, 5, 7, 13],
     "enableDates": ["2025-12-15", "2025-12-16"],
+    "serviceStartTimes": ["09:00", "10:00", "12:00", "14:30", "16:00"],
+    "minServiceDurationMinutes": 90,
     "servicePeriod": { "id": 5, "title": "Почасовая" },
     "cost_per_unit": 8000
   },
@@ -41,6 +43,8 @@
     "quantityFactorArea": false,
     "enableArea": [],
     "enableDates": ["2025-12-15", "2025-12-16"],
+    "serviceStartTimes": ["08:30", "09:00", "11:00", "13:30", "15:00"],
+    "serviceDurationMinutes": 240,
     "servicePeriod": { "id": 5, "title": "Почасовая" },
     "cost_per_unit": 8000
   },

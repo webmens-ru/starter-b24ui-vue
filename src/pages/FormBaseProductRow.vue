@@ -263,6 +263,28 @@ function normalizeDateString(val: any): string {
   return ''
 }
 
+function normalizeTimeString(val: any): string {
+  if (!val) return ''
+  const raw = typeof val === 'string' ? val.trim() : String(val)
+  const [hRaw, mRaw] = raw.split(':')
+  const h = Number(hRaw)
+  const m = Number(mRaw)
+  if (Number.isNaN(h) || Number.isNaN(m)) return ''
+  if (h < 0 || h > 24 || m < 0 || m > 59) return ''
+  if (h === 24 && m !== 0) return ''
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+}
+
+function addMinutesToTime(time: string, minutesToAdd: number): string {
+  const [h, m] = time.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return ''
+  const total = h * 60 + m + minutesToAdd
+  if (total < 0 || total > 24 * 60) return ''
+  const hh = Math.floor(total / 60)
+  const mm = total % 60
+  return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`
+}
+
 const allowedServiceDates = computed<string[]>(() =>
   (selectedProduct.value?.enableDates ?? []).map(d => normalizeDateString(d)).filter(Boolean),
 )
@@ -279,6 +301,18 @@ const costPerUnitLabel = computed(() =>
 )
 const totalCostLabel = computed(() => (state.costSource === 'total' ? '✔ Себестоимость' : 'Себестоимость'))
 
+const allowedServiceStartTimes = computed<string[]>(() =>
+  (selectedProduct.value?.serviceStartTimes ?? []).map(t => normalizeTimeString(t)).filter(Boolean),
+)
+const minServiceDurationMinutes = computed(() => {
+  const val = Number(selectedProduct.value?.minServiceDurationMinutes)
+  return Number.isFinite(val) && val > 0 ? val : 0
+})
+const serviceDurationMinutes = computed(() => {
+  const val = Number(selectedProduct.value?.serviceDurationMinutes)
+  return Number.isFinite(val) && val > 0 ? val : 0
+})
+
 const timeOptions = computed<SelectItem[]>(() => {
   const opts: SelectItem[] = []
   for (let h = 0; h < 24; h++) {
@@ -292,12 +326,24 @@ const timeOptions = computed<SelectItem[]>(() => {
   return opts
 })
 
+const timeOptionsStart = computed<SelectItem[]>(() => {
+  if (!isHourlyService.value) return timeOptions.value
+  const list = allowedServiceStartTimes.value
+  if (!list.length) return timeOptions.value
+  return list.map(t => ({ value: t, label: t }))
+})
+
 const timeOptionsEnd = computed<SelectItem[]>(() => {
   const base = [...timeOptions.value, { value: '24:00', label: '24:00' }]
   if (!state.serviceTimeFrom) return base
   const [fh, fm] = state.serviceTimeFrom.split(':').map(Number)
   if (Number.isNaN(fh) || Number.isNaN(fm)) return base
-  const minMinutes = fh * 60 + fm + 1 // строго больше
+  if (serviceDurationMinutes.value > 0) {
+    const end = addMinutesToTime(state.serviceTimeFrom, serviceDurationMinutes.value)
+    return end ? base.filter(opt => (opt as any).value === end) : []
+  }
+  const minDuration = minServiceDurationMinutes.value || 1
+  const minMinutes = fh * 60 + fm + minDuration
   return base.filter(opt => {
     const val = (opt as any).value ?? opt
     const [h, m] = String(val).split(':').map(Number)
@@ -361,6 +407,16 @@ watch(
       state.serviceDate = ''
       state.serviceTimeFrom = ''
       state.serviceTimeTo = ''
+    } else {
+      const allowed = allowedServiceStartTimes.value
+      if (allowed.length && state.serviceTimeFrom && !allowed.includes(state.serviceTimeFrom)) {
+        state.serviceTimeFrom = ''
+        state.serviceTimeTo = ''
+      }
+      if (serviceDurationMinutes.value > 0 && state.serviceTimeFrom) {
+        const end = addMinutesToTime(state.serviceTimeFrom, serviceDurationMinutes.value)
+        state.serviceTimeTo = end || ''
+      }
     }
     if (selectedProduct.value?.quantityFactorArea) {
       const allowed = selectedProduct.value.enableArea ?? []
@@ -604,10 +660,35 @@ watch(
         const [th, tm] = state.serviceTimeTo.split(':').map(Number)
         const start = fh * 60 + fm
         const end = th * 60 + tm
-        if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+        const fixedDuration = serviceDurationMinutes.value
+        if (fixedDuration > 0) {
+          if (Number.isNaN(start) || Number.isNaN(end) || end - start !== fixedDuration) {
+            state.serviceTimeTo = ''
+          }
+          return
+        }
+        const minDuration = minServiceDurationMinutes.value || 1
+        if (Number.isNaN(start) || Number.isNaN(end) || end - start < minDuration) {
           state.serviceTimeTo = ''
         }
       }
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  [isHourlyService, allowedServiceStartTimes, () => state.serviceTimeFrom],
+  ([isHourly, allowed]) => {
+    if (!isHourly) return
+    if (!allowed.length) return
+    if (state.serviceTimeFrom && !allowed.includes(state.serviceTimeFrom)) {
+      state.serviceTimeFrom = ''
+      state.serviceTimeTo = ''
+    }
+    if (serviceDurationMinutes.value > 0 && state.serviceTimeFrom) {
+      const end = addMinutesToTime(state.serviceTimeFrom, serviceDurationMinutes.value)
+      state.serviceTimeTo = end || ''
     }
   },
   { immediate: true },
@@ -683,8 +764,8 @@ async function loadDetail() {
     if (detail.autoRecalc !== undefined) state.autoRecalc = Boolean(detail.autoRecalc)
     if (Array.isArray(detail.serviceDates)) state.serviceDates = detail.serviceDates.filter(Boolean)
     if (detail.serviceDate) state.serviceDate = normalizeDateString(detail.serviceDate)
-    if (detail.serviceTimeFrom) state.serviceTimeFrom = detail.serviceTimeFrom
-    if (detail.serviceTimeTo) state.serviceTimeTo = detail.serviceTimeTo
+    if (detail.serviceTimeFrom) state.serviceTimeFrom = normalizeTimeString(detail.serviceTimeFrom)
+    if (detail.serviceTimeTo) state.serviceTimeTo = normalizeTimeString(detail.serviceTimeTo)
 
     recalcPrices()
   } catch (error) {
@@ -783,6 +864,24 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     const end = th * 60 + tm
     if (end <= start) {
       toast.add({ title: 'Время некорректно', description: 'Окончание должно быть позже начала', color: 'air-primary-alert' })
+      return
+    }
+    const fixedDuration = serviceDurationMinutes.value || 0
+    if (fixedDuration > 0 && end - start !== fixedDuration) {
+      toast.add({
+        title: 'Неверная длительность',
+        description: `Продолжительность должна быть ${fixedDuration} мин`,
+        color: 'air-primary-alert',
+      })
+      return
+    }
+    const minDuration = minServiceDurationMinutes.value || 0
+    if (minDuration > 0 && end - start < minDuration) {
+      toast.add({
+        title: 'Слишком короткая услуга',
+        description: `Минимальная продолжительность ${minDuration} мин`,
+        color: 'air-primary-alert',
+      })
       return
     }
     state.hoursCount = Math.ceil((end - start) / 60)
@@ -990,7 +1089,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <B24FormField label="Время начала" name="serviceTimeFrom" style="width: 150px;">
             <B24Select
               v-model="state.serviceTimeFrom"
-              :items="timeOptions"
+              :items="timeOptionsStart"
               value-key="value"
               label-key="label"
               placeholder="Выберите время"
@@ -1005,6 +1104,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               label-key="label"
               placeholder="Выберите время"
               :style="{ width: '150px' }"
+              :disabled="serviceDurationMinutes > 0"
             />
           </B24FormField>
           <B24FormField label="Количество часов" name="hoursCount" style="width: 150px;">
@@ -1012,6 +1112,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </B24FormField>
         </div>
         <div v-if="!serviceDateOptions.length" class="text-sm text-slate-600">Нет доступных дат</div>
+        <div v-if="minServiceDurationMinutes > 0" class="text-sm text-slate-600">
+          Минимальная продолжительность: {{ minServiceDurationMinutes }} мин
+        </div>
         
       </template>
       <template v-if="selectedProduct?.quantityFactorArea">
