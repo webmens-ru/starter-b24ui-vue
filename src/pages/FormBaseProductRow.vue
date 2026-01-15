@@ -86,6 +86,7 @@ const goodsFromApi = ref<Good[] | null>(null)
 const detailLoading = ref(false)
 const submitLoading = ref(false)
 const costUpdateGuard = ref(false)
+const productSearch = ref('')
 const isEdit = computed(() => Boolean(recordId))
 onMounted(async () => {
   goodsFromApi.value = await fetchGoods({
@@ -174,10 +175,33 @@ const allGoods = computed<Good[]>(() => {
   if (goodsFromApi.value === null) return [] // ждём ответ
   return goodsFromApi.value.length ? goodsFromApi.value : goodsStub
 })
-const filteredGoods = computed<Good[]>(() => allGoods.value)
+const filteredGoods = computed<Good[]>(() => {
+  const list = allGoods.value
+  const query = productSearch.value.trim().toLowerCase()
+  if (!query) return list
+
+  return list.filter(g => {
+    const haystack = [
+      g.title,
+      g.type?.title,
+      g.unit?.title,
+      g.contractor?.title,
+    ]
+    return haystack.some(v => (v ?? '').toString().toLowerCase().includes(query))
+  })
+})
 const productItems = computed<SelectItem[]>(() => {
+  const goods = [...filteredGoods.value]
+  const current =
+    state.product !== undefined ? allGoods.value.find(g => Number(g.id) === Number(state.product)) : undefined
+
+  // обеспечиваем наличие выбранного товара в списке даже при активном поиске
+  if (current && !goods.some(g => Number(g.id) === Number(current.id))) {
+    goods.unshift(current)
+  }
+
   // храним id товара числом, чтобы выборка по v-model работала сразу после загрузки деталей
-  return filteredGoods.value.map((g: Good) => ({
+  return goods.map((g: Good) => ({
     value: g.id,
     label: g.title,
     goodType: g.type?.title ?? '',
@@ -188,7 +212,7 @@ const productItems = computed<SelectItem[]>(() => {
   }))
 })
 const selectedProduct = computed<Good | undefined>(() =>
-  filteredGoods.value.find((g: Good) => Number(g.id) === Number(state.product ?? NaN)),
+  allGoods.value.find((g: Good) => Number(g.id) === Number(state.product ?? NaN)),
 )
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
@@ -357,6 +381,13 @@ watch(
     })
   },
   { immediate: true },
+)
+
+watch(
+  () => state.product,
+  () => {
+    productSearch.value = ''
+  },
 )
 
 watch(
@@ -881,12 +912,29 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             itemTrailingIcon: 'hidden',
           }"
         >
+          <template #content-top>
+            <div class="px-3 pt-3 pb-1">
+              <B24Input
+                v-model="productSearch"
+                type="search"
+                placeholder="Поиск товара..."
+                size="sm"
+                class="w-full"
+                autofocus
+                @keydown.stop
+                @click.stop
+              />
+            </div>
+          </template>
           <template #item-label="{ item }">
             <template v-if="item">
               <div class="flex flex-col gap-1">
                 <span class="font-medium">{{ (item as ProductItem).label }}</span>
               </div>
             </template>
+          </template>
+          <template #content-bottom>
+            <div v-if="!productItems.length" class="px-3 pb-2 text-sm text-slate-600">Ничего не найдено</div>
           </template>
         </B24Select>
       </B24FormField>
