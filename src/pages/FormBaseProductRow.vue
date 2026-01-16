@@ -16,7 +16,7 @@ const placementParams = widgetParams?.placementOptions?.params ?? {}
 const dealTypeBuildingId = placementParams.dealTypeBuildingId ?? 1
 const productTypeId = placementParams.productTypeId
 // recordId должен приходить явно, id слайдера использовать нельзя — иначе грузится чужая запись
-const recordId = placementParams.recordId ?? placementParams.id
+const initialRecordId = placementParams.recordId ?? placementParams.id
 const dealId = placementParams.dealId
 const dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
 const areasObj = placementParams.areas && !Array.isArray(placementParams.areas) ? placementParams.areas : {}
@@ -87,7 +87,8 @@ const detailLoading = ref(false)
 const submitLoading = ref(false)
 const costUpdateGuard = ref(false)
 const productSearch = ref('')
-const isEdit = computed(() => Boolean(recordId))
+const currentRecordId = ref<number | string | undefined>(initialRecordId)
+const isEdit = computed(() => Boolean(currentRecordId.value))
 onMounted(async () => {
   goodsFromApi.value = await fetchGoods({
     dealTypeBuildingId,
@@ -736,12 +737,12 @@ watch(
   },
 )
 async function loadDetail() {
-  if (!recordId) return
+  if (!currentRecordId.value) return
 
   detailLoading.value = true
   try {
     costUpdateGuard.value = true
-    const response = await api.get(`/api/sp1040/view?id=${recordId}`)
+    const response = await api.get(`/api/sp1040/view?id=${currentRecordId.value}`)
     const detail = response.data ?? {}
 
     // Заполняем состояние, если поля пришли
@@ -910,7 +911,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     ...event.data,
     productTypeId,
     dealTypeBuildingId,
-    recordId: recordId ?? undefined,
+    recordId: currentRecordId.value ?? undefined,
     dealId: dealId ?? undefined,
     unitPrice,
     costPerUnit,
@@ -942,11 +943,19 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     submitLoading.value = true
 
-    if (isEdit.value && recordId) {
-      await api.put(`/api/sp1222/update?id=${recordId}`, payload)
+    if (isEdit.value && currentRecordId.value) {
+      await api.put(`/api/sp1222/update?id=${currentRecordId.value}`, payload)
       toast.add({ title: 'Готово', description: 'Изменения сохранены', color: 'air-primary-success' })
     } else {
-      await api.post('/api/sp1222/create', payload)
+      const response = await api.post('/api/sp1222/create', payload)
+      const newId =
+        response?.data?.recordId ??
+        response?.data?.id ??
+        response?.data?.result?.id ??
+        response?.data?.result?.recordId
+      if (newId) {
+        currentRecordId.value = newId
+      }
       toast.add({ title: 'Готово', description: 'Форма отправлена', color: 'air-primary-success' })
     }
   } catch (error) {
@@ -1130,10 +1139,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </B24FormField>
         </div>
         <div v-if="!serviceDateOptions.length" class="text-sm text-slate-600">Нет доступных дат</div>
-        <div v-if="minServiceDurationMinutes > 0" class="text-sm text-slate-600">
-          Минимальная продолжительность: {{ minServiceDurationMinutes }} мин
-        </div>
-        
       </template>
       <template v-if="selectedProduct?.quantityFactorArea">
         <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 12px; margin-top: 10px;">
