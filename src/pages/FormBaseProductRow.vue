@@ -10,13 +10,15 @@ import discountTypeDirectoryJson from '../data/discountTypeDirectory.json'
 import markupTypeDirectoryJson from '../data/markupTypeDirectory.json'
 import currencyDirectoryJson from '../data/currencyDirectory.json'
 import areaDirectoryJson from '../data/areaDirectory.json'
+import timeStartServiceDirectoryJson from '../data/ufCrm19TimeStartService.json'
+import timeFinishServiceDirectoryJson from '../data/ufCrm19TimeFinishService.json'
 
 const widgetParams = typeof window !== 'undefined' ? (window as any)._PARAMS_ : undefined
 const placementParams = widgetParams?.placementOptions?.params ?? {}
 const dealTypeBuildingId = placementParams.dealTypeBuildingId ?? 1
 const productTypeId = placementParams.productTypeId
-// recordId должен приходить явно, id слайдера использовать нельзя — иначе грузится чужая запись
-const initialRecordId = placementParams.recordId ?? placementParams.id
+// id должен приходить явно, id слайдера использовать нельзя — иначе грузится чужая запись
+const initialId = placementParams.id
 const dealId = placementParams.dealId
 const dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
 const areasObj = placementParams.areas && !Array.isArray(placementParams.areas) ? placementParams.areas : {}
@@ -49,6 +51,8 @@ const discountTypeDirectory = discountTypeDirectoryJson as DirectoryItem[]
 const markupTypeDirectory = markupTypeDirectoryJson as DirectoryItem[]
 const currencyDirectory = currencyDirectoryJson as DirectoryItem[]
 const areaDirectory = areaDirectoryJson as AreaDirectoryItem[]
+const timeStartServiceDirectory = timeStartServiceDirectoryJson as { ID: string; VALUE: string }[]
+const timeFinishServiceDirectory = timeFinishServiceDirectoryJson as { ID: string; VALUE: string }[]
 const currencyCodeToTitle: Record<string, string> = {
   руб: 'Рубль',
   usd: 'Доллар США',
@@ -75,6 +79,18 @@ const currencyIdToCode: Record<number, string> = Object.fromEntries(
     })
     .filter(([, code]) => Boolean(code)),
 )
+const timeStartIdByValue: Record<string, string> = Object.fromEntries(
+  timeStartServiceDirectory.map(item => [item.VALUE, item.ID]),
+)
+const timeFinishIdByValue: Record<string, string> = Object.fromEntries(
+  timeFinishServiceDirectory.map(item => [item.VALUE, item.ID]),
+)
+const timeStartValueById: Record<string, string> = Object.fromEntries(
+  timeStartServiceDirectory.map(item => [item.ID, item.VALUE]),
+)
+const timeFinishValueById: Record<string, string> = Object.fromEntries(
+  timeFinishServiceDirectory.map(item => [item.ID, item.VALUE]),
+)
 
 const dealCurrency: Currency | string = 'руб' // валюта сделки (пример)
 const discountTypes = discountTypeDirectory.map(i => i.title)
@@ -87,8 +103,8 @@ const detailLoading = ref(false)
 const submitLoading = ref(false)
 const costUpdateGuard = ref(false)
 const productSearch = ref('')
-const currentRecordId = ref<number | string | undefined>(initialRecordId)
-const isEdit = computed(() => Boolean(currentRecordId.value))
+const currentId = ref<number | string | undefined>(initialId)
+const isEdit = computed(() => Boolean(currentId.value))
 onMounted(async () => {
   goodsFromApi.value = await fetchGoods({
     dealTypeBuildingId,
@@ -737,12 +753,12 @@ watch(
   },
 )
 async function loadDetail() {
-  if (!currentRecordId.value) return
+  if (!currentId.value) return
 
   detailLoading.value = true
   try {
     costUpdateGuard.value = true
-    const response = await api.get(`/api/sp1040/view?id=${currentRecordId.value}`)
+    const response = await api.get(`/api/sp1040/view?id=${currentId.value}`)
     const detail = response.data ?? {}
 
     // Заполняем состояние, если поля пришли
@@ -769,8 +785,18 @@ async function loadDetail() {
     if (detail.autoRecalc !== undefined) state.autoRecalc = Boolean(detail.autoRecalc)
     if (Array.isArray(detail.serviceDates)) state.serviceDates = detail.serviceDates.filter(Boolean)
     if (detail.serviceDate) state.serviceDate = normalizeDateString(detail.serviceDate)
-    if (detail.serviceTimeFrom) state.serviceTimeFrom = normalizeTimeString(detail.serviceTimeFrom)
-    if (detail.serviceTimeTo) state.serviceTimeTo = normalizeTimeString(detail.serviceTimeTo)
+    if (detail.serviceTimeFromId) {
+      const value = timeStartValueById[String(detail.serviceTimeFromId)]
+      state.serviceTimeFrom = normalizeTimeString(value)
+    } else if (detail.serviceTimeFrom) {
+      state.serviceTimeFrom = normalizeTimeString(detail.serviceTimeFrom)
+    }
+    if (detail.serviceTimeToId) {
+      const value = timeFinishValueById[String(detail.serviceTimeToId)]
+      state.serviceTimeTo = normalizeTimeString(value)
+    } else if (detail.serviceTimeTo) {
+      state.serviceTimeTo = normalizeTimeString(detail.serviceTimeTo)
+    }
 
     recalcPrices()
   } catch (error) {
@@ -809,8 +835,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const currencyId = currencyIdFromCode[state.currency] ?? null
   const serviceDatesPayload = isDailyService.value ? state.serviceDates : null
   const serviceDateSingle = isTimeService.value ? state.serviceDate : null
-  const serviceTimeFromPayload = isTimeService.value ? state.serviceTimeFrom : null
-  const serviceTimeToPayload = isTimeService.value ? state.serviceTimeTo : null
+  const serviceTimeFromPayload = isTimeService.value ? timeStartIdByValue[state.serviceTimeFrom] ?? null : null
+  const serviceTimeToPayload = isTimeService.value ? timeFinishIdByValue[state.serviceTimeTo] ?? null : null
   const areaValueNumber = Number(state.areaValue || dealArea || 0) || 0
   if (product?.quantityFactorArea) {
     if (!state.areaTypeId) {
@@ -911,7 +937,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     ...event.data,
     productTypeId,
     dealTypeBuildingId,
-    recordId: currentRecordId.value ?? undefined,
+    id: currentId.value ?? undefined,
     dealId: dealId ?? undefined,
     unitPrice,
     costPerUnit,
@@ -927,8 +953,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     currency: state.currency,
     serviceDates: serviceDatesPayload,
     serviceDate: serviceDateSingle,
-    serviceTimeFrom: serviceTimeFromPayload,
-    serviceTimeTo: serviceTimeToPayload,
+    serviceTimeFromId: serviceTimeFromPayload,
+    serviceTimeToId: serviceTimeToPayload,
     quantityWithArea,
     areaTypeId: areaTypeIdPayload,
     areaValue: areaValuePayload,
@@ -943,18 +969,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     submitLoading.value = true
 
-    if (isEdit.value && currentRecordId.value) {
-      await api.put(`/api/sp1222/update?id=${currentRecordId.value}`, payload)
+    if (isEdit.value && currentId.value) {
+      await api.put(`/api/sp1222/update?id=${currentId.value}`, payload)
       toast.add({ title: 'Готово', description: 'Изменения сохранены', color: 'air-primary-success' })
     } else {
       const response = await api.post('/api/sp1222/create', payload)
       const newId =
-        response?.data?.recordId ??
         response?.data?.id ??
-        response?.data?.result?.id ??
-        response?.data?.result?.recordId
+        response?.data?.result?.id
       if (newId) {
-        currentRecordId.value = newId
+        currentId.value = newId
       }
       toast.add({ title: 'Готово', description: 'Форма отправлена', color: 'air-primary-success' })
     }
@@ -1101,7 +1125,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               value-key="value"
               label-key="label"
               placeholder="Выберите дату"
-              :style="isScheduledService ? 'width: 200px;' : 'width: 100%;'"
+              :style="isScheduledService ? 'width: 200px;' : 'width: 150px;'"
 
             />
           </B24FormField>
@@ -1116,7 +1140,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               value-key="value"
               label-key="label"
               placeholder="Выберите время"
-              :style="isScheduledService ? 'width: 190px;' : 'width: 100%;'"
+              :style="isScheduledService ? 'width: 190px;' : 'width: 150px;'"
             />
           </B24FormField>
           <B24FormField
@@ -1130,7 +1154,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               value-key="value"
               label-key="label"
               placeholder="Выберите время"
-              :style="isScheduledService ? 'width: 190px;' : 'width: 100%;'"
+              :style="isScheduledService ? 'width: 190px;' : 'width: 150px;'"
               :disabled="serviceDurationMinutes > 0"
             />
           </B24FormField>
