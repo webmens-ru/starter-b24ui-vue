@@ -132,23 +132,10 @@ setLocale({
   },
 })
 
-const schema = yup.object({
-  product: yup.number().nullable().default(undefined).required('Выберите товар'),
-  quantity: yup.number().required('Укажите количество').min(1),
-  discountValue: yup.number().required().default(0),
-  discountType: yup.string().oneOf(discountTypes).required(),
-  markupValue: yup.number().required().default(0),
-  markupType: yup.string().oneOf(markupTypes).required(),
-  autoRecalc: yup.boolean().default(true),
-  serviceDates: yup.array().of(yup.string()).default([]),
-  // остальные поля — не редактируемые или вычисляются автоматически
-})
-
-type Schema = yup.InferType<typeof schema>
-type FormSubmitEvent<T> = SubmitEvent & { data: T }
-
 const state = reactive({
   product: undefined as number | undefined, // id товара
+  customProductTitle: '',
+  customUnitPrice: 0,
   quantity: 1,
   unit: '', // единица измерения
   totalQuantity: 0,
@@ -231,6 +218,32 @@ const productItems = computed<SelectItem[]>(() => {
 const selectedProduct = computed<Good | undefined>(() =>
   allGoods.value.find((g: Good) => Number(g.id) === Number(state.product ?? NaN)),
 )
+const isStubProduct = computed(() => {
+  const productTypeIdNumber = Number(productTypeId)
+  return productTypeIdNumber === 41 || selectedProduct.value?.type?.id === 41
+})
+const schema = yup.object({
+  product: yup.number().nullable().default(undefined).required('Выберите товар'),
+  customProductTitle: yup
+    .string()
+    .default('')
+    .test('stub-title', 'Введите название', val => !isStubProduct.value || Boolean(val?.trim())),
+  customUnitPrice: yup
+    .number()
+    .default(0)
+    .test('stub-price', 'Укажите цену', val => !isStubProduct.value || Number(val) > 0),
+  quantity: yup.number().required('Укажите количество').min(1),
+  discountValue: yup.number().required().default(0),
+  discountType: yup.string().oneOf(discountTypes).required(),
+  markupValue: yup.number().required().default(0),
+  markupType: yup.string().oneOf(markupTypes).required(),
+  autoRecalc: yup.boolean().default(true),
+  serviceDates: yup.array().of(yup.string()).default([]),
+  // остальные поля — не редактируемые или вычисляются автоматически
+})
+
+type Schema = yup.InferType<typeof schema>
+type FormSubmitEvent<T> = SubmitEvent & { data: T }
 const isCurrencyMismatch = computed(() => state.currency !== dealCurrency)
 const isFinalOverCost = computed(() => {
   if (state.currency !== 'руб') return false
@@ -415,6 +428,20 @@ watch(
     // подтягиваем себестоимость из товара по умолчанию
     state.costPerUnit = selectedProduct.value?.cost_per_unit?.toString() ?? ''
     state.costCurrency = 'Рубль'
+    if (isStubProduct.value) {
+      state.customProductTitle = selectedProduct.value?.title ?? ''
+      const currency = state.currency
+      const basePrice =
+        currency === 'руб'
+          ? selectedProduct.value?.price_rub ?? 0
+          : currency === 'usd'
+            ? selectedProduct.value?.price_usd ?? 0
+            : selectedProduct.value?.price_eur ?? 0
+      state.customUnitPrice = Number(basePrice || 0)
+    } else {
+      state.customProductTitle = ''
+      state.customUnitPrice = 0
+    }
 
     if (!isDailyService.value) {
       state.serviceDates = []
@@ -562,7 +589,13 @@ function recalcPrices() {
   state.unit = product.unit?.title ?? ''
   state.contractor = product.contractor?.title ?? ''
   const currency = state.currency
-  const basePrice = currency === 'руб' ? product.price_rub : currency === 'usd' ? product.price_usd : product.price_eur
+  const basePrice = isStubProduct.value
+    ? Number(state.customUnitPrice) || 0
+    : currency === 'руб'
+      ? product.price_rub
+      : currency === 'usd'
+        ? product.price_usd
+        : product.price_eur
   state.baseUnitPrice = Number(basePrice || 0).toFixed(2)
   const costPerUnitRaw = Number(state.costPerUnit)
 
@@ -641,6 +674,7 @@ function recalcHourlyQuantity() {
 watch(
   [
     selectedProduct,
+    () => state.customUnitPrice,
     () => state.quantity,
     () => state.discountValue,
     () => state.discountType,
@@ -775,6 +809,13 @@ async function loadDetail() {
       const code = currencyIdToCode[Number(detail.currencyId)]
       if (code) state.currency = code as Currency
     }
+    if (detail.productTitle || detail.productName || detail.title) {
+      state.customProductTitle = String(detail.productTitle ?? detail.productName ?? detail.title)
+    }
+    if (detail.unitPrice !== undefined || detail.price !== undefined) {
+      const price = detail.unitPrice ?? detail.price
+      state.customUnitPrice = Number(price || 0)
+    }
     if (detail.unit) state.unit = detail.unit
     if (detail.contractor) state.contractor = detail.contractor
     if (detail.comment) state.comment = detail.comment
@@ -814,11 +855,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const product = selectedProduct.value
   const currency = state.currency
   const unitPrice =
-    currency === 'руб'
-      ? product?.price_rub ?? 0
-      : currency === 'usd'
-        ? product?.price_usd ?? 0
-        : product?.price_eur ?? 0
+    isStubProduct.value
+      ? Number(state.customUnitPrice) || 0
+      : currency === 'руб'
+        ? product?.price_rub ?? 0
+        : currency === 'usd'
+          ? product?.price_usd ?? 0
+          : product?.price_eur ?? 0
   const costPerUnit = Number(state.costPerUnit) || 0
   const requiresToApproval =
     (product as any)?.requiresToApproval ??
@@ -940,6 +983,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     id: currentId.value ?? undefined,
     dealId: dealId ?? undefined,
     unitPrice,
+    productTitle: isStubProduct.value ? state.customProductTitle.trim() : undefined,
     costPerUnit,
     requiresToApproval,
     // передаём id единицы измерения
@@ -1076,6 +1120,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </template>
         </B24Select>
       </B24FormField>
+      <template v-if="isStubProduct">
+        <B24FormField label="Название" name="customProductTitle" required>
+          <B24Input class="form-field-600px" v-model="state.customProductTitle" placeholder="Введите название" />
+        </B24FormField>
+      </template>
       <!-- Даты предоставления услуги (посуточно) -->
       <template v-if="isDailyService">
         <div class="form-field-600px form-flex-row flex-align-bottom" style="gap: 12px;">
@@ -1280,11 +1329,21 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <div class="form-field-600px form-flex-row flex-align-bottom">
         <!-- Стоимость итоговая -->
         <B24FormField label="Стоимость ед. базовая" name="baseUnitPrice">
-          <B24Input 
-          :model-value="state.baseUnitPrice" 
-          disabled 
-          placeholder="0" 
-          style="width:140px"
+          <B24Input
+            v-if="isStubProduct"
+            v-model="state.customUnitPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            style="width:140px"
+          />
+          <B24Input
+            v-else
+            :model-value="state.baseUnitPrice"
+            disabled
+            placeholder="0"
+            style="width:140px"
           />
         </B24FormField>
         <B24FormField label="Стоимость ед." name="finalUnitPrice">
