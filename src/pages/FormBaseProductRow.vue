@@ -168,7 +168,6 @@ const state = reactive({
 type ProductItem = {
   value: string
   label: string
-  goodType: string
   unit: string
   contractor: string
   price: number
@@ -187,7 +186,6 @@ const filteredGoods = computed<Good[]>(() => {
   return list.filter(g => {
     const haystack = [
       g.title,
-      g.type?.title,
       g.unit?.title,
       g.contractor?.title,
     ]
@@ -208,7 +206,6 @@ const productItems = computed<SelectItem[]>(() => {
   return goods.map((g: Good) => ({
     value: g.id,
     label: g.title,
-    goodType: g.type?.title ?? '',
     unit: g.unit?.title ?? '',
     contractor: g.contractor?.title ?? '',
     price: state.currency === 'руб' ? g.price_rub : state.currency === 'usd' ? g.price_usd : g.price_eur,
@@ -220,7 +217,7 @@ const selectedProduct = computed<Good | undefined>(() =>
 )
 const isStubProduct = computed(() => {
   const productTypeIdNumber = Number(productTypeId)
-  return productTypeIdNumber === 41 || selectedProduct.value?.type?.id === 41
+  return productTypeIdNumber === 41
 })
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),

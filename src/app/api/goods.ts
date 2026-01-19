@@ -6,7 +6,7 @@ export type Currency = (typeof currencyList)[number]
 export type Good = {
   id: number
   title: string
-  type: {
+  type?: {
     id: number
     title: string
   }
@@ -54,7 +54,7 @@ export async function fetchGoods(params: FetchGoodsParams = {}): Promise<Good[]>
     return data.map(item => ({
       id: item.id,
       title: (item as any).title ?? '',
-      type: (item as any).type ?? { id: 0, title: '' },
+      type: (item as any).type,
       unit: (item as any).unit ?? { id: 0, title: '' },
       price_rub: (item as any).price_rub ?? (item as any).priceByCurrency?.руб ?? 0,
       price_usd: (item as any).price_usd ?? (item as any).priceByCurrency?.usd ?? 0,

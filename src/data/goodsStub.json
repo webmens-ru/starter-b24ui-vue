@@ -2,7 +2,6 @@
   {
     "id": 1,
     "title": "Услуга зависит от дат только usd, eur",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 0,
     "price_usd": 120,
@@ -17,7 +16,6 @@
   {
     "id": 4,
     "title": "Услуга зависит от дат со временем и площади только rub, eur",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 10000,
     "price_usd": 0,
@@ -34,7 +32,6 @@
   {
     "id": 3,
     "title": "Услуга зависит от дат со временем только rub, eur",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 10000,
     "price_usd": 0,
@@ -51,7 +48,6 @@
   {
     "id": 5,
     "title": "Услуга зависит только от площади только rub, usd",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 10000,
     "price_usd": 120,
@@ -66,7 +62,6 @@
   {
     "id": 7,
     "title": "Услуга зависит от дат и площади только usd, eur",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 0,
     "price_usd": 120,
@@ -81,7 +76,6 @@
   {
     "id": 8,
     "title": "Услуга по расписанию",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 9000,
     "price_usd": 0,
@@ -98,7 +92,6 @@
   {
     "id": 6,
     "title": "Простая услуга все валюты",
-    "type": { "id": 1, "title": "Жилой" },
     "unit": { "id": 1, "title": "шт" },
     "price_rub": 10000,
     "price_usd": 120,
@@ -113,7 +106,6 @@
   {
     "id": 2,
     "title": "Стол",
-    "type": { "id": 2, "title": "Офис" },
     "unit": { "id": 2, "title": "компл" },
     "price_rub": 5000,
     "price_usd": 60,
