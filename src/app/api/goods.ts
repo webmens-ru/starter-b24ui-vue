@@ -33,6 +33,11 @@ export type Good = {
   }
 }
 
+export type Contractor = {
+  id: number
+  title: string
+}
+
 type FetchGoodsParams = {
   dealTypeBuildingId?: number
   productTypeId?: number
@@ -99,3 +104,21 @@ export async function fetchGoods(params: FetchGoodsParams = {}): Promise<Good[]>
   }
 }
 
+export async function fetchContractors(): Promise<Contractor[]> {
+  try {
+    const response = await api.get<Contractor[]>('/api/sp1222/contractor')
+    const data = response.data ?? []
+
+    return data
+      .map(item => {
+        const raw = item as any
+        const id = Number(raw?.id ?? raw?.ID ?? raw?.value ?? 0)
+        const title = String(raw?.title ?? raw?.name ?? raw?.TITLE ?? raw?.label ?? '')
+        return { id, title }
+      })
+      .filter(item => item.id > 0 && item.title)
+  } catch (error) {
+    console.warn('[fetch contractors error]', error)
+    return []
+  }
+}

@@ -3,7 +3,7 @@ import type { SelectItem } from '@bitrix24/b24ui-nuxt'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
-import { currencyList, type Currency, type Good, fetchGoods } from '../app/api/goods'
+import { currencyList, type Currency, type Good, type Contractor, fetchGoods, fetchContractors } from '../app/api/goods'
 import api from '../app/api'
 import goodsStubJson from '../data/goodsStub.json'
 import discountTypeDirectoryJson from '../data/discountTypeDirectory.json'
@@ -99,6 +99,7 @@ const markupTypes = markupTypeDirectory.map(i => i.title)
 // Получаем список товаров с бэка с резервной заглушкой
 // goodsFromApi = null означает, что запрос ещё не завершился, поэтому не показываем заглушку
 const goodsFromApi = ref<Good[] | null>(null)
+const contractorsFromApi = ref<Contractor[] | null>(null)
 const detailLoading = ref(false)
 const submitLoading = ref(false)
 const costUpdateGuard = ref(false)
@@ -110,6 +111,7 @@ onMounted(async () => {
     dealTypeBuildingId,
     productTypeId,
   })
+  contractorsFromApi.value = await fetchContractors()
 
   if (isEdit.value) {
     await loadDetail()
@@ -154,7 +156,7 @@ const state = reactive({
   costCurrency: 'Рубль',
   costSource: 'unit' as 'unit' | 'total',
   invoiceIssued: false,
-  contractor: '',
+  contractor: undefined as number | undefined,
   comment: '',
   autoRecalc: true,
   areaTypeId: undefined as number | undefined,
@@ -178,6 +180,24 @@ const allGoods = computed<Good[]>(() => {
   if (goodsFromApi.value === null) return [] // ждём ответ
   return goodsFromApi.value.length ? goodsFromApi.value : goodsStub
 })
+const contractorsFromProducts = computed<Contractor[]>(() => {
+  const map = new Map<number, string>()
+  for (const g of allGoods.value) {
+    const id = Number(g.contractor?.id)
+    const title = g.contractor?.title ?? ''
+    if (id > 0 && title && !map.has(id)) {
+      map.set(id, title)
+    }
+  }
+  return Array.from(map, ([id, title]) => ({ id, title }))
+})
+const contractorOptions = computed<SelectItem[]>(() => {
+  const list = contractorsFromApi.value && contractorsFromApi.value.length
+    ? contractorsFromApi.value
+    : contractorsFromProducts.value
+  return list.map(item => ({ value: item.id, label: item.title }))
+})
+
 const filteredGoods = computed<Good[]>(() => {
   const list = allGoods.value
   const query = productSearch.value.trim().toLowerCase()
@@ -579,68 +599,67 @@ function recalcPrices() {
       state.finalPrice = 0
       state.costPerUnit = ''
       state.totalCost = ''
-    state.costSource = 'unit'
-      state.contractor = ''
+      state.costSource = 'unit'
+      state.contractor = undefined
       return
     }
 
-  state.unit = product.unit?.title ?? ''
-  state.contractor = product.contractor?.title ?? ''
-  const currency = state.currency
-  const basePrice = isCustomPriceEnabled.value
-    ? Number(state.customUnitPrice) || 0
-    : currency === 'руб'
-      ? product.price_rub
-      : currency === 'usd'
-        ? product.price_usd
-        : product.price_eur
-  state.baseUnitPrice = Number(basePrice || 0).toFixed(2)
-  const costPerUnitRaw = Number(state.costPerUnit)
+    state.unit = product.unit?.title ?? ''
+    const currency = state.currency
+    const basePrice = isCustomPriceEnabled.value
+      ? Number(state.customUnitPrice) || 0
+      : currency === 'руб'
+        ? product.price_rub
+        : currency === 'usd'
+          ? product.price_usd
+          : product.price_eur
+    state.baseUnitPrice = Number(basePrice || 0).toFixed(2)
+    const costPerUnitRaw = Number(state.costPerUnit)
 
-  const quantityRaw = Number(state.quantity) || 0
-  const areaFactor = product.quantityFactorArea
-    ? Number(state.areaValue || dealArea || 1) || 1
-    : 1
-  const daysFactor = hasCustomDayCount.value
-    ? Number(state.daysCount) || 1
-    : isDailyService.value
-      ? state.daysCount || state.serviceDates.length || 0
+    const quantityRaw = Number(state.quantity) || 0
+    const areaFactor = product.quantityFactorArea
+      ? Number(state.areaValue || dealArea || 1) || 1
       : 1
-  const hoursFactor = isHourlyService.value ? (state.hoursCount || 0) : 1
-  const quantity = quantityRaw * areaFactor * daysFactor * hoursFactor
-  let discountVal = Number(state.discountValue) || 0
-  const markupVal = Number(state.markupValue) || 0
+    const daysFactor = hasCustomDayCount.value
+      ? Number(state.daysCount) || 1
+      : isDailyService.value
+        ? state.daysCount || state.serviceDates.length || 0
+        : 1
+    const hoursFactor = isHourlyService.value ? (state.hoursCount || 0) : 1
+    const quantity = quantityRaw * areaFactor * daysFactor * hoursFactor
+    let discountVal = Number(state.discountValue) || 0
+    const markupVal = Number(state.markupValue) || 0
 
-  if (state.discountType === '%' && discountVal > 100) {
-    discountVal = 100
-    state.discountValue = 100
-  }
-
-  const baseTotal = basePrice * quantity
-  const discount = state.discountType === '%' ? (baseTotal * discountVal) / 100 : discountVal
-  const markup = state.markupType === '%' ? (baseTotal * markupVal) / 100 : markupVal
-  const totalPrice = Math.max(baseTotal - discount + markup, 0)
-
-  state.finalPrice = Number(totalPrice.toFixed(2))
-  const quantityForCost = showTotalQuantity.value ? (state.totalQuantity || quantity) : quantity
-
-  if (state.costSource === 'total') {
-    const totalCostNum = Number(state.totalCost)
-    if (quantityForCost > 0 && Number.isFinite(totalCostNum)) {
-      const cpu = totalCostNum / quantityForCost
-      state.costPerUnit = Number(cpu.toFixed(2)).toString()
+    if (state.discountType === '%' && discountVal > 100) {
+      discountVal = 100
+      state.discountValue = 100
     }
-  } else {
-    if (Number.isFinite(costPerUnitRaw)) {
-      state.totalCost = Number((costPerUnitRaw * quantityForCost).toFixed(2)).toString()
+
+    const baseTotal = basePrice * quantity
+    const discount = state.discountType === '%' ? (baseTotal * discountVal) / 100 : discountVal
+    const markup = state.markupType === '%' ? (baseTotal * markupVal) / 100 : markupVal
+    const totalPrice = Math.max(baseTotal - discount + markup, 0)
+
+    state.finalPrice = Number(totalPrice.toFixed(2))
+    const quantityForCost = showTotalQuantity.value ? (state.totalQuantity || quantity) : quantity
+
+    if (state.costSource === 'total') {
+      const totalCostNum = Number(state.totalCost)
+      if (quantityForCost > 0 && Number.isFinite(totalCostNum)) {
+        const cpu = totalCostNum / quantityForCost
+        state.costPerUnit = Number(cpu.toFixed(2)).toString()
+      }
     } else {
-      state.totalCost = ''
+      if (Number.isFinite(costPerUnitRaw)) {
+        state.totalCost = Number((costPerUnitRaw * quantityForCost).toFixed(2)).toString()
+      } else {
+        state.totalCost = ''
+      }
     }
-  }
 
-  if (showTotalQuantity.value) {
-    state.totalQuantity = quantity
-  }
+    if (showTotalQuantity.value) {
+      state.totalQuantity = quantity
+    }
 
     const totalQty = quantity || quantityRaw || 0
     state.finalUnitPrice = totalQty > 0 ? Number(totalPrice / totalQty).toFixed(2) : ''
@@ -698,6 +717,23 @@ watch(
   val => {
     if (val) recalcPrices()
   },
+)
+
+watch(
+  selectedProduct,
+  product => {
+    if (!product) {
+      state.contractor = undefined
+      return
+    }
+    if (state.contractor === undefined || state.contractor === null) {
+      const contractorIdFromProduct = Number(product.contractor?.id)
+      if (Number.isFinite(contractorIdFromProduct) && contractorIdFromProduct > 0) {
+        state.contractor = contractorIdFromProduct
+      }
+    }
+  },
+  { immediate: true },
 )
 
 const toast = useToast()
@@ -815,7 +851,13 @@ async function loadDetail() {
       state.customUnitPrice = Number(price || 0)
     }
     if (detail.unit) state.unit = detail.unit
-    if (detail.contractor) state.contractor = detail.contractor
+    const detailContractorRaw = detail.contractorId ?? detail.contractor_id ?? detail.contractor
+    const detailContractorId = Number(
+      (detailContractorRaw as any)?.id ?? detailContractorRaw ?? NaN,
+    )
+    if (Number.isFinite(detailContractorId) && detailContractorId > 0) {
+      state.contractor = detailContractorId
+    }
     if (detail.comment) state.comment = detail.comment
     if (detail.finalPrice !== undefined) state.finalPrice = Number(detail.finalPrice) || 0
     if (detail.costPerUnit !== undefined) state.costPerUnit = String(detail.costPerUnit)
@@ -867,7 +909,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     (product as any)?.need_approval ??
     false
   const unitId = product?.unit?.id ?? null
-  const contractorId = product?.contractor?.id ?? null
+  const contractorId = state.contractor ?? null
   const discountTitleToId = Object.fromEntries(discountTypeDirectory.map(i => [i.title, i.id]))
   const markupTitleToId = Object.fromEntries(markupTypeDirectory.map(i => [i.title, i.id]))
   const currencyIdFromCode = currencyCodeToId
@@ -1075,7 +1117,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <!-- Товар -->
       <B24FormField label="Товар" name="product" required>
         <B24Select
-          class="form-field-600px"
+          class="w-full"
           :style="{ width: '600px' }"
           v-model="state.product"
           :items="productItems"
@@ -1415,7 +1457,25 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       </B24FormField>
       <!-- Подрядчик -->
       <B24FormField label="Подрядчик" name="contractor">
-        <B24Input class="form-field-600px" v-model="state.contractor" disabled placeholder="-" />
+        <B24Select
+          class="w-full"
+          :style="{ width: '600px' }"
+          v-model="state.contractor"
+          :items="contractorOptions"
+          value-key="value"
+          label-key="label"
+          placeholder="Выберите подрядчика"
+          :disabled="!contractorOptions.length"
+          :b24ui="{
+            base: 'text-base-760 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:hover:ring-blue-600 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-blue-500 dark:data-[state=open]:ring-blue-600',
+            trailingIcon: 'text-base-760 size-lg',
+            content: 'rounded-[18px] min-w-[590px] shadow-lg ring-0 border-0',
+            viewport: 'relative scroll-py-1 w-[590px] max-h-[40vh] overflow-x-hidden overflow-y-auto scrollbar-thin ring-0 border-0',
+            group: 'p-0 my-[2px] -mx-1 w-full !max-w-none',
+            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start gap-1',
+            itemTrailingIcon: 'hidden',
+          }"
+        />
       </B24FormField>
       <!-- Комментарий -->
       <B24FormField label="Комментарий" name="comment">
