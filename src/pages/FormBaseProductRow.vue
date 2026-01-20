@@ -215,20 +215,18 @@ const productItems = computed<SelectItem[]>(() => {
 const selectedProduct = computed<Good | undefined>(() =>
   allGoods.value.find((g: Good) => Number(g.id) === Number(state.product ?? NaN)),
 )
-const isStubProduct = computed(() => {
-  const productTypeIdNumber = Number(productTypeId)
-  return productTypeIdNumber === 41
-})
+const isCustomPriceEnabled = computed(() => Boolean(selectedProduct.value?.allowPriceEdit))
+const isCustomTitleEnabled = computed(() => Boolean(selectedProduct.value?.allowTitleEdit))
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),
   customProductTitle: yup
     .string()
     .default('')
-    .test('stub-title', 'Введите название', val => !isStubProduct.value || Boolean(val?.trim())),
+    .test('stub-title', 'Введите название', val => !isCustomTitleEnabled.value || Boolean(val?.trim())),
   customUnitPrice: yup
     .number()
     .default(0)
-    .test('stub-price', 'Укажите цену', val => !isStubProduct.value || Number(val) > 0),
+    .test('stub-price', 'Укажите цену', val => !isCustomPriceEnabled.value || Number(val) > 0),
   quantity: yup.number().required('Укажите количество').min(1),
   discountValue: yup.number().required().default(0),
   discountType: yup.string().oneOf(discountTypes).required(),
@@ -425,8 +423,12 @@ watch(
     // подтягиваем себестоимость из товара по умолчанию
     state.costPerUnit = selectedProduct.value?.cost_per_unit?.toString() ?? ''
     state.costCurrency = 'Рубль'
-    if (isStubProduct.value) {
+    if (isCustomTitleEnabled.value) {
       state.customProductTitle = selectedProduct.value?.title ?? ''
+    } else {
+      state.customProductTitle = ''
+    }
+    if (isCustomPriceEnabled.value) {
       const currency = state.currency
       const basePrice =
         currency === 'руб'
@@ -436,7 +438,6 @@ watch(
             : selectedProduct.value?.price_eur ?? 0
       state.customUnitPrice = Number(basePrice || 0)
     } else {
-      state.customProductTitle = ''
       state.customUnitPrice = 0
     }
 
@@ -586,7 +587,7 @@ function recalcPrices() {
   state.unit = product.unit?.title ?? ''
   state.contractor = product.contractor?.title ?? ''
   const currency = state.currency
-  const basePrice = isStubProduct.value
+  const basePrice = isCustomPriceEnabled.value
     ? Number(state.customUnitPrice) || 0
     : currency === 'руб'
       ? product.price_rub
@@ -852,7 +853,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const product = selectedProduct.value
   const currency = state.currency
   const unitPrice =
-    isStubProduct.value
+    isCustomPriceEnabled.value
       ? Number(state.customUnitPrice) || 0
       : currency === 'руб'
         ? product?.price_rub ?? 0
@@ -980,7 +981,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     id: currentId.value ?? undefined,
     dealId: dealId ?? undefined,
     unitPrice,
-    productTitle: isStubProduct.value ? state.customProductTitle.trim() : undefined,
+    productTitle: isCustomTitleEnabled.value ? state.customProductTitle.trim() : undefined,
     costPerUnit,
     requiresToApproval,
     // передаём id единицы измерения
@@ -1117,7 +1118,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </template>
         </B24Select>
       </B24FormField>
-      <template v-if="isStubProduct">
+      <template v-if="isCustomTitleEnabled">
         <B24FormField label="Название" name="customProductTitle" required>
           <B24Input class="form-field-600px" v-model="state.customProductTitle" placeholder="Введите название" />
         </B24FormField>
@@ -1327,7 +1328,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         <!-- Стоимость итоговая -->
         <B24FormField label="Стоимость ед. базовая" name="baseUnitPrice">
           <B24Input
-            v-if="isStubProduct"
+            v-if="isCustomPriceEnabled"
             v-model="state.customUnitPrice"
             type="number"
             min="0"
