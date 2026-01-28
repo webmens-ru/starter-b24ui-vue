@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
 import { currencyList, type Currency, type Good, type Contractor, fetchGoods, fetchContractors } from '../app/api/goods'
+import { fetchDealCacheById, type DealCache } from '../app/api/deal'
 import api from '../app/api'
 import goodsStubJson from '../data/goodsStub.json'
 import discountTypeDirectoryJson from '../data/discountTypeDirectory.json'
@@ -20,7 +21,7 @@ const productTypeId = placementParams.productTypeId
 // id должен приходить явно, id слайдера использовать нельзя — иначе грузится чужая запись
 const initialId = placementParams.id
 const dealId = placementParams.dealId
-const dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
+let dealArea = Number(placementParams.dealArea ?? placementParams.area ?? 0) || 0
 const areasObj = placementParams.areas && !Array.isArray(placementParams.areas) ? placementParams.areas : {}
 const dealAreasArray = Array.isArray(placementParams.areas) ? placementParams.areas : []
 const dealAreaById: Record<number, number> = {}
@@ -51,6 +52,14 @@ const discountTypeDirectory = discountTypeDirectoryJson as DirectoryItem[]
 const markupTypeDirectory = markupTypeDirectoryJson as DirectoryItem[]
 const currencyDirectory = currencyDirectoryJson as DirectoryItem[]
 const areaDirectory = areaDirectoryJson as AreaDirectoryItem[]
+const areaKeyToId: Record<string, number> = Object.fromEntries(
+  areaDirectory
+    .map(item => [item.key, item.id] as const)
+    .filter(([key]) => Boolean(key)),
+)
+const areaEditableById: Record<number, boolean> = Object.fromEntries(
+  areaDirectory.map(item => [item.id, Boolean(item.editable)] as const),
+)
 const timeStartServiceDirectory = timeStartServiceDirectoryJson as { ID: string; VALUE: string }[]
 const timeFinishServiceDirectory = timeFinishServiceDirectoryJson as { ID: string; VALUE: string }[]
 const currencyCodeToTitle: Record<string, string> = {
@@ -100,7 +109,12 @@ const markupTypes = markupTypeDirectory.map(i => i.title)
 // goodsFromApi = null означает, что запрос ещё не завершился, поэтому не показываем заглушку
 const goodsFromApi = ref<Good[] | null>(null)
 const contractorsFromApi = ref<Contractor[] | null>(null)
-const detailLoading = ref(false)
+const dealCacheFromApi = ref<DealCache | null>(null)
+const detailLoading = ref(Boolean(initialId))
+const detailHydrating = ref(false)
+const hasDetailCost = ref(false)
+const hasDetailTitle = ref(false)
+const hasDetailUnitPrice = ref(false)
 const submitLoading = ref(false)
 const costUpdateGuard = ref(false)
 const productSearch = ref('')
@@ -112,6 +126,13 @@ onMounted(async () => {
     productTypeId,
   })
   contractorsFromApi.value = await fetchContractors()
+
+  if (dealId) {
+    const dealCache = await fetchDealCacheById(dealId)
+    if (dealCache) {
+      applyDealCache(dealCache)
+    }
+  }
 
   if (isEdit.value) {
     await loadDetail()
@@ -165,7 +186,123 @@ const state = reactive({
   serviceDate: '' as string, // для почасовых
   serviceTimeFrom: '' as string,
   serviceTimeTo: '' as string,
+  approvedTo: false,
+  approvedOm: false,
 })
+
+function toFiniteNumber(value: unknown): number | null {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function tryParseJson(value: unknown): unknown {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return value
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
+    try {
+      return JSON.parse(trimmed)
+    } catch (error) {
+      return value
+    }
+  }
+  return value
+}
+
+function extractAreasMap(rawAreas: unknown): Record<number, number> {
+  const result: Record<number, number> = {}
+  const parsed = tryParseJson(rawAreas)
+
+  if (Array.isArray(parsed)) {
+    for (const item of parsed) {
+      const id = toFiniteNumber(
+        (item as any)?.id ?? (item as any)?.ID ?? (item as any)?.areaId ?? (item as any)?.typeId,
+      )
+      const value = toFiniteNumber(
+        (item as any)?.value ?? (item as any)?.VALUE ?? (item as any)?.area ?? (item as any)?.square,
+      )
+      if (id !== null && id > 0 && value !== null) {
+        result[id] = value
+      }
+    }
+    return result
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    for (const [key, valueRaw] of Object.entries(parsed as Record<string, unknown>)) {
+      const idFromKey = toFiniteNumber(key) ?? (key in areaKeyToId ? areaKeyToId[key] : null)
+      const value = toFiniteNumber(valueRaw)
+      if (idFromKey !== null && idFromKey > 0 && value !== null) {
+        result[idFromKey] = value
+      }
+    }
+  }
+
+  return result
+}
+
+function extractDealAreaValue(payload: Record<string, unknown>): number | null {
+  const value = toFiniteNumber(
+    (payload as any)?.dealArea ??
+      (payload as any)?.area ??
+      (payload as any)?.totalArea ??
+      (payload as any)?.areaTotal ??
+      (payload as any)?.areaValue ??
+      (payload as any)?.square ??
+      (payload as any)?.squareTotal,
+  )
+  return value !== null ? value : null
+}
+
+function applyDealCache(cache: DealCache) {
+  dealCacheFromApi.value = cache
+
+  const payload = ((cache as any)?.result ?? cache) as Record<string, unknown>
+  const ufFieldToAreaKey: Record<string, string> = {
+    UF_CRM_DEAL_SQUARE_ONE_FLOOR: 'areaFirstFloor',
+    UF_CRM_DEAL_FLOOR_COVERING: 'areaCover',
+    UF_CRM_1736772862: 'areaOnMap',
+    UF_CRM_1565948603: 'areaSecondFloor',
+    UF_CRM_1565948577: 'areaContract',
+  }
+  const rawAreas =
+    (payload as any)?.areas ??
+    (payload as any)?.areaValues ??
+    (payload as any)?.areasById ??
+    (payload as any)?.areaById
+  const areasMap = extractAreasMap(rawAreas)
+
+  for (const [field, areaKey] of Object.entries(ufFieldToAreaKey)) {
+    const areaId = areaKeyToId[areaKey]
+    if (!areaId) continue
+    const value = toFiniteNumber((payload as any)?.[field])
+    if (value !== null) {
+      dealAreaById[areaId] = value
+    }
+  }
+
+  for (const [id, value] of Object.entries(areasMap)) {
+    const idNumber = Number(id)
+    if (Number.isFinite(idNumber) && idNumber > 0) {
+      dealAreaById[idNumber] = value
+    }
+  }
+
+  const dealAreaValue = extractDealAreaValue(payload)
+  if (dealAreaValue !== null) {
+    dealArea = dealAreaValue
+  }
+
+  if (!isEdit.value && state.areaTypeId) {
+    const val = dealAreaById[Number(state.areaTypeId)]
+    if (Number.isFinite(val)) {
+      state.areaValue = String(val)
+    }
+  }
+}
 
 type ProductItem = {
   value: string
@@ -237,6 +374,10 @@ const selectedProduct = computed<Good | undefined>(() =>
 )
 const isCustomPriceEnabled = computed(() => Boolean(selectedProduct.value?.allowPriceEdit))
 const isCustomTitleEnabled = computed(() => Boolean(selectedProduct.value?.allowTitleEdit))
+const requiresToApproval = computed(() => Boolean(selectedProduct.value?.requiresToApproval))
+const requiresOmApproval = computed(() => Boolean(selectedProduct.value?.requiresOmApproval))
+const canEditApprovedTo = computed(() => resolveApprovalFlag(placementParams.isExtendedPrivilegesTo) ?? false)
+const canEditApprovedOm = computed(() => resolveApprovalFlag(placementParams.isExtendedPrivilegesOm) ?? false)
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),
   customProductTitle: yup
@@ -285,11 +426,19 @@ const showTotalQuantity = computed(
 const hasCustomDayCount = computed(() => selectedProduct.value?.id === 1)
 const isDaysFieldReadOnly = computed(() => isDailyService.value)
 const areaTypeOptions = computed<SelectItem[]>(() => areaDirectory.map(a => ({ value: a.id, label: a.title })))
+const filteredAreaTypeOptions = computed<SelectItem[]>(() => {
+  return areaTypeOptions.value.filter(opt => {
+    const id = Number((opt as any).value)
+    if (areaEditableById[id]) return true
+    const val = dealAreaById[id]
+    return Number.isFinite(val) && Number(val) > 0
+  })
+})
 const enabledAreaTypeOptions = computed<SelectItem[]>(() => {
   const allowed = selectedProduct.value?.enableArea
-  if (!allowed || !allowed.length) return areaTypeOptions.value
+  if (!allowed || !allowed.length) return filteredAreaTypeOptions.value
   const allowedSet = new Set(allowed.map(Number))
-  return areaTypeOptions.value.filter(opt => allowedSet.has(Number((opt as any).value)))
+  return filteredAreaTypeOptions.value.filter(opt => allowedSet.has(Number((opt as any).value)))
 })
 const selectedAreaType = computed(() => areaDirectory.find(a => Number(a.id) === Number(state.areaTypeId)))
 const selectedAreaEditable = computed(() => Boolean(selectedAreaType.value?.editable))
@@ -323,6 +472,28 @@ function normalizeTimeString(val: any): string {
   if (h < 0 || h > 24 || m < 0 || m > 59) return ''
   if (h === 24 && m !== 0) return ''
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+}
+
+function resolveApprovalFlag(val: unknown): boolean | undefined {
+  if (val === undefined || val === null || val === '') return undefined
+  if (typeof val === 'boolean') return val
+  if (typeof val === 'number') return val !== 0
+  if (typeof val === 'string') {
+    const normalized = val.trim().toLowerCase()
+    if (['1', 'true', 'yes', 'y', 'да'].includes(normalized)) return true
+    if (['0', 'false', 'no', 'n', 'нет'].includes(normalized)) return false
+  }
+  return Boolean(val)
+}
+
+function applyAutoApprovalForCreate() {
+  if (isEdit.value) return
+  if (requiresToApproval.value && canEditApprovedTo.value) {
+    state.approvedTo = true
+  }
+  if (requiresOmApproval.value && canEditApprovedOm.value) {
+    state.approvedOm = true
+  }
 }
 
 function addMinutesToTime(time: string, minutesToAdd: number): string {
@@ -437,26 +608,34 @@ watch(
   selectedProduct,
   () => {
     costUpdateGuard.value = true
-    // сбрасываем площадь и тип при смене товара
-    state.areaTypeId = undefined
-    state.areaValue = ''
-    // подтягиваем себестоимость из товара по умолчанию
-    state.costPerUnit = selectedProduct.value?.cost_per_unit?.toString() ?? ''
+    // сбрасываем площадь и тип при смене товара, но не во время гидрации деталей
+    if (!isEdit.value || !detailHydrating.value) {
+      state.areaTypeId = undefined
+      state.areaValue = ''
+    }
+    // подтягиваем себестоимость из товара по умолчанию (если нет данных из деталей)
+    if (!hasDetailCost.value) {
+      state.costPerUnit = selectedProduct.value?.cost_per_unit?.toString() ?? ''
+    }
     state.costCurrency = 'Рубль'
     if (isCustomTitleEnabled.value) {
-      state.customProductTitle = selectedProduct.value?.title ?? ''
+      if (!hasDetailTitle.value) {
+        state.customProductTitle = selectedProduct.value?.title ?? ''
+      }
     } else {
       state.customProductTitle = ''
     }
     if (isCustomPriceEnabled.value) {
-      const currency = state.currency
-      const basePrice =
-        currency === 'руб'
-          ? selectedProduct.value?.price_rub ?? 0
-          : currency === 'usd'
-            ? selectedProduct.value?.price_usd ?? 0
-            : selectedProduct.value?.price_eur ?? 0
-      state.customUnitPrice = Number(basePrice || 0)
+      if (!hasDetailUnitPrice.value) {
+        const currency = state.currency
+        const basePrice =
+          currency === 'руб'
+            ? selectedProduct.value?.price_rub ?? 0
+            : currency === 'usd'
+              ? selectedProduct.value?.price_usd ?? 0
+              : selectedProduct.value?.price_eur ?? 0
+        state.customUnitPrice = Number(basePrice || 0)
+      }
     } else {
       state.customUnitPrice = 0
     }
@@ -486,12 +665,17 @@ watch(
       }
     }
     if (selectedProduct.value?.quantityFactorArea) {
-      const allowed = selectedProduct.value.enableArea ?? []
-      const firstAllowed = allowed.length ? allowed[0] : undefined
-      if (firstAllowed) {
-        state.areaTypeId = Number(firstAllowed)
-        const val = dealAreaById[state.areaTypeId]
-        state.areaValue = Number.isFinite(val) ? String(val) : ''
+      if (!isEdit.value || !detailHydrating.value) {
+        const options = enabledAreaTypeOptions.value
+        const first = options[0]
+        if (first) {
+          state.areaTypeId = Number((first as any).value)
+          const val = dealAreaById[state.areaTypeId]
+          state.areaValue = Number.isFinite(val) ? String(val) : ''
+        } else {
+          state.areaTypeId = undefined
+          state.areaValue = ''
+        }
       }
     }
     const options = currencyOptions.value ?? []
@@ -510,6 +694,13 @@ watch(
   () => state.product,
   () => {
     productSearch.value = ''
+    if (detailHydrating.value) {
+      return
+    }
+    if (!detailLoading.value) {
+      hasDetailTitle.value = false
+      hasDetailUnitPrice.value = false
+    }
   },
 )
 
@@ -724,6 +915,8 @@ watch(
   product => {
     if (!product) {
       state.contractor = undefined
+      state.approvedTo = false
+      state.approvedOm = false
       return
     }
     if (state.contractor === undefined || state.contractor === null) {
@@ -732,6 +925,9 @@ watch(
         state.contractor = contractorIdFromProduct
       }
     }
+    if (!requiresToApproval.value) state.approvedTo = false
+    if (!requiresOmApproval.value) state.approvedOm = false
+    applyAutoApprovalForCreate()
   },
   { immediate: true },
 )
@@ -806,8 +1002,12 @@ watch(
   () => state.areaTypeId,
   id => {
     if (!selectedProduct.value?.quantityFactorArea) return
-    const val = id ? dealAreaById[Number(id)] : undefined
-    state.areaValue = Number.isFinite(val) ? String(val) : ''
+    if (!isEdit.value) {
+      const val = id ? dealAreaById[Number(id)] : undefined
+      if (Number.isFinite(val)) {
+        state.areaValue = String(val)
+      }
+    }
     recalcPrices()
   },
 )
@@ -831,6 +1031,7 @@ async function loadDetail() {
 
     // Заполняем состояние, если поля пришли
     if (detail.product ?? detail.productId) {
+      detailHydrating.value = true
       state.product = Number(detail.product ?? detail.productId)
     }
     if (detail.quantity !== undefined) state.quantity = Number(detail.quantity) || 1
@@ -844,11 +1045,14 @@ async function loadDetail() {
       if (code) state.currency = code as Currency
     }
     if (detail.productTitle || detail.productName || detail.title) {
-      state.customProductTitle = String(detail.productTitle ?? detail.productName ?? detail.title)
+      const detailTitle = String(detail.productTitle ?? detail.productName ?? detail.title)
+      state.customProductTitle = detailTitle
+      hasDetailTitle.value = true
     }
     if (detail.unitPrice !== undefined || detail.price !== undefined) {
       const price = detail.unitPrice ?? detail.price
       state.customUnitPrice = Number(price || 0)
+      hasDetailUnitPrice.value = true
     }
     if (detail.unit) state.unit = detail.unit
     const detailContractorRaw = detail.contractorId ?? detail.contractor_id ?? detail.contractor
@@ -860,8 +1064,25 @@ async function loadDetail() {
     }
     if (detail.comment) state.comment = detail.comment
     if (detail.finalPrice !== undefined) state.finalPrice = Number(detail.finalPrice) || 0
-    if (detail.costPerUnit !== undefined) state.costPerUnit = String(detail.costPerUnit)
-    if (detail.totalCost !== undefined) state.totalCost = String(detail.totalCost)
+    const detailCostSourceRaw = detail.costSource
+    const detailCostSource =
+      detailCostSourceRaw === 'unit' || detailCostSourceRaw === 'total' ? detailCostSourceRaw : undefined
+    const detailCostPerUnit = Number(detail.costPerUnit)
+    const detailTotalCost = Number(detail.totalCost)
+    const hasDetailCostPerUnit = Number.isFinite(detailCostPerUnit) && detailCostPerUnit > 0
+    const hasDetailTotalCost = Number.isFinite(detailTotalCost) && detailTotalCost > 0
+    if (hasDetailCostPerUnit) {
+      state.costPerUnit = String(detailCostPerUnit)
+      if (!detailCostSource) state.costSource = 'unit'
+    }
+    if (hasDetailTotalCost) {
+      state.totalCost = String(detailTotalCost)
+      if (!hasDetailCostPerUnit && !detailCostSource) state.costSource = 'total'
+    }
+    if (detailCostSource) {
+      state.costSource = detailCostSource
+    }
+    hasDetailCost.value = hasDetailCostPerUnit || hasDetailTotalCost
     if (detail.invoiceIssued !== undefined) state.invoiceIssued = Boolean(detail.invoiceIssued)
     if (detail.autoRecalc !== undefined) state.autoRecalc = Boolean(detail.autoRecalc)
     if (Array.isArray(detail.serviceDates)) state.serviceDates = detail.serviceDates.filter(Boolean)
@@ -878,6 +1099,22 @@ async function loadDetail() {
     } else if (detail.serviceTimeTo) {
       state.serviceTimeTo = normalizeTimeString(detail.serviceTimeTo)
     }
+    const detailAreaTypeId = Number(
+      detail.areaTypeId ?? detail.area_type_id ?? detail.areaType ?? detail.area_type ?? detail.areaId ?? detail.area_id ?? NaN,
+    )
+    if (Number.isFinite(detailAreaTypeId) && detailAreaTypeId > 0) {
+      state.areaTypeId = detailAreaTypeId
+    }
+    const detailAreaValue = Number(detail.areaValue ?? detail.area_value ?? detail.area ?? detail.square ?? NaN)
+    if (Number.isFinite(detailAreaValue)) {
+      state.areaValue = String(detailAreaValue)
+    }
+    const approvedToRaw = detail.approvalTo
+    const approvedOmRaw = detail.approvalOm
+    const approvedTo = resolveApprovalFlag(approvedToRaw)
+    const approvedOm = resolveApprovalFlag(approvedOmRaw)
+    if (approvedTo !== undefined) state.approvedTo = approvedTo
+    if (approvedOm !== undefined) state.approvedOm = approvedOm
 
     recalcPrices()
   } catch (error) {
@@ -888,6 +1125,9 @@ async function loadDetail() {
       costUpdateGuard.value = false
     })
     detailLoading.value = false
+    nextTick(() => {
+      detailHydrating.value = false
+    })
   }
 }
 
@@ -1023,9 +1263,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     id: currentId.value ?? undefined,
     dealId: dealId ?? undefined,
     unitPrice,
+    categoryId: product?.categoryId ?? undefined,
     productTitle: isCustomTitleEnabled.value ? state.customProductTitle.trim() : undefined,
     costPerUnit,
     requiresToApproval,
+    approvedTo: state.approvedTo,
+    approvedOm: state.approvedOm,
     // передаём id единицы измерения
     unitId: unitId ?? undefined,
     contractorId: contractorId ?? undefined,
@@ -1054,10 +1297,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     submitLoading.value = true
 
     if (isEdit.value && currentId.value) {
-      await api.put(`/api/sp1222/update?id=${currentId.value}`, payload)
+      await api.put(`/api/product-row-form/update?id=${currentId.value}`, payload)
       toast.add({ title: 'Готово', description: 'Изменения сохранены', color: 'air-primary-success' })
     } else {
-      const response = await api.post('/api/sp1222/create', payload)
+      const response = await api.post('/api/product-row-form/create', payload)
       const newId =
         response?.data?.id ??
         response?.data?.result?.id
@@ -1076,6 +1319,29 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <style scoped>
+.form-loading {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 16px;
+  color: #64748b;
+}
+.form-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(100, 116, 139, 0.3);
+  border-top-color: #64748b;
+  border-radius: 50%;
+  animation: form-spin 0.8s linear infinite;
+}
+@keyframes form-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .form-field-600px {
   width: 600px !important;
   min-width: 600px !important;
@@ -1108,7 +1374,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 <template>
   <B24App>
+    <div v-if="isEdit && detailLoading" class="form-loading">
+      <span class="form-spinner" aria-hidden="true"></span>
+      <span>Загрузка...</span>
+    </div>
     <B24Form
+      v-else
       :schema="schema"
       :state="state"
       class="space-y-4"
@@ -1447,14 +1718,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         </B24FormField>
       </div>
       
-      <!-- Автоперерасчёт -->
-      <B24FormField label="Автоматический перерасчёт" name="autoRecalc">
-        <B24Checkbox class="form-field-600px" v-model="state.autoRecalc" />
-      </B24FormField>
-      <!-- Был выставлен счет -->
-      <B24FormField label="Был выставлен счет" name="invoiceIssued">
-        <B24Checkbox class="form-field-600px" v-model="state.invoiceIssued" />
-      </B24FormField>
+      <div class="form-field-600px form-flex-row flex-align-bottom">
+        <!-- Автоперерасчёт -->
+        <B24FormField label="Автоматический перерасчёт" name="autoRecalc" style="flex: 1;">
+          <B24Checkbox v-model="state.autoRecalc" />
+        </B24FormField>
+        <!-- Был выставлен счет -->
+        <B24FormField label="Был выставлен счет" name="invoiceIssued" style="flex: 1;">
+          <B24Checkbox v-model="state.invoiceIssued" />
+        </B24FormField>
+      </div>
       <!-- Подрядчик -->
       <B24FormField label="Подрядчик" name="contractor">
         <B24Select
@@ -1477,6 +1750,24 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           }"
         />
       </B24FormField>
+      <template v-if="requiresToApproval || requiresOmApproval">
+        <div v-if="requiresToApproval" class="form-field-600px form-flex-row flex-align-bottom">
+          <B24FormField label="Требуется согласование ТО" style="flex: 1;">
+            <B24Checkbox :model-value="true" disabled />
+          </B24FormField>
+          <B24FormField label="Согласовано ТО" style="flex: 1;">
+            <B24Checkbox v-model="state.approvedTo" :disabled="!canEditApprovedTo" />
+          </B24FormField>
+        </div>
+        <div v-if="requiresOmApproval" class="form-field-600px form-flex-row flex-align-bottom">
+          <B24FormField label="Требуется согласование ОМ" style="flex: 1;">
+            <B24Checkbox :model-value="true" disabled />
+          </B24FormField>
+          <B24FormField label="Согласовано ОМ" style="flex: 1;">
+            <B24Checkbox v-model="state.approvedOm" :disabled="!canEditApprovedOm" />
+          </B24FormField>
+        </div>
+      </template>
       <!-- Комментарий -->
       <B24FormField label="Комментарий" name="comment">
         <B24Textarea class="form-field-600px" v-model="state.comment" placeholder="Комментарий по заказу..." />
