@@ -1369,6 +1369,35 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 :deep(.b24-select__option),
 :deep(.b24-select__option-label) {
   white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+::deep(.b24-select__option-label) {
+  display: block;
+}
+::deep([data-slot="item"]) {
+  height: auto !important;
+  align-items: flex-start;
+}
+::deep([data-slot="itemLabel"].truncate) {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: block;
+}
+</style>
+
+<style>
+/* Teleported select content needs global styles. */
+[data-slot="item"] {
+  height: auto !important;
+  align-items: flex-start;
+}
+[data-slot="itemLabel"].truncate {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: block;
 }
 </style>
 
@@ -1401,7 +1430,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             content: 'rounded-[18px] min-w-[590px] shadow-lg ring-0 border-0',
             viewport: 'relative scroll-py-1 w-[590px] max-h-[40vh] overflow-x-hidden overflow-y-auto scrollbar-thin ring-0 border-0',
             group: 'p-0 my-[2px] -mx-1 w-full !max-w-none',
-            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-all overflow-visible text-ellipsis line-clamp-3 hover:line-clamp-none min-h-[24px] items-start gap-1',
+            item: 'ps-[16px] pe-[16px] py-2 whitespace-normal min-w-[590px] break-words overflow-visible min-h-[24px] items-start gap-1',
             itemTrailingIcon: 'hidden',
           }"
         >
@@ -1486,6 +1515,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               label-key="label"
               placeholder="Выберите дату"
               :style="isScheduledService ? 'width: 200px;' : 'width: 150px;'"
+              :b24ui="isScheduledService ?{
+                content: 'max-w-[185px]',
+                viewport: 'max-w-[185px]',
+                item: 'max-w-[185px]',
+              }:{
+                content: 'max-w-[145px]',
+                viewport: 'max-w-[145px]',
+                item: 'max-w-[145px]',
+              }"
 
             />
           </B24FormField>
@@ -1501,6 +1539,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               label-key="label"
               placeholder="Выберите время"
               :style="isScheduledService ? 'width: 190px;' : 'width: 150px;'"
+              :b24ui="isScheduledService ?{
+                content: 'max-w-[185px]',
+                viewport: 'max-w-[185px]',
+                item: 'max-w-[185px]',
+              }:{
+                content: 'max-w-[145px]',
+                viewport: 'max-w-[145px]',
+                item: 'max-w-[145px]',
+              }"
             />
           </B24FormField>
           <B24FormField
