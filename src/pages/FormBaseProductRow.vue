@@ -3,7 +3,15 @@ import type { SelectItem } from '@bitrix24/b24ui-nuxt'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import * as yup from 'yup'
 import { setLocale } from 'yup'
-import { currencyList, type Currency, type Good, type Contractor, fetchGoods, fetchContractors } from '../app/api/goods'
+import {
+  currencyList,
+  type Currency,
+  type Good,
+  type Contractor,
+  fetchGoods,
+  fetchContractors,
+  fetchGoodById,
+} from '../app/api/goods'
 import { fetchDealCacheById, type DealCache } from '../app/api/deal'
 import api from '../app/api'
 import goodsStubJson from '../data/goodsStub.json'
@@ -115,7 +123,9 @@ const detailHydrating = ref(false)
 const hasDetailCost = ref(false)
 const hasDetailTitle = ref(false)
 const hasDetailUnitPrice = ref(false)
+const customUnitPriceManuallyEdited = ref(false)
 const submitLoading = ref(false)
+const hasFitWindowCalled = ref(false)
 const costUpdateGuard = ref(false)
 const productSearch = ref('')
 const currentId = ref<number | string | undefined>(initialId)
@@ -136,6 +146,23 @@ onMounted(async () => {
 
   if (isEdit.value) {
     await loadDetail()
+  }
+})
+
+function fitWindowOnce() {
+  if (typeof window === 'undefined' || !import.meta.env.PROD) return
+  if (hasFitWindowCalled.value) return
+  const bx24 = (window as any).BX24
+  if (bx24?.fitWindow) {
+    hasFitWindowCalled.value = true
+    bx24.fitWindow()
+  }
+}
+
+watch(detailLoading, async (loading, prevLoading) => {
+  if (prevLoading && !loading) {
+    await nextTick()
+    fitWindowOnce()
   }
 })
 
@@ -378,6 +405,21 @@ const requiresToApproval = computed(() => Boolean(selectedProduct.value?.require
 const requiresOmApproval = computed(() => Boolean(selectedProduct.value?.requiresOmApproval))
 const canEditApprovedTo = computed(() => resolveApprovalFlag(placementParams.isExtendedPrivilegesTo) ?? false)
 const canEditApprovedOm = computed(() => resolveApprovalFlag(placementParams.isExtendedPrivilegesOm) ?? false)
+const canEditApprovedOp = computed(() => resolveApprovalFlag(placementParams.isExtendedPrivilegesOp) ?? false)
+
+const CATEGORY_TO = 149
+const CATEGORY_OP = 165
+const CATEGORY_OM = 167
+
+const showCostBlock = computed(() => {
+  const product = selectedProduct.value
+  if (!product?.categoryId) return true
+  const cat = Number(product.categoryId)
+  if (cat === CATEGORY_TO) return canEditApprovedTo.value
+  if (cat === CATEGORY_OP) return canEditApprovedOp.value
+  if (cat === CATEGORY_OM) return canEditApprovedOm.value
+  return true
+})
 const schema = yup.object({
   product: yup.number().nullable().default(undefined).required('Выберите товар'),
   customProductTitle: yup
@@ -442,6 +484,20 @@ const enabledAreaTypeOptions = computed<SelectItem[]>(() => {
 })
 const selectedAreaType = computed(() => areaDirectory.find(a => Number(a.id) === Number(state.areaTypeId)))
 const selectedAreaEditable = computed(() => Boolean(selectedAreaType.value?.editable))
+function getProductPriceByCurrency(product: Good | undefined, currency: Currency): number {
+  if (!product) return 0
+  if (currency === 'руб') return Number(product.price_rub) || 0
+  if (currency === 'usd') return Number(product.price_usd) || 0
+  return Number(product.price_eur) || 0
+}
+
+function syncCustomUnitPriceWithCurrency() {
+  if (!isCustomPriceEnabled.value) return
+  if (customUnitPriceManuallyEdited.value) return
+  if (hasDetailUnitPrice.value) return
+  state.customUnitPrice = getProductPriceByCurrency(selectedProduct.value, state.currency)
+}
+
 function normalizeDateString(val: any): string {
   if (!val) return ''
   if (typeof val === 'string') {
@@ -626,17 +682,12 @@ watch(
       state.customProductTitle = ''
     }
     if (isCustomPriceEnabled.value) {
+      customUnitPriceManuallyEdited.value = false
       if (!hasDetailUnitPrice.value) {
-        const currency = state.currency
-        const basePrice =
-          currency === 'руб'
-            ? selectedProduct.value?.price_rub ?? 0
-            : currency === 'usd'
-              ? selectedProduct.value?.price_usd ?? 0
-              : selectedProduct.value?.price_eur ?? 0
-        state.customUnitPrice = Number(basePrice || 0)
+        syncCustomUnitPriceWithCurrency()
       }
     } else {
+      customUnitPriceManuallyEdited.value = false
       state.customUnitPrice = 0
     }
 
@@ -705,6 +756,13 @@ watch(
 )
 
 watch(
+  () => state.currency,
+  () => {
+    syncCustomUnitPriceWithCurrency()
+  },
+)
+
+watch(
   () => state.quantity,
   val => {
     const value = val as unknown
@@ -766,6 +824,10 @@ function onQuantityBlur() {
 function onCostPerUnitInput() {
   state.costSource = 'unit'
   recalcPrices()
+}
+
+function onCustomUnitPriceInput() {
+  customUnitPriceManuallyEdited.value = true
 }
 
 function onTotalCostInput() {
@@ -1036,7 +1098,10 @@ async function loadDetail() {
     }
     if (detail.quantity !== undefined) state.quantity = Number(detail.quantity) || 1
     if (detail.discountValue !== undefined) state.discountValue = Number(detail.discountValue) || 0
-    if (detail.discountType) state.discountType = detail.discountType
+    if (detail.discountType) {
+      const raw = String(detail.discountType)
+      state.discountType = discountTypes.includes(raw) ? raw : (raw === 'Сумма в валюте' ? 'Сумма' : raw)
+    }
     if (detail.markupValue !== undefined) state.markupValue = Number(detail.markupValue) || 0
     if (detail.markupType) state.markupType = detail.markupType
     if (detail.currency) state.currency = detail.currency
@@ -1116,6 +1181,7 @@ async function loadDetail() {
     if (approvedTo !== undefined) state.approvedTo = approvedTo
     if (approvedOm !== undefined) state.approvedOm = approvedOm
 
+    await ensureCurrentProductInGoodsList()
     recalcPrices()
   } catch (error) {
     console.warn('[load detail error]', error)
@@ -1129,6 +1195,20 @@ async function loadDetail() {
       detailHydrating.value = false
     })
   }
+}
+
+async function ensureCurrentProductInGoodsList() {
+  const productId = Number(state.product ?? NaN)
+  if (!Number.isFinite(productId) || productId <= 0) return
+  if (!Array.isArray(goodsFromApi.value)) return
+
+  const hasProduct = goodsFromApi.value.some(item => Number(item.id) === productId)
+  if (hasProduct) return
+
+  const archivedProduct = await fetchGoodById(productId)
+  if (!archivedProduct) return
+
+  goodsFromApi.value = [archivedProduct, ...goodsFromApi.value]
 }
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
@@ -1148,7 +1228,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     (product as any)?.needToApprove ??
     (product as any)?.need_approval ??
     false
+  const requiresOmApproval = Boolean((product as any)?.requiresOmApproval)
   const unitId = product?.unit?.id ?? null
+  const typeBuildingIds = (product as any)?.typeBuildingIds
   const contractorId = state.contractor ?? null
   const discountTitleToId = Object.fromEntries(discountTypeDirectory.map(i => [i.title, i.id]))
   const markupTitleToId = Object.fromEntries(markupTypeDirectory.map(i => [i.title, i.id]))
@@ -1267,6 +1349,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     productTitle: isCustomTitleEnabled.value ? state.customProductTitle.trim() : undefined,
     costPerUnit,
     requiresToApproval,
+    requiresOmApproval,
     approvedTo: state.approvedTo,
     approvedOm: state.approvedOm,
     // передаём id единицы измерения
@@ -1291,6 +1374,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     hasTime: hasTimeFlag,
     hasDays: hasDaysFlag,
     hasArea: hasAreaFlag,
+    typeBuildingIds,
   }
 
   try {
@@ -1695,6 +1779,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             step="0.01"
             placeholder="0"
             style="width:140px"
+            @input="onCustomUnitPriceInput"
           />
           <B24Input
             v-else
@@ -1735,7 +1820,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             />
           </B24FormField>
       </div>
-      <div class="form-field-600px form-flex-row flex-align-bottom">
+      <div v-if="showCostBlock" class="form-field-600px form-flex-row flex-align-bottom">
         <!-- Себестоимость ед. -->
         <B24FormField :label="costPerUnitLabel" name="costPerUnit">
           <B24Input
