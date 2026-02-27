@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint --ext .js,.vue src",
-    "typecheck": "vue-tsc -p ./tsconfig.app.json"
+    "typecheck": "vue-tsc -p ./tsconfig.app.json",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
   },
   "dependencies": {
     "@bitrix24/b24icons-vue": "^2.0.4",
@@ -24,6 +26,7 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "eslint": "^9.38.0",
     "eslint-plugin-vue": "^10.5.1",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^7.1.12",
