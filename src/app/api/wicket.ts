@@ -9,6 +9,9 @@ import {
   mockGetPolozhenieJumper,
   mockGetAssortmentJumper,
   mockGetColorShield,
+  mockGetAddressSuggestions,
+  mockFinalCalculate,
+  mockDeleteCalculation,
 } from './mockWicket'
 import type {
   SelectItem,
@@ -89,6 +92,43 @@ export async function getColorShield(
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/wicket/type${modelId}/get-color-shield`)
   return data
+}
+
+export async function getAddressSuggestions(
+  query: string
+): Promise<{ suggestions: { value: string }[] }> {
+  if (isMock) return mockGetAddressSuggestions(query)
+  const { data } = await api.post('/address/suggest', { query })
+  return data
+}
+
+export async function saveCalculationNumber(payload: Record<string, unknown>): Promise<void> {
+  if (isMock) return
+  await api.post('/calculation-number/data', payload)
+}
+
+export async function saveClientInfo(payload: Record<string, unknown>): Promise<void> {
+  if (isMock) return
+  await api.post('/client/data', payload)
+}
+
+export async function finalCalculate(payload: {
+  calculation_number: string | number
+  product_type: string
+  model: string
+  model_id: string | number
+}): Promise<{ price_dealer: string; price_retail: string }> {
+  if (isMock) return mockFinalCalculate()
+  const { data } = await api.post('/wicket/calculation', payload)
+  return data
+}
+
+export async function deleteCalculation(payload: {
+  calculation_number: string | number
+  model_id: string | number
+}): Promise<void> {
+  if (isMock) return mockDeleteCalculation()
+  await api.post(`/wicket/type${payload.model_id}/delete`, payload)
 }
 
 export async function recalculate(payload: {

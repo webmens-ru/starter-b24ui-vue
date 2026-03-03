@@ -308,6 +308,38 @@ export async function mockGetColorShield(): Promise<{ arr_color_shield: SelectIt
   return { arr_color_shield: MOCK_COLOR_SHIELD }
 }
 
+// ─── Мок подсказок адреса ────────────────────────────────────────────────────
+
+export async function mockGetAddressSuggestions(
+  query: string
+): Promise<{ suggestions: { value: string }[] }> {
+  await delay(150)
+  const samples = [
+    'Москва, ул. Ленина, 1',
+    'Москва, ул. Пушкина, 10',
+    'Санкт-Петербург, Невский пр-т, 50',
+    'Екатеринбург, ул. Мира, 15',
+    'Новосибирск, Красный пр-т, 25',
+  ]
+  const q = query.toLowerCase()
+  return {
+    suggestions: samples
+      .filter(s => s.toLowerCase().includes(q))
+      .map(value => ({ value })),
+  }
+}
+
+// ─── Финальный расчёт ────────────────────────────────────────────────────────
+
+export async function mockFinalCalculate(): Promise<{ price_dealer: string; price_retail: string }> {
+  await delay(400)
+  return { price_dealer: '15 000', price_retail: '22 500' }
+}
+
+export async function mockDeleteCalculation(): Promise<void> {
+  await delay(200)
+}
+
 // ─── Прочие моки ─────────────────────────────────────────────────────────────
 
 function delay(ms: number) {

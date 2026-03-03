@@ -10,6 +10,11 @@ import StolbVariantOtkritiya from '../../components/wicket/StolbVariantOtkritiya
 import ShieldType from '../../components/wicket/ShieldType.vue'
 import RaspolozheniyePolotna from '../../components/wicket/RaspolozheniyePolotna.vue'
 import RazmeryProyema from '../../components/wicket/RazmeryProyema.vue'
+import IsTherelock from '../../components/wicket/IsTherelock.vue'
+import LockType from '../../components/wicket/LockType.vue'
+import Pen from '../../components/wicket/Pen.vue'
+import Client from '../../components/wicket/Client.vue'
+import End from '../../components/wicket/End.vue'
 
 const calc = useCalculation()
 const { activePage, visitedPages, isPageAccessible, setActivePage } = calc
@@ -38,6 +43,11 @@ const stepComponents: Record<string, Component> = {
   page3:        ShieldType,
   page6:        RaspolozheniyePolotna,
   page7:        RazmeryProyema,
+  page9:           IsTherelock,
+  page_lock_type:  LockType,
+  page10:  Pen,
+  page11:  Client,
+  page12:  End,
   // page2_yard_siding:    SidingYard,
   // page2_yard_profnastil: ProfnastilYard,
 }
@@ -53,6 +63,10 @@ function getNextPage(from: string): string | null {
       return calc.material_yard_glob.value === 'Профлист'
         ? 'page2_yard_profnastil'
         : 'page2_yard_siding'
+    case 'page9':
+      return calc.is_there_lock_id.value === 1 ? 'page_lock_type' : 'page10'
+    case 'page_lock_type':
+      return 'page10'
     default: {
       const idx = menuItems.findIndex(m => m.page === from)
       return idx !== -1 && idx < menuItems.length - 1 ? menuItems[idx + 1].page : null
@@ -62,8 +76,10 @@ function getNextPage(from: string): string | null {
 
 function getPrevPage(from: string): string | null {
   switch (from) {
-    case 'page2_facade': return 'page2'
-    case 'page5':        return 'page2_facade'
+    case 'page2_facade':    return 'page2'
+    case 'page5':           return 'page2_facade'
+    case 'page_lock_type':  return 'page9'
+    case 'page10':          return calc.is_there_lock_id.value === 1 ? 'page_lock_type' : 'page9'
     default: {
       const idx = menuItems.findIndex(m => m.page === from)
       return idx > 0 ? menuItems[idx - 1].page : null

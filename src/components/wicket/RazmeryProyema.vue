@@ -180,7 +180,7 @@ onMounted(async () => {
     <div class="flex flex-col gap-5 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
 
       <!-- Размеры проема -->
-      <div class="max-w-sm mx-auto w-full flex flex-col gap-4">
+      <div class="flex flex-col gap-4">
         <h2 class="text-center text-lg font-semibold">Размеры проема</h2>
 
         <!-- Ширина -->
@@ -190,8 +190,8 @@ onMounted(async () => {
             id="width"
             v-model="width"
             type="text"
-            placeholder="Введите ширину"
-            class="border rounded px-3 py-2 text-sm"
+            placeholder="Введите ширину (600–2000)"
+            class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errWidth ? 'border-red-500' : 'border-gray-300'"
             @input="debouncedSave"
           />
@@ -204,8 +204,8 @@ onMounted(async () => {
             id="height"
             v-model="height"
             type="text"
-            placeholder="Введите высоту"
-            class="border rounded px-3 py-2 text-sm"
+            placeholder="Введите высоту (1000–3000)"
+            class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errHeight ? 'border-red-500' : 'border-gray-300'"
             @input="debouncedSave"
           />
@@ -218,8 +218,8 @@ onMounted(async () => {
             id="clearance"
             v-model="clearance"
             type="text"
-            placeholder="Введите просвет"
-            class="border rounded px-3 py-2 text-sm"
+            placeholder="Введите просвет (10–100)"
+            class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errClearance ? 'border-red-500' : 'border-gray-300'"
             @input="debouncedSave"
           />

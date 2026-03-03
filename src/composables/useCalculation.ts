@@ -39,6 +39,34 @@ const peremichka_polozheniye_name = ref<string>('')
 const peremichka_sortament_id     = ref<string | number | null>(null)
 const peremichka_sortament_name   = ref<string | null>(null)
 
+// Поля шага "Клиент"
+const calculation_name  = ref<string>('')
+const client_name       = ref<string>('')
+const client_last_name  = ref<string>('')
+const client_surname    = ref<string>('')
+const client_phone      = ref<string>('')
+const client_email      = ref<string>('')
+const client_address    = ref<string>('')
+const client_comment    = ref<string>('')
+const country_code      = ref<string>('+7')
+
+// Поля шага "Ручка"
+const is_there_pen_name = ref<string>('Не будет')
+const is_there_pen_id   = ref<number>(0)
+const pen_provided      = ref<string>('Предоставляет изготовитель')
+const pen_installed     = ref<string>('Устанавливает изготовитель')
+const pen_color         = ref<string>('Черная')
+
+// Поля шага "Тип замка"
+const type_lock = ref<string>('Тип_1')
+
+// Поля шага "Замок"
+const is_there_lock_name = ref<string>('Есть')
+const is_there_lock_id   = ref<number>(1)
+const provides_lock      = ref<string>('Предоставляет изготовитель')
+const lock_installer     = ref<string>('Выполняет изготовитель')
+const is_there_cable     = ref<string>('Изготовитель устанавливает')
+
 // Поля шага "Проем"
 const width_proyema      = ref<string>('')
 const height_proyema     = ref<string>('')
@@ -66,8 +94,9 @@ const type_of_coating_facade   = ref<string>('')
 const color_facade             = ref<string>('')
 
 // Цена
-const price_retail = ref<string | number>('')
-const price_dealer = ref<string | number>('')
+const price_retail  = ref<string | number>('')
+const price_dealer  = ref<string | number>('')
+const fields_filled = ref<number>(0)
 
 export function useCalculation() {
   function setActivePage(page: string) {
@@ -132,6 +161,26 @@ export function useCalculation() {
     peremichka_polozheniye_name,
     peremichka_sortament_id,
     peremichka_sortament_name,
+    calculation_name,
+    client_name,
+    client_last_name,
+    client_surname,
+    client_phone,
+    client_email,
+    client_address,
+    client_comment,
+    country_code,
+    is_there_pen_name,
+    is_there_pen_id,
+    pen_provided,
+    pen_installed,
+    pen_color,
+    type_lock,
+    is_there_lock_name,
+    is_there_lock_id,
+    provides_lock,
+    lock_installer,
+    is_there_cable,
     width_proyema,
     height_proyema,
     clearance_proyema,
@@ -152,6 +201,7 @@ export function useCalculation() {
     color_facade,
     price_retail,
     price_dealer,
+    fields_filled,
     setActivePage,
     isPageAccessible,
     updateOrCreateBlock,

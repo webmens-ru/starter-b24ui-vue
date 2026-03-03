@@ -6,7 +6,7 @@ import Wicket from "../pages/wicket/Type1.vue"
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Main },
   { path: '/form', component: Form },
-  { path: '/wicket/Type1', component: Wicket },
+  { path: '/wicket/type1', component: Wicket },
 ]
 
 export const router = createRouter({
