@@ -114,91 +114,67 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Замок</span>
+      <span class="text-2xl font-bold flex-1 text-center">Замок</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <div class="flex flex-col gap-6 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-6" style="padding-inline: 4px;">
 
       <!-- Есть / Нет замок -->
-      <div class="flex justify-center gap-24 flex-wrap">
-        <label class="flex items-center gap-2 cursor-pointer font-semibold">
-          <input
-            v-model="is_there_lock"
-            type="radio"
-            value="Есть"
-            class="accent-blue-600"
-            @change="save"
-          />
-          Есть
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer font-semibold">
-          <input
-            v-model="is_there_lock"
-            type="radio"
-            value="Нет"
-            class="accent-blue-600"
-            @change="save"
-          />
-          Нет
-        </label>
+      <div>
+        <div class="option-grid">
+          <label class="lock-card">
+            <input v-model="is_there_lock" type="radio" value="Есть" class="sr-only" @change="save" />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Есть</span>
+            </div>
+          </label>
+          <label class="lock-card">
+            <input v-model="is_there_lock" type="radio" value="Нет" class="sr-only" @change="save" />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Нет</span>
+            </div>
+          </label>
+        </div>
       </div>
 
       <!-- Детали замка (только если Есть) -->
       <template v-if="showLockDetails">
 
         <!-- Кто предоставляет замок -->
-        <div class="flex justify-center gap-12 flex-wrap">
-          <label
-            v-for="opt in providesOptions"
-            :key="opt.value"
-            class="flex flex-col items-center gap-1 cursor-pointer text-center max-w-[180px]"
-          >
-            <input
-              v-model="provides_lock"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm mt-1">{{ opt.label }}</span>
-          </label>
+        <div>
+          <div class="option-grid">
+            <label v-for="opt in providesOptions" :key="opt.value" class="lock-card">
+              <input v-model="provides_lock" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <div class="card-content">
+                <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+              </div>
+            </label>
+          </div>
         </div>
 
         <!-- Кто выполняет врезку -->
-        <div class="flex justify-center gap-12 flex-wrap">
-          <label
-            v-for="opt in installerOptions"
-            :key="opt.value"
-            class="flex flex-col items-center gap-1 cursor-pointer text-center max-w-[180px]"
-          >
-            <input
-              v-model="lock_installer"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm mt-1">{{ opt.label }}</span>
-          </label>
+        <div>
+          <div class="option-grid">
+            <label v-for="opt in installerOptions" :key="opt.value" class="lock-card">
+              <input v-model="lock_installer" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <div class="card-content">
+                <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+              </div>
+            </label>
+          </div>
         </div>
 
         <!-- Кабель для э/м замка -->
-        <div class="flex justify-center gap-12 flex-wrap">
-          <label
-            v-for="opt in cableOptions"
-            :key="opt.value"
-            class="flex flex-col items-center gap-1 cursor-pointer text-center max-w-[180px]"
-          >
-            <input
-              v-model="is_there_cable"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm mt-1">{{ opt.label }}</span>
-          </label>
+        <div>
+          <div class="option-grid">
+            <label v-for="opt in cableOptions" :key="opt.value" class="lock-card">
+              <input v-model="is_there_cable" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <div class="card-content">
+                <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+              </div>
+            </label>
+          </div>
         </div>
 
       </template>
@@ -206,3 +182,44 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+}
+
+@media (min-width: 640px) {
+  .option-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #eff6ff;
+}
+
+.card-content {
+  padding: 12px;
+}
+</style>

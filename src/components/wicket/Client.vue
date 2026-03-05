@@ -7,6 +7,7 @@ import {
   saveClientInfo,
   getAddressSuggestions,
 } from '../../app/api/wicket'
+import * as yup from 'yup'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -38,8 +39,53 @@ const address          = ref('')
 const client_comment   = ref('')
 
 // ─── Ошибки ──────────────────────────────────────────────────────────────────
-const errName  = ref(false)
-const errPhone = ref(false)
+const errName  = ref('')
+const errPhone = ref('')
+const errEmail = ref('')
+
+// ─── Yup схема ───────────────────────────────────────────────────────────────
+const schema = yup.object({
+  client_name:  yup.string().required('Обязательное поле'),
+  phone:        yup.string().required('Обязательное поле').test(
+    'digits',
+    'Введите корректный номер (10 цифр)',
+    v => (v ?? '').replace(/\D/g, '').length === 10,
+  ),
+  client_email: yup.string().email('Некорректный email').nullable(),
+})
+
+type FieldName = 'client_name' | 'phone' | 'client_email'
+const errRefs: Record<FieldName, typeof errName> = {
+  client_name:  errName,
+  phone:        errPhone,
+  client_email: errEmail,
+}
+
+async function validateField(field: FieldName, value: string) {
+  try {
+    await schema.validateAt(field, { [field]: value || null })
+    errRefs[field].value = ''
+  } catch (e: any) {
+    errRefs[field].value = e.message
+  }
+}
+
+async function validateAll(): Promise<boolean> {
+  try {
+    await schema.validate(
+      { client_name: client_name.value, phone: phone.value, client_email: client_email.value || null },
+      { abortEarly: false },
+    )
+    errName.value = errPhone.value = errEmail.value = ''
+    return true
+  } catch (e: any) {
+    errName.value = errPhone.value = errEmail.value = ''
+    for (const err of e.inner as yup.ValidationError[]) {
+      if (err.path && err.path in errRefs) errRefs[err.path as FieldName].value = err.message
+    }
+    return false
+  }
+}
 
 // ─── Телефонная маска ─────────────────────────────────────────────────────────
 function applyPhoneMask(raw: string): string {
@@ -152,20 +198,9 @@ function syncCalcFields() {
   ])
 }
 
-// ─── Валидация + сохранение при "Далее" ───────────────────────────────────────
-function validate(): boolean {
-  errName.value  = false
-  errPhone.value = false
-  const msgs: string[] = []
-  if (!client_name.value.trim()) { errName.value  = true; msgs.push('Заполните поле: Имя') }
-  if (!phone.value.trim())       { errPhone.value = true; msgs.push('Заполните поле: Телефон') }
-  if (msgs.length) { openModal(msgs.join('\n')); return false }
-  return true
-}
-
 async function handleNext() {
   syncCalcFields()
-  if (!validate()) return
+  if (!(await validateAll())) return
 
   const payload = {
     calculation_number: calc.number.value,
@@ -218,7 +253,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4 h-full">
 
     <B24Modal
       v-model:open="showModal"
@@ -233,11 +268,11 @@ onUnmounted(() => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Клиент</span>
+      <span class="text-2xl font-bold flex-1 text-center">Клиент</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
-    <div class="flex flex-col gap-4 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-4 flex-1 overflow-y-auto" style="padding-inline: 4px;">
 
       <!-- Название расчёта -->
       <div class="flex flex-col gap-1">
@@ -260,8 +295,10 @@ onUnmounted(() => {
           placeholder="Введите имя"
           class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
           :class="errName ? 'border-red-500' : 'border-gray-300'"
-          @input="debouncedSync"
+          @blur="validateField('client_name', client_name)"
+          @input="errName ? validateField('client_name', client_name) : debouncedSync()"
         />
+        <span v-if="errName" class="text-xs text-red-500">{{ errName }}</span>
       </div>
 
       <!-- Фамилия -->
@@ -313,8 +350,10 @@ onUnmounted(() => {
             :class="errPhone ? 'border-red-500' : 'border-gray-300'"
             @input="onPhoneInput"
             @keydown="onPhoneKeydown"
+            @blur="validateField('phone', phone)"
           />
         </div>
+        <span v-if="errPhone" class="text-xs text-red-500">{{ errPhone }}</span>
       </div>
 
       <!-- Эл. почта -->
@@ -324,9 +363,12 @@ onUnmounted(() => {
           v-model="client_email"
           type="email"
           placeholder="Введите электронную почту"
-          class="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-          @input="debouncedSync"
+          class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          :class="errEmail ? 'border-red-500' : 'border-gray-300'"
+          @blur="validateField('client_email', client_email)"
+          @input="errEmail ? validateField('client_email', client_email) : debouncedSync()"
         />
+        <span v-if="errEmail" class="text-xs text-red-500">{{ errEmail }}</span>
       </div>
 
       <!-- Адрес с подсказками -->

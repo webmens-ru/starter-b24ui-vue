@@ -80,39 +80,70 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Тип замка</span>
+      <span class="text-2xl font-bold flex-1 text-center">Тип замка</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <!-- Горизонтальная прокрутка -->
-    <div class="overflow-x-auto pb-2" style="touch-action: pan-x;">
-      <div class="flex flex-nowrap gap-8 px-1">
-        <div
-          v-for="opt in lockOptions"
-          :key="opt.value"
-          class="flex flex-col items-center flex-shrink-0"
-        >
-          <label class="flex flex-col items-center gap-1 cursor-pointer">
-            <div class="flex items-center gap-1">
-              <input
-                v-model="selected"
-                type="radio"
-                :value="opt.value"
-                class="accent-blue-600"
-                @change="save"
-              />
-              <span class="text-sm font-semibold">{{ opt.label }}</span>
-            </div>
-            <img
-              :src="opt.img"
-              :alt="opt.label"
-              class="mt-2 border border-gray-300 rounded"
-              style="max-width: 200px; max-height: 200px; height: auto;"
-            />
-          </label>
+    <div class="locks-grid">
+      <label
+        v-for="opt in lockOptions"
+        :key="opt.value"
+        class="lock-card"
+      >
+        <input
+          v-model="selected"
+          type="radio"
+          :value="opt.value"
+          class="sr-only"
+          @change="save"
+        />
+        <div class="card-content">
+          <img
+            :src="opt.img"
+            :alt="opt.label"
+            class="w-full h-[120px] object-contain mb-2"
+          />
+          <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
         </div>
-      </div>
+      </label>
     </div>
 
   </div>
 </template>
+
+<style scoped>
+.locks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 4px;
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.card-content {
+  padding: 12px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.lock-card:has(input[type="radio"]:checked) .card-content {
+  background: #eff6ff;
+}
+</style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { getFilterOptions, type FilterOptionItem } from '../../app/api/wicket'
 
 const props = defineProps<{
@@ -14,18 +14,32 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string[]): void
 }>()
 
+const containerRef = ref<HTMLElement | null>(null)
 const isOpen  = ref(false)
 const search  = ref('')
 const options = ref<FilterOptionItem[]>([])
 const loaded  = ref(false)
 const loading = ref(false)
 
+function onDocumentClick(e: MouseEvent) {
+  if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
+    isOpen.value = false
+  }
+}
+
+watch(isOpen, (open) => {
+  if (open) document.addEventListener('mousedown', onDocumentClick)
+  else document.removeEventListener('mousedown', onDocumentClick)
+})
+
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick))
+
 async function toggle() {
   isOpen.value = !isOpen.value
   if (isOpen.value && !loaded.value) {
     loading.value = true
     try {
-      const data = await getFilterOptions(props.url)
+      const data = await getFilterOptions(props.url, props.dataKey)
       options.value = data[props.dataKey] ?? []
       loaded.value = true
     } catch (e) {
@@ -53,16 +67,16 @@ function onCheck(id: string, checked: boolean) {
 </script>
 
 <template>
-  <div class="flex-1 min-w-0 relative">
+  <div ref="containerRef" class="flex-1 min-w-max relative">
     <!-- Заголовок фильтра -->
     <button
       type="button"
-      class="w-full flex items-center justify-between px-2 py-1.5 border border-gray-300 rounded bg-white text-sm hover:bg-gray-50 transition-colors"
+      class="w-full flex items-start justify-between gap-1 px-3 py-2.5 border border-gray-300 rounded bg-white text-base hover:bg-gray-50 transition-colors"
       @click="toggle"
     >
-      <span>{{ label }}</span>
+      <span class="text-left leading-tight whitespace-normal">{{ label }}</span>
       <span
-        class="inline-block w-0 h-0 border-l-4 border-r-4 border-l-transparent border-r-transparent border-t-4 border-t-gray-700 transition-transform"
+        class="inline-block shrink-0 mt-1 w-0 h-0 border-l-4 border-r-4 border-l-transparent border-r-transparent border-t-4 border-t-gray-700 transition-transform"
         :class="{ 'rotate-180': isOpen }"
       />
     </button>

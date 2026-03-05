@@ -119,8 +119,8 @@ onMounted(() => {
     <!-- Заголовок + кнопка Назад -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Рассчитать</span>
-      <div class="w-24" />
+      <span class="text-2xl font-bold flex-1 text-center">Рассчитать</span>
+      <div class="w-[68px]" />
     </div>
 
     <!-- Сообщение -->

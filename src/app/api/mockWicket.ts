@@ -1,4 +1,4 @@
-import type { SelectItem, RecalculateResponse, FilterOptions, SidingFilters, SidingRow } from './wicket.types'
+import type { SelectItem, RecalculateResponse, FilterOptions, SidingFilters, SidingRow, ProfnastilFilters, ProfnastilRow, ProfnastilTableResponse } from './wicket.types'
 
 // ─── Таблица сайдинга (реальные данные) ──────────────────────────────────────
 
@@ -234,13 +234,14 @@ const FILTER_SIDING: FilterOptions = {
   color:         unique('color'),
 }
 
-export async function mockGetFilterOptions(url: string): Promise<FilterOptions> {
+export async function mockGetFilterOptions(url: string, _type?: string): Promise<FilterOptions> {
   await delay(150)
   if (url.includes('get-filter-data-siding')) return FILTER_SIDING
-  return FILTER_COMPANY
+  if (url.includes('get-filter-data-profnastil')) return PROFNASTIL_FILTER
+  return FILTER_MAIN
 }
 
-export async function mockGetSidingTable(filters: SidingFilters): Promise<{ table: SidingRow[] }> {
+export async function mockGetSidingTable(filters: SidingFilters, page = 1): Promise<{ table: SidingRow[]; pagination: { page: number; pageSize: number; totalCount: number; pageCount: number } }> {
   await delay(200)
   let rows = [...SIDING_ROWS]
   if (filters.companies.length)     rows = rows.filter(r => filters.companies.includes(String(r.company)))
@@ -248,7 +249,123 @@ export async function mockGetSidingTable(filters: SidingFilters): Promise<{ tabl
   if (filters.form.length)          rows = rows.filter(r => filters.form.includes(String(r.form)))
   if (filters.typeOfCoating.length) rows = rows.filter(r => filters.typeOfCoating.includes(String(r.typeOfCoating)))
   if (filters.colors.length)        rows = rows.filter(r => filters.colors.includes(String(r.color)))
-  return { table: rows }
+  const pageSize   = 100
+  const totalCount = rows.length
+  const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage   = Math.min(Math.max(1, page), pageCount)
+  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+  return { table, pagination: { page: safePage, pageSize, totalCount, pageCount } }
+}
+
+// ─── Таблица профлиста (моковые данные) ──────────────────────────────────────
+
+const PROFNASTIL_ROWS: ProfnastilRow[] = [
+  { id: 1,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'NL 807' },
+  { id: 2,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 1014' },
+  { id: 3,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 1015' },
+  { id: 4,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 1018' },
+  { id: 5,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 2004' },
+  { id: 6,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 3003' },
+  { id: 7,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 3005' },
+  { id: 8,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 3011' },
+  { id: 9,  company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 3020' },
+  { id: 10, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 5002' },
+  { id: 11, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 5005' },
+  { id: 12, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 5015' },
+  { id: 13, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 5021' },
+  { id: 14, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 6002' },
+  { id: 15, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 6005' },
+  { id: 16, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 6018' },
+  { id: 17, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 7004' },
+  { id: 18, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 7005' },
+  { id: 19, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 7024' },
+  { id: 20, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 7035' },
+  { id: 21, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 7038' },
+  { id: 22, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 8004' },
+  { id: 23, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 8017' },
+  { id: 24, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 8019' },
+  { id: 25, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 9002' },
+  { id: 26, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 9003' },
+  { id: 27, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Глянец',       color: 'RAL 9006' },
+  { id: 28, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'ДВС',          color: 'RAL 3005' },
+  { id: 29, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'ДВС',          color: 'RAL 6005' },
+  { id: 30, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'ДВС',          color: 'RAL 7024' },
+  { id: 31, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'ДВС',          color: 'RAL 8017' },
+  { id: 32, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 3005' },
+  { id: 33, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 6005' },
+  { id: 34, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 6020' },
+  { id: 35, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 7024' },
+  { id: 36, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 8004' },
+  { id: 37, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 8017' },
+  { id: 38, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 8019' },
+  { id: 39, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RAL 9005' },
+  { id: 40, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Матовый',      color: 'RR 32 ММК' },
+  { id: 41, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Белая Береза' },
+  { id: 42, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Дерево Св. Текстур.' },
+  { id: 43, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Oak Темный Дуб' },
+  { id: 44, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Золотое Мербау' },
+  { id: 45, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Марроканский Дуб' },
+  { id: 46, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Орех' },
+  { id: 47, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Сандал' },
+  { id: 48, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Клен' },
+  { id: 49, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Сосна' },
+  { id: 50, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Снежный Дуб' },
+  { id: 51, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Темный Бриар' },
+  { id: 52, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech',     color: 'Темное Венге' },
+  { id: 53, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech ЛМЗ', color: 'Античный Дуб' },
+  { id: 54, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'Printech ДВС', color: 'Античный Дуб' },
+  { id: 55, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.45', typeOfCoating: 'ОЦ',           color: 'Цинк' },
+  { id: 56, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'NL 807' },
+  { id: 57, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 1014' },
+  { id: 58, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 1015' },
+  { id: 59, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 3005' },
+  { id: 60, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 3011' },
+  { id: 61, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 5005' },
+  { id: 62, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 6002' },
+  { id: 63, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 6005' },
+  { id: 64, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 7004' },
+  { id: 65, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 7024' },
+  { id: 66, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 8017' },
+  { id: 67, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 9003' },
+  { id: 68, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Глянец',       color: 'RAL 9006' },
+  { id: 69, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Бархат матовый', color: 'RAL 7024' },
+  { id: 70, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Бархат матовый', color: 'RAL 8004' },
+  { id: 71, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Бархат матовый', color: 'RAL 8017' },
+  { id: 72, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'Бархат матовый', color: 'RAL 8019' },
+  { id: 73, company: 'Кровельный центр', material: 'Профлист С-20', thickness: '0.5',  typeOfCoating: 'ОЦ',           color: 'Цинк' },
+]
+
+const PROFNASTIL_FILTER: FilterOptions = {
+  material:      [...new Set(PROFNASTIL_ROWS.map(r => r.material))].sort().map(v => ({ id: v, name: v })),
+  thickness:     [...new Set(PROFNASTIL_ROWS.map(r => r.thickness))].sort().map(v => ({ id: v, name: v })),
+  typeOfCoating: [...new Set(PROFNASTIL_ROWS.map(r => r.typeOfCoating))].sort().map(v => ({ id: v, name: v })),
+  color:         [...new Set(PROFNASTIL_ROWS.map(r => r.color))].sort().map(v => ({ id: v, name: v })),
+}
+
+// Объединённые данные для get-filter-data: company + profnastil material/thickness/color
+const FILTER_MAIN: FilterOptions = {
+  ...FILTER_COMPANY,
+  ...PROFNASTIL_FILTER,
+}
+
+export async function mockGetProfnastilTable(filters: ProfnastilFilters, page = 1): Promise<Required<ProfnastilTableResponse>> {
+  await delay(200)
+  let rows = [...PROFNASTIL_ROWS]
+  if (filters.companies.length) rows = rows.filter(r => filters.companies.includes(String(r.company)))
+  if (filters.materials.length) rows = rows.filter(r => filters.materials.includes(String(r.material)))
+  if (filters.thickness.length) rows = rows.filter(r => filters.thickness.includes(String(r.thickness)))
+  if (filters.colors.length)    rows = rows.filter(r => filters.colors.includes(String(r.color)))
+  const pageSize   = 100
+  const totalCount = rows.length
+  const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage   = Math.min(Math.max(1, page), pageCount)
+  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+  return { table, pagination: { page: safePage, pageSize, totalCount, pageCount } }
+}
+
+export async function mockGetProfnastilFilterOptions(): Promise<FilterOptions> {
+  await delay(150)
+  return PROFNASTIL_FILTER
 }
 
 // ─── Моки столбы / перемычка ─────────────────────────────────────────────────
@@ -357,9 +474,9 @@ export async function mockSaveWicketData(_payload: Record<string, unknown>): Pro
 export async function mockRecalculate(
   _payload: {
     calculation_number: string | number
-    product_type: string
-    model: string
     model_id: string | number
+    product_type?: string
+    model?: string
   }
 ): Promise<RecalculateResponse> {
   return {

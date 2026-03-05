@@ -64,37 +64,71 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Расположение полотна</span>
+      <span class="text-2xl font-bold flex-1 text-center">Расположение полотна</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
     </div>
 
     <!-- Варианты -->
-    <div class="flex flex-wrap justify-center gap-10 mt-2">
-      <div
+    <div class="polotno-grid">
+      <label
         v-for="opt in options"
         :key="opt.value"
-        class="flex flex-col items-center"
+        class="lock-card"
       >
-        <label class="flex flex-col items-center gap-1 cursor-pointer">
-          <div class="flex items-center gap-1">
-            <input
-              v-model="selected"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm font-semibold">{{ opt.value }}</span>
-          </div>
+        <input
+          v-model="selected"
+          type="radio"
+          :value="opt.value"
+          class="sr-only"
+          @change="save"
+        />
+        <div class="card-content">
           <img
             :src="opt.img"
             :alt="opt.value"
-            class="mt-2 border border-gray-300 rounded"
-            style="max-width: 200px; max-height: 200px; height: auto;"
+            class="w-full h-[140px] object-contain mb-2"
           />
-        </label>
-      </div>
+          <span class="block text-sm font-semibold text-center">{{ opt.value }}</span>
+        </div>
+      </label>
     </div>
 
   </div>
 </template>
+
+<style scoped>
+.polotno-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 4px;
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.card-content {
+  padding: 12px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.lock-card:has(input[type="radio"]:checked) .card-content {
+  background: #eff6ff;
+}
+</style>

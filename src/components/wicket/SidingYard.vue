@@ -68,29 +68,27 @@ watch(filters, () => {
 
 // ─── Восстановление сохранённой строки ───────────────────────────────────────
 function restoreFromCalc(): SidingRow | null {
-  if (!calc.id_facade.value) return null
+  if (!calc.id_yard.value) return null
   return {
-    id:            calc.id_facade.value,
-    company:       calc.material_supplier_facade.value,
-    material:      calc.material_facade.value,
-    form:          calc.form_facade.value,
-    typeOfCoating: calc.type_of_coating_facade.value,
-    color:         calc.color_facade.value,
+    id:            calc.id_yard.value,
+    company:       calc.material_supplier_yard.value,
+    material:      calc.material_yard.value,
+    form:          calc.form_yard.value,
+    typeOfCoating: calc.type_of_coating_yard.value,
+    color:         calc.color_yard.value,
   }
 }
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow) {
-  // Синхронизируем calc-поля
-  calc.id_facade.value                = row.id
-  calc.material_supplier_facade.value = row.company
-  calc.material_facade.value          = row.material
-  calc.form_facade.value              = row.form
-  calc.type_of_coating_facade.value   = row.typeOfCoating
-  calc.color_facade.value             = row.color
+  calc.id_yard.value                = row.id
+  calc.material_supplier_yard.value = row.company
+  calc.material_yard.value          = row.material
+  calc.form_yard.value              = row.form
+  calc.type_of_coating_yard.value   = row.typeOfCoating
+  calc.color_yard.value             = row.color
 
-  // Блок данных
-  calc.updateOrCreateBlock('Заполнение (фасад)', [
+  calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
     { name: 'Материал',                value: row.material },
     { name: 'Форма',                   value: row.form },
@@ -100,14 +98,14 @@ async function save(row: SidingRow) {
 
   try {
     await saveWicketData({
-      calculation_number:        calc.number.value,
-      id_facade:                 row.id,
-      material_supplier_facade:  row.company,
-      material_facade:           row.material,
-      form_facade:               row.form,
-      type_of_coating_facade:    row.typeOfCoating,
-      color_facade:              row.color,
-      model_id:                  calc.modelId.value,
+      calculation_number:       calc.number.value,
+      id_yard:                  row.id,
+      material_supplier_yard:   row.company,
+      material_yard:            row.material,
+      form_yard:                row.form,
+      type_of_coating_yard:     row.typeOfCoating,
+      color_yard:               row.color,
+      model_id:                 calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -138,7 +136,7 @@ async function selectRow(row: SidingRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.id_facade.value = ''
+  calc.id_yard.value = ''
 }
 
 function isSelected(row: SidingRow) {
@@ -156,13 +154,15 @@ function onContinue() {
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
-  calc.setActivePage('page2_facade_siding')
+  const page = calc.material_yard_glob.value === 'Профлист'
+    ? 'page2_yard_profnastil'
+    : 'page2_yard_siding'
+  calc.setActivePage(page)
   const saved = restoreFromCalc()
   if (saved) {
     selectedRow.value = saved
     await save(saved)
   }
-  // Таблица загрузится через watch(filters) при первом рендере (пустые фильтры)
   await loadTable()
 })
 </script>
@@ -183,7 +183,7 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-3xl font-bold flex-1 text-center">Заполнение (фасад)</span>
+      <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
       <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
     </div>
 

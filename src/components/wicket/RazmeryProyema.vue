@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
+import * as yup from 'yup'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -10,17 +11,6 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 
-// ─── Модальное окно ───────────────────────────────────────────────────────────
-const showModal  = ref(false)
-const modalTitle = ref('Внимание')
-const modalMsg   = ref('')
-
-function openModal(msg: string, title = 'Внимание') {
-  modalTitle.value = title
-  modalMsg.value   = msg
-  showModal.value  = true
-}
-
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const width      = ref<string>('')
 const height     = ref<string>('')
@@ -28,9 +18,48 @@ const clearance  = ref<string>('')
 const sostoyaniye = ref<string>('Готов')
 
 // ─── Ошибки ──────────────────────────────────────────────────────────────────
-const errWidth     = ref(false)
-const errHeight    = ref(false)
-const errClearance = ref(false)
+const errWidth     = ref('')
+const errHeight    = ref('')
+const errClearance = ref('')
+
+// ─── Yup схема ───────────────────────────────────────────────────────────────
+const schema = yup.object({
+  width:     yup.number().typeError('Только числа').required('Обязательное поле').min(600,  'От 600 до 2000 мм').max(2000, 'От 600 до 2000 мм'),
+  height:    yup.number().typeError('Только числа').required('Обязательное поле').min(1000, 'От 1000 до 3000 мм').max(3000, 'От 1000 до 3000 мм'),
+  clearance: yup.number().typeError('Только числа').required('Обязательное поле').min(10,   'От 10 до 100 мм').max(100,  'От 10 до 100 мм'),
+})
+
+type FieldName = 'width' | 'height' | 'clearance'
+const errRefs: Record<FieldName, typeof errWidth> = { width: errWidth, height: errHeight, clearance: errClearance }
+
+async function validateField(field: FieldName, raw: string) {
+  const val = raw.trim() === '' ? undefined : Number(raw)
+  try {
+    await schema.validateAt(field, { [field]: val })
+    errRefs[field].value = ''
+  } catch (e: any) {
+    errRefs[field].value = e.message
+  }
+}
+
+async function validateAll(): Promise<boolean> {
+  const values = {
+    width:     width.value.trim()     === '' ? undefined : Number(width.value),
+    height:    height.value.trim()    === '' ? undefined : Number(height.value),
+    clearance: clearance.value.trim() === '' ? undefined : Number(clearance.value),
+  }
+  try {
+    await schema.validate(values, { abortEarly: false })
+    errWidth.value = errHeight.value = errClearance.value = ''
+    return true
+  } catch (e: any) {
+    errWidth.value = errHeight.value = errClearance.value = ''
+    for (const err of e.inner as yup.ValidationError[]) {
+      if (err.path && err.path in errRefs) errRefs[err.path as FieldName].value = err.message
+    }
+    return false
+  }
+}
 
 // ─── Debounce ────────────────────────────────────────────────────────────────
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -90,57 +119,8 @@ async function save() {
   }
 }
 
-// ─── Валидация ───────────────────────────────────────────────────────────────
-function validateField(
-  value: string,
-  min: number,
-  max: number,
-  label: string,
-  errRef: { value: boolean }
-): string {
-  const v = value.trim()
-  errRef.value = false
-
-  if (!v) {
-    errRef.value = true
-    return `Заполните поле: ${label}`
-  }
-  if (!/^\d+$/.test(v)) {
-    errRef.value = true
-    return `${label} должна содержать только числа`
-  }
-  const n = parseInt(v, 10)
-  if (n < min || n > max) {
-    errRef.value = true
-    return `${label} должна быть от ${min} до ${max} мм`
-  }
-  return ''
-}
-
-function validate(): boolean {
-  errWidth.value     = false
-  errHeight.value    = false
-  errClearance.value = false
-
-  const msgs: string[] = []
-
-  const mW = validateField(width.value,     600,  2000, 'Ширина',  errWidth)
-  const mH = validateField(height.value,   1000,  3000, 'Высота',  errHeight)
-  const mC = validateField(clearance.value,  10,   100, 'Просвет', errClearance)
-
-  if (mW) msgs.push(mW)
-  if (mH) msgs.push(mH)
-  if (mC) msgs.push(mC)
-
-  if (msgs.length) {
-    openModal(msgs.join('\n'))
-    return false
-  }
-  return true
-}
-
-function handleNext() {
-  if (!validate()) return
+async function handleNext() {
+  if (!(await validateAll())) return
   emit('next')
 }
 
@@ -160,24 +140,14 @@ onMounted(async () => {
 <template>
   <div class="flex flex-col gap-4">
 
-    <B24Modal
-      v-model:open="showModal"
-      :title="modalTitle"
-      :description="modalMsg"
-    >
-      <template #footer="{ close }">
-        <B24Button color="air-primary" @click="close">Понятно</B24Button>
-      </template>
-    </B24Modal>
-
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Проём</span>
+      <span class="text-2xl font-bold flex-1 text-center">Проём</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
-    <div class="flex flex-col gap-5 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-5" style="padding-inline: 4px;">
 
       <!-- Размеры проема -->
       <div class="flex flex-col gap-4">
@@ -193,8 +163,10 @@ onMounted(async () => {
             placeholder="Введите ширину (600–2000)"
             class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errWidth ? 'border-red-500' : 'border-gray-300'"
-            @input="debouncedSave"
+            @blur="validateField('width', width)"
+            @input="errWidth ? validateField('width', width) : debouncedSave()"
           />
+          <span v-if="errWidth" class="text-xs text-red-500">{{ errWidth }}</span>
         </div>
 
         <!-- Высота -->
@@ -207,8 +179,10 @@ onMounted(async () => {
             placeholder="Введите высоту (1000–3000)"
             class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errHeight ? 'border-red-500' : 'border-gray-300'"
-            @input="debouncedSave"
+            @blur="validateField('height', height)"
+            @input="errHeight ? validateField('height', height) : debouncedSave()"
           />
+          <span v-if="errHeight" class="text-xs text-red-500">{{ errHeight }}</span>
         </div>
 
         <!-- Просвет -->
@@ -221,34 +195,40 @@ onMounted(async () => {
             placeholder="Введите просвет (10–100)"
             class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errClearance ? 'border-red-500' : 'border-gray-300'"
-            @input="debouncedSave"
+            @blur="validateField('clearance', clearance)"
+            @input="errClearance ? validateField('clearance', clearance) : debouncedSave()"
           />
+          <span v-if="errClearance" class="text-xs text-red-500">{{ errClearance }}</span>
         </div>
       </div>
 
       <!-- Готовность проема -->
       <div class="flex flex-col gap-3">
         <h2 class="text-center text-lg font-semibold">Готовность проема на момент заказа</h2>
-        <div class="flex justify-center gap-16 flex-wrap">
-          <label class="flex items-center gap-2 cursor-pointer">
+        <div class="option-grid">
+          <label class="lock-card">
             <input
               v-model="sostoyaniye"
               type="radio"
               value="Готов"
-              class="accent-blue-600"
+              class="sr-only"
               @change="save"
             />
-            <span class="text-sm font-semibold">Готов</span>
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Готов</span>
+            </div>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer">
+          <label class="lock-card">
             <input
               v-model="sostoyaniye"
               type="radio"
               value="Не готов"
-              class="accent-blue-600"
+              class="sr-only"
               @change="save"
             />
-            <span class="text-sm font-semibold">На стадии строительства</span>
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">На стадии строительства</span>
+            </div>
           </label>
         </div>
       </div>
@@ -256,3 +236,44 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+}
+
+@media (min-width: 640px) {
+  .option-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #eff6ff;
+}
+
+.card-content {
+  padding: 12px;
+}
+</style>

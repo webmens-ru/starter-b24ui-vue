@@ -109,33 +109,25 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Дополнительная ручка (скоба)</span>
+      <span class="text-2xl font-bold flex-1 text-center">Дополнительная ручка (скоба)</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <div class="flex flex-col gap-6 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-6" style="padding-inline: 4px;">
 
       <!-- Будет / Не будет -->
-      <div class="flex justify-center gap-24 flex-wrap">
-        <label class="flex items-center gap-2 cursor-pointer font-semibold">
-          <input
-            v-model="is_there_pen"
-            type="radio"
-            value="Будет"
-            class="accent-blue-600"
-            @change="save"
-          />
-          Будет
+      <div class="option-grid">
+        <label class="lock-card">
+          <input v-model="is_there_pen" type="radio" value="Будет" class="sr-only" @change="save" />
+          <div class="card-content">
+            <span class="block text-sm font-semibold text-center">Будет</span>
+          </div>
         </label>
-        <label class="flex items-center gap-2 cursor-pointer font-semibold">
-          <input
-            v-model="is_there_pen"
-            type="radio"
-            value="Не будет"
-            class="accent-blue-600"
-            @change="save"
-          />
-          Не будет
+        <label class="lock-card">
+          <input v-model="is_there_pen" type="radio" value="Не будет" class="sr-only" @change="save" />
+          <div class="card-content">
+            <span class="block text-sm font-semibold text-center">Не будет</span>
+          </div>
         </label>
       </div>
 
@@ -143,56 +135,32 @@ onMounted(async () => {
       <template v-if="showDetails">
 
         <!-- Кто предоставляет -->
-        <div class="flex justify-center gap-12 flex-wrap">
-          <label
-            v-for="opt in providedOptions"
-            :key="opt.value"
-            class="flex items-center gap-2 cursor-pointer"
-          >
-            <input
-              v-model="pen_provided"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm">{{ opt.label }}</span>
+        <div class="option-grid">
+          <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
+            <input v-model="pen_provided" type="radio" :value="opt.value" class="sr-only" @change="save" />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+            </div>
           </label>
         </div>
 
         <!-- Кто устанавливает -->
-        <div class="flex justify-center gap-12 flex-wrap">
-          <label
-            v-for="opt in installedOptions"
-            :key="opt.value"
-            class="flex items-center gap-2 cursor-pointer"
-          >
-            <input
-              v-model="pen_installed"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm">{{ opt.label }}</span>
+        <div class="option-grid">
+          <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
+            <input v-model="pen_installed" type="radio" :value="opt.value" class="sr-only" @change="save" />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+            </div>
           </label>
         </div>
 
         <!-- Цвет ручки -->
-        <div class="flex justify-center gap-8 flex-wrap">
-          <label
-            v-for="opt in colorOptions"
-            :key="opt.value"
-            class="flex items-center gap-2 cursor-pointer"
-          >
-            <input
-              v-model="pen_color"
-              type="radio"
-              :value="opt.value"
-              class="accent-blue-600"
-              @change="save"
-            />
-            <span class="text-sm">{{ opt.label }}</span>
+        <div class="color-grid">
+          <label v-for="opt in colorOptions" :key="opt.value" class="lock-card">
+            <input v-model="pen_color" type="radio" :value="opt.value" class="sr-only" @change="save" />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+            </div>
           </label>
         </div>
 
@@ -201,3 +169,58 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+}
+
+@media (min-width: 640px) {
+  .option-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #eff6ff;
+}
+
+.card-content {
+  padding: 12px;
+}
+</style>

@@ -90,8 +90,18 @@ const id_facade                = ref<string | number>('')
 const material_supplier_facade = ref<string>('')
 const material_facade          = ref<string>('')
 const form_facade              = ref<string>('')
+const thickness_facade         = ref<string>('')
 const type_of_coating_facade   = ref<string>('')
 const color_facade             = ref<string>('')
+
+// Поля шага "Заполнение (двор)"
+const id_yard                = ref<string | number>('')
+const material_supplier_yard = ref<string>('')
+const material_yard          = ref<string>('')
+const form_yard              = ref<string>('')
+const thickness_yard         = ref<string>('')
+const type_of_coating_yard   = ref<string>('')
+const color_yard             = ref<string>('')
 
 // Цена
 const price_retail  = ref<string | number>('')
@@ -197,8 +207,16 @@ export function useCalculation() {
     material_supplier_facade,
     material_facade,
     form_facade,
+    thickness_facade,
     type_of_coating_facade,
     color_facade,
+    id_yard,
+    material_supplier_yard,
+    material_yard,
+    form_yard,
+    thickness_yard,
+    type_of_coating_yard,
+    color_yard,
     price_retail,
     price_dealer,
     fields_filled,

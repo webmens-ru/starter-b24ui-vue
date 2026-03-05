@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+
+declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import {
   getAssortmentStolb,
@@ -35,12 +37,15 @@ const stolb_id          = ref<string>('')
 const showStolbList     = computed(() => nalichie_stolbov.value === 'Со столбами')
 
 // ─── Вариант открытия ────────────────────────────────────────────────────────
-const openingOptions = [
-  { label: 'Наружу / Правая', id: 1, img: '/web/img/wicket_opening_diagram_02.jpg' },
-  { label: 'Наружу / Левая',  id: 3, img: '/web/img/wicket_opening_diagram_01.jpg' },
-  { label: 'Внутрь / Левая',  id: 2, img: '/web/img/wicket_opening_diagram_03.jpg' },
-  { label: 'Внутрь / Правая', id: 4, img: '/web/img/wicket_opening_diagram_04.jpg' },
-]
+const openingOptions = computed(() => {
+  const base = window._HOSTNAME_
+  return [
+    { label: 'Наружу / Правая', id: 1, img: `${base}/web/img/wicket_opening_diagram_02.jpg` },
+    { label: 'Наружу / Левая',  id: 3, img: `${base}/web/img/wicket_opening_diagram_01.jpg` },
+    { label: 'Внутрь / Левая',  id: 2, img: `${base}/web/img/wicket_opening_diagram_03.jpg` },
+    { label: 'Внутрь / Правая', id: 4, img: `${base}/web/img/wicket_opening_diagram_04.jpg` },
+  ]
+})
 const opening_option_id = ref<number | null>(null)
 
 // ─── Перемычка ───────────────────────────────────────────────────────────────
@@ -98,9 +103,7 @@ async function onNalichieChange() {
 }
 
 async function onStolbChange() {
-  const name = stolbOptions.value.find(i => String(i.id) === stolb_id.value)?.name ?? ''
   await save()
-  openModal(`Внесены изменения: столб '${name}'`, 'Изменения сохранены')
 }
 
 async function onOpeningOptionChange() {
@@ -130,9 +133,7 @@ async function onPolozhenieChange() {
 }
 
 async function onSortamentChange() {
-  const name = sortamentOptions.value.find(i => String(i.id) === peremichka_sortament.value)?.name ?? ''
   await save()
-  openModal(`Внесены изменения: сортамент перемычки '${name}'`, 'Изменения сохранены')
 }
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
@@ -149,7 +150,7 @@ function syncCalcFields() {
     calc.stolb_name.value = ''
   }
 
-  const openingItem = openingOptions.find(o => o.id === opening_option_id.value)
+  const openingItem = openingOptions.value.find(o => o.id === opening_option_id.value)
   calc.opening_option_name.value       = openingItem?.label ?? ''
   calc.opening_option_id.value         = opening_option_id.value
   calc.opening_option_path_photo.value = openingItem?.img ?? ''
@@ -289,31 +290,45 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Столбы / Вариант открытия / Перемычка</span>
+      <span class="text-2xl font-bold flex-1 text-center">Столбы / Вариант открытия / Перемычка</span>
       <B24Button label="Далее"  color="air-secondary" @click="handleNext" />
     </div>
 
-    <div class="flex flex-col gap-6 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-6" style="padding-inline: 4px;">
 
       <!-- Наличие столбов -->
-      <div class="flex flex-wrap gap-10 justify-center">
-
-        <!-- Со столбами -->
-        <div class="flex flex-col items-center gap-2">
-          <label class="flex items-center gap-2 cursor-pointer font-semibold">
+      <div class="flex flex-col items-center gap-3">
+        <div class="stolb-grid">
+          <label class="lock-card">
             <input
               v-model="nalichie_stolbov"
               type="radio"
               value="Со столбами"
-              class="accent-blue-600"
+              class="sr-only"
               @change="onNalichieChange"
             />
-            Со столбами
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Со столбами</span>
+            </div>
           </label>
+          <label class="lock-card">
+            <input
+              v-model="nalichie_stolbov"
+              type="radio"
+              value="Без столбов"
+              class="sr-only"
+              @change="onNalichieChange"
+            />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Без столбов</span>
+            </div>
+          </label>
+        </div>
+        <div v-show="showStolbList" class="stolb-select-wrap">
+          <span class="text-sm font-semibold whitespace-nowrap">Столб:</span>
           <select
-            v-show="showStolbList"
             v-model="stolb_id"
-            class="border border-gray-300 rounded px-2 py-1 text-sm min-w-[120px]"
+            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
             @change="onStolbChange"
           >
             <option
@@ -323,58 +338,40 @@ onMounted(async () => {
             >{{ item.name }}</option>
           </select>
         </div>
-
-        <!-- Без столбов -->
-        <div class="flex flex-col items-center justify-center">
-          <label class="flex items-center gap-2 cursor-pointer font-semibold">
-            <input
-              v-model="nalichie_stolbov"
-              type="radio"
-              value="Без столбов"
-              class="accent-blue-600"
-              @change="onNalichieChange"
-            />
-            Без столбов
-          </label>
-        </div>
-
       </div>
 
       <!-- Вариант открытия -->
-      <div class="flex flex-wrap gap-5 justify-center">
-        <div
+      <div class="opening-grid">
+        <label
           v-for="opt in openingOptions"
           :key="opt.id"
-          class="flex flex-col items-center w-[180px]"
+          class="lock-card"
         >
-          <label class="flex flex-col items-center gap-1 cursor-pointer">
-            <div class="flex items-center gap-1">
-              <input
-                v-model="opening_option_id"
-                type="radio"
-                :value="opt.id"
-                class="accent-blue-600"
-                @change="onOpeningOptionChange"
-              />
-              <span class="text-sm font-semibold">{{ opt.label }}</span>
-            </div>
+          <input
+            v-model="opening_option_id"
+            type="radio"
+            :value="opt.id"
+            class="sr-only"
+            @change="onOpeningOptionChange"
+          />
+          <div class="card-content">
             <img
               :src="opt.img"
               :alt="opt.label"
-              class="mt-1 border border-gray-300 rounded"
-              style="max-width: 180px; height: auto;"
+              class="w-full h-[140px] object-contain mb-2"
             />
-          </label>
-        </div>
+            <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+          </div>
+        </label>
       </div>
 
       <!-- Перемычка -->
-      <div v-show="showPeremichka" class="flex flex-wrap items-center gap-3">
-        <span class="font-bold text-base whitespace-nowrap">Перемычка:</span>
-        <div class="flex flex-wrap gap-3 flex-1 min-w-[150px]">
+      <div v-show="showPeremichka" class="flex flex-col items-center gap-2">
+        <div class="peremichka-select-wrap">
+          <span class="text-sm font-semibold whitespace-nowrap">Перемычка:</span>
           <select
             v-model="peremichka_polozheniye"
-            class="border border-gray-300 rounded px-2 py-1 text-sm flex-1 min-w-[140px]"
+            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
             @change="onPolozhenieChange"
           >
             <option
@@ -383,10 +380,12 @@ onMounted(async () => {
               :value="String(item.id)"
             >{{ item.name }}</option>
           </select>
+        </div>
+        <div v-show="showSortament" class="peremichka-select-wrap">
+          <span class="text-sm font-semibold whitespace-nowrap">Труба:</span>
           <select
-            v-show="showSortament"
             v-model="peremichka_sortament"
-            class="border border-gray-300 rounded px-2 py-1 text-sm flex-1 min-w-[140px]"
+            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
             @change="onSortamentChange"
           >
             <option
@@ -401,3 +400,83 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.stolb-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .stolb-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+  }
+}
+
+.stolb-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .stolb-select-wrap {
+    width: auto;
+  }
+}
+
+.peremichka-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .peremichka-select-wrap {
+    width: auto;
+  }
+}
+
+.opening-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 4px;
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #eff6ff;
+}
+
+.card-content {
+  padding: 12px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.lock-card:has(input[type="radio"]:checked) .card-content {
+  background: #eff6ff;
+}
+</style>

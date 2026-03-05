@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+
+declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, saveWicketData, recalculate } from '../../app/api/wicket'
 import type { SelectItem } from '../../app/api/wicket'
@@ -54,12 +56,16 @@ const imageFolder = computed(() => {
   return id === 1 || id === 4 ? 'right' : 'left'
 })
 
-const shieldOptions = computed(() => [
-  { value: 'Тип_1', label: 'Тип 1', img: `/web/img/wicket/shield-type/${imageFolder.value}/shield_type1_${imageFolder.value}.jpg` },
-  { value: 'Тип_2', label: 'Тип 2', img: `/web/img/wicket/shield-type/${imageFolder.value}/shield_type2_${imageFolder.value}.jpg` },
-  { value: 'Тип_3', label: 'Тип 3', img: `/web/img/wicket/shield-type/${imageFolder.value}/shield_type3_${imageFolder.value}.jpg` },
-  { value: 'Тип_4', label: 'Тип 4', img: `/web/img/wicket/shield-type/${imageFolder.value}/shield_type4_${imageFolder.value}.jpg` },
-])
+const shieldOptions = computed(() => {
+  const base = window._HOSTNAME_
+  const folder = imageFolder.value
+  return [
+    { value: 'Тип_1', label: 'Тип 1', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type1_${folder}.jpg` },
+    { value: 'Тип_2', label: 'Тип 2', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type2_${folder}.jpg` },
+    { value: 'Тип_3', label: 'Тип 3', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type3_${folder}.jpg` },
+    { value: 'Тип_4', label: 'Тип 4', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type4_${folder}.jpg` },
+  ]
+})
 
 // ─── Загрузка цветов ─────────────────────────────────────────────────────────
 async function loadColorShield() {
@@ -261,11 +267,11 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold text-center">Щит</span>
+      <span class="text-2xl font-bold flex-1 text-center">Щит</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
-    <div class="flex flex-col gap-5 overflow-y-auto" style="max-height: 500px; padding-right: 4px;">
+    <div class="flex flex-col gap-5 overflow-y-auto" style="max-height: 500px; padding-inline: 4px;">
 
       <!-- Цвет щита -->
       <div class="flex flex-wrap items-center gap-3">
@@ -273,7 +279,7 @@ onMounted(async () => {
         <div class="flex-1 min-w-[150px]">
           <select
             v-model="color_shield_id"
-            class="border border-gray-300 rounded px-2 py-1 text-sm w-full"
+            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full"
             @change="onColorChange"
           >
             <option
@@ -286,31 +292,28 @@ onMounted(async () => {
       </div>
 
       <!-- Типы щита -->
-      <div class="flex flex-wrap justify-center gap-4">
-        <div
+      <div class="shield-grid">
+        <label
           v-for="opt in shieldOptions"
           :key="opt.value"
-          class="flex flex-col items-center w-[120px]"
+          class="lock-card"
         >
-          <label class="flex flex-col items-center gap-1 cursor-pointer">
-            <div class="flex items-center gap-1">
-              <input
-                v-model="shield_type"
-                type="radio"
-                :value="opt.value"
-                class="accent-blue-600"
-                @change="onShieldTypeChange"
-              />
-              <span class="text-sm font-semibold">{{ opt.label }}</span>
-            </div>
+          <input
+            v-model="shield_type"
+            type="radio"
+            :value="opt.value"
+            class="sr-only"
+            @change="onShieldTypeChange"
+          />
+          <div class="card-content">
             <img
               :src="opt.img"
               :alt="opt.label"
-              class="mt-1 border border-gray-300 rounded"
-              style="max-width: 100px; max-height: 200px; height: auto;"
+              class="w-full h-[120px] object-contain mb-2"
             />
-          </label>
-        </div>
+            <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
+          </div>
+        </label>
       </div>
 
       <!-- Высота верхней части (Тип_3) -->
@@ -322,7 +325,7 @@ onMounted(async () => {
           id="height_top_part"
           v-model="height_top_part"
           type="text"
-          class="border rounded px-2 py-1 text-sm w-[120px]"
+          class="border rounded px-3 py-2.5 text-base w-[140px]"
           :class="errHeightTop ? 'border-red-500' : 'border-gray-300'"
           @input="debouncedSave"
         />
@@ -337,7 +340,7 @@ onMounted(async () => {
           id="height_lower_part"
           v-model="height_lower_part"
           type="text"
-          class="border rounded px-2 py-1 text-sm w-[120px]"
+          class="border rounded px-3 py-2.5 text-base w-[140px]"
           :class="errHeightLower ? 'border-red-500' : 'border-gray-300'"
           @input="debouncedSave"
         />
@@ -353,7 +356,7 @@ onMounted(async () => {
             id="width_side_part"
             v-model="width_side_part"
             type="text"
-            class="border rounded px-2 py-1 text-sm w-[120px]"
+            class="border rounded px-3 py-2.5 text-base w-[140px]"
             :class="errWidthSide ? 'border-red-500' : 'border-gray-300'"
             @input="debouncedSave"
           />
@@ -385,3 +388,40 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.shield-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 4px;
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.card-content {
+  padding: 12px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.lock-card:has(input[type="radio"]:checked) .card-content {
+  background: #eff6ff;
+}
+</style>
