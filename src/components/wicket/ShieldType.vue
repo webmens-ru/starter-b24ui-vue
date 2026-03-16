@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, saveWicketData, recalculate } from '../../app/api/wicket'
-import type { SelectItem } from '../../app/api/wicket'
+import type { ColorShieldItem } from '../../app/api/wicket'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -25,8 +25,8 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Цвет щита ───────────────────────────────────────────────────────────────
-const colorOptions    = ref<SelectItem[]>([])
-const color_shield_id = ref<string>('')
+const colorOptions    = ref<ColorShieldItem[]>([])
+const color_shield_id = ref<string | number>('')
 
 // ─── Тип щита ────────────────────────────────────────────────────────────────
 const shield_type = ref<string>('Тип_1')
@@ -51,20 +51,41 @@ const errHeightLower = ref(false)
 const errWidthSide   = ref(false)
 
 // ─── Изображения щитов ───────────────────────────────────────────────────────
-const imageFolder = computed(() => {
+// g - горизонтально, v - вертикально; right→g, left→v
+const panelOrientation = computed(() => {
   const id = calc.opening_option_id.value
-  return id === 1 || id === 4 ? 'right' : 'left'
+  return id === 1 || id === 4 ? 'g' : 'v'
 })
 
+const IMG_BASE = 'https://test-lk.doorhan-krd.ru/img/wicket/type1'
+
 const shieldOptions = computed(() => {
-  const base = window._HOSTNAME_
-  const folder = imageFolder.value
+  const orient = panelOrientation.value
+  // z - замок, p - петля (только для Тип_4)
+  const type4Suffix = grille_location.value === 'Возле замка' ? 'z' : 'p'
   return [
-    { value: 'Тип_1', label: 'Тип 1', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type1_${folder}.jpg` },
-    { value: 'Тип_2', label: 'Тип 2', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type2_${folder}.jpg` },
-    { value: 'Тип_3', label: 'Тип 3', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type3_${folder}.jpg` },
-    { value: 'Тип_4', label: 'Тип 4', img: `${base}/web/img/wicket/shield-type/${folder}/shield_type4_${folder}.jpg` },
+    { value: 'Тип_1', label: 'Тип 1', img: `${IMG_BASE}/w_${orient}_1.1.png` },
+    { value: 'Тип_2', label: 'Тип 2', img: `${IMG_BASE}/w_${orient}_1.2.png` },
+    { value: 'Тип_3', label: 'Тип 3', img: `${IMG_BASE}/w_${orient}_1.3.png` },
+    { value: 'Тип_4', label: 'Тип 4', img: `${IMG_BASE}/w_${orient}_1.4_${type4Suffix}.png` },
   ]
+})
+
+// Группировка: Стандартная краска / Не стандартная (для B24SelectMenu)
+const colorSelectItems = computed(() => {
+  const standard = colorOptions.value.filter(i => (i.isStandard ?? 1) === 1)
+  const custom   = colorOptions.value.filter(i => (i.isStandard ?? 1) === 0)
+  const rows: Array<{ type?: 'label' | 'separator'; label?: string; id?: string | number }> = []
+  if (standard.length) {
+    rows.push({ type: 'label', label: 'Стандартная краска' })
+    rows.push(...standard.map(i => ({ id: i.id, label: i.name })))
+  }
+  if (custom.length) {
+    if (rows.length) rows.push({ type: 'separator' })
+    rows.push({ type: 'label', label: 'Не стандартная краска' })
+    rows.push(...custom.map(i => ({ id: i.id, label: i.name })))
+  }
+  return rows
 })
 
 // ─── Загрузка цветов ─────────────────────────────────────────────────────────
@@ -103,17 +124,19 @@ async function onShieldTypeChange() {
   await save()
 }
 
-async function onColorChange() {
-  const name = colorOptions.value.find(i => String(i.id) === color_shield_id.value)?.name ?? ''
-  await save()
-  openModal(`Внесены изменения: Цвет щита '${name}'`, 'Изменения сохранены')
+function onColorChange() {
+  save().then(() => {
+    const sid = String(color_shield_id.value ?? '')
+    const name = colorOptions.value.find(i => String(i.id) === sid)?.name ?? ''
+    openModal(`Внесены изменения: Цвет щита '${name}'`, 'Изменения сохранены')
+  })
 }
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
   calc.shield_type.value       = shield_type.value
-  calc.color_shield_id.value   = color_shield_id.value
-  const colorItem = colorOptions.value.find(i => String(i.id) === color_shield_id.value)
+  calc.color_shield_id.value   = String(color_shield_id.value ?? '')
+  const colorItem = colorOptions.value.find(i => String(i.id) === String(color_shield_id.value))
   calc.color_shield_name.value = colorItem?.name ?? ''
   calc.height_top_part.value   = height_top_part.value
   calc.height_lower_part.value = height_lower_part.value
@@ -149,7 +172,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      calculation_number: calc.number.value,
+      order_id: Number(calc.number.value),
       shield_type:        calc.shield_type.value,
       color_shield_name:  calc.color_shield_name.value,
       color_shield_id:    calc.color_shield_id.value,
@@ -166,7 +189,7 @@ async function save() {
   if (calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,
@@ -244,7 +267,7 @@ onMounted(async () => {
   await loadColorShield()
 
   if (calc.color_shield_id.value) {
-    color_shield_id.value = String(calc.color_shield_id.value)
+    color_shield_id.value = calc.color_shield_id.value
   }
 
   await save()
@@ -276,18 +299,15 @@ onMounted(async () => {
       <!-- Цвет щита -->
       <div class="flex flex-wrap items-center gap-3">
         <span class="font-bold text-base whitespace-nowrap">Цвет щита:</span>
-        <div class="flex-1 min-w-[150px]">
-          <select
+        <div class="flex-1 min-w-[200px] max-w-[320px]">
+          <B24SelectMenu
             v-model="color_shield_id"
-            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full"
-            @change="onColorChange"
-          >
-            <option
-              v-for="item in colorOptions"
-              :key="item.id"
-              :value="String(item.id)"
-            >{{ item.name }}</option>
-          </select>
+            value-key="id"
+            :items="colorSelectItems"
+            placeholder="Выберите цвет"
+            class="w-full"
+            @update:model-value="onColorChange"
+          />
         </div>
       </div>
 

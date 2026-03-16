@@ -1,4 +1,4 @@
-import type { SelectItem, RecalculateResponse, FilterOptions, SidingFilters, SidingRow, ProfnastilFilters, ProfnastilRow, ProfnastilTableResponse } from './wicket.types'
+import type { SelectItem, ColorShieldItem, RecalculateResponse, FilterOptions, SidingFilters, SidingRow, ProfnastilFilters, ProfnastilRow, ProfnastilTableResponse } from './wicket.types'
 
 // ─── Таблица сайдинга (реальные данные) ──────────────────────────────────────
 
@@ -410,17 +410,19 @@ export async function mockGetAssortmentJumper(): Promise<{ arr_assortment_jumper
 
 // ─── Моки цвет щита ──────────────────────────────────────────────────────────
 
-const MOCK_COLOR_SHIELD: SelectItem[] = [
-  { id: 1,  name: 'RAL 7024 (Графитовый серый)' },
-  { id: 2,  name: 'RAL 8017 (Шоколадно-коричневый)' },
-  { id: 3,  name: 'RAL 9003 (Сигнальный белый)' },
-  { id: 4,  name: 'RAL 3005 (Винно-красный)' },
-  { id: 5,  name: 'RAL 6020 (Хромовый зелёный)' },
-  { id: 6,  name: 'RAL 1014 (Слоновая кость)' },
-  { id: 7,  name: 'RAL 7004 (Сигнальный серый)' },
+const MOCK_COLOR_SHIELD: ColorShieldItem[] = [
+  { id: 1,  name: 'RAL 7024 (Графитовый серый)', isStandard: 1 },
+  { id: 2,  name: 'RAL 8017 (Шоколадно-коричневый)', isStandard: 1 },
+  { id: 3,  name: 'RAL 9003 (Сигнальный белый)', isStandard: 1 },
+  { id: 4,  name: 'RAL 3005 (Винно-красный)', isStandard: 1 },
+  { id: 5,  name: 'RAL 6020 (Хромовый зелёный)', isStandard: 1 },
+  { id: 6,  name: 'RAL 1014 (Слоновая кость)', isStandard: 1 },
+  { id: 7,  name: 'RAL 7004 (Сигнальный серый)', isStandard: 1 },
+  { id: 101, name: 'RAL 9001 (Кремово-белый)', isStandard: 0 },
+  { id: 102, name: 'RAL 5010 (Горечавково-синий)', isStandard: 0 },
 ]
 
-export async function mockGetColorShield(): Promise<{ arr_color_shield: SelectItem[] }> {
+export async function mockGetColorShield(): Promise<{ arr_color_shield: ColorShieldItem[] }> {
   await delay(100)
   return { arr_color_shield: MOCK_COLOR_SHIELD }
 }
@@ -471,9 +473,97 @@ export async function mockSaveWicketData(_payload: Record<string, unknown>): Pro
   // no-op
 }
 
+export async function mockCreateOrder(): Promise<{
+  order_id: number
+  companyId: number | null
+  managerId: number
+}> {
+  await delay(100)
+  return {
+    order_id: 42,
+    companyId: 5,
+    managerId: 12,
+  }
+}
+
+export async function mockLoadWicketData(
+  _orderId: number,
+): Promise<Record<string, unknown>> {
+  await delay(200)
+  return {
+    order_id: 42,
+    orderId: 42,
+    model_id: '1',
+    provides_material: 'Предоставляет изготовитель',
+    provides_paint: 'Предоставляет изготовитель',
+    does_painting_frame: 'Выполняет изготовитель',
+    does_assembly: 'Выполняет изготовитель',
+    fill_side: 'Одна сторона',
+    material_facade_glob: 'Сайдинг',
+    material_yard_glob: null,
+    nalichie_stolbov_name: 'Со столбами',
+    nalichie_stolbov_id: 1,
+    stolb_id: 7,
+    stolb_name: '60/60/2',
+    opening_option_id: 1,
+    opening_option_name: 'Наружу / Правая',
+    peremichka_polozheniye_id: '1',
+    peremichka_polozheniye_name: 'Без перемычки',
+    peremichka_sortament_id: null,
+    peremichka_sortament_name: null,
+    calculation_name: 'Тест редактирования',
+    client_name: 'Иван',
+    client_last_name: 'Иванов',
+    client_surname: 'Иванович',
+    client_phone: '+7 (999) 123-45-67',
+    client_email: 'ivan@example.com',
+    client_address: 'Москва, ул. Ленина, 1',
+    client_comment: '',
+    country_code: '+7',
+    is_there_pen_id: 0,
+    is_there_pen_name: 'Не будет',
+    is_there_lock_id: 1,
+    is_there_lock_name: 'Есть',
+    provides_lock: 'Предоставляет изготовитель',
+    lock_installer: 'Выполняет изготовитель',
+    is_there_cable: 'Изготовитель устанавливает',
+    type_lock: 'Тип_1',
+    width_proyema: '1000',
+    height_proyema: '2000',
+    clearance_proyema: '20',
+    sostoyaniye_proyema: 'Готов',
+    raspolozheniye_polotna: 'Вертикально',
+    shield_type: 'Тип_1',
+    color_shield_id: 1,
+    color_shield_name: 'RAL 7024',
+    height_top_part: '0',
+    height_lower_part: '0',
+    width_side_part: '0',
+    grille_location: 'Возле петель',
+    id_facade: 5,
+    material_supplier_facade: 'Кровельный центр',
+    material_facade: 'Сайдинг «Бревно»',
+    form_facade: 'Гладкая',
+    thickness_facade: '',
+    type_of_coating_facade: 'Глянец',
+    color_facade: 'RAL 7004',
+    id_yard: '',
+    material_supplier_yard: '',
+    material_yard: '',
+    form_yard: '',
+    thickness_yard: '',
+    type_of_coating_yard: '',
+    color_yard: '',
+    price_retail: '13500',
+    price_dealer: '10000',
+    visitedPages: ['page1', 'page2', 'page3', 'page5', 'page6', 'page7', 'page9', 'page10', 'page11', 'page12'],
+    activePage: 'page12',
+  }
+}
+
 export async function mockRecalculate(
   _payload: {
-    calculation_number: string | number
+    order_id: number
     model_id: string | number
     product_type?: string
     model?: string

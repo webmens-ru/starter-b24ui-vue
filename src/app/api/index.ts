@@ -4,7 +4,8 @@ const api = axios.create({
   baseURL: window._HOSTNAME_,
   headers: {
     "Content-Type": "application/json",
-  }
+  },
+  withCredentials: true,  // сессионная cookie (Yii2 login)
 })
 
 // Токен берётся при каждом запросе — на случай если он обновится после инициализации

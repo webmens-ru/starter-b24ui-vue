@@ -15,6 +15,12 @@ import PlayCircleIcon from '@bitrix24/b24icons-vue/main/PlayCircleIcon'
 
         <div class="flex flex-wrap items-start sm:items-center gap-2">
           <B24Button
+            label="Добавить продукт"
+            color="air-primary"
+            to="/add-product"
+          />
+
+          <B24Button
             label="Documentation"
             color="air-primary-copilot"
             :icon="PlayCircleIcon"

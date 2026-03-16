@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, type Component } from 'vue'
+import { useRoute } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
+import { loadWicketData, createOrder, createWicketMainMenu } from '../../app/api/wicket'
 declare const window: Window & {
-  _PARAMS_?: { placementOptions?: { id?: string | number } }
+  _PARAMS_?: { placementOptions?: { id?: string | number; modelId?: string } }
 }
 
 import WicketMenu from '../../components/WicketMenu.vue'
@@ -22,14 +24,25 @@ import LockType from '../../components/wicket/LockType.vue'
 import Pen from '../../components/wicket/Pen.vue'
 import Client from '../../components/wicket/Client.vue'
 import End from '../../components/wicket/End.vue'
+import { getNextPage as getNextPageFn, getPrevPage as getPrevPageFn } from './type1Navigation'
 
 const calc = useCalculation()
-const { activePage, visitedPages, isPageAccessible, setActivePage } = calc
+const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi } = calc
 
-calc.modelId.value = '1'
-calc.number.value  = window._PARAMS_?.placementOptions?.id ?? ''
+const route = useRoute()
+/** modelId из _PARAMS_, из пути /wicket/typeN или '1' по умолчанию */
+const resolvedModelId = (): string => {
+  const fromParams = window._PARAMS_?.placementOptions?.modelId
+  if (fromParams) return String(fromParams)
+  const m = route.path.match(/\/wicket\/type(\d+)$/)
+  return m ? m[1] : '1'
+}
+calc.modelId.value = resolvedModelId()
 
 const windowWidth = ref(window.innerWidth)
+const loadError = ref<string | null>(null)
+const showLoadErrorModal = ref(false)
+const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
 
 let resizeTimer: ReturnType<typeof setTimeout>
@@ -37,7 +50,42 @@ function onResize() {
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => { windowWidth.value = window.innerWidth }, 100)
 }
-onMounted(() => window.addEventListener('resize', onResize))
+async function initCalculation() {
+  const placementId = window._PARAMS_?.placementOptions?.id
+  const existingOrderId = calc.number.value ? Number(calc.number.value) : null
+  calc.modelId.value = resolvedModelId()
+  try {
+    if (placementId) {
+      const orderId = Number(placementId)
+      const apiData = await loadWicketData(calc.modelId.value, orderId)
+      loadFromApi(apiData)
+      calc.number.value = orderId
+      switchTo(calc.activePage.value)
+    } else if (existingOrderId) {
+      const apiData = await loadWicketData(calc.modelId.value, existingOrderId)
+      loadFromApi(apiData)
+      switchTo(calc.activePage.value)
+    } else {
+      const res = await createOrder()
+      calc.number.value = res.order_id
+      await createWicketMainMenu({
+        order_id: res.order_id,
+        model_id: calc.modelId.value,
+        model: `Калитка Тип ${calc.modelId.value}`,
+      })
+    }
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : 'Ошибка загрузки расчёта'
+    showLoadErrorModal.value = true
+  } finally {
+    loadPending.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+  initCalculation()
+})
 onUnmounted(() => { window.removeEventListener('resize', onResize); clearTimeout(resizeTimer) })
 
 const showWarningModal = ref(false)
@@ -83,57 +131,21 @@ const stepComponents: Record<string, Component> = {
 
 const currentComponent = shallowRef<Component>(ManufacturingOption)
 
-function getNextPage(from: string): string | null {
-  switch (from) {
-    case 'page2':
-      return calc.material_facade_glob.value === 'Профлист'
-        ? 'page2_facade_profnastil'
-        : 'page2_facade_siding'
-    case 'page2_facade_siding':
-    case 'page2_facade_profnastil':
-      if (calc.fill_side.value === 'Одна сторона') return 'page5'
-      return calc.material_yard_glob.value === 'Профлист'
-        ? 'page2_yard_profnastil'
-        : 'page2_yard_siding'
-    case 'page2_yard_siding':
-    case 'page2_yard_profnastil':
-      return 'page5'
-    case 'page9':
-      return calc.is_there_lock_id.value === 1 ? 'page_lock_type' : 'page10'
-    case 'page_lock_type':
-      return 'page10'
-    default: {
-      const idx = menuItems.findIndex(m => m.page === from)
-      return idx !== -1 && idx < menuItems.length - 1 ? menuItems[idx + 1].page : null
-    }
+function getNavState() {
+  return {
+    material_facade_glob: calc.material_facade_glob.value,
+    fill_side: calc.fill_side.value,
+    material_yard_glob: calc.material_yard_glob.value,
+    is_there_lock_id: calc.is_there_lock_id.value,
   }
 }
 
+function getNextPage(from: string): string | null {
+  return getNextPageFn(from, getNavState())
+}
+
 function getPrevPage(from: string): string | null {
-  switch (from) {
-    case 'page2_facade_siding':
-    case 'page2_facade_profnastil': return 'page2'
-    case 'page2_yard_siding':
-    case 'page2_yard_profnastil':
-      return calc.material_facade_glob.value === 'Профлист'
-        ? 'page2_facade_profnastil'
-        : 'page2_facade_siding'
-    case 'page5':
-      if (calc.fill_side.value === 'Одна сторона') {
-        return calc.material_facade_glob.value === 'Профлист'
-          ? 'page2_facade_profnastil'
-          : 'page2_facade_siding'
-      }
-      return calc.material_yard_glob.value === 'Профлист'
-        ? 'page2_yard_profnastil'
-        : 'page2_yard_siding'
-    case 'page_lock_type':  return 'page9'
-    case 'page10':          return calc.is_there_lock_id.value === 1 ? 'page_lock_type' : 'page9'
-    default: {
-      const idx = menuItems.findIndex(m => m.page === from)
-      return idx > 0 ? menuItems[idx - 1].page : null
-    }
-  }
+  return getPrevPageFn(from, getNavState())
 }
 
 function switchTo(page: string) {
@@ -178,6 +190,24 @@ function goBack() {
         <B24Button color="air-primary" @click="close">Понятно</B24Button>
       </template>
     </B24Modal>
+
+    <B24Modal
+      v-model:open="showLoadErrorModal"
+      title="Ошибка"
+      :description="loadError || ''"
+    >
+      <template #footer="{ close }">
+        <B24Button color="air-primary" @click="loadError = null; showLoadErrorModal = false; close()">Понятно</B24Button>
+      </template>
+    </B24Modal>
+
+    <!-- Loading overlay -->
+    <div
+      v-if="loadPending"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-100/90"
+    >
+      <span class="text-gray-600">Загрузка расчёта…</span>
+    </div>
 
     <!-- 3-column layout -->
     <div class="flex h-screen overflow-hidden bg-gray-100">
@@ -287,6 +317,7 @@ function goBack() {
       <main class="flex-1 overflow-y-auto bg-gray-50 relative p-[10px]">
 
         <component
+          v-if="!loadPending"
           :is="currentComponent"
           @next="goNext"
           @back="goBack"

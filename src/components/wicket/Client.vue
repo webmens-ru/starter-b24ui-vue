@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import {
   saveWicketData,
-  saveCalculationNumber,
+  saveOrderData,
   saveClientInfo,
   getAddressSuggestions,
 } from '../../app/api/wicket'
@@ -203,7 +203,7 @@ async function handleNext() {
   if (!(await validateAll())) return
 
   const payload = {
-    calculation_number: calc.number.value,
+    order_id: Number(calc.number.value),
     calculation_name:   calc.calculation_name.value,
     client_name:        calc.client_name.value,
     client_last_name:   calc.client_last_name.value,
@@ -217,7 +217,7 @@ async function handleNext() {
 
   try {
     await saveWicketData(payload)
-    await saveCalculationNumber(payload)
+    await saveOrderData({ order_id: payload.order_id, calculation_name: payload.calculation_name })
     await saveClientInfo(payload)
   } catch (e) {
     console.warn('saveClientData:', e)

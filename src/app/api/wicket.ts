@@ -13,9 +13,12 @@ import {
   mockGetAddressSuggestions,
   mockFinalCalculate,
   mockDeleteCalculation,
+  mockLoadWicketData,
+  mockCreateOrder,
 } from './mockWicket'
 import type {
   SelectItem,
+  ColorShieldItem,
   FilterOptionItem,
   FilterOptions,
   SidingFilters,
@@ -30,6 +33,7 @@ import type {
 
 export type {
   SelectItem,
+  ColorShieldItem,
   FilterOptionItem,
   FilterOptions,
   SidingFilters,
@@ -43,6 +47,46 @@ export type {
 }
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
+
+/** Создаёт новый заказ и возвращает order_id. Вызывать один раз при открытии новой формы. */
+export async function createOrder(): Promise<{
+  order_id: number
+  companyId: number | null
+  managerId: number
+}> {
+  if (isMock) return mockCreateOrder()
+  const { data } = await api.post('/api/order/create')
+  return data.data
+}
+
+/** Создаёт запись расчёта в БД при первом открытии новой формы. */
+export async function createWicketMainMenu(payload: {
+  order_id: number
+  model_id: string | number
+  model: string
+  productType?: string
+}): Promise<void> {
+  if (isMock) return
+  const body = {
+    ...payload,
+    modelId: payload.model_id,
+    productType: payload.productType ?? 'Калитка',
+  }
+  await api.post(`/api/wicket/type${payload.model_id}/main-menu`, body)
+}
+
+/** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
+export async function loadWicketData(
+  modelId: string | number,
+  orderId: number,
+): Promise<Record<string, unknown>> {
+  if (isMock) return mockLoadWicketData(orderId)
+  const params: Record<string, string | number> = { order_id: orderId }
+  // Для type2 и выше обязателен model_id в query
+  if (String(modelId) !== '1') params.model_id = modelId
+  const { data } = await api.get(`/api/wicket/type${modelId}/get-data`, { params })
+  return data.data
+}
 
 export async function getFilterOptions(url: string, type?: string): Promise<FilterOptions> {
   if (isMock) return mockGetFilterOptions(url, type)
@@ -86,7 +130,9 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 
 export async function saveWicketData(payload: Record<string, unknown>): Promise<void> {
   if (isMock) return mockSaveWicketData(payload)
-  await api.post(`/api/wicket/type${payload.model_id}/data`, payload)
+  // order_id обязателен во всех эндпоинтах
+  const body = { ...payload, order_id: payload.order_id ?? payload.orderId }
+  await api.post(`/api/wicket/type${payload.model_id}/data`, body)
 }
 
 export async function getAssortmentStolb(
@@ -118,7 +164,7 @@ export async function getAssortmentJumper(
 
 export async function getColorShield(
   modelId: string | number
-): Promise<{ arr_color_shield: SelectItem[] }> {
+): Promise<{ arr_color_shield: ColorShieldItem[] }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
   return data.data
@@ -132,12 +178,13 @@ export async function getAddressSuggestions(
   return data
 }
 
-export async function saveCalculationNumber(payload: {
-  calculation_number: string | number
+/** Переименовать расчёт (обновить calculation_name). */
+export async function saveOrderData(payload: {
+  order_id: number
   calculation_name: string
 }): Promise<void> {
   if (isMock) return
-  await api.post('/api/calculation-number/data', payload)
+  await api.post('/api/order/data', payload)
 }
 
 export async function saveClientInfo(payload: Record<string, unknown>): Promise<void> {
@@ -146,21 +193,21 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
 }
 
 export async function finalCalculate(payload: {
-  calculation_number: string | number
+  order_id: number
   model_id: string | number
   product_type?: string
   model?: string
 }): Promise<{ price_dealer: string; price_retail: string }> {
   if (isMock) return mockFinalCalculate()
   const { data } = await api.post('/api/wicket/calculation/index', {
-    model_id:           payload.model_id,
-    calculation_number: payload.calculation_number,
+    model_id:  payload.model_id,
+    order_id:  payload.order_id,
   })
   return data.data
 }
 
 export async function deleteCalculation(payload: {
-  calculation_number: string | number
+  order_id: number
   model_id: string | number
 }): Promise<void> {
   if (isMock) return mockDeleteCalculation()
@@ -168,15 +215,15 @@ export async function deleteCalculation(payload: {
 }
 
 export async function recalculate(payload: {
-  calculation_number: string | number
+  order_id: number
   model_id: string | number
   product_type?: string
   model?: string
 }): Promise<RecalculateResponse> {
   if (isMock) return mockRecalculate(payload)
   const { data } = await api.post('/api/wicket/calculation/index', {
-    model_id:           payload.model_id,
-    calculation_number: payload.calculation_number,
+    model_id:  payload.model_id,
+    order_id:  payload.order_id,
   })
   return data.data
 }

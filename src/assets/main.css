@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "@bitrix24/b24ui-nuxt";
 
+/* Скрываем утечку Tailwind base-reset за пределы #app */
+@layer base {
+  @scope (#app) {
+    *,
+    ::before,
+    ::after {
+      box-sizing: border-box;
+    }
+  }
+}
+
 @theme static {
 
 }

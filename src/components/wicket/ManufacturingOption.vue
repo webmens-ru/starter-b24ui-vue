@@ -29,7 +29,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      calculation_number:  calc.number.value,
+      order_id: Number(calc.number.value),
       provides_material:   calc.provides_material.value,
       provides_paint:      calc.provides_paint.value,
       does_painting_frame: calc.does_painting_frame.value,
@@ -43,7 +43,7 @@ async function save() {
   if (calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,

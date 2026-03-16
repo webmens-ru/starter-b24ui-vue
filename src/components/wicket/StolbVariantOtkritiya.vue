@@ -194,7 +194,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      calculation_number:        calc.number.value,
+      order_id: Number(calc.number.value),
       nalichie_stolbov_name:     calc.nalichie_stolbov_name.value,
       nalichie_stolbov_id:       calc.nalichie_stolbov_id.value,
       stolb_name:                calc.stolb_name.value,
@@ -215,7 +215,7 @@ async function save() {
   if (calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,

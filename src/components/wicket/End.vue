@@ -32,7 +32,7 @@ async function handleCalculate() {
   calculating.value = true
   try {
     const result = await finalCalculate({
-      calculation_number: calc.number.value,
+      order_id: Number(calc.number.value),
       product_type:       calc.productType.value,
       model:              calc.model.value,
       model_id:           calc.modelId.value,
@@ -56,7 +56,7 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await deleteCalculation({
-      calculation_number: calc.number.value,
+      order_id: Number(calc.number.value),
       model_id:           calc.modelId.value,
     })
     window.location.href = '/orders'

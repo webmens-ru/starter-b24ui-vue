@@ -10,9 +10,10 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 
+const IMG_BASE = 'https://test-lk.doorhan-krd.ru/img/wicket/type1'
 const options = [
-  { value: 'Вертикально',   img: '/web/k2.jpg' },
-  { value: 'Горизонтально', img: '/web/k3.jpg' },
+  { value: 'Вертикально',   img: `${IMG_BASE}/w_v_1.1.png` },
+  { value: 'Горизонтально', img: `${IMG_BASE}/w_g_1.1.png` },
 ]
 
 const selected = ref<string>('Вертикально')
@@ -26,7 +27,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      calculation_number:     calc.number.value,
+      order_id: Number(calc.number.value),
       raspolozheniye_polotna: calc.raspolozheniye_polotna.value,
       model_id:               calc.modelId.value,
     })
@@ -37,7 +38,7 @@ async function save() {
   if (calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,

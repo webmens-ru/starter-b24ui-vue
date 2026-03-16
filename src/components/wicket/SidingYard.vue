@@ -98,7 +98,7 @@ async function save(row: SidingRow) {
 
   try {
     await saveWicketData({
-      calculation_number:       calc.number.value,
+      order_id: Number(calc.number.value),
       id_yard:                  row.id,
       material_supplier_yard:   row.company,
       material_yard:            row.material,
@@ -116,7 +116,7 @@ async function doRecalculate() {
   if (!calc.price_retail.value) return
   try {
     const result = await recalculate({
-      calculation_number: calc.number.value,
+      order_id: Number(calc.number.value),
       product_type:       calc.productType.value,
       model:              calc.model.value,
       model_id:           calc.modelId.value,

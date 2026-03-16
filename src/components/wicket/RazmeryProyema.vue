@@ -32,8 +32,9 @@ const schema = yup.object({
 type FieldName = 'width' | 'height' | 'clearance'
 const errRefs: Record<FieldName, typeof errWidth> = { width: errWidth, height: errHeight, clearance: errClearance }
 
-async function validateField(field: FieldName, raw: string) {
-  const val = raw.trim() === '' ? undefined : Number(raw)
+async function validateField(field: FieldName, raw: string | number) {
+  const str = String(raw ?? '').trim()
+  const val = str === '' ? undefined : Number(str)
   try {
     await schema.validateAt(field, { [field]: val })
     errRefs[field].value = ''
@@ -43,10 +44,13 @@ async function validateField(field: FieldName, raw: string) {
 }
 
 async function validateAll(): Promise<boolean> {
+  const rawW = String(width.value ?? '').trim()
+  const rawH = String(height.value ?? '').trim()
+  const rawC = String(clearance.value ?? '').trim()
   const values = {
-    width:     width.value.trim()     === '' ? undefined : Number(width.value),
-    height:    height.value.trim()    === '' ? undefined : Number(height.value),
-    clearance: clearance.value.trim() === '' ? undefined : Number(clearance.value),
+    width:     rawW === '' ? undefined : Number(rawW),
+    height:    rawH === '' ? undefined : Number(rawH),
+    clearance: rawC === '' ? undefined : Number(rawC),
   }
   try {
     await schema.validate(values, { abortEarly: false })
@@ -92,7 +96,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      calculation_number:  calc.number.value,
+      order_id: Number(calc.number.value),
       width_proyema:       calc.width_proyema.value,
       height_proyema:      calc.height_proyema.value,
       clearance_proyema:   calc.clearance_proyema.value,
@@ -107,7 +111,7 @@ async function save() {
   if (String(calc.modelId.value) !== '3' && calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,
@@ -121,6 +125,7 @@ async function save() {
 
 async function handleNext() {
   if (!(await validateAll())) return
+  await save() // Сохраняем в calc и API перед переходом — debounce может не успеть сработать
   emit('next')
 }
 
@@ -128,10 +133,14 @@ async function handleNext() {
 onMounted(async () => {
   calc.setActivePage('page7')
 
-  if (calc.width_proyema.value)      width.value      = calc.width_proyema.value
-  if (calc.height_proyema.value)     height.value     = calc.height_proyema.value
-  if (calc.clearance_proyema.value)  clearance.value  = calc.clearance_proyema.value
-  if (calc.sostoyaniye_proyema.value) sostoyaniye.value = calc.sostoyaniye_proyema.value
+  const w = calc.width_proyema.value
+  const h = calc.height_proyema.value
+  const c = calc.clearance_proyema.value
+  const s = calc.sostoyaniye_proyema.value
+  if (w != null && w !== '') width.value = String(w)
+  if (h != null && h !== '') height.value = String(h)
+  if (c != null && c !== '') clearance.value = String(c)
+  if (s) sostoyaniye.value = String(s)
 
   await save()
 })

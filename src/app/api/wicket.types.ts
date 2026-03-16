@@ -3,6 +3,11 @@ export interface SelectItem {
   name: string
 }
 
+/** Элемент списка цветов щита (dir_paints). isStandard: 1 — стандартная, 0 — не стандартная. */
+export interface ColorShieldItem extends SelectItem {
+  isStandard?: 0 | 1
+}
+
 export interface FilterOptionItem {
   id: string
   name: string
@@ -68,4 +73,11 @@ export interface ProfnastilTableResponse {
 export interface RecalculateResponse {
   price_dealer: string | number
   price_retail: string | number
+}
+
+/** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
+export interface WicketGetDataResponse {
+  visitedPages: string[]
+  activePage: string
+  [key: string]: unknown
 }

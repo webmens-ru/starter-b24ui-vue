@@ -40,7 +40,7 @@ async function save() {
   calc.updateOrCreateBlock('Заполнение', params)
 
   await saveWicketData({
-    calculation_number:       calc.number.value,
+    order_id: Number(calc.number.value),
     fill_side:                calc.fill_side.value,
     material_facade_glob:     calc.material_facade_glob.value,
     material_yard_glob:       calc.material_yard_glob.value,
@@ -66,7 +66,7 @@ async function save() {
   if (calc.price_retail.value) {
     try {
       const result = await recalculate({
-        calculation_number: calc.number.value,
+        order_id: Number(calc.number.value),
         product_type:       calc.productType.value,
         model:              calc.model.value,
         model_id:           calc.modelId.value,
