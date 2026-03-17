@@ -128,6 +128,7 @@ const customUnitPriceManuallyEdited = ref(false);
 const submitLoading = ref(false);
 const hasFitWindowCalled = ref(false);
 const costUpdateGuard = ref(false);
+const discountUpdateGuard = ref(false);
 const productSearch = ref("");
 const currentId = ref<number | string | undefined>(initialId);
 const isEdit = computed(() => Boolean(currentId.value));
@@ -195,7 +196,9 @@ const state = reactive({
   hoursCount: 0,
   daysCount: 1,
   discountValue: 0,
+  discountValueOne: 0,
   discountType: "%",
+  discountTypeAllOne: "all" as "all" | "one",
   markupValue: 0,
   markupType: "%",
   finalPrice: 0,
@@ -435,6 +438,7 @@ const schema = yup.object({
       (val) => val === undefined || val === null || isFractionalQuantityAllowed.value || Number.isInteger(val),
     ),
   discountValue: yup.number().required().default(0),
+  discountValueOne: yup.number().required().default(0),
   discountType: yup.string().oneOf(discountTypes).required(),
   markupValue: yup.number().required().default(0),
   markupType: yup.string().oneOf(markupTypes).required(),
@@ -582,6 +586,12 @@ const serviceDateOptions = computed<SelectItem[]>(() =>
 
 const costPerUnitLabel = computed(() => (state.costSource === "unit" ? "✔ Себестоимость ед." : "Себестоимость ед."));
 const totalCostLabel = computed(() => (state.costSource === "total" ? "✔ Себестоимость" : "Себестоимость"));
+const discountValueOneLabel = computed(
+  () => (state.discountTypeAllOne === "one" ? "✔ Скидка ед." : "Скидка ед."),
+);
+const discountValueLabel = computed(
+  () => (state.discountTypeAllOne === "all" ? "✔ Скидка" : "Скидка"),
+);
 
 const allowedServiceStartTimes = computed<string[]>(() =>
   (selectedProduct.value?.serviceStartTimes ?? []).map((t) => normalizeTimeString(t)).filter(Boolean),
@@ -788,6 +798,16 @@ watch(
 );
 
 watch(
+  () => state.discountValueOne,
+  (val) => {
+    const value = val as unknown;
+    if ((typeof value === "string" && value.trim() === "") || value === null || Number.isNaN(Number(value))) {
+      state.discountValueOne = 0;
+    }
+  },
+);
+
+watch(
   () => state.markupValue,
   (val) => {
     const value = val as unknown;
@@ -814,6 +834,14 @@ watch(
   },
 );
 
+watch(
+  [() => state.discountValue, () => state.discountValueOne, () => state.discountTypeAllOne],
+  () => {
+    if (discountUpdateGuard.value) return;
+    recalcPrices();
+  },
+);
+
 function onQuantityBlur() {
   const value = state.quantity as unknown;
   if (
@@ -828,6 +856,48 @@ function onQuantityBlur() {
 
 function onCostPerUnitInput() {
   state.costSource = "unit";
+  recalcPrices();
+}
+
+function getQuantityForDiscount(): number {
+  const product = selectedProduct.value;
+  if (!product) return Number(state.quantity) || 0;
+  const quantityRaw = Number(state.quantity) || 0;
+  const areaFactor = product.quantityFactorArea ? Number(state.areaValue || dealArea || 1) || 1 : 1;
+  const daysFactor = hasCustomDayCount.value
+    ? Number(state.daysCount) || 1
+    : isDailyService.value
+      ? state.daysCount || state.serviceDates.length || 0
+      : 1;
+  const hoursFactor = isHourlyService.value ? state.hoursCount || 0 : 1;
+  return quantityRaw * areaFactor * daysFactor * hoursFactor;
+}
+
+function onDiscountValueOneInput() {
+  state.discountTypeAllOne = "one";
+  const qty = getQuantityForDiscount();
+  discountUpdateGuard.value = true;
+  if (state.discountType === "%") {
+    state.discountValue = Number(state.discountValueOne) || 0;
+  } else if (qty > 0) {
+    const valOne = Number(state.discountValueOne) || 0;
+    state.discountValue = Number((valOne * qty).toFixed(2));
+  }
+  discountUpdateGuard.value = false;
+  recalcPrices();
+}
+
+function onDiscountValueInput() {
+  state.discountTypeAllOne = "all";
+  const qty = getQuantityForDiscount();
+  discountUpdateGuard.value = true;
+  if (state.discountType === "%") {
+    state.discountValueOne = Number(state.discountValue) || 0;
+  } else if (qty > 0 && Number.isFinite(Number(state.discountValue))) {
+    const total = Number(state.discountValue) || 0;
+    state.discountValueOne = Number((total / qty).toFixed(2));
+  }
+  discountUpdateGuard.value = false;
   recalcPrices();
 }
 
@@ -859,6 +929,9 @@ function recalcPrices() {
       state.costPerUnit = "";
       state.totalCost = "";
       state.costSource = "unit";
+      state.discountValue = 0;
+      state.discountValueOne = 0;
+      state.discountTypeAllOne = "all";
       state.contractor = undefined;
       return;
     }
@@ -884,16 +957,47 @@ function recalcPrices() {
         : 1;
     const hoursFactor = isHourlyService.value ? state.hoursCount || 0 : 1;
     const quantity = quantityRaw * areaFactor * daysFactor * hoursFactor;
-    let discountVal = Number(state.discountValue) || 0;
+    const usePerUnit = state.discountTypeAllOne === "one";
+    let discountVal = usePerUnit
+      ? Number(state.discountValueOne) || 0
+      : Number(state.discountValue) || 0;
     const markupVal = Number(state.markupValue) || 0;
 
     if (state.discountType === "%" && discountVal > 100) {
       discountVal = 100;
-      state.discountValue = 100;
+      discountUpdateGuard.value = true;
+      if (usePerUnit) state.discountValueOne = 100;
+      else state.discountValue = 100;
+      discountUpdateGuard.value = false;
     }
 
     const baseTotal = basePrice * quantity;
-    const discount = state.discountType === "%" ? (baseTotal * discountVal) / 100 : discountVal;
+    let discount: number;
+    if (state.discountType === "%") {
+      discount = (baseTotal * discountVal) / 100;
+    } else {
+      discount = usePerUnit ? discountVal * quantity : discountVal;
+    }
+    // Синхронизация полей скидки (как для себестоимости)
+    if (quantity > 0 || state.discountType === "%") {
+      discountUpdateGuard.value = true;
+      if (state.discountTypeAllOne === "all") {
+        if (state.discountType === "%") {
+          state.discountValueOne = Number(state.discountValue) || 0;
+        } else {
+          const total = Number(state.discountValue) || 0;
+          state.discountValueOne = Number((total / quantity).toFixed(2));
+        }
+      } else {
+        if (state.discountType === "%") {
+          state.discountValue = Number(state.discountValueOne) || 0;
+        } else {
+          const valOne = Number(state.discountValueOne) || 0;
+          state.discountValue = Number((valOne * quantity).toFixed(2));
+        }
+      }
+      discountUpdateGuard.value = false;
+    }
     const markup = state.markupType === "%" ? (baseTotal * markupVal) / 100 : markupVal;
     const totalPrice = Math.max(baseTotal - discount + markup, 0);
 
@@ -1101,6 +1205,12 @@ async function loadDetail() {
     }
     if (detail.quantity !== undefined) state.quantity = Number(detail.quantity) || 1;
     if (detail.discountValue !== undefined) state.discountValue = Number(detail.discountValue) || 0;
+    if (detail.discountValueOne !== undefined) state.discountValueOne = Number(detail.discountValueOne) || 0;
+    const detailDiscountTypeAllOne =
+      detail.discountTypeAllOne ?? (detail as any).discontTypeAllOne;
+    if (detailDiscountTypeAllOne === "all" || detailDiscountTypeAllOne === "one") {
+      state.discountTypeAllOne = detailDiscountTypeAllOne;
+    }
     if (detail.discountType) {
       const raw = String(detail.discountType);
       state.discountType = discountTypes.includes(raw) ? raw : raw === "Сумма в валюте" ? "Сумма" : raw;
@@ -1402,6 +1512,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     contractorId: contractorId ?? undefined,
     discountType: discountTypeId ?? undefined,
     discountTypeTitle: state.discountType,
+    discountTypeAllOne: state.discountTypeAllOne,
+    discountValueOne: state.discountValueOne,
     markupType: markupTypeId ?? undefined,
     markupTypeTitle: state.markupType,
     currencyId: currencyId ?? undefined,
@@ -1477,6 +1589,22 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   width: 600px !important;
   min-width: 600px !important;
   max-width: 600px !important;
+}
+/* Ширина полей как у себестоимости — равные колонки в ряду */
+.form-field-cost-like > * {
+  flex: 1;
+  min-width: 0;
+}
+.form-field-cost-like :deep(.form-field-300px),
+.form-field-cost-like :deep(input),
+.form-field-cost-like :deep([data-slot="trigger"]) {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+.form-field-300px {
+  width: 100%;
+  min-width: 0;
 }
 .form-flex-row {
   display: flex;
@@ -1759,9 +1887,20 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <B24Input v-model="state.unit" disabled placeholder="Авто из товара" />
         </B24FormField>
       </div>
-      <!-- Скидка и тип скидки: выравнивание по нижнему краю -->
-      <div class="form-field-600px form-flex-row flex-align-bottom">
-        <B24FormField label="Скидка" name="discountValue" required>
+      <!-- Скидка за ед. / Скидка за всё и тип скидки (как себестоимость) -->
+      <div class="form-field-600px form-flex-row flex-align-bottom form-field-cost-like">
+        <B24FormField :label="discountValueOneLabel" name="discountValueOne">
+          <B24Input
+            type="number"
+            min="0"
+            step="0.01"
+            :max="state.discountType === '%' ? 100 : undefined"
+            v-model="state.discountValueOne"
+            placeholder="0"
+            class="form-field-300px"
+            @input="onDiscountValueOneInput" />
+        </B24FormField>
+        <B24FormField :label="discountValueLabel" name="discountValue">
           <B24Input
             type="number"
             min="0"
@@ -1769,9 +1908,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             :max="state.discountType === '%' ? 100 : undefined"
             v-model="state.discountValue"
             placeholder="0"
-            style="width: 400px" />
+            class="form-field-300px"
+            @input="onDiscountValueInput" />
         </B24FormField>
-        <div style="width: 190px">
+        <B24FormField label="Тип скидки" name="discountType">
           <B24Select
             v-model="state.discountType"
             :items="discountTypes.map((t) => ({ value: t, label: t }))"
@@ -1781,7 +1921,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               viewport: 'max-w-[185px]',
               item: 'max-w-[185px]',
             }" />
-        </div>
+        </B24FormField>
       </div>
       <!-- Наценка и тип наценки: выравнивание по нижнему краю -->
       <div class="form-field-600px form-flex-row flex-align-bottom">
@@ -1844,7 +1984,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             }" />
         </B24FormField>
       </div>
-      <div v-if="showCostBlock" class="form-field-600px form-flex-row flex-align-bottom">
+      <div v-if="showCostBlock" class="form-field-600px form-flex-row flex-align-bottom form-field-cost-like">
         <!-- Себестоимость ед. -->
         <B24FormField :label="costPerUnitLabel" name="costPerUnit">
           <B24Input
