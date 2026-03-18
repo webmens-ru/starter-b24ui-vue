@@ -45,11 +45,11 @@ const errEmail = ref('')
 
 // ─── Yup схема ───────────────────────────────────────────────────────────────
 const schema = yup.object({
-  client_name:  yup.string().required('Обязательное поле'),
-  phone:        yup.string().required('Обязательное поле').test(
+  client_name:  yup.string().nullable(),
+  phone:        yup.string().nullable().test(
     'digits',
     'Введите корректный номер (10 цифр)',
-    v => (v ?? '').replace(/\D/g, '').length === 10,
+    v => !v || (v ?? '').replace(/\D/g, '').length === 0 || (v ?? '').replace(/\D/g, '').length === 10,
   ),
   client_email: yup.string().email('Некорректный email').nullable(),
 })
@@ -202,23 +202,38 @@ async function handleNext() {
   syncCalcFields()
   if (!(await validateAll())) return
 
+  const client_phone_raw = calc.client_phone.value || ''
+  const client_phone =
+    client_phone_raw.replace(/\D/g, '').length >= 10 ? client_phone_raw : ''
+
   const payload = {
     order_id: Number(calc.number.value),
     calculation_name:   calc.calculation_name.value,
     client_name:        calc.client_name.value,
     client_last_name:   calc.client_last_name.value,
     client_surname:     calc.client_surname.value,
-    client_phone:       calc.client_phone.value,
+    client_phone,
     client_email:       calc.client_email.value,
     client_address:     calc.client_address.value,
     client_comment:     calc.client_comment.value,
     model_id:           calc.modelId.value,
   }
 
+  const clientFilled =
+    client_phone !== '' ||
+    (payload.client_name || '').trim() !== '' ||
+    (payload.client_last_name || '').trim() !== '' ||
+    (payload.client_surname || '').trim() !== '' ||
+    (payload.client_email || '').trim() !== '' ||
+    (payload.client_address || '').trim() !== '' ||
+    (payload.client_comment || '').trim() !== ''
+
   try {
     await saveWicketData(payload)
     await saveOrderData({ order_id: payload.order_id, calculation_name: payload.calculation_name })
-    await saveClientInfo(payload)
+    if (clientFilled) {
+      await saveClientInfo(payload)
+    }
   } catch (e) {
     console.warn('saveClientData:', e)
   }
@@ -288,7 +303,7 @@ onUnmounted(() => {
 
       <!-- Имя -->
       <div class="flex flex-col gap-1">
-        <label class="font-semibold text-sm">Имя: <span class="text-red-500">*</span></label>
+        <label class="font-semibold text-sm">Имя:</label>
         <input
           v-model="client_name"
           type="text"
@@ -327,7 +342,7 @@ onUnmounted(() => {
 
       <!-- Телефон -->
       <div class="flex flex-col gap-1">
-        <label class="font-semibold text-sm">Телефон: <span class="text-red-500">*</span></label>
+        <label class="font-semibold text-sm">Телефон:</label>
         <div class="flex gap-2">
           <input
             v-model="country_code"

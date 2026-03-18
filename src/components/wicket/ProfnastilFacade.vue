@@ -94,6 +94,7 @@ async function save(row: ProfnastilRow) {
     await saveWicketData({
       order_id: Number(calc.number.value),
       id_facade:                row.id,
+      material_facade_glob:     calc.material_facade_glob.value,
       material_supplier_facade: row.company,
       material_facade:          row.material,
       thickness_facade:         row.thickness,

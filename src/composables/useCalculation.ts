@@ -50,15 +50,21 @@ const client_address    = ref<string>('')
 const client_comment    = ref<string>('')
 const country_code      = ref<string>('+7')
 
-// Поля шага "Ручка"
-const is_there_pen_name = ref<string>('Не будет')
-const is_there_pen_id   = ref<number>(0)
-const pen_provided      = ref<string>('Предоставляет изготовитель')
-const pen_installed     = ref<string>('Устанавливает изготовитель')
-const pen_color         = ref<string>('Черная')
+// Поля шага "Ручка" (дополнительная ручка / скоба)
+const is_there_pen_name   = ref<string>('Не будет')
+const is_there_pen_id     = ref<number>(0)
+const pen_provided        = ref<string>('Предоставляет изготовитель')
+const pen_installed       = ref<string>('Устанавливает изготовитель')
+const pen_color           = ref<string>('Черная')
+const additional_pen_id     = ref<number | null>(null)
+const additional_pen_color  = ref<string>('')
+const additional_pen_marking = ref<string>('')
 
-// Поля шага "Тип замка"
-const type_lock = ref<string>('Тип_1')
+// Поля шага "Тип замка" и ручки в комплекте
+const type_lock      = ref<string>('Тип_1')
+const lock_set_id    = ref<number | null>(null)
+const lock_pen_id    = ref<number | null>(null)
+const lock_pen_color = ref<string>('Черная')
 
 // Поля шага "Замок"
 const is_there_lock_name = ref<string>('Есть')
@@ -82,8 +88,14 @@ const color_shield_id   = ref<string | number>('')
 const color_shield_name = ref<string>('')
 const height_top_part   = ref<string>('0')
 const height_lower_part = ref<string>('0')
-const width_side_part   = ref<string>('0')
-const grille_location   = ref<string>('Возле петель')
+const width_side_part         = ref<string>('0')
+const assortment_side_grille_net_id = ref<string | number | null>(null)
+const assortment_height_upper_net_id = ref<string | number | null>(null)
+const assortment_height_lower_net_id = ref<string | number | null>(null)
+const grille_location         = ref<string>('Возле петель')
+const net_width_provider_top  = ref<string>('executor')
+const net_width_provider_lower = ref<string>('executor')
+const net_width_provider_side  = ref<string>('executor')
 
 // Поля шага "Заполнение (фасад)"
 const id_facade                = ref<string | number>('')
@@ -179,7 +191,13 @@ export function useCalculation() {
     pen_provided.value = 'Предоставляет изготовитель'
     pen_installed.value = 'Устанавливает изготовитель'
     pen_color.value = 'Черная'
+    additional_pen_id.value = null
+    additional_pen_color.value = ''
+    additional_pen_marking.value = ''
     type_lock.value = 'Тип_1'
+    lock_set_id.value = null
+    lock_pen_id.value = null
+    lock_pen_color.value = 'Черная'
     is_there_lock_name.value = 'Есть'
     is_there_lock_id.value = 1
     provides_lock.value = 'Предоставляет изготовитель'
@@ -196,7 +214,13 @@ export function useCalculation() {
     height_top_part.value = '0'
     height_lower_part.value = '0'
     width_side_part.value = '0'
+    assortment_side_grille_net_id.value = null
+    assortment_height_upper_net_id.value = null
+    assortment_height_lower_net_id.value = null
     grille_location.value = 'Возле петель'
+    net_width_provider_top.value = 'executor'
+    net_width_provider_lower.value = 'executor'
+    net_width_provider_side.value = 'executor'
     id_facade.value = ''
     material_supplier_facade.value = ''
     material_facade.value = ''
@@ -331,7 +355,13 @@ export function useCalculation() {
       pen_provided,
       pen_installed,
       pen_color,
+      additional_pen_id,
+      additional_pen_color,
+      additional_pen_marking,
       type_lock,
+      lock_set_id,
+      lock_pen_id,
+      lock_pen_color,
       is_there_lock_name,
       is_there_lock_id,
       provides_lock,
@@ -348,7 +378,15 @@ export function useCalculation() {
       height_top_part,
       height_lower_part,
       width_side_part,
+      assortment_side_grille_net_id,
+      assortment_height_upper_net_id,
+      assortment_height_lower_net_id,
       grille_location,
+      net_width_provider_top,
+      net_width_provider_lower,
+      net_width_provider_side,
+      // Обратная совместимость: до миграции API может вернуть assortment_grille_net_id
+      assortment_grille_net_id: assortment_side_grille_net_id,
       id_facade,
       material_supplier_facade,
       material_facade,
@@ -373,6 +411,9 @@ export function useCalculation() {
       'opening_option_id',
       'is_there_pen_id',
       'is_there_lock_id',
+      'lock_pen_id',
+      'lock_set_id',
+      'additional_pen_id',
     ])
 
     // Значения по умолчанию для страниц, которые ещё не заполнены (когда API возвращает null или '')
@@ -389,6 +430,9 @@ export function useCalculation() {
       sostoyaniye_proyema: 'Готов',
       shield_type:        'Тип_1',
       grille_location:    'Возле петель',
+      net_width_provider_top:  'executor',
+      net_width_provider_lower: 'executor',
+      net_width_provider_side:  'executor',
       height_top_part:    '0',
       height_lower_part:  '0',
       width_side_part:    '0',
@@ -398,11 +442,16 @@ export function useCalculation() {
       lock_installer:     'Выполняет изготовитель',
       is_there_cable:     'Изготовитель устанавливает',
       type_lock:          'Тип_1',
+      lock_set_id:        null,
+      lock_pen_color:      'Черная',
       is_there_pen_name:   'Не будет',
       is_there_pen_id:     0,
       pen_provided:       'Предоставляет изготовитель',
       pen_installed:      'Устанавливает изготовитель',
       pen_color:          'Черная',
+      additional_pen_id:     null,
+      additional_pen_color:  '',
+      additional_pen_marking: '',
       country_code:       '+7',
     }
 
@@ -434,6 +483,11 @@ export function useCalculation() {
 
     for (const [key, value] of Object.entries(apiData)) {
       set(key, value)
+    }
+
+    // Когда additional_pen_id задан, цвет хранится в pen_color — синхронизируем additional_pen_color
+    if (additional_pen_id.value != null && pen_color.value && !additional_pen_color.value) {
+      additional_pen_color.value = pen_color.value
     }
 
     // При редактировании — только этапы, до которых пользователь уже дошёл
@@ -550,7 +604,7 @@ export function useCalculation() {
       { name: 'Тип щита', value: shield_type.value },
     ]
     if (color_shield_name.value) {
-      shieldParams.push({ name: 'Цвет щита', value: color_shield_name.value })
+      shieldParams.push({ name: 'Цвет рамы', value: color_shield_name.value })
     }
     if (shield_type.value === 'Тип_3' && height_top_part.value && height_top_part.value !== '0') {
       shieldParams.push({ name: 'Высота верхней части', value: height_top_part.value })
@@ -595,7 +649,10 @@ export function useCalculation() {
       lockParams.push({ name: 'Замок предоставляет', value: provides_lock.value })
       lockParams.push({ name: 'Врезку замка выполняет', value: lock_installer.value })
       lockParams.push({ name: 'Кабель для э/м замка', value: is_there_cable.value })
-      lockParams.push({ name: 'Тип замка', value: type_lock.value })
+      lockParams.push({ name: 'Тип замка', value: type_lock.value || '' })
+      if (lock_pen_id.value != null) {
+        lockParams.push({ name: 'Цвет ручки', value: lock_pen_color.value })
+      }
     }
     blocks.push({ blockName: 'Замок', params: lockParams })
 
@@ -606,7 +663,12 @@ export function useCalculation() {
     if (is_there_pen_id.value === 1) {
       penParams.push({ name: 'Ручку предоставляет', value: pen_provided.value })
       penParams.push({ name: 'Ручку устанавливает', value: pen_installed.value })
-      penParams.push({ name: 'Цвет ручки', value: pen_color.value })
+      if (pen_provided.value === 'Предоставляет изготовитель') {
+        if (additional_pen_id.value != null && additional_pen_marking.value) {
+          penParams.push({ name: 'Модель ручки', value: additional_pen_marking.value })
+        }
+        penParams.push({ name: 'Цвет ручки', value: additional_pen_color.value || pen_color.value })
+      }
     }
     blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
@@ -680,7 +742,13 @@ export function useCalculation() {
     pen_provided,
     pen_installed,
     pen_color,
+    additional_pen_id,
+    additional_pen_color,
+    additional_pen_marking,
     type_lock,
+    lock_set_id,
+    lock_pen_id,
+    lock_pen_color,
     is_there_lock_name,
     is_there_lock_id,
     provides_lock,
@@ -697,7 +765,13 @@ export function useCalculation() {
     height_top_part,
     height_lower_part,
     width_side_part,
+    assortment_side_grille_net_id,
+    assortment_height_upper_net_id,
+    assortment_height_lower_net_id,
     grille_location,
+    net_width_provider_top,
+    net_width_provider_lower,
+    net_width_provider_side,
     id_facade,
     material_supplier_facade,
     material_facade,

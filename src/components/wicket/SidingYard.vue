@@ -100,8 +100,9 @@ async function save(row: SidingRow) {
     await saveWicketData({
       order_id: Number(calc.number.value),
       id_yard:                  row.id,
+      material_yard_glob:       calc.material_yard_glob.value ?? calc.material_facade_glob.value,
       material_supplier_yard:   row.company,
-      material_yard:            row.material,
+      material_yard:             row.material,
       form_yard:                row.form,
       type_of_coating_yard:     row.typeOfCoating,
       color_yard:               row.color,

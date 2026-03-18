@@ -427,6 +427,69 @@ export async function mockGetColorShield(): Promise<{ arr_color_shield: ColorShi
   return { arr_color_shield: MOCK_COLOR_SHIELD }
 }
 
+// ─── Мок ширины сетки ────────────────────────────────────────────────────────
+
+const MOCK_NET_WIDTHS = [
+  { id: '50', name: '50 мм' },
+  { id: '75', name: '75 мм' },
+  { id: '100', name: '100 мм' },
+]
+
+export async function mockGetNetWidths(): Promise<{ arr_net_width: { id: string; name: string }[] }> {
+  await delay(100)
+  return { arr_net_width: MOCK_NET_WIDTHS }
+}
+
+export async function mockGetNetsByWidth(_sizeA: number | string): Promise<{
+  items: Array<{ id: number; model: string; image_url: string | null; size_a: number; size_b: number; thickness: number; price: number }>
+}> {
+  await delay(100)
+  return {
+    items: [
+      { id: 1, model: 'Сетка 50x50 2мм', image_url: null, size_a: 50, size_b: 50, thickness: 2, price: 350 },
+      { id: 2, model: 'Сетка 50x75 2мм', image_url: null, size_a: 50, size_b: 75, thickness: 2, price: 380 },
+    ],
+  }
+}
+
+// ─── Мок замков ─────────────────────────────────────────────────────────────────
+
+export async function mockGetLocks(): Promise<{
+  items: Array<{ id: number; marking: string; image_urls: string[] }>
+}> {
+  await delay(100)
+  return {
+    items: [
+      { id: 1, marking: 'STUBLINA 1032', image_urls: [] },
+      { id: 2, marking: 'STUBLINA 1028', image_urls: [] },
+    ],
+  }
+}
+
+export async function mockGetPensByLock(_lockSetId: number): Promise<{
+  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+}> {
+  await delay(80)
+  return {
+    items: [
+      { id: 1, marking: 'Ручка STUBLINA 1032', colors: ['Черная', 'Коричневая', 'Белая'], image_urls: [] },
+      { id: 2, marking: 'Ручка STUBLINA 1028', colors: ['Черная', 'Коричневая', 'Белая'], image_urls: [] },
+    ],
+  }
+}
+
+export async function mockGetAdditionalPens(): Promise<{
+  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+}> {
+  await delay(80)
+  return {
+    items: [
+      { id: 1, marking: 'Скоба СК-101', colors: ['Черная', 'Коричневая', 'Белая'], image_urls: [] },
+      { id: 2, marking: 'Скоба СК-102', colors: ['Черная', 'Коричневая'], image_urls: [] },
+    ],
+  }
+}
+
 // ─── Мок подсказок адреса ────────────────────────────────────────────────────
 
 export async function mockGetAddressSuggestions(
@@ -539,6 +602,9 @@ export async function mockLoadWicketData(
     height_top_part: '0',
     height_lower_part: '0',
     width_side_part: '0',
+    net_width_provider_top: 'executor',
+    net_width_provider_lower: 'executor',
+    net_width_provider_side: 'executor',
     grille_location: 'Возле петель',
     id_facade: 5,
     material_supplier_facade: 'Кровельный центр',

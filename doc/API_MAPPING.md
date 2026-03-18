@@ -30,6 +30,14 @@
 | `getColorShield()` | GET | `/api/wicket/type{modelId}/get-color-shield` |
 | `getPolozhenieJumper()` | POST | `/api/wicket/type{modelId}/get-available-polozheniye-jumper` |
 
+## Справочники dict (сетки, замки)
+
+| Фронт | Метод | Эндпоинт |
+|-------|-------|----------|
+| `getNetWidths()` | GET | `/api/dict/net/get-available-widths` |
+| `getNetsByWidth(sizeA)` | GET | `/api/dict/net/get-by-width?size_a=…` |
+| `getLocks()` | GET | `/api/dict/lock/get-list` |
+
 ## Справочники type1/type2
 
 | Фронт | Метод | Эндпоинт |

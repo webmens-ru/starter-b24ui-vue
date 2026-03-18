@@ -47,6 +47,10 @@ function syncCalcFields() {
     calc.provides_lock.value  = ''
     calc.lock_installer.value = ''
     calc.is_there_cable.value = ''
+    calc.type_lock.value      = ''
+    calc.lock_set_id.value    = null
+    calc.lock_pen_id.value     = null
+    calc.lock_pen_color.value  = ''
   }
 }
 
@@ -67,7 +71,7 @@ async function save() {
   buildBlock()
 
   try {
-    await saveWicketData({
+    const payload: Record<string, unknown> = {
       order_id: Number(calc.number.value),
       is_there_lock_id:   calc.is_there_lock_id.value,
       is_there_lock_name: calc.is_there_lock_name.value,
@@ -75,7 +79,14 @@ async function save() {
       lock_installer:     calc.lock_installer.value || null,
       is_there_cable:     calc.is_there_cable.value || null,
       model_id:           calc.modelId.value,
-    })
+    }
+    if (calc.is_there_lock_id.value === 0) {
+      payload.type_lock = null
+      payload.lock_set_id = null
+      payload.lock_pen_id = null
+      payload.lock_pen_color = null
+    }
+    await saveWicketData(payload)
   } catch (e) {
     console.warn('saveWicketData:', e)
   }

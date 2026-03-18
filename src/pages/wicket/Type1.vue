@@ -106,7 +106,7 @@ const menuItems = [
   { url: 'raspolozheniye-polotna',                page: 'page6',  label: 'Расположение полотна' },
   { url: 'razmery-proyema',                       page: 'page7',  label: 'Проем' },
   { url: 'is-there-lock',                         page: 'page9',  label: 'Комплект замка' },
-  { url: 'pen',                                   page: 'page10', label: 'Ручка' },
+  { url: 'pen',                                   page: 'page10', label: 'Дополнительная ручка' },
   { url: 'client',                                page: 'page11', label: 'Клиент' },
   { url: 'end',                                   page: 'page12', label: 'Рассчитать' },
 ]

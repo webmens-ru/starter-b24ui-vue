@@ -10,6 +10,11 @@ import {
   mockGetPolozhenieJumper,
   mockGetAssortmentJumper,
   mockGetColorShield,
+  mockGetNetWidths,
+  mockGetNetsByWidth,
+  mockGetLocks,
+  mockGetPensByLock,
+  mockGetAdditionalPens,
   mockGetAddressSuggestions,
   mockFinalCalculate,
   mockDeleteCalculation,
@@ -167,6 +172,49 @@ export async function getColorShield(
 ): Promise<{ arr_color_shield: ColorShieldItem[] }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
+  return data.data
+}
+
+/** Список доступной ширины сетки (size_a из справочника dir_net). */
+export async function getNetWidths(): Promise<{ arr_net_width: { id: string; name: string }[] }> {
+  if (isMock) return mockGetNetWidths()
+  const { data } = await api.get('/api/dict/net/get-available-widths')
+  return data.data
+}
+
+/** Сетки по ширине (size_a) — для выбора карточкой. */
+export async function getNetsByWidth(sizeA: number | string): Promise<{
+  items: Array<{ id: number; model: string; image_url: string | null; size_a: number; size_b: number; thickness: number; price: number }>
+}> {
+  if (isMock) return mockGetNetsByWidth(sizeA)
+  const { data } = await api.get('/api/dict/net/get-by-width', { params: { size_a: sizeA } })
+  return data.data
+}
+
+/** Список замков с картинками — для выбора карточкой. */
+export async function getLocks(): Promise<{
+  items: Array<{ id: number; marking: string; image_urls: string[] }>
+}> {
+  if (isMock) return mockGetLocks()
+  const { data } = await api.get('/api/dict/lock/get-list')
+  return data.data
+}
+
+/** Ручки, совместимые с выбранным комплектом замка (dir_pen_lock). */
+export async function getPensByLock(lockSetId: number): Promise<{
+  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+}> {
+  if (isMock) return mockGetPensByLock(lockSetId)
+  const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lock_set_id: lockSetId } })
+  return data.data
+}
+
+/** Список дополнительных ручек (скоб) из dir_additional_pen. */
+export async function getAdditionalPens(): Promise<{
+  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+}> {
+  if (isMock) return mockGetAdditionalPens()
+  const { data } = await api.get('/api/dict/additional-pen/get-list')
   return data.data
 }
 
