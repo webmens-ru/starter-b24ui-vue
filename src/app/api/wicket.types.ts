@@ -60,9 +60,12 @@ export interface ProfnastilRow {
   id: string | number
   company: string
   material: string
-  thickness: string
+  thickness: string | number
   typeOfCoating: string
   color: string
+  /** camelCase, как в API и в БД dir_filling_profnastil */
+  priceM2?: string | number
+  weightM2?: string | number
 }
 
 export interface ProfnastilTableResponse {

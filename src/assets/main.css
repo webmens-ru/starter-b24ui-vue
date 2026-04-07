@@ -1,6 +1,27 @@
 @import "tailwindcss";
 @import "@bitrix24/b24ui-nuxt";
 
+/* B24SelectMenu на всю ширину */
+.select-full-width {
+  width: 100%;
+}
+.select-full-width > * {
+  width: 100% !important;
+  min-width: 0;
+}
+
+/* Расширяет фон липкой шапки вверх, чтобы закрасить просвет сверху */
+.sticky-header-fill::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -20px;
+  right: -20px;
+  height: 50px;
+  background: inherit;
+  z-index: -1;
+}
+
 /* Скрываем утечку Tailwind base-reset за пределы #app */
 @layer base {
   @scope (#app) {

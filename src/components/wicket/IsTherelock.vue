@@ -43,14 +43,20 @@ function syncCalcFields() {
     calc.provides_lock.value  = provides_lock.value
     calc.lock_installer.value = lock_installer.value
     calc.is_there_cable.value = is_there_cable.value
+    if (provides_lock.value === 'Предоставляет заказчик') {
+      calc.type_lock.value      = ''
+      calc.lock_set_id.value    = null
+      calc.lock_pen_id.value    = null
+      calc.lock_pen_color.value = ''
+    }
   } else {
     calc.provides_lock.value  = ''
     calc.lock_installer.value = ''
     calc.is_there_cable.value = ''
     calc.type_lock.value      = ''
     calc.lock_set_id.value    = null
-    calc.lock_pen_id.value     = null
-    calc.lock_pen_color.value  = ''
+    calc.lock_pen_id.value    = null
+    calc.lock_pen_color.value = ''
   }
 }
 
@@ -72,15 +78,14 @@ async function save() {
 
   try {
     const payload: Record<string, unknown> = {
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       is_there_lock_id:   calc.is_there_lock_id.value,
       is_there_lock_name: calc.is_there_lock_name.value,
       provides_lock:      calc.provides_lock.value || null,
       lock_installer:     calc.lock_installer.value || null,
       is_there_cable:     calc.is_there_cable.value || null,
-      model_id:           calc.modelId.value,
     }
-    if (calc.is_there_lock_id.value === 0) {
+    if (calc.is_there_lock_id.value === 0 || calc.provides_lock.value === 'Предоставляет заказчик') {
       payload.type_lock = null
       payload.lock_set_id = null
       payload.lock_pen_id = null
@@ -123,7 +128,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4">
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Замок</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />

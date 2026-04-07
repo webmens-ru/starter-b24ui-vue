@@ -96,12 +96,11 @@ async function save() {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       width_proyema:       calc.width_proyema.value,
       height_proyema:      calc.height_proyema.value,
       clearance_proyema:   calc.clearance_proyema.value,
       sostoyaniye_proyema: calc.sostoyaniye_proyema.value,
-      model_id:            calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -150,7 +149,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4">
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Проём</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
@@ -158,10 +157,39 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-5" style="padding-inline: 4px;">
 
-      <!-- Размеры проема -->
-      <div class="flex flex-col gap-4">
-        <h2 class="text-center text-lg font-semibold">Размеры проема</h2>
+      <!-- Готовность проема -->
+      <div class="flex flex-col gap-3 items-start w-full">
+        <span class="text-lg font-semibold">Готовность проема на момент заказа</span>
+        <div class="option-grid">
+          <label class="lock-card">
+            <input
+              v-model="sostoyaniye"
+              type="radio"
+              value="Готов"
+              class="sr-only"
+              @change="save"
+            />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">Готов</span>
+            </div>
+          </label>
+          <label class="lock-card">
+            <input
+              v-model="sostoyaniye"
+              type="radio"
+              value="Не готов"
+              class="sr-only"
+              @change="save"
+            />
+            <div class="card-content">
+              <span class="block text-sm font-semibold text-center">На стадии строительства</span>
+            </div>
+          </label>
+        </div>
+      </div>
 
+      <!-- Размеры -->
+      <div class="flex flex-col gap-4">
         <!-- Ширина -->
         <div class="flex flex-col gap-1">
           <label class="font-semibold text-sm" for="width">Ширина в мм</label>
@@ -211,37 +239,6 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Готовность проема -->
-      <div class="flex flex-col gap-3">
-        <h2 class="text-center text-lg font-semibold">Готовность проема на момент заказа</h2>
-        <div class="option-grid">
-          <label class="lock-card">
-            <input
-              v-model="sostoyaniye"
-              type="radio"
-              value="Готов"
-              class="sr-only"
-              @change="save"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">Готов</span>
-            </div>
-          </label>
-          <label class="lock-card">
-            <input
-              v-model="sostoyaniye"
-              type="radio"
-              value="Не готов"
-              class="sr-only"
-              @change="save"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">На стадии строительства</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
@@ -259,7 +256,6 @@ onMounted(async () => {
     grid-template-columns: repeat(2, 1fr);
     min-width: 350px;
     max-width: 600px;
-    margin-inline: auto;
   }
 }
 

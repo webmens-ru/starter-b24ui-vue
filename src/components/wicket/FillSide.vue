@@ -20,12 +20,48 @@ const materialOptions = [
   { label: 'Профлист',  value: 'Профлист' },
 ]
 
+function clearFacadeSelection() {
+  calc.id_facade.value = ''
+  calc.material_supplier_facade.value = ''
+  calc.material_facade.value = ''
+  calc.form_facade.value = ''
+  calc.thickness_facade.value = ''
+  calc.type_of_coating_facade.value = ''
+  calc.color_facade.value = ''
+}
+
+function clearYardSelection() {
+  calc.id_yard.value = ''
+  calc.material_supplier_yard.value = ''
+  calc.material_yard.value = ''
+  calc.form_yard.value = ''
+  calc.thickness_yard.value = ''
+  calc.type_of_coating_yard.value = ''
+  calc.color_yard.value = ''
+}
+
 function onFillSideChange() {
   if (calc.fill_side.value === 'Одна сторона') {
     calc.material_yard_glob.value = null
+    clearYardSelection()
   } else {
     calc.material_yard_glob.value = calc.material_facade_glob.value
+    clearYardSelection()
   }
+  save()
+}
+
+function onMaterialFacadeChange() {
+  clearFacadeSelection()
+  if (calc.fill_side.value === 'Две стороны') {
+    calc.material_yard_glob.value = calc.material_facade_glob.value
+    clearYardSelection()
+  }
+  save()
+}
+
+function onMaterialYardChange() {
+  clearYardSelection()
   save()
 }
 
@@ -40,11 +76,10 @@ async function save() {
   calc.updateOrCreateBlock('Заполнение', params)
 
   await saveWicketData({
-    order_id: Number(calc.number.value),
+    ...calc.getBaseSavePayload(),
     fill_side:                calc.fill_side.value,
     material_facade_glob:     calc.material_facade_glob.value,
     material_yard_glob:       calc.material_yard_glob.value,
-    model_id:                 calc.modelId.value,
     material_supplier_facade: null,
     form_facade:              null,
     thickness_facade:         null,
@@ -88,7 +123,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4">
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение</span>
       <B24Button label="Далее"  color="air-secondary" @click="emit('next')" />
@@ -134,7 +169,7 @@ onMounted(async () => {
               type="radio"
               :value="opt.value"
               class="sr-only"
-              @change="save"
+              @change="onMaterialFacadeChange"
             />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
@@ -157,7 +192,7 @@ onMounted(async () => {
               type="radio"
               :value="opt.value"
               class="sr-only"
-              @change="save"
+              @change="onMaterialYardChange"
             />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>

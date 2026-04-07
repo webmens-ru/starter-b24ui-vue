@@ -164,11 +164,10 @@ async function save() {
 
   try {
     await saveWicketData({
-      order_id:        Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       lock_set_id:     calc.lock_set_id.value,
       lock_pen_id:     calc.lock_pen_id.value,
       lock_pen_color:  calc.lock_pen_color.value || null,
-      model_id:        calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -208,7 +207,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-6">
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Комплект замка</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
@@ -274,9 +273,9 @@ onMounted(async () => {
     </div>
 
     <!-- 3. Выбор цвета (после выбора ручки) — выпадающий список из цветов выбранной ручки -->
-    <div v-if="selectedPenId" class="flex flex-col gap-2 items-center">
-      <h2 class="text-lg font-semibold mb-2 text-center">Цвет ручки</h2>
-      <div class="w-full max-w-[280px]">
+    <div v-if="selectedPenId" class="flex flex-col gap-2 items-start w-full">
+      <h2 class="text-lg font-semibold mb-2">Цвет ручки</h2>
+      <div class="select-full-width w-full">
         <B24SelectMenu
           v-model="selectedColor"
           value-key="id"

@@ -207,7 +207,7 @@ async function handleNext() {
     client_phone_raw.replace(/\D/g, '').length >= 10 ? client_phone_raw : ''
 
   const payload = {
-    order_id: Number(calc.number.value),
+    ...calc.getBaseSavePayload(),
     calculation_name:   calc.calculation_name.value,
     client_name:        calc.client_name.value,
     client_last_name:   calc.client_last_name.value,
@@ -216,7 +216,6 @@ async function handleNext() {
     client_email:       calc.client_email.value,
     client_address:     calc.client_address.value,
     client_comment:     calc.client_comment.value,
-    model_id:           calc.modelId.value,
   }
 
   const clientFilled =
@@ -281,7 +280,7 @@ onUnmounted(() => {
     </B24Modal>
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Клиент</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />

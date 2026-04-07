@@ -359,7 +359,12 @@ export async function mockGetProfnastilTable(filters: ProfnastilFilters, page = 
   const totalCount = rows.length
   const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage   = Math.min(Math.max(1, page), pageCount)
-  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const slice      = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const table      = slice.map(r => ({
+    ...r,
+    priceM2:  r.priceM2 ?? 450,
+    weightM2: r.weightM2 ?? 5.2,
+  }))
   return { table, pagination: { page: safePage, pageSize, totalCount, pageCount } }
 }
 
@@ -622,6 +627,8 @@ export async function mockLoadWicketData(
     color_yard: '',
     price_retail: '13500',
     price_dealer: '10000',
+    reached_step: 'page12',
+    visited_pages: '["page1","page2","page3","page5","page6","page7","page9","page10","page11","page12"]',
     visitedPages: ['page1', 'page2', 'page3', 'page5', 'page6', 'page7', 'page9', 'page10', 'page11', 'page12'],
     activePage: 'page12',
   }

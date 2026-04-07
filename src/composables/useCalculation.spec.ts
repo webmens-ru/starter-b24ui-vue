@@ -184,6 +184,24 @@ describe('useCalculation', () => {
     })
   })
 
+  describe('getBaseSavePayload', () => {
+    it('возвращает order_id, model_id, reached_step, visited_pages', () => {
+      calc.number.value = 42
+      calc.modelId.value = '1'
+      calc.setActivePage('page5')
+
+      const payload = calc.getBaseSavePayload()
+
+      expect(payload).toEqual({
+        order_id: 42,
+        model_id: '1',
+        reached_step: 'page5',
+        visited_pages: JSON.stringify(calc.visitedPages.value),
+      })
+      expect(JSON.parse(payload.visited_pages)).toContain('page5')
+    })
+  })
+
   describe('reset', () => {
     it('сбрасывает все поля к дефолтным значениям', () => {
       calc.number.value = '123'

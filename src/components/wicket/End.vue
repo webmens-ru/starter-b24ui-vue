@@ -117,7 +117,7 @@ onMounted(() => {
     </B24Modal>
 
     <!-- Заголовок + кнопка Назад -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Рассчитать</span>
       <div class="w-[68px]" />

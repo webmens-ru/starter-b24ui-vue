@@ -56,6 +56,11 @@ const showSortament          = ref(false)
 const sortamentOptions       = ref<SelectItem[]>([])
 const peremichka_sortament   = ref<string>('')
 
+// Формат для B24SelectMenu: { id, label }
+const stolbSelectItems       = computed(() => stolbOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+const peremichkaSelectItems  = computed(() => peremichkaOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+const sortamentSelectItems   = computed(() => sortamentOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+
 // ─── Загрузка данных ─────────────────────────────────────────────────────────
 async function loadStolbOptions() {
   try {
@@ -194,7 +199,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       nalichie_stolbov_name:     calc.nalichie_stolbov_name.value,
       nalichie_stolbov_id:       calc.nalichie_stolbov_id.value,
       stolb_name:                calc.stolb_name.value,
@@ -206,7 +211,6 @@ async function save() {
       peremichka_polozheniye_id:   calc.peremichka_polozheniye_id.value,
       peremichka_sortament_name:   calc.peremichka_sortament_name.value,
       peremichka_sortament_id:     calc.peremichka_sortament_id.value,
-      model_id:                    calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -259,7 +263,7 @@ onMounted(async () => {
     showPeremichka.value = true
     await loadPolozhenieOptions(opening_option_id.value)
     if (calc.peremichka_polozheniye_id.value) {
-      peremichka_polozheniye.value = calc.peremichka_polozheniye_id.value
+      peremichka_polozheniye.value = String(calc.peremichka_polozheniye_id.value)
     }
     if (peremichka_polozheniye.value && peremichka_polozheniye.value !== '1') {
       showSortament.value = true
@@ -288,7 +292,7 @@ onMounted(async () => {
     </B24Modal>
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Столбы / Вариант открытия / Перемычка</span>
       <B24Button label="Далее"  color="air-secondary" @click="handleNext" />
@@ -297,7 +301,7 @@ onMounted(async () => {
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
 
       <!-- Наличие столбов -->
-      <div class="flex flex-col items-center gap-3">
+      <div class="flex flex-col items-start gap-3 w-full">
         <div class="stolb-grid">
           <label class="lock-card">
             <input
@@ -326,17 +330,16 @@ onMounted(async () => {
         </div>
         <div v-show="showStolbList" class="stolb-select-wrap">
           <span class="text-sm font-semibold whitespace-nowrap">Столб:</span>
-          <select
-            v-model="stolb_id"
-            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
-            @change="onStolbChange"
-          >
-            <option
-              v-for="item in stolbOptions"
-              :key="item.id"
-              :value="String(item.id)"
-            >{{ item.name }}</option>
-          </select>
+          <div class="select-full-width">
+            <B24SelectMenu
+              v-model="stolb_id"
+              value-key="id"
+              :items="stolbSelectItems"
+              placeholder="Выберите столб"
+              class="w-full"
+              @update:model-value="onStolbChange"
+            />
+          </div>
         </div>
       </div>
 
@@ -366,34 +369,32 @@ onMounted(async () => {
       </div>
 
       <!-- Перемычка -->
-      <div v-show="showPeremichka" class="flex flex-col items-center gap-2">
+      <div v-show="showPeremichka" class="flex flex-col items-start gap-2 w-full">
         <div class="peremichka-select-wrap">
           <span class="text-sm font-semibold whitespace-nowrap">Перемычка:</span>
-          <select
-            v-model="peremichka_polozheniye"
-            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
-            @change="onPolozhenieChange"
-          >
-            <option
-              v-for="item in peremichkaOptions"
-              :key="item.id"
-              :value="String(item.id)"
-            >{{ item.name }}</option>
-          </select>
+          <div class="select-full-width">
+            <B24SelectMenu
+              v-model="peremichka_polozheniye"
+              value-key="id"
+              :items="peremichkaSelectItems"
+              placeholder="Выберите перемычку"
+              class="w-full"
+              @update:model-value="onPolozhenieChange"
+            />
+          </div>
         </div>
         <div v-show="showSortament" class="peremichka-select-wrap">
           <span class="text-sm font-semibold whitespace-nowrap">Труба:</span>
-          <select
-            v-model="peremichka_sortament"
-            class="border border-gray-300 rounded px-3 py-2.5 text-base w-full sm:w-auto sm:min-w-[450px]"
-            @change="onSortamentChange"
-          >
-            <option
-              v-for="item in sortamentOptions"
-              :key="item.id"
-              :value="String(item.id)"
-            >{{ item.name }}</option>
-          </select>
+          <div class="select-full-width">
+            <B24SelectMenu
+              v-model="peremichka_sortament"
+              value-key="id"
+              :items="sortamentSelectItems"
+              placeholder="Выберите трубу"
+              class="w-full"
+              @update:model-value="onSortamentChange"
+            />
+          </div>
         </div>
       </div>
 
@@ -420,28 +421,19 @@ onMounted(async () => {
 
 .stolb-select-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   width: 100%;
 }
 
-@media (min-width: 640px) {
-  .stolb-select-wrap {
-    width: auto;
-  }
-}
 
 .peremichka-select-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   width: 100%;
-}
-
-@media (min-width: 640px) {
-  .peremichka-select-wrap {
-    width: auto;
-  }
 }
 
 .opening-grid {

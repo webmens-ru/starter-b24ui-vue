@@ -61,6 +61,20 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
+// Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
+watch(() => calc.id_yard.value, async (val) => {
+  if (!val) return
+  const saved = restoreFromCalc()
+  if (saved && !selectedRow.value) {
+    selectedRow.value = saved
+    try {
+      await save(saved)
+    } catch (e) {
+      console.warn('saveWicketData при восстановлении:', e)
+    }
+  }
+}, { immediate: true })
+
 function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.id_yard.value) return null
   return {
@@ -92,7 +106,7 @@ async function save(row: ProfnastilRow) {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       id_yard:                row.id,
       material_yard_glob:     calc.material_yard_glob.value ?? calc.material_facade_glob.value,
       material_supplier_yard: row.company,
@@ -100,7 +114,6 @@ async function save(row: ProfnastilRow) {
       thickness_yard:         row.thickness,
       type_of_coating_yard:   row.typeOfCoating,
       color_yard:             row.color,
-      model_id:               calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -147,11 +160,7 @@ function onContinue() {
 
 onMounted(async () => {
   calc.setActivePage('page2_yard_profnastil')
-  const saved = restoreFromCalc()
-  if (saved) {
-    selectedRow.value = saved
-    await save(saved)
-  }
+  // Восстановление из calc — через watch(id_yard) с immediate: true
   await loadTable()
 })
 </script>
@@ -169,7 +178,7 @@ onMounted(async () => {
       </template>
     </B24Modal>
 
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
       <B24Button label="Далее"  color="air-secondary" @click="onContinue" />

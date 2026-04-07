@@ -69,7 +69,9 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload).toMatchObject({
       order_id: 42,
       model_id: '1',
+      reached_step: 'page1',
     })
+    expect(payload).toHaveProperty('visited_pages')
     expect(payload).toHaveProperty('provides_material')
     expect(payload).toHaveProperty('provides_paint')
     expect(payload).toHaveProperty('does_painting_frame')
@@ -92,6 +94,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload).toMatchObject({
       order_id: 42,
       model_id: '1',
+      reached_step: 'page2',
       fill_side: 'Одна сторона',
       material_facade_glob: 'Сайдинг',
       material_yard_glob: null,
@@ -132,6 +135,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
     expect(payload).toHaveProperty('is_there_lock_id')
     expect(payload).toHaveProperty('is_there_lock_name')
+    expect(payload).toHaveProperty('reached_step')
     expect(payload.model_id).toBe('1')
   })
 })

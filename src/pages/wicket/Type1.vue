@@ -27,7 +27,7 @@ import End from '../../components/wicket/End.vue'
 import { getNextPage as getNextPageFn, getPrevPage as getPrevPageFn } from './type1Navigation'
 
 const calc = useCalculation()
-const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi } = calc
+const { activePage, visitedPages, isPageAccessible, isFillSectionIncomplete, setActivePage, loadFromApi } = calc
 
 const route = useRoute()
 /** modelId из _PARAMS_, из пути /wicket/typeN или '1' по умолчанию */
@@ -137,6 +137,7 @@ function getNavState() {
     fill_side: calc.fill_side.value,
     material_yard_glob: calc.material_yard_glob.value,
     is_there_lock_id: calc.is_there_lock_id.value,
+    provides_lock: calc.provides_lock.value,
   }
 }
 
@@ -276,6 +277,7 @@ function goBack() {
             :active-page="activePage"
             :visited-pages="visitedPages"
             :is-page-accessible="isPageAccessible"
+            :incomplete-pages="isFillSectionIncomplete ? ['page2'] : []"
             :collapsed="isMobile || menuCollapsed"
             @select="onMenuSelect"
           />
@@ -306,6 +308,7 @@ function goBack() {
               :active-page="activePage"
               :visited-pages="visitedPages"
               :is-page-accessible="isPageAccessible"
+              :incomplete-pages="isFillSectionIncomplete ? ['page2'] : []"
               :collapsed="false"
               @select="(item) => { onMenuSelect(item); menuOpen = false }"
             />
@@ -322,22 +325,24 @@ function goBack() {
           @next="goNext"
           @back="goBack"
         />
-
-        <!-- Toggle button for right panel -->
-        <button
-          class="absolute top-1/2 -translate-y-1/2 right-0 z-10 flex items-center justify-center w-5 h-12 bg-white border border-gray-200 rounded-l-md shadow-sm text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-          :title="showSummary ? 'Скрыть сводку' : 'Показать сводку'"
-          @click="showSummary = !showSummary"
-        >
-          <svg
-            class="w-3 h-3 transition-transform duration-200"
-            :class="showSummary ? '' : 'rotate-180'"
-            viewBox="0 0 6 10" fill="none" xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M1 1L5 5L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
       </main>
+
+      <!-- Toggle button for right panel (fixed, не скроллится) -->
+      <button
+        v-if="!loadPending"
+        class="fixed top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-12 bg-white border border-gray-200 rounded-l-md shadow-sm text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer transition-[right] duration-200"
+        :style="{ right: isMobile && showSummary ? '320px' : showSummary ? '430px' : '0' }"
+        :title="showSummary ? 'Скрыть сводку' : 'Показать сводку'"
+        @click="showSummary = !showSummary"
+      >
+        <svg
+          class="w-3 h-3 transition-transform duration-200"
+          :class="showSummary ? '' : 'rotate-180'"
+          viewBox="0 0 6 10" fill="none" xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M1 1L5 5L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
 
       <!-- Right: Calculation summary -->
       <aside

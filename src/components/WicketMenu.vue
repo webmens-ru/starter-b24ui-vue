@@ -9,6 +9,8 @@ const props = defineProps<{
   activePage: string
   visitedPages: string[]
   isPageAccessible: (page: string) => boolean
+  /** Страницы с неполным заполнением — подсвечиваются красной обводкой */
+  incompletePages?: string[]
   collapsed?: boolean
 }>()
 
@@ -25,6 +27,8 @@ const stateMap = computed<Map<string, ItemState>>(() => {
       : 'default',
   ]))
 })
+
+const incompleteSet = computed(() => new Set(props.incompletePages ?? []))
 
 const colorMap = {
   active:  'air-primary',
@@ -55,6 +59,7 @@ const inactiveB24ui = {
       :color="colorMap[stateMap.get(item.page)!]"
       :disabled="!isPageAccessible(item.page)"
       :b24ui="stateMap.get(item.page) !== 'active' ? inactiveB24ui : {}"
+      :class="{ 'ring-2 ring-red-500 ring-inset': incompleteSet.has(item.page) }"
       block
       size="sm"
       @click="emit('select', item)"
@@ -67,7 +72,10 @@ const inactiveB24ui = {
       v-for="(item, index) in menuItems"
       :key="item.page"
       class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-      :class="dotClassMap[stateMap.get(item.page)!]"
+      :class="[
+        dotClassMap[stateMap.get(item.page)!],
+        incompleteSet.has(item.page) && 'ring-2 ring-red-500 ring-inset'
+      ]"
       :disabled="!isPageAccessible(item.page)"
       :title="item.label"
       @click="emit('select', item)"

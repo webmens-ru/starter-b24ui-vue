@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface CalcBlock {
   blockName: string
@@ -131,6 +131,24 @@ export function useCalculation() {
 
   function isPageAccessible(page: string) {
     return visitedPages.value.includes(page) || activePage.value === page
+  }
+
+  /** Раздел «Заполнение» неполный: сброшен материал или не выбран материал двора при «Две стороны». */
+  const isFillSectionIncomplete = computed(() => {
+    const hasFacade = id_facade.value != null && String(id_facade.value).trim() !== ''
+    const needYard = fill_side.value === 'Две стороны'
+    const hasYard = id_yard.value != null && String(id_yard.value).trim() !== ''
+    return !hasFacade || (needYard && !hasYard)
+  })
+
+  /** Базовый payload для saveWicketData: order_id, model_id, reached_step, visited_pages */
+  function getBaseSavePayload(): { order_id: number; model_id: string | number; reached_step: string; visited_pages: string } {
+    return {
+      order_id: Number(number.value),
+      model_id: modelId.value,
+      reached_step: activePage.value,
+      visited_pages: JSON.stringify(visitedPages.value),
+    }
   }
 
   function updateOrCreateBlock(blockName: string, params: CalcBlock['params']) {
@@ -791,6 +809,8 @@ export function useCalculation() {
     fields_filled,
     setActivePage,
     isPageAccessible,
+    isFillSectionIncomplete,
+    getBaseSavePayload,
     updateOrCreateBlock,
     removeAllBlocksExcept,
     updatePriceBlock,

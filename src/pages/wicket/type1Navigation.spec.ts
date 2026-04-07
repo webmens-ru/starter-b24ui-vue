@@ -7,6 +7,7 @@ function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
     fill_side: 'Одна сторона',
     material_yard_glob: null,
     is_there_lock_id: 1,
+    provides_lock: 'Предоставляет изготовитель',
     ...overrides,
   }
 }
@@ -55,8 +56,11 @@ describe('type1Navigation', () => {
     })
 
     describe('page9 → lock или page10 (замок)', () => {
-      it('Замок есть (id=1) → page_lock_type', () => {
-        expect(getNextPage('page9', state({ is_there_lock_id: 1 }))).toBe('page_lock_type')
+      it('Замок есть (id=1) + изготовитель → page_lock_type', () => {
+        expect(getNextPage('page9', state({ is_there_lock_id: 1, provides_lock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+      })
+      it('Замок есть + заказчик → page10 (пропуск выбора комплекта)', () => {
+        expect(getNextPage('page9', state({ is_there_lock_id: 1, provides_lock: 'Предоставляет заказчик' }))).toBe('page10')
       })
       it('Замок нет (id=0) → page10 напрямую', () => {
         expect(getNextPage('page9', state({ is_there_lock_id: 0 }))).toBe('page10')
@@ -119,8 +123,11 @@ describe('type1Navigation', () => {
       it('page_lock_type → page9', () => {
         expect(getPrevPage('page_lock_type', state())).toBe('page9')
       })
-      it('page10, замок есть → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ is_there_lock_id: 1 }))).toBe('page_lock_type')
+      it('page10, замок есть + изготовитель → page_lock_type', () => {
+        expect(getPrevPage('page10', state({ is_there_lock_id: 1, provides_lock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+      })
+      it('page10, замок есть + заказчик → page9 (пропуск page_lock_type)', () => {
+        expect(getPrevPage('page10', state({ is_there_lock_id: 1, provides_lock: 'Предоставляет заказчик' }))).toBe('page9')
       })
       it('page10, замок нет → page9', () => {
         expect(getPrevPage('page10', state({ is_there_lock_id: 0 }))).toBe('page9')

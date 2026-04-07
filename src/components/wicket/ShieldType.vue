@@ -425,7 +425,7 @@ async function save() {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       shield_type:        calc.shield_type.value,
       color_shield_name:  calc.color_shield_name.value,
       color_shield_id:    calc.color_shield_id.value,
@@ -439,7 +439,6 @@ async function save() {
       assortment_side_grille_net_id: showSidePart.value && provSide === 'executor' ? (assortment_grille_net_id.value ?? undefined) : undefined,
       assortment_height_upper_net_id: showHeightTop.value && provTop === 'executor' ? (assortment_height_upper_net_id.value ?? undefined) : undefined,
       grille_location:         calc.grille_location.value,
-      model_id:           calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -573,7 +572,7 @@ onMounted(async () => {
   }
 
   if (calc.color_shield_id.value) {
-    color_shield_id.value = calc.color_shield_id.value
+    color_shield_id.value = String(calc.color_shield_id.value)
   }
 
   await save()
@@ -594,18 +593,18 @@ onMounted(async () => {
     </B24Modal>
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Щит</span>
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
-    <div class="flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-56px)] px-1">
+    <div class="flex flex-col gap-5 px-1">
 
       <!-- Цвет рамы -->
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex flex-col gap-2">
         <span class="font-bold text-base whitespace-nowrap">Цвет рамы:</span>
-        <div class="flex-1 min-w-[320px] max-w-[540px] w-full">
+        <div class="select-full-width">
           <B24SelectMenu
             v-model="color_shield_id"
             value-key="id"
@@ -666,11 +665,11 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showHeightTop">
-          <div v-if="isExecutorTop" class="flex items-center gap-3 flex-wrap">
+          <div v-if="isExecutorTop" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="height_top_part">
               Высота сетки (мм):
             </label>
-            <div class="min-w-[140px] max-w-[200px]">
+            <div class="select-full-width">
               <B24SelectMenu
                 id="height_top_part"
                 v-model="height_top_part"
@@ -683,7 +682,7 @@ onMounted(async () => {
               />
             </div>
           </div>
-          <div v-if="showInputTop" class="flex items-center gap-3 flex-wrap">
+          <div v-if="showInputTop" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="height_top_part_custom">
               Высота верхней части (мм):
             </label>
@@ -692,7 +691,7 @@ onMounted(async () => {
               v-model="height_top_part"
               type="number"
               min="1"
-              class="min-w-[120px] max-w-[160px] px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300"
               :class="errHeightTop ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
@@ -753,11 +752,11 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showHeightLower">
-          <div v-if="isExecutorLower" class="flex items-center gap-3 flex-wrap">
+          <div v-if="isExecutorLower" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="height_lower_part">
               Высота сетки (мм):
             </label>
-            <div class="min-w-[140px] max-w-[200px]">
+            <div class="select-full-width">
               <B24SelectMenu
                 id="height_lower_part"
                 v-model="height_lower_part"
@@ -770,7 +769,7 @@ onMounted(async () => {
               />
             </div>
           </div>
-          <div v-if="showInputLower" class="flex items-center gap-3 flex-wrap">
+          <div v-if="showInputLower" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="height_lower_part_custom">
               Высота нижней части (мм):
             </label>
@@ -779,7 +778,7 @@ onMounted(async () => {
               v-model="height_lower_part"
               type="number"
               min="1"
-              class="min-w-[120px] max-w-[160px] px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300"
               :class="errHeightLower ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
@@ -839,11 +838,11 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showSidePart">
-          <div v-if="isExecutorSide" class="flex items-center gap-3">
+          <div v-if="isExecutorSide" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="width_side_part">
               Ширина сетки (мм):
             </label>
-            <div class="min-w-[140px] max-w-[200px]">
+            <div class="select-full-width">
               <B24SelectMenu
                 id="width_side_part"
                 v-model="width_side_part"
@@ -856,7 +855,7 @@ onMounted(async () => {
               />
             </div>
           </div>
-          <div v-if="showInputSide" class="flex items-center gap-3">
+          <div v-if="showInputSide" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="width_side_part_custom">
               Ширина боковой решётки (мм):
             </label>
@@ -865,7 +864,7 @@ onMounted(async () => {
               v-model="width_side_part"
               type="number"
               min="1"
-              class="min-w-[120px] max-w-[160px] px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300"
               :class="errWidthSide ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
@@ -955,11 +954,12 @@ onMounted(async () => {
 }
 
 .provider-card .card-content {
-  min-height: 60px;
+  height: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 12px;
+  padding: 0 12px;
 }
 
 .net-cards-row {

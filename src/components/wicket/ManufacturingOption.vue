@@ -29,12 +29,11 @@ async function save() {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       provides_material:   calc.provides_material.value,
       provides_paint:      calc.provides_paint.value,
       does_painting_frame: calc.does_painting_frame.value,
       does_assembly:       calc.does_assembly.value,
-      model_id:            calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -65,7 +64,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4">
 
     <!-- Заголовок + кнопка "Далее" -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <div class="w-[68px]" />
       <span class="text-3xl font-bold flex-1 text-center">Вариант изготовления</span>
       <B24Button

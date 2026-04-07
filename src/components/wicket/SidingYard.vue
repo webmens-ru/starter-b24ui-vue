@@ -23,8 +23,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Фильтры ────────────────────────────────────────────────────────────────
-const COMPANY_URL = `/api/wicket/type${calc.modelId.value}/get-filter-data`
-const SIDING_URL  = `/api/wicket/type${calc.modelId.value}/get-filter-data-siding`
+const SIDING_URL = `/api/wicket/type${calc.modelId.value}/get-filter-data-siding`
 
 const filters = reactive({
   companies:      [] as string[],
@@ -66,6 +65,20 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
+// Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
+watch(() => calc.id_yard.value, async (val) => {
+  if (!val) return
+  const saved = restoreFromCalc()
+  if (saved && !selectedRow.value) {
+    selectedRow.value = saved
+    try {
+      await save(saved)
+    } catch (e) {
+      console.warn('saveWicketData при восстановлении:', e)
+    }
+  }
+}, { immediate: true })
+
 // ─── Восстановление сохранённой строки ───────────────────────────────────────
 function restoreFromCalc(): SidingRow | null {
   if (!calc.id_yard.value) return null
@@ -98,7 +111,7 @@ async function save(row: SidingRow) {
 
   try {
     await saveWicketData({
-      order_id: Number(calc.number.value),
+      ...calc.getBaseSavePayload(),
       id_yard:                  row.id,
       material_yard_glob:       calc.material_yard_glob.value ?? calc.material_facade_glob.value,
       material_supplier_yard:   row.company,
@@ -106,7 +119,6 @@ async function save(row: SidingRow) {
       form_yard:                row.form,
       type_of_coating_yard:     row.typeOfCoating,
       color_yard:               row.color,
-      model_id:                 calc.modelId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -159,11 +171,7 @@ onMounted(async () => {
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
   calc.setActivePage(page)
-  const saved = restoreFromCalc()
-  if (saved) {
-    selectedRow.value = saved
-    await save(saved)
-  }
+  // Восстановление из calc — через watch(id_yard) с immediate: true
   await loadTable()
 })
 </script>
@@ -182,7 +190,7 @@ onMounted(async () => {
     </B24Modal>
 
     <!-- Заголовок + кнопки -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
       <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
@@ -192,7 +200,7 @@ onMounted(async () => {
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <FilterDropdown
         label="Производитель материала"
-        :url="COMPANY_URL"
+        :url="SIDING_URL"
         data-key="company"
         v-model="filters.companies"
       />
