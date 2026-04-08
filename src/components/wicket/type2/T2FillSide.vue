@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useCalculation } from '../../composables/useCalculation'
-import { saveWicketData, recalculate } from '../../app/api/wicket'
+import { useCalculation } from '../../../composables/useCalculation'
+import { saveWicketData, recalculate } from '../../../app/api/wicket'
 
 const emit = defineEmits<{
   (e: 'next'): void

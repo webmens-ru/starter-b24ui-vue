@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { getFilterOptions, type FilterOptionItem } from '../../app/api/wicket'
+import { getFilterOptions, type FilterOptionItem } from '../../../app/api/wicket'
 
 const props = defineProps<{
   label: string

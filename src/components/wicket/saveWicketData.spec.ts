@@ -5,9 +5,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
 import ManufacturingOption from './ManufacturingOption.vue'
-import FillSide from './FillSide.vue'
+import FillSide from './type1/FillSide.vue'
 import IsTherelock from './IsTherelock.vue'
 
 const testRouter = createRouter({
@@ -41,6 +42,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   let calc: ReturnType<typeof useCalculation>
 
   beforeEach(async () => {
+    setActivePinia(createPinia())
     calc = useCalculation()
     calc.reset()
     calc.modelId.value = '1'

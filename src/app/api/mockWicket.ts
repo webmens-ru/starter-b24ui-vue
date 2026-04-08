@@ -337,7 +337,7 @@ const PROFNASTIL_ROWS: ProfnastilRow[] = [
 
 const PROFNASTIL_FILTER: FilterOptions = {
   material:      [...new Set(PROFNASTIL_ROWS.map(r => r.material))].sort().map(v => ({ id: v, name: v })),
-  thickness:     [...new Set(PROFNASTIL_ROWS.map(r => r.thickness))].sort().map(v => ({ id: v, name: v })),
+  thickness:     [...new Set(PROFNASTIL_ROWS.map(r => r.thickness))].sort().map(v => ({ id: String(v), name: String(v) })),
   typeOfCoating: [...new Set(PROFNASTIL_ROWS.map(r => r.typeOfCoating))].sort().map(v => ({ id: v, name: v })),
   color:         [...new Set(PROFNASTIL_ROWS.map(r => r.color))].sort().map(v => ({ id: v, name: v })),
 }

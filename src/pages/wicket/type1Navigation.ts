@@ -1,31 +1,25 @@
 /** Логика навигации по шагам формы Type1. Вынесена для тестирования. */
 
-export interface Type1NavState {
-  material_facade_glob: string
-  fill_side: string
-  material_yard_glob: string | null
-  is_there_lock_id: number
-  /** Кто предоставляет замок. При "Предоставляет заказчик" шаг выбора комплекта пропускается */
-  provides_lock: string
+import { WICKET_MENU_ITEMS } from './wicketMenuConfig'
+import type { WicketSharedNavState } from './wicketNavTypes'
+
+/** Состояние навигации типа 1 (совпадает с общим контрактом; см. `facadeMaterialDetailPage`). */
+export type Type1NavState = WicketSharedNavState
+
+/** Страница выбора позиции фасада: у типа 1 всегда сайдинг. */
+function facadeMaterialDetailPage(state: Type1NavState): 'page2_facade_siding' | 'page2_facade_profnastil' {
+  if (state.modelId === '1') {
+    return 'page2_facade_siding'
+  }
+  return state.material_facade_glob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
 }
 
-const MENU_ITEMS = [
-  { url: 'manufacturing-option', page: 'page1', label: 'Вариант изготовления' },
-  { url: 'fill-side', page: 'page2', label: 'Заполнение' },
-  { url: 'stolb-variant-otkritiya-peremichka-2', page: 'page5', label: 'Столбы / Вариант открытия / Перемычка' },
-  { url: 'shield-type', page: 'page3', label: 'Тип щита' },
-  { url: 'raspolozheniye-polotna', page: 'page6', label: 'Расположение полотна' },
-  { url: 'razmery-proyema', page: 'page7', label: 'Проем' },
-  { url: 'is-there-lock', page: 'page9', label: 'Комплект замка' },
-  { url: 'pen', page: 'page10', label: 'Дополнительная ручка' },
-  { url: 'client', page: 'page11', label: 'Клиент' },
-  { url: 'end', page: 'page12', label: 'Рассчитать' },
-]
+const MENU_ITEMS = WICKET_MENU_ITEMS
 
 export function getNextPage(from: string, state: Type1NavState): string | null {
   switch (from) {
     case 'page2':
-      return state.material_facade_glob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
+      return facadeMaterialDetailPage(state)
     case 'page2_facade_siding':
     case 'page2_facade_profnastil':
       if (state.fill_side === 'Одна сторона') return 'page5'
@@ -55,10 +49,10 @@ export function getPrevPage(from: string, state: Type1NavState): string | null {
       return 'page2'
     case 'page2_yard_siding':
     case 'page2_yard_profnastil':
-      return state.material_facade_glob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
+      return facadeMaterialDetailPage(state)
     case 'page5':
       if (state.fill_side === 'Одна сторона') {
-        return state.material_facade_glob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
+        return facadeMaterialDetailPage(state)
       }
       return state.material_yard_glob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
     case 'page_lock_type':

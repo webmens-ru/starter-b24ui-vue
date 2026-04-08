@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
-import { useCalculation } from '../../composables/useCalculation'
-import { getProfnastilTable, saveWicketData, recalculate, type ProfnastilRow, type SidingPagination } from '../../app/api/wicket'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { useCalculation } from '../../../composables/useCalculation'
+import { getProfnastilTable, saveWicketData, recalculate, type ProfnastilRow, type SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
+import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -21,7 +22,7 @@ function openModal(msg: string, title = 'Внимание') {
   showModal.value  = true
 }
 
-const FILTER_URL = `/api/wicket/type${calc.modelId.value}/get-filter-data`
+const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(calc.modelId.value))
 
 const filters = reactive({
   companies: [] as string[],
@@ -92,14 +93,14 @@ async function save(row: ProfnastilRow) {
   calc.material_supplier_yard.value = row.company
   calc.material_yard.value          = row.material
   calc.form_yard.value              = ''
-  calc.thickness_yard.value         = row.thickness
+  calc.thickness_yard.value         = String(row.thickness)
   calc.type_of_coating_yard.value   = row.typeOfCoating
   calc.color_yard.value             = row.color
 
   calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
     { name: 'Материал',                value: row.material },
-    { name: 'Толщина листа',           value: row.thickness },
+    { name: 'Толщина листа',           value: String(row.thickness) },
     { name: 'Тип покрытия',            value: row.typeOfCoating },
     { name: 'Цвет',                    value: row.color },
   ])
@@ -111,7 +112,7 @@ async function save(row: ProfnastilRow) {
       material_yard_glob:     calc.material_yard_glob.value ?? calc.material_facade_glob.value,
       material_supplier_yard: row.company,
       material_yard:           row.material,
-      thickness_yard:         row.thickness,
+      thickness_yard:         String(row.thickness),
       type_of_coating_yard:   row.typeOfCoating,
       color_yard:             row.color,
     })
@@ -187,25 +188,25 @@ onMounted(async () => {
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <FilterDropdown
         label="Производитель материала"
-        :url="FILTER_URL"
+        :url="profnastilFilterDataUrl"
         data-key="company"
         v-model="filters.companies"
       />
       <FilterDropdown
         label="Материал"
-        :url="FILTER_URL"
+        :url="profnastilFilterDataUrl"
         data-key="material"
         v-model="filters.materials"
       />
       <FilterDropdown
         label="Толщина листа"
-        :url="FILTER_URL"
+        :url="profnastilFilterDataUrl"
         data-key="thickness"
         v-model="filters.thickness"
       />
       <FilterDropdown
         label="Цвет"
-        :url="FILTER_URL"
+        :url="profnastilFilterDataUrl"
         data-key="color"
         v-model="filters.colors"
       />

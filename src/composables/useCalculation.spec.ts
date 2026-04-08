@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from './useCalculation'
 
 describe('useCalculation', () => {
   let calc: ReturnType<typeof useCalculation>
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     calc = useCalculation()
     calc.reset()
   })

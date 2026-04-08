@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
-import { useCalculation } from '../../composables/useCalculation'
-import { getSidingTable, saveWicketData, recalculate, type SidingRow, type SidingPagination } from '../../app/api/wicket'
-import FilterDropdown from './FilterDropdown.vue'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { useCalculation } from '../../../composables/useCalculation'
+import { getSidingTable, saveWicketData, recalculate, type SidingRow, type SidingPagination } from '../../../app/api/wicket'
+import T2FilterDropdown from './T2FilterDropdown.vue'
+import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -23,7 +24,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Фильтры ────────────────────────────────────────────────────────────────
-const SIDING_URL = `/api/wicket/type${calc.modelId.value}/get-filter-data-siding`
+const sidingFilterDataUrl = computed(() => wicketSidingFilterDataUrl(calc.modelId.value))
 
 const filters = reactive({
   companies:      [] as string[],
@@ -65,8 +66,8 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
-// Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.id_yard.value, async (val) => {
+// Восстановление при загрузке данных (редактирование): id_facade может появиться после монтирования
+watch(() => calc.id_facade.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
@@ -81,27 +82,29 @@ watch(() => calc.id_yard.value, async (val) => {
 
 // ─── Восстановление сохранённой строки ───────────────────────────────────────
 function restoreFromCalc(): SidingRow | null {
-  if (!calc.id_yard.value) return null
+  if (!calc.id_facade.value) return null
   return {
-    id:            calc.id_yard.value,
-    company:       calc.material_supplier_yard.value,
-    material:      calc.material_yard.value,
-    form:          calc.form_yard.value,
-    typeOfCoating: calc.type_of_coating_yard.value,
-    color:         calc.color_yard.value,
+    id:            calc.id_facade.value,
+    company:       calc.material_supplier_facade.value,
+    material:      calc.material_facade.value,
+    form:          calc.form_facade.value,
+    typeOfCoating: calc.type_of_coating_facade.value,
+    color:         calc.color_facade.value,
   }
 }
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow) {
-  calc.id_yard.value                = row.id
-  calc.material_supplier_yard.value = row.company
-  calc.material_yard.value          = row.material
-  calc.form_yard.value              = row.form
-  calc.type_of_coating_yard.value   = row.typeOfCoating
-  calc.color_yard.value             = row.color
+  // Синхронизируем calc-поля
+  calc.id_facade.value                = row.id
+  calc.material_supplier_facade.value = row.company
+  calc.material_facade.value          = row.material
+  calc.form_facade.value              = row.form
+  calc.type_of_coating_facade.value   = row.typeOfCoating
+  calc.color_facade.value             = row.color
 
-  calc.updateOrCreateBlock('Заполнение (двор)', [
+  // Блок данных
+  calc.updateOrCreateBlock('Заполнение (фасад)', [
     { name: 'Производитель материала', value: row.company },
     { name: 'Материал',                value: row.material },
     { name: 'Форма',                   value: row.form },
@@ -112,13 +115,13 @@ async function save(row: SidingRow) {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      id_yard:                  row.id,
-      material_yard_glob:       calc.material_yard_glob.value ?? calc.material_facade_glob.value,
-      material_supplier_yard:   row.company,
-      material_yard:             row.material,
-      form_yard:                row.form,
-      type_of_coating_yard:     row.typeOfCoating,
-      color_yard:               row.color,
+      id_facade:                 row.id,
+      material_facade_glob:       calc.material_facade_glob.value,
+      material_supplier_facade:  row.company,
+      material_facade:           row.material,
+      form_facade:               row.form,
+      type_of_coating_facade:    row.typeOfCoating,
+      color_facade:              row.color,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -149,7 +152,7 @@ async function selectRow(row: SidingRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.id_yard.value = ''
+  calc.id_facade.value = ''
 }
 
 function isSelected(row: SidingRow) {
@@ -167,11 +170,8 @@ function onContinue() {
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
-  const page = calc.material_yard_glob.value === 'Профлист'
-    ? 'page2_yard_profnastil'
-    : 'page2_yard_siding'
-  calc.setActivePage(page)
-  // Восстановление из calc — через watch(id_yard) с immediate: true
+  calc.setActivePage('page2_facade_siding')
+  // Восстановление из calc — через watch(id_facade) с immediate: true
   await loadTable()
 })
 </script>
@@ -192,39 +192,39 @@ onMounted(async () => {
     <!-- Заголовок + кнопки -->
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
+      <span class="text-3xl font-bold flex-1 text-center">Заполнение (фасад)</span>
       <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
     </div>
 
     <!-- Фильтры -->
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
-      <FilterDropdown
+      <T2FilterDropdown
         label="Производитель материала"
-        :url="SIDING_URL"
+        :url="sidingFilterDataUrl"
         data-key="company"
         v-model="filters.companies"
       />
-      <FilterDropdown
+      <T2FilterDropdown
         label="Материал"
-        :url="SIDING_URL"
+        :url="sidingFilterDataUrl"
         data-key="material"
         v-model="filters.materials"
       />
-      <FilterDropdown
+      <T2FilterDropdown
         label="Форма"
-        :url="SIDING_URL"
+        :url="sidingFilterDataUrl"
         data-key="form"
         v-model="filters.form"
       />
-      <FilterDropdown
+      <T2FilterDropdown
         label="Тип покрытия"
-        :url="SIDING_URL"
+        :url="sidingFilterDataUrl"
         data-key="typeOfCoating"
         v-model="filters.typeOfCoating"
       />
-      <FilterDropdown
+      <T2FilterDropdown
         label="Цвет"
-        :url="SIDING_URL"
+        :url="sidingFilterDataUrl"
         data-key="color"
         v-model="filters.colors"
       />
