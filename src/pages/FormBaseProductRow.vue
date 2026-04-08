@@ -1388,6 +1388,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   const hoursFactor = isHourlyService.value ? state.hoursCount || 0 : 1;
   const quantityWithArea = quantityRaw * areaFactor * daysFactor * hoursFactor;
   const baseTotalPrice = Number((unitPrice * quantityWithArea).toFixed(2));
+  const markupValSubmit = Number(state.markupValue) || 0;
+  const markupAmountSubmit =
+    state.markupType === "%" ? (baseTotalPrice * markupValSubmit) / 100 : markupValSubmit;
+  /** Сумма позиции без учёта скидок (база + наценка; скидка не вычитается). */
+  const totalPriceWithoutDiscount = Number((baseTotalPrice + markupAmountSubmit).toFixed(2));
   if (isDailyService.value) {
     if (!serviceDatesPayload || serviceDatesPayload.length === 0) {
       toast.add({
@@ -1500,6 +1505,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     dealId: dealId ?? undefined,
     unitPrice,
     baseTotalPrice,
+    totalPriceWithoutDiscount,
     categoryId: product?.categoryId ?? undefined,
     productTitle: isCustomTitleEnabled.value ? state.customProductTitle.trim() : undefined,
     costPerUnit,
