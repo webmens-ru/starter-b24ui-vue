@@ -105,17 +105,24 @@ const panelOrientation = computed(() => {
   return id === 1 || id === 4 ? 'g' : 'v'
 })
 
-const IMG_BASE = 'https://test-lk.doorhan-krd.ru/img/wicket/type1'
+/** База URL для схем щита: /img/wicket/type{N}/… (N — modelId калитки). */
+const shieldImgBase = computed(() => {
+  const hostRaw = typeof window !== 'undefined' ? window._HOSTNAME_ : ''
+  const host = hostRaw ? String(hostRaw).replace(/\/$/, '') : 'https://test-lk.doorhan-krd.ru'
+  const folder = `type${String(calc.modelId.value || '1')}`
+  return `${host}/img/wicket/${folder}`
+})
 
 const shieldOptions = computed(() => {
   const orient = panelOrientation.value
+  const base = shieldImgBase.value
   // z - замок, p - петля (только для Тип_4)
   const type4Suffix = grille_location.value === 'Возле замка' ? 'z' : 'p'
   return [
-    { value: 'Тип_1', label: 'Тип 1', img: `${IMG_BASE}/w_${orient}_1.1.png` },
-    { value: 'Тип_2', label: 'Тип 2', img: `${IMG_BASE}/w_${orient}_1.2.png` },
-    { value: 'Тип_3', label: 'Тип 3', img: `${IMG_BASE}/w_${orient}_1.3.png` },
-    { value: 'Тип_4', label: 'Тип 4', img: `${IMG_BASE}/w_${orient}_1.4_${type4Suffix}.png` },
+    { value: 'Тип_1', label: 'Тип 1', img: `${base}/w_${orient}_1.1.png` },
+    { value: 'Тип_2', label: 'Тип 2', img: `${base}/w_${orient}_1.2.png` },
+    { value: 'Тип_3', label: 'Тип 3', img: `${base}/w_${orient}_1.3.png` },
+    { value: 'Тип_4', label: 'Тип 4', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
   ]
 })
 

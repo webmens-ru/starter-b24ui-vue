@@ -34,13 +34,23 @@ watch(isOpen, (open) => {
 
 onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick))
 
+/** API может вернуть id/name числами (например thickness из БД). */
+function normalizeOptions(
+  items: Array<{ id: string | number; name?: string | number | null }>,
+): FilterOptionItem[] {
+  return (items ?? []).map((o) => ({
+    id: String(o.id),
+    name: String(o.name ?? ''),
+  }))
+}
+
 async function toggle() {
   isOpen.value = !isOpen.value
   if (isOpen.value && !loaded.value) {
     loading.value = true
     try {
       const data = await getFilterOptions(props.url, props.dataKey)
-      options.value = data[props.dataKey] ?? []
+      options.value = normalizeOptions(data[props.dataKey] ?? [])
       loaded.value = true
     } catch (e) {
       console.warn('getFilterOptions недоступен:', e)
@@ -51,18 +61,24 @@ async function toggle() {
 }
 
 const filteredOptions = computed(() =>
-  options.value.filter(o => o.name.toLowerCase().includes(search.value.toLowerCase()))
+  options.value.filter((o) =>
+    o.name.toLowerCase().includes(search.value.toLowerCase()),
+  ),
 )
 
 function onCheck(id: string, checked: boolean) {
   const next = [...props.modelValue]
   if (checked) {
-    if (!next.includes(id)) next.push(id)
+    if (!next.some((v) => String(v) === id)) next.push(id)
   } else {
-    const i = next.indexOf(id)
+    const i = next.findIndex((v) => String(v) === id)
     if (i > -1) next.splice(i, 1)
   }
   emit('update:modelValue', next)
+}
+
+function isChecked(id: string): boolean {
+  return props.modelValue.some((v) => String(v) === id)
 }
 </script>
 
@@ -104,7 +120,7 @@ function onCheck(id: string, checked: boolean) {
               <input
                 type="checkbox"
                 :value="option.id"
-                :checked="modelValue.includes(option.id)"
+                :checked="isChecked(option.id)"
                 class="accent-blue-600"
                 @change="onCheck(option.id, ($event.target as HTMLInputElement).checked)"
               />
