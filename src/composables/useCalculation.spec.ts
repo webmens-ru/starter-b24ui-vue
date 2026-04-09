@@ -13,76 +13,75 @@ describe('useCalculation', () => {
 
   describe('loadFromApi — данные не теряются при загрузке', () => {
     const fullApiData: Record<string, unknown> = {
-      order_id: 42,
       orderId: 42,
-      model_id: '1',
-      product_type: 'wicket',
+      modelId: '1',
+      productType: 'wicket',
       model: 'Калитка Тип 1',
-      provides_material: 'Предоставляет изготовитель',
-      provides_paint: 'Предоставляет изготовитель',
-      does_painting_frame: 'Выполняет изготовитель',
-      does_assembly: 'Выполняет изготовитель',
-      fill_side: 'Две стороны',
-      material_facade_glob: 'Профлист',
-      material_yard_glob: 'Сайдинг',
-      nalichie_stolbov_name: 'Со столбами',
-      nalichie_stolbov_id: 1,
-      stolb_id: 7,
-      stolb_name: '60/60/2',
-      opening_option_id: 2,
-      opening_option_name: 'Внутрь / Левая',
-      peremichka_polozheniye_id: '2',
-      peremichka_polozheniye_name: 'Перемычка над створкой',
-      peremichka_sortament_id: 11,
-      peremichka_sortament_name: '40/40/2',
-      calculation_name: 'Тест расчёта',
-      client_name: 'Иван',
-      client_last_name: 'Петров',
-      client_surname: 'Сергеевич',
-      client_phone: '+7 (999) 111-22-33',
-      client_email: 'ivan@test.ru',
-      client_address: 'Москва, ул. Пушкина, 1',
-      client_comment: 'Позвонить',
-      country_code: '+7',
-      is_there_pen_id: 1,
-      is_there_pen_name: 'Будет',
-      pen_provided: 'Предоставляет заказчик',
-      pen_installed: 'Устанавливает заказчик',
-      pen_color: 'Белая',
-      type_lock: 'Тип_2',
-      is_there_lock_id: 0,
-      is_there_lock_name: 'Нет',
-      provides_lock: 'Предоставляет изготовитель',
-      lock_installer: 'Выполняет изготовитель',
-      is_there_cable: 'Изготовитель устанавливает',
-      width_proyema: '1100',
-      height_proyema: '2100',
-      clearance_proyema: '30',
-      sostoyaniye_proyema: 'Готов',
-      raspolozheniye_polotna: 'Горизонтально',
-      shield_type: 'Тип_3',
-      color_shield_id: 2,
-      color_shield_name: 'RAL 8017',
-      height_top_part: '150',
-      height_lower_part: '200',
-      width_side_part: '0',
-      grille_location: 'Возле петель',
-      id_facade: 5,
-      material_supplier_facade: 'Кровельный центр',
-      material_facade: 'Профлист С-20',
-      form_facade: '',
-      thickness_facade: '0.45',
-      type_of_coating_facade: 'Глянец',
-      color_facade: 'RAL 7004',
-      id_yard: 12,
-      material_supplier_yard: 'Кровельный центр',
-      material_yard: 'Сайдинг «Бревно»',
-      form_yard: 'Гладкая',
-      thickness_yard: '',
-      type_of_coating_yard: 'Глянец',
-      color_yard: 'RAL 9003',
-      price_retail: '18500',
-      price_dealer: '12500',
+      providesMaterial: 'Предоставляет изготовитель',
+      providesPaint: 'Предоставляет изготовитель',
+      doesPaintingFrame: 'Выполняет изготовитель',
+      doesAssembly: 'Выполняет изготовитель',
+      fillSide: 'Две стороны',
+      materialFacadeGlob: 'Профлист',
+      materialYardGlob: 'Сайдинг',
+      nalichieStolbovName: 'Со столбами',
+      nalichieStolbovId: 1,
+      stolbId: 7,
+      stolbName: '60/60/2',
+      openingOptionId: 2,
+      openingOptionName: 'Внутрь / Левая',
+      peremichkaPolozheniyeId: '2',
+      peremichkaPolozheniyeName: 'Перемычка над створкой',
+      peremichkaSortamentId: 11,
+      peremichkaSortamentName: '40/40/2',
+      calculationName: 'Тест расчёта',
+      clientName: 'Иван',
+      clientLastName: 'Петров',
+      clientSurname: 'Сергеевич',
+      clientPhone: '+7 (999) 111-22-33',
+      clientEmail: 'ivan@test.ru',
+      clientAddress: 'Москва, ул. Пушкина, 1',
+      clientComment: 'Позвонить',
+      countryCode: '+7',
+      isTherePenId: 1,
+      isTherePenName: 'Будет',
+      penProvided: 'Предоставляет заказчик',
+      penInstalled: 'Устанавливает заказчик',
+      penColor: 'Белая',
+      typeLock: 'Тип_2',
+      isThereLockId: 0,
+      isThereLockName: 'Нет',
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет изготовитель',
+      isThereCable: 'Изготовитель устанавливает',
+      widthProyema: '1100',
+      heightProyema: '2100',
+      clearanceProyema: '30',
+      sostoyaniyeProyema: 'Готов',
+      raspolozheniyePolotna: 'Горизонтально',
+      shieldType: 'Тип_3',
+      colorShieldId: 2,
+      colorShieldName: 'RAL 8017',
+      heightTopPart: '150',
+      heightLowerPart: '200',
+      widthSidePart: '0',
+      grilleLocation: 'Возле петель',
+      idFacade: 5,
+      materialSupplierFacade: 'Кровельный центр',
+      materialFacade: 'Профлист С-20',
+      formFacade: '',
+      thicknessFacade: '0.45',
+      typeOfCoatingFacade: 'Глянец',
+      colorFacade: 'RAL 7004',
+      idYard: 12,
+      materialSupplierYard: 'Кровельный центр',
+      materialYard: 'Сайдинг «Бревно»',
+      formYard: 'Гладкая',
+      thicknessYard: '',
+      typeOfCoatingYard: 'Глянец',
+      colorYard: 'RAL 9003',
+      priceRetail: '18500',
+      priceDealer: '12500',
       visitedPages: [
         'page1', 'page2', 'page2_facade_siding', 'page2_facade_profnastil',
         'page2_yard_siding', 'page2_yard_profnastil', 'page5', 'page3', 'page6',
@@ -95,43 +94,43 @@ describe('useCalculation', () => {
       calc.loadFromApi(fullApiData)
 
       expect(calc.number.value).toBe(42)
-      expect(calc.fill_side.value).toBe('Две стороны')
-      expect(calc.material_facade_glob.value).toBe('Профлист')
-      expect(calc.material_yard_glob.value).toBe('Сайдинг')
-      expect(calc.nalichie_stolbov_id.value).toBe(1)
-      expect(calc.opening_option_id.value).toBe(2)
-      expect(calc.peremichka_sortament_id.value).toBe(11)
-      expect(calc.client_name.value).toBe('Иван')
-      expect(calc.client_phone.value).toBe('+7 (999) 111-22-33')
-      expect(calc.is_there_pen_id.value).toBe(1)
-      expect(calc.is_there_lock_id.value).toBe(0)
-      expect(calc.width_proyema.value).toBe('1100')
-      expect(calc.shield_type.value).toBe('Тип_3')
-      expect(calc.height_top_part.value).toBe('150')
-      expect(calc.id_facade.value).toBe(5)
-      expect(calc.id_yard.value).toBe(12)
-      expect(calc.price_retail.value).toBe('18500')
+      expect(calc.fillSide.value).toBe('Две стороны')
+      expect(calc.materialFacadeGlob.value).toBe('Профлист')
+      expect(calc.materialYardGlob.value).toBe('Сайдинг')
+      expect(calc.nalichieStolbovId.value).toBe(1)
+      expect(calc.openingOptionId.value).toBe(2)
+      expect(calc.peremichkaSortamentId.value).toBe(11)
+      expect(calc.clientName.value).toBe('Иван')
+      expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
+      expect(calc.isTherePenId.value).toBe(1)
+      expect(calc.isThereLockId.value).toBe(0)
+      expect(calc.widthProyema.value).toBe('1100')
+      expect(calc.shieldType.value).toBe('Тип_3')
+      expect(calc.heightTopPart.value).toBe('150')
+      expect(calc.idFacade.value).toBe(5)
+      expect(calc.idYard.value).toBe(12)
+      expect(calc.priceRetail.value).toBe('18500')
     })
 
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {
       calc.loadFromApi({
-        nalichie_stolbov_id: '1',
-        opening_option_id: '2',
-        is_there_pen_id: '1',
-        is_there_lock_id: '0',
+        nalichieStolbovId: '1',
+        openingOptionId: '2',
+        isTherePenId: '1',
+        isThereLockId: '0',
       })
 
-      expect(calc.nalichie_stolbov_id.value).toBe(1)
-      expect(typeof calc.nalichie_stolbov_id.value).toBe('number')
+      expect(calc.nalichieStolbovId.value).toBe(1)
+      expect(typeof calc.nalichieStolbovId.value).toBe('number')
     })
 
-    it('при material_yard_glob=null оставляет null (при Одна сторона)', () => {
+    it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
       calc.loadFromApi({
-        fill_side: 'Одна сторона',
-        material_yard_glob: null,
+        fillSide: 'Одна сторона',
+        materialYardGlob: null,
       })
 
-      expect(calc.material_yard_glob.value).toBeNull()
+      expect(calc.materialYardGlob.value).toBeNull()
     })
 
     it('visitedPages содержит все шаги после загрузки (доступ к любому шагу)', () => {
@@ -150,7 +149,7 @@ describe('useCalculation', () => {
 
     it('при редактировании пустого заказа — доступны только достигнутые этапы', () => {
       calc.loadFromApi({
-        order_id: 42,
+        orderId: 42,
         visitedPages: ['page1'],
         activePage: 'page2',
       })
@@ -165,12 +164,12 @@ describe('useCalculation', () => {
   describe('rebuildSummaryBlocks (через loadFromApi)', () => {
     it('сводка отражает состояние после loadFromApi', () => {
       calc.loadFromApi({
-        order_id: 42,
-        fill_side: 'Две стороны',
-        material_facade_glob: 'Сайдинг',
-        material_yard_glob: 'Профлист',
-        is_there_lock_id: 1,
-        client_name: 'Тест',
+        orderId: 42,
+        fillSide: 'Две стороны',
+        materialFacadeGlob: 'Сайдинг',
+        materialYardGlob: 'Профлист',
+        isThereLockId: 1,
+        clientName: 'Тест',
       })
 
       const blockNames = calc.data.value.map(b => b.blockName)
@@ -187,7 +186,7 @@ describe('useCalculation', () => {
   })
 
   describe('getBaseSavePayload', () => {
-    it('возвращает order_id, model_id, reached_step, visited_pages', () => {
+    it('возвращает orderId, modelId, reachedStep, visitedPages', () => {
       calc.number.value = 42
       calc.modelId.value = '1'
       calc.setActivePage('page5')
@@ -195,26 +194,26 @@ describe('useCalculation', () => {
       const payload = calc.getBaseSavePayload()
 
       expect(payload).toEqual({
-        order_id: 42,
-        model_id: '1',
-        reached_step: 'page5',
-        visited_pages: JSON.stringify(calc.visitedPages.value),
+        orderId: 42,
+        modelId: '1',
+        reachedStep: 'page5',
+        visitedPages: JSON.stringify(calc.visitedPages.value),
       })
-      expect(JSON.parse(payload.visited_pages)).toContain('page5')
+      expect(JSON.parse(payload.visitedPages)).toContain('page5')
     })
   })
 
   describe('reset', () => {
     it('сбрасывает все поля к дефолтным значениям', () => {
       calc.number.value = '123'
-      calc.client_name.value = 'Иван'
-      calc.fill_side.value = 'Две стороны'
+      calc.clientName.value = 'Иван'
+      calc.fillSide.value = 'Две стороны'
 
       calc.reset()
 
       expect(calc.number.value).toBe('')
-      expect(calc.client_name.value).toBe('')
-      expect(calc.fill_side.value).toBe('Одна сторона')
+      expect(calc.clientName.value).toBe('')
+      expect(calc.fillSide.value).toBe('Одна сторона')
       expect(calc.data.value).toHaveLength(0)
       expect(calc.visitedPages.value).toHaveLength(0)
     })

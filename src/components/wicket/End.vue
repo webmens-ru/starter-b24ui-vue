@@ -32,14 +32,14 @@ async function handleCalculate() {
   calculating.value = true
   try {
     const result = await finalCalculate({
-      order_id: Number(calc.number.value),
-      product_type:       calc.productType.value,
+      orderId: Number(calc.number.value),
+      productType:       calc.productType.value,
       model:              calc.model.value,
-      model_id:           calc.modelId.value,
+      modelId:           calc.modelId.value,
     })
-    priceDealer.value = result.price_dealer
-    priceRetail.value = result.price_retail
-    calc.updatePriceBlock(result.price_dealer, result.price_retail)
+    priceDealer.value = result.priceDealer
+    priceRetail.value = result.priceRetail
+    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     calculated.value = true
   } catch (e) {
     console.error('finalCalculate:', e)
@@ -56,8 +56,8 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await deleteCalculation({
-      order_id: Number(calc.number.value),
-      model_id:           calc.modelId.value,
+      orderId: Number(calc.number.value),
+      modelId:           calc.modelId.value,
     })
     window.location.href = '/orders'
   } catch (e) {
@@ -72,13 +72,13 @@ async function confirmDelete() {
 // ─── Монтирование ─────────────────────────────────────────────────────────────
 onMounted(() => {
   calc.setActivePage('page12')
-  calc.fields_filled.value = 1
+  calc.fieldsFilled.value = 1
   document.dispatchEvent(new Event('dataUpdated'))
 
   // Восстановить цену из стора, если уже считалась
-  if (calc.price_dealer.value && calc.price_retail.value) {
-    priceDealer.value = String(calc.price_dealer.value)
-    priceRetail.value = String(calc.price_retail.value)
+  if (calc.priceDealer.value && calc.priceRetail.value) {
+    priceDealer.value = String(calc.priceDealer.value)
+    priceRetail.value = String(calc.priceRetail.value)
     calculated.value  = true
   }
 })

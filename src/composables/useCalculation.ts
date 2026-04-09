@@ -13,17 +13,17 @@ export function useCalculation() {
   const form = useWicketFormStore()
 
   function getBaseSavePayload(): {
-    order_id: number
+    orderId: number
     /** API Yii ожидает строку (см. BaseModelController::validateBasePayload). */
-    model_id: string
-    reached_step: string
-    visited_pages: string
+    modelId: string
+    reachedStep: string
+    visitedPages: string
   } {
     return {
-      order_id: Number(wizard.number),
-      model_id: String(wizard.modelId ?? ''),
-      reached_step: wizard.activePage,
-      visited_pages: JSON.stringify(wizard.visitedPages),
+      orderId: Number(wizard.number),
+      modelId: String(wizard.modelId ?? ''),
+      reachedStep: wizard.activePage,
+      visitedPages: JSON.stringify(wizard.visitedPages),
     }
   }
 

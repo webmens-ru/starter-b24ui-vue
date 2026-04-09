@@ -28,7 +28,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
-const calculation_name = ref('')
+const calculationName = ref('')
 const client_name      = ref('')
 const client_last_name = ref('')
 const client_surname   = ref('')
@@ -176,25 +176,25 @@ function debouncedSync() {
 
 // ─── Синхронизация ───────────────────────────────────────────────────────────
 function syncCalcFields() {
-  calc.calculation_name.value = calculation_name.value
-  calc.client_name.value      = client_name.value
-  calc.client_last_name.value = client_last_name.value
-  calc.client_surname.value   = client_surname.value
-  calc.client_phone.value     = country_code.value + ' ' + phone.value
-  calc.client_email.value     = client_email.value
-  calc.client_address.value   = address.value
-  calc.client_comment.value   = client_comment.value
-  calc.country_code.value     = country_code.value
+  calc.calculationName.value = calculationName.value
+  calc.clientName.value      = client_name.value
+  calc.clientLastName.value = client_last_name.value
+  calc.clientSurname.value   = client_surname.value
+  calc.clientPhone.value     = country_code.value + ' ' + phone.value
+  calc.clientEmail.value     = client_email.value
+  calc.clientAddress.value   = address.value
+  calc.clientComment.value   = client_comment.value
+  calc.countryCode.value     = country_code.value
 
   calc.updateOrCreateBlock('Клиент', [
-    { name: 'Название расчета', value: calc.calculation_name.value },
-    { name: 'Имя',             value: calc.client_name.value },
-    { name: 'Фамилия',         value: calc.client_last_name.value },
-    { name: 'Отчество',        value: calc.client_surname.value },
-    { name: 'Телефон',         value: calc.client_phone.value },
-    { name: 'Эл. почта',       value: calc.client_email.value },
-    { name: 'Адрес',           value: calc.client_address.value },
-    { name: 'Комментарий',     value: calc.client_comment.value },
+    { name: 'Название расчета', value: calc.calculationName.value },
+    { name: 'Имя',             value: calc.clientName.value },
+    { name: 'Фамилия',         value: calc.clientLastName.value },
+    { name: 'Отчество',        value: calc.clientSurname.value },
+    { name: 'Телефон',         value: calc.clientPhone.value },
+    { name: 'Эл. почта',       value: calc.clientEmail.value },
+    { name: 'Адрес',           value: calc.clientAddress.value },
+    { name: 'Комментарий',     value: calc.clientComment.value },
   ])
 }
 
@@ -202,20 +202,20 @@ async function handleNext() {
   syncCalcFields()
   if (!(await validateAll())) return
 
-  const client_phone_raw = calc.client_phone.value || ''
+  const client_phone_raw = calc.clientPhone.value || ''
   const client_phone =
     client_phone_raw.replace(/\D/g, '').length >= 10 ? client_phone_raw : ''
 
   const payload = {
     ...calc.getBaseSavePayload(),
-    calculation_name:   calc.calculation_name.value,
-    client_name:        calc.client_name.value,
-    client_last_name:   calc.client_last_name.value,
-    client_surname:     calc.client_surname.value,
+    calculationName:   calc.calculationName.value,
+    client_name:        calc.clientName.value,
+    client_last_name:   calc.clientLastName.value,
+    client_surname:     calc.clientSurname.value,
     client_phone,
-    client_email:       calc.client_email.value,
-    client_address:     calc.client_address.value,
-    client_comment:     calc.client_comment.value,
+    client_email:       calc.clientEmail.value,
+    client_address:     calc.clientAddress.value,
+    client_comment:     calc.clientComment.value,
   }
 
   const clientFilled =
@@ -229,7 +229,7 @@ async function handleNext() {
 
   try {
     await saveWicketData(payload)
-    await saveOrderData({ order_id: payload.order_id, calculation_name: payload.calculation_name })
+    await saveOrderData({ orderId: payload.orderId, calculationName: payload.calculationName })
     if (clientFilled) {
       await saveClientInfo(payload)
     }
@@ -244,17 +244,17 @@ async function handleNext() {
 onMounted(() => {
   calc.setActivePage('page11')
 
-  calculation_name.value = calc.calculation_name.value
-  client_name.value      = calc.client_name.value
-  client_last_name.value = calc.client_last_name.value
-  client_surname.value   = calc.client_surname.value
-  client_email.value     = calc.client_email.value
-  address.value          = calc.client_address.value
-  client_comment.value   = calc.client_comment.value
+  calculationName.value = calc.calculationName.value
+  client_name.value      = calc.clientName.value
+  client_last_name.value = calc.clientLastName.value
+  client_surname.value   = calc.clientSurname.value
+  client_email.value     = calc.clientEmail.value
+  address.value          = calc.clientAddress.value
+  client_comment.value   = calc.clientComment.value
 
-  if (calc.country_code.value)  country_code.value = calc.country_code.value
-  if (calc.client_phone.value) {
-    const parts = calc.client_phone.value.split(' ')
+  if (calc.countryCode.value)  country_code.value = calc.countryCode.value
+  if (calc.clientPhone.value) {
+    const parts = calc.clientPhone.value.split(' ')
     if (parts.length > 1) phone.value = parts.slice(1).join(' ')
   }
 
@@ -292,7 +292,7 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Название расчета:</label>
         <input
-          v-model="calculation_name"
+          v-model="calculationName"
           type="text"
           placeholder="Введите название расчета"
           class="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"

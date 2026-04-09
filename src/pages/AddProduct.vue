@@ -43,11 +43,11 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
 
   try {
     const res = await createOrder()
-    calc.number.value = res.order_id
+    calc.number.value = res.orderId
     calc.productType.value = item.productType
 
     calc.updateOrCreateBlock('Номер расчета', [
-      { name: 'Номер расчета', value: String(res.order_id) },
+      { name: 'Номер расчета', value: String(res.orderId) },
     ])
     calc.updateOrCreateBlock('Тип изделия', [
       { name: 'Тип изделия', value: item.productType },
@@ -55,8 +55,8 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
 
     if ('modelId' in item && 'model' in item) {
       await createWicketMainMenu({
-        order_id: res.order_id,
-        model_id: (item as { modelId: string }).modelId,
+        orderId: res.orderId,
+        modelId: (item as { modelId: string }).modelId,
         model: (item as { model: string }).model,
       })
     }

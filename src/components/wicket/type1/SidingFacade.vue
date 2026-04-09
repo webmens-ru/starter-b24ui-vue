@@ -67,7 +67,7 @@ watch(filters, () => {
 }, { deep: true })
 
 // Восстановление при загрузке данных (редактирование): id_facade может появиться после монтирования
-watch(() => calc.id_facade.value, async (val) => {
+watch(() => calc.idFacade.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
@@ -82,26 +82,26 @@ watch(() => calc.id_facade.value, async (val) => {
 
 // ─── Восстановление сохранённой строки ───────────────────────────────────────
 function restoreFromCalc(): SidingRow | null {
-  if (!calc.id_facade.value) return null
+  if (!calc.idFacade.value) return null
   return {
-    id:            calc.id_facade.value,
-    company:       calc.material_supplier_facade.value,
-    material:      calc.material_facade.value,
-    form:          calc.form_facade.value,
-    typeOfCoating: calc.type_of_coating_facade.value,
-    color:         calc.color_facade.value,
+    id:            calc.idFacade.value,
+    company:       calc.materialSupplierFacade.value,
+    material:      calc.materialFacade.value,
+    form:          calc.formFacade.value,
+    typeOfCoating: calc.typeOfCoatingFacade.value,
+    color:         calc.colorFacade.value,
   }
 }
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow) {
   // Синхронизируем calc-поля
-  calc.id_facade.value                = row.id
-  calc.material_supplier_facade.value = row.company
-  calc.material_facade.value          = row.material
-  calc.form_facade.value              = row.form
-  calc.type_of_coating_facade.value   = row.typeOfCoating
-  calc.color_facade.value             = row.color
+  calc.idFacade.value                = row.id
+  calc.materialSupplierFacade.value = row.company
+  calc.materialFacade.value          = row.material
+  calc.formFacade.value              = row.form
+  calc.typeOfCoatingFacade.value   = row.typeOfCoating
+  calc.colorFacade.value             = row.color
 
   // Блок данных
   calc.updateOrCreateBlock('Заполнение (фасад)', [
@@ -115,13 +115,13 @@ async function save(row: SidingRow) {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      id_facade:                 row.id,
-      material_facade_glob:       calc.material_facade_glob.value,
-      material_supplier_facade:  row.company,
-      material_facade:           row.material,
-      form_facade:               row.form,
-      type_of_coating_facade:    row.typeOfCoating,
-      color_facade:              row.color,
+      idFacade:                 row.id,
+      materialFacadeGlob:       calc.materialFacadeGlob.value,
+      materialSupplierFacade:  row.company,
+      materialFacade:           row.material,
+      formFacade:               row.form,
+      typeOfCoatingFacade:    row.typeOfCoating,
+      colorFacade:              row.color,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -129,15 +129,15 @@ async function save(row: SidingRow) {
 }
 
 async function doRecalculate() {
-  if (!calc.price_retail.value) return
+  if (!calc.priceRetail.value) return
   try {
     const result = await recalculate({
-      order_id: Number(calc.number.value),
-      product_type:       calc.productType.value,
+      orderId: Number(calc.number.value),
+      productType:       calc.productType.value,
       model:              calc.model.value,
-      model_id:           calc.modelId.value,
+      modelId:           calc.modelId.value,
     })
-    calc.updatePriceBlock(result.price_dealer, result.price_retail)
+    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
   } catch (e) {
     console.error('Ошибка пересчёта:', e)
   }
@@ -152,7 +152,7 @@ async function selectRow(row: SidingRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.id_facade.value = ''
+  calc.idFacade.value = ''
 }
 
 function isSelected(row: SidingRow) {

@@ -66,10 +66,10 @@ async function initCalculation() {
       reset()
       calc.modelId.value = resolvedModelId()
       const res = await createOrder()
-      calc.number.value = res.order_id
+      calc.number.value = res.orderId
       await createWicketMainMenu({
-        order_id: res.order_id,
-        model_id: calc.modelId.value,
+        orderId: res.orderId,
+        modelId: calc.modelId.value,
         model: `Калитка Тип ${calc.modelId.value}`,
       })
       switchTo('page1')
@@ -105,11 +105,11 @@ const currentComponent = shallowRef<Component | null>(null)
 function getNavState(): WicketSharedNavState {
   return {
     modelId: String(calc.modelId.value ?? ''),
-    material_facade_glob: calc.material_facade_glob.value,
-    fill_side: calc.fill_side.value,
-    material_yard_glob: calc.material_yard_glob.value,
-    is_there_lock_id: calc.is_there_lock_id.value,
-    provides_lock: calc.provides_lock.value,
+    materialFacadeGlob: calc.materialFacadeGlob.value,
+    fill_side: calc.fillSide.value,
+    materialYardGlob: calc.materialYardGlob.value,
+    is_there_lock_id: calc.isThereLockId.value,
+    providesLock: calc.providesLock.value,
   }
 }
 

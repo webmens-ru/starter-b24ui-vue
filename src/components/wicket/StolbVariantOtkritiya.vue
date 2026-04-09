@@ -65,7 +65,7 @@ const sortamentSelectItems   = computed(() => sortamentOptions.value.map(o => ({
 async function loadStolbOptions() {
   try {
     const res = await getAssortmentStolb(calc.modelId.value)
-    stolbOptions.value = res.arr_assortment_pipe
+    stolbOptions.value = res.assortmentPipe
     // Дефолтный выбор id=7 при первом открытии
     if (!stolb_id.value) {
       const defaultItem = stolbOptions.value.find(i => i.id === 7)
@@ -79,7 +79,7 @@ async function loadStolbOptions() {
 async function loadPolozhenieOptions(openingId: number) {
   try {
     const res = await getPolozhenieJumper(calc.modelId.value, openingId)
-    peremichkaOptions.value = res.arr_available_polozheniye_jumper
+    peremichkaOptions.value = res.availablePolozheniyeJumper
     if (!peremichka_polozheniye.value) {
       peremichka_polozheniye.value = String(peremichkaOptions.value[0]?.id ?? '')
     }
@@ -91,7 +91,7 @@ async function loadPolozhenieOptions(openingId: number) {
 async function loadSortamentOptions() {
   try {
     const res = await getAssortmentJumper(calc.modelId.value)
-    sortamentOptions.value = res.arr_assortment_jumper
+    sortamentOptions.value = res.assortmentJumper
     // Дефолтный выбор id=11 при первом открытии
     if (!peremichka_sortament.value) {
       const defaultItem = sortamentOptions.value.find(i => i.id === 11)
@@ -118,10 +118,10 @@ async function onOpeningOptionChange() {
   peremichka_sortament.value = ''
   peremichkaOptions.value    = []
   sortamentOptions.value     = []
-  calc.peremichka_polozheniye_id.value   = ''
-  calc.peremichka_polozheniye_name.value = ''
-  calc.peremichka_sortament_id.value     = null
-  calc.peremichka_sortament_name.value   = null
+  calc.peremichkaPolozheniyeId.value   = ''
+  calc.peremichkaPolozheniyeName.value = ''
+  calc.peremichkaSortamentId.value     = null
+  calc.peremichkaSortamentName.value   = null
   peremichka_polozheniye.value = ''
   await loadPolozhenieOptions(opening_option_id.value)
   await save()
@@ -143,52 +143,52 @@ async function onSortamentChange() {
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.nalichie_stolbov_name.value = nalichie_stolbov.value
-  calc.nalichie_stolbov_id.value   = nalichie_stolbov.value === 'Со столбами' ? 1 : 0
+  calc.nalichieStolbovName.value = nalichie_stolbov.value
+  calc.nalichieStolbovId.value   = nalichie_stolbov.value === 'Со столбами' ? 1 : 0
 
   if (nalichie_stolbov.value === 'Со столбами') {
-    calc.stolb_id.value   = stolb_id.value
+    calc.stolbId.value   = stolb_id.value
     const item = stolbOptions.value.find(i => String(i.id) === stolb_id.value)
-    calc.stolb_name.value = item?.name ?? ''
+    calc.stolbName.value = item?.name ?? ''
   } else {
-    calc.stolb_id.value   = ''
-    calc.stolb_name.value = ''
+    calc.stolbId.value   = ''
+    calc.stolbName.value = ''
   }
 
   const openingItem = openingOptions.value.find(o => o.id === opening_option_id.value)
-  calc.opening_option_name.value       = openingItem?.label ?? ''
-  calc.opening_option_id.value         = opening_option_id.value
-  calc.opening_option_path_photo.value = openingItem?.img ?? ''
+  calc.openingOptionName.value       = openingItem?.label ?? ''
+  calc.openingOptionId.value         = opening_option_id.value
+  calc.openingOptionPathPhoto.value = openingItem?.img ?? ''
 
-  calc.peremichka_polozheniye_id.value = peremichka_polozheniye.value
+  calc.peremichkaPolozheniyeId.value = peremichka_polozheniye.value
   const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichka_polozheniye.value)
-  calc.peremichka_polozheniye_name.value = polItem?.name ?? ''
+  calc.peremichkaPolozheniyeName.value = polItem?.name ?? ''
 
-  if (calc.peremichka_polozheniye_name.value && calc.peremichka_polozheniye_name.value !== 'Без перемычки') {
-    calc.peremichka_sortament_id.value = peremichka_sortament.value || null
+  if (calc.peremichkaPolozheniyeName.value && calc.peremichkaPolozheniyeName.value !== 'Без перемычки') {
+    calc.peremichkaSortamentId.value = peremichka_sortament.value || null
     const sortItem = sortamentOptions.value.find(i => String(i.id) === peremichka_sortament.value)
-    calc.peremichka_sortament_name.value = sortItem?.name ?? null
+    calc.peremichkaSortamentName.value = sortItem?.name ?? null
   } else {
-    calc.peremichka_sortament_id.value   = null
-    calc.peremichka_sortament_name.value = null
+    calc.peremichkaSortamentId.value   = null
+    calc.peremichkaSortamentName.value = null
   }
 }
 
 function buildBlock() {
   const params: { name: string; value: string }[] = [
-    { name: 'Наличие столбов', value: calc.nalichie_stolbov_name.value },
+    { name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
   ]
-  if (nalichie_stolbov.value === 'Со столбами' && calc.stolb_name.value) {
-    params.push({ name: 'Сортамент столбов', value: calc.stolb_name.value })
+  if (nalichie_stolbov.value === 'Со столбами' && calc.stolbName.value) {
+    params.push({ name: 'Сортамент столбов', value: calc.stolbName.value })
   }
-  if (calc.opening_option_name.value) {
-    params.push({ name: 'Вариант открытия', value: calc.opening_option_name.value })
+  if (calc.openingOptionName.value) {
+    params.push({ name: 'Вариант открытия', value: calc.openingOptionName.value })
   }
-  if (calc.peremichka_polozheniye_name.value) {
-    params.push({ name: 'Положение перемычки', value: calc.peremichka_polozheniye_name.value })
+  if (calc.peremichkaPolozheniyeName.value) {
+    params.push({ name: 'Положение перемычки', value: calc.peremichkaPolozheniyeName.value })
   }
-  if (calc.peremichka_sortament_name.value) {
-    params.push({ name: 'Сортамент перемычки', value: calc.peremichka_sortament_name.value })
+  if (calc.peremichkaSortamentName.value) {
+    params.push({ name: 'Сортамент перемычки', value: calc.peremichkaSortamentName.value })
   }
   calc.updateOrCreateBlock('Столбы / вариант открытия / перемычка', params)
 }
@@ -200,31 +200,31 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      nalichie_stolbov_name:     calc.nalichie_stolbov_name.value,
-      nalichie_stolbov_id:       calc.nalichie_stolbov_id.value,
-      stolb_name:                calc.stolb_name.value,
-      stolb_id:                  calc.stolb_id.value,
-      opening_option_name:       calc.opening_option_name.value,
-      opening_option_id:         calc.opening_option_id.value,
-      opening_option_path_photo: calc.opening_option_path_photo.value,
-      peremichka_polozheniye_name: calc.peremichka_polozheniye_name.value,
-      peremichka_polozheniye_id:   calc.peremichka_polozheniye_id.value,
-      peremichka_sortament_name:   calc.peremichka_sortament_name.value,
-      peremichka_sortament_id:     calc.peremichka_sortament_id.value,
+      nalichieStolbovName:     calc.nalichieStolbovName.value,
+      nalichieStolbovId:       calc.nalichieStolbovId.value,
+      stolbName:                calc.stolbName.value,
+      stolbId:                  calc.stolbId.value,
+      openingOptionName:       calc.openingOptionName.value,
+      openingOptionId:         calc.openingOptionId.value,
+      openingOptionPathPhoto: calc.openingOptionPathPhoto.value,
+      peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
+      peremichkaPolozheniyeId:   calc.peremichkaPolozheniyeId.value,
+      peremichkaSortamentName:   calc.peremichkaSortamentName.value,
+      peremichkaSortamentId:     calc.peremichkaSortamentId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -245,31 +245,31 @@ onMounted(async () => {
   calc.setActivePage('page5')
 
   // Восстанавливаем сохранённые значения
-  if (calc.nalichie_stolbov_name.value) {
-    nalichie_stolbov.value = calc.nalichie_stolbov_name.value as 'Со столбами' | 'Без столбов'
+  if (calc.nalichieStolbovName.value) {
+    nalichie_stolbov.value = calc.nalichieStolbovName.value as 'Со столбами' | 'Без столбов'
   }
-  if (calc.opening_option_id.value !== null) {
-    opening_option_id.value = calc.opening_option_id.value
+  if (calc.openingOptionId.value !== null) {
+    opening_option_id.value = calc.openingOptionId.value
   }
 
   await loadStolbOptions()
 
   // Восстанавливаем stolb_id после загрузки списка
-  if (calc.stolb_id.value) {
-    stolb_id.value = String(calc.stolb_id.value)
+  if (calc.stolbId.value) {
+    stolb_id.value = String(calc.stolbId.value)
   }
 
   if (opening_option_id.value !== null) {
     showPeremichka.value = true
     await loadPolozhenieOptions(opening_option_id.value)
-    if (calc.peremichka_polozheniye_id.value) {
-      peremichka_polozheniye.value = String(calc.peremichka_polozheniye_id.value)
+    if (calc.peremichkaPolozheniyeId.value) {
+      peremichka_polozheniye.value = String(calc.peremichkaPolozheniyeId.value)
     }
     if (peremichka_polozheniye.value && peremichka_polozheniye.value !== '1') {
       showSortament.value = true
       await loadSortamentOptions()
-      if (calc.peremichka_sortament_id.value) {
-        peremichka_sortament.value = String(calc.peremichka_sortament_id.value)
+      if (calc.peremichkaSortamentId.value) {
+        peremichka_sortament.value = String(calc.peremichkaSortamentId.value)
       }
     }
   }

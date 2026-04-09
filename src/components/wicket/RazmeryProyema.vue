@@ -75,18 +75,18 @@ function debouncedSave() {
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.width_proyema.value      = width.value
-  calc.height_proyema.value     = height.value
-  calc.clearance_proyema.value  = clearance.value
-  calc.sostoyaniye_proyema.value = sostoyaniye.value
+  calc.widthProyema.value      = width.value
+  calc.heightProyema.value     = height.value
+  calc.clearanceProyema.value  = clearance.value
+  calc.sostoyaniyeProyema.value = sostoyaniye.value
 }
 
 function buildBlock() {
   calc.updateOrCreateBlock('Проем', [
-    { name: 'Ширина',            value: calc.width_proyema.value },
-    { name: 'Высота',            value: calc.height_proyema.value },
-    { name: 'Просвет',           value: calc.clearance_proyema.value },
-    { name: 'Состояние проема',  value: calc.sostoyaniye_proyema.value },
+    { name: 'Ширина',            value: calc.widthProyema.value },
+    { name: 'Высота',            value: calc.heightProyema.value },
+    { name: 'Просвет',           value: calc.clearanceProyema.value },
+    { name: 'Состояние проема',  value: calc.sostoyaniyeProyema.value },
   ])
 }
 
@@ -97,25 +97,25 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      width_proyema:       calc.width_proyema.value,
-      height_proyema:      calc.height_proyema.value,
-      clearance_proyema:   calc.clearance_proyema.value,
-      sostoyaniye_proyema: calc.sostoyaniye_proyema.value,
+      width_proyema:       calc.widthProyema.value,
+      height_proyema:      calc.heightProyema.value,
+      clearance_proyema:   calc.clearanceProyema.value,
+      sostoyaniyeProyema: calc.sostoyaniyeProyema.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
   // Для модели 3 (штакетник) пересчёт не выполняется
-  if (String(calc.modelId.value) !== '3' && calc.price_retail.value) {
+  if (String(calc.modelId.value) !== '3' && calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -132,10 +132,10 @@ async function handleNext() {
 onMounted(async () => {
   calc.setActivePage('page7')
 
-  const w = calc.width_proyema.value
-  const h = calc.height_proyema.value
-  const c = calc.clearance_proyema.value
-  const s = calc.sostoyaniye_proyema.value
+  const w = calc.widthProyema.value
+  const h = calc.heightProyema.value
+  const c = calc.clearanceProyema.value
+  const s = calc.sostoyaniyeProyema.value
   if (w != null && w !== '') width.value = String(w)
   if (h != null && h !== '') height.value = String(h)
   if (c != null && c !== '') clearance.value = String(c)

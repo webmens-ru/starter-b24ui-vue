@@ -19,30 +19,30 @@ const options = [
 const selected = ref<string>('Вертикально')
 
 async function save() {
-  calc.raspolozheniye_polotna.value = selected.value
+  calc.raspolozheniyePolotna.value = selected.value
 
   calc.updateOrCreateBlock('Расположение полотна', [
-    { name: 'Расположение полотна', value: calc.raspolozheniye_polotna.value },
+    { name: 'Расположение полотна', value: calc.raspolozheniyePolotna.value },
   ])
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      raspolozheniye_polotna: calc.raspolozheniye_polotna.value,
+      raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -51,8 +51,8 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page6')
-  if (calc.raspolozheniye_polotna.value) {
-    selected.value = calc.raspolozheniye_polotna.value
+  if (calc.raspolozheniyePolotna.value) {
+    selected.value = calc.raspolozheniyePolotna.value
   }
   await save()
 })

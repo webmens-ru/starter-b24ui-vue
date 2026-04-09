@@ -9,115 +9,115 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
 
 // Поля шага "Вариант изготовления"
-const provides_material    = ref<string>('Предоставляет изготовитель')
-const provides_paint       = ref<string>('Предоставляет изготовитель')
-const does_painting_frame  = ref<string>('Выполняет изготовитель')
-const does_assembly        = ref<string>('Выполняет изготовитель')
+const providesMaterial    = ref<string>('Предоставляет изготовитель')
+const providesPaint       = ref<string>('Предоставляет изготовитель')
+const doesPaintingFrame  = ref<string>('Выполняет изготовитель')
+const doesAssembly        = ref<string>('Выполняет изготовитель')
 
 // Поля шага "Заполнение"
-const fill_side            = ref<string>('Одна сторона')
-const material_facade_glob = ref<string>('Сайдинг')
-const material_yard_glob   = ref<string | null>(null)
+const fillSide            = ref<string>('Одна сторона')
+const materialFacadeGlob = ref<string>('Сайдинг')
+const materialYardGlob   = ref<string | null>(null)
 
 // Поля шага "Столбы / Вариант открытия / Перемычка"
-const nalichie_stolbov_name       = ref<string>('Со столбами')
-const nalichie_stolbov_id         = ref<number>(1)
-const stolb_id                    = ref<string | number>('')
-const stolb_name                  = ref<string>('')
-const opening_option_name         = ref<string>('')
-const opening_option_id           = ref<number | null>(null)
-const opening_option_path_photo   = ref<string>('')
-const peremichka_polozheniye_id   = ref<string>('')
-const peremichka_polozheniye_name = ref<string>('')
-const peremichka_sortament_id     = ref<string | number | null>(null)
-const peremichka_sortament_name   = ref<string | null>(null)
+const nalichieStolbovName       = ref<string>('Со столбами')
+const nalichieStolbovId         = ref<number>(1)
+const stolbId                    = ref<string | number>('')
+const stolbName                  = ref<string>('')
+const openingOptionName         = ref<string>('')
+const openingOptionId           = ref<number | null>(null)
+const openingOptionPathPhoto   = ref<string>('')
+const peremichkaPolozheniyeId   = ref<string>('')
+const peremichkaPolozheniyeName = ref<string>('')
+const peremichkaSortamentId     = ref<string | number | null>(null)
+const peremichkaSortamentName   = ref<string | null>(null)
 
 // Поля шага "Клиент"
-const calculation_name  = ref<string>('')
-const client_name       = ref<string>('')
-const client_last_name  = ref<string>('')
-const client_surname    = ref<string>('')
-const client_phone      = ref<string>('')
-const client_email      = ref<string>('')
-const client_address    = ref<string>('')
-const client_comment    = ref<string>('')
-const country_code      = ref<string>('+7')
+const calculationName  = ref<string>('')
+const clientName       = ref<string>('')
+const clientLastName  = ref<string>('')
+const clientSurname    = ref<string>('')
+const clientPhone      = ref<string>('')
+const clientEmail      = ref<string>('')
+const clientAddress    = ref<string>('')
+const clientComment    = ref<string>('')
+const countryCode      = ref<string>('+7')
 
 // Поля шага "Ручка" (дополнительная ручка / скоба)
-const is_there_pen_name   = ref<string>('Не будет')
-const is_there_pen_id     = ref<number>(0)
-const pen_provided        = ref<string>('Предоставляет изготовитель')
-const pen_installed       = ref<string>('Устанавливает изготовитель')
-const pen_color           = ref<string>('Черная')
-const additional_pen_id     = ref<number | null>(null)
-const additional_pen_color  = ref<string>('')
-const additional_pen_marking = ref<string>('')
+const isTherePenName   = ref<string>('Не будет')
+const isTherePenId     = ref<number>(0)
+const penProvided        = ref<string>('Предоставляет изготовитель')
+const penInstalled       = ref<string>('Устанавливает изготовитель')
+const penColor           = ref<string>('Черная')
+const additionalPenId     = ref<number | null>(null)
+const additionalPenColor  = ref<string>('')
+const additionalPenMarking = ref<string>('')
 
 // Поля шага "Тип замка" и ручки в комплекте
-const type_lock      = ref<string>('Тип_1')
-const lock_set_id    = ref<number | null>(null)
-const lock_pen_id    = ref<number | null>(null)
-const lock_pen_color = ref<string>('Черная')
+const typeLock      = ref<string>('Тип_1')
+const lockSetId    = ref<number | null>(null)
+const lockPenId    = ref<number | null>(null)
+const lockPenColor = ref<string>('Черная')
 
 // Поля шага "Замок"
-const is_there_lock_name = ref<string>('Есть')
-const is_there_lock_id   = ref<number>(1)
-const provides_lock      = ref<string>('Предоставляет изготовитель')
-const lock_installer     = ref<string>('Выполняет изготовитель')
-const is_there_cable     = ref<string>('Изготовитель устанавливает')
+const isThereLockName = ref<string>('Есть')
+const isThereLockId   = ref<number>(1)
+const providesLock      = ref<string>('Предоставляет изготовитель')
+const lockInstaller     = ref<string>('Выполняет изготовитель')
+const isThereCable     = ref<string>('Изготовитель устанавливает')
 
 // Поля шага "Проем"
-const width_proyema      = ref<string>('')
-const height_proyema     = ref<string>('')
-const clearance_proyema  = ref<string>('')
-const sostoyaniye_proyema = ref<string>('Готов')
+const widthProyema      = ref<string>('')
+const heightProyema     = ref<string>('')
+const clearanceProyema  = ref<string>('')
+const sostoyaniyeProyema = ref<string>('Готов')
 
 // Поля шага "Расположение полотна"
-const raspolozheniye_polotna = ref<string>('Вертикально')
+const raspolozheniyePolotna = ref<string>('Вертикально')
 
 // Поля шага "Тип щита"
-const shield_type       = ref<string>('Тип_1')
-const color_shield_id   = ref<string | number>('')
-const color_shield_name = ref<string>('')
-const height_top_part   = ref<string>('0')
-const height_lower_part = ref<string>('0')
-const width_side_part         = ref<string>('0')
-const assortment_side_grille_net_id = ref<string | number | null>(null)
-const assortment_height_upper_net_id = ref<string | number | null>(null)
-const assortment_height_lower_net_id = ref<string | number | null>(null)
-const grille_location         = ref<string>('Возле петель')
-const net_width_provider_top  = ref<string>('executor')
-const net_width_provider_lower = ref<string>('executor')
-const net_width_provider_side  = ref<string>('executor')
+const shieldType       = ref<string>('Тип_1')
+const colorShieldId   = ref<string | number>('')
+const colorShieldName = ref<string>('')
+const heightTopPart   = ref<string>('0')
+const heightLowerPart = ref<string>('0')
+const widthSidePart         = ref<string>('0')
+const assortmentSideGrilleNetId = ref<string | number | null>(null)
+const assortmentHeightUpperNetId = ref<string | number | null>(null)
+const assortmentHeightLowerNetId = ref<string | number | null>(null)
+const grilleLocation         = ref<string>('Возле петель')
+const netWidthProviderTop  = ref<string>('executor')
+const netWidthProviderLower = ref<string>('executor')
+const netWidthProviderSide  = ref<string>('executor')
 
 // Поля шага "Заполнение (фасад)"
-const id_facade                = ref<string | number>('')
-const material_supplier_facade = ref<string>('')
-const material_facade          = ref<string>('')
-const form_facade              = ref<string>('')
-const thickness_facade         = ref<string>('')
-const type_of_coating_facade   = ref<string>('')
-const color_facade             = ref<string>('')
+const idFacade                = ref<string | number>('')
+const materialSupplierFacade = ref<string>('')
+const materialFacade          = ref<string>('')
+const formFacade              = ref<string>('')
+const thicknessFacade         = ref<string>('')
+const typeOfCoatingFacade   = ref<string>('')
+const colorFacade             = ref<string>('')
 
 // Поля шага "Заполнение (двор)"
-const id_yard                = ref<string | number>('')
-const material_supplier_yard = ref<string>('')
-const material_yard          = ref<string>('')
-const form_yard              = ref<string>('')
-const thickness_yard         = ref<string>('')
-const type_of_coating_yard   = ref<string>('')
-const color_yard             = ref<string>('')
+const idYard                = ref<string | number>('')
+const materialSupplierYard = ref<string>('')
+const materialYard          = ref<string>('')
+const formYard              = ref<string>('')
+const thicknessYard         = ref<string>('')
+const typeOfCoatingYard   = ref<string>('')
+const colorYard             = ref<string>('')
 
 // Цена
-const price_retail  = ref<string | number>('')
-const price_dealer  = ref<string | number>('')
-const fields_filled = ref<number>(0)
+const priceRetail  = ref<string | number>('')
+const priceDealer  = ref<string | number>('')
+const fieldsFilled = ref<number>(0)
 
   /** Раздел «Заполнение» неполный: сброшен материал или не выбран материал двора при «Две стороны». */
   const isFillSectionIncomplete = computed(() => {
-    const hasFacade = id_facade.value != null && String(id_facade.value).trim() !== ''
-    const needYard = fill_side.value === 'Две стороны'
-    const hasYard = id_yard.value != null && String(id_yard.value).trim() !== ''
+    const hasFacade = idFacade.value != null && String(idFacade.value).trim() !== ''
+    const needYard = fillSide.value === 'Две стороны'
+    const hasYard = idYard.value != null && String(idYard.value).trim() !== ''
     return !hasFacade || (needYard && !hasYard)
   })
 
@@ -139,90 +139,90 @@ const fields_filled = ref<number>(0)
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
     data.value = []
-    price_retail.value = ''
-    price_dealer.value = ''
-    provides_material.value = 'Предоставляет изготовитель'
-    provides_paint.value = 'Предоставляет изготовитель'
-    does_painting_frame.value = 'Выполняет изготовитель'
-    does_assembly.value = 'Выполняет изготовитель'
-    fill_side.value = 'Одна сторона'
-    material_facade_glob.value = 'Сайдинг'
-    material_yard_glob.value = null
-    nalichie_stolbov_name.value = 'Со столбами'
-    nalichie_stolbov_id.value = 1
-    stolb_id.value = ''
-    stolb_name.value = ''
-    opening_option_name.value = ''
-    opening_option_id.value = null
-    opening_option_path_photo.value = ''
-    peremichka_polozheniye_id.value = ''
-    peremichka_polozheniye_name.value = ''
-    peremichka_sortament_id.value = null
-    peremichka_sortament_name.value = null
-    calculation_name.value = ''
-    client_name.value = ''
-    client_last_name.value = ''
-    client_surname.value = ''
-    client_phone.value = ''
-    client_email.value = ''
-    client_address.value = ''
-    client_comment.value = ''
-    country_code.value = '+7'
-    is_there_pen_name.value = 'Не будет'
-    is_there_pen_id.value = 0
-    pen_provided.value = 'Предоставляет изготовитель'
-    pen_installed.value = 'Устанавливает изготовитель'
-    pen_color.value = 'Черная'
-    additional_pen_id.value = null
-    additional_pen_color.value = ''
-    additional_pen_marking.value = ''
-    type_lock.value = 'Тип_1'
-    lock_set_id.value = null
-    lock_pen_id.value = null
-    lock_pen_color.value = 'Черная'
-    is_there_lock_name.value = 'Есть'
-    is_there_lock_id.value = 1
-    provides_lock.value = 'Предоставляет изготовитель'
-    lock_installer.value = 'Выполняет изготовитель'
-    is_there_cable.value = 'Изготовитель устанавливает'
-    width_proyema.value = ''
-    height_proyema.value = ''
-    clearance_proyema.value = ''
-    sostoyaniye_proyema.value = 'Готов'
-    raspolozheniye_polotna.value = 'Вертикально'
-    shield_type.value = 'Тип_1'
-    color_shield_id.value = ''
-    color_shield_name.value = ''
-    height_top_part.value = '0'
-    height_lower_part.value = '0'
-    width_side_part.value = '0'
-    assortment_side_grille_net_id.value = null
-    assortment_height_upper_net_id.value = null
-    assortment_height_lower_net_id.value = null
-    grille_location.value = 'Возле петель'
-    net_width_provider_top.value = 'executor'
-    net_width_provider_lower.value = 'executor'
-    net_width_provider_side.value = 'executor'
-    id_facade.value = ''
-    material_supplier_facade.value = ''
-    material_facade.value = ''
-    form_facade.value = ''
-    thickness_facade.value = ''
-    type_of_coating_facade.value = ''
-    color_facade.value = ''
-    id_yard.value = ''
-    material_supplier_yard.value = ''
-    material_yard.value = ''
-    form_yard.value = ''
-    thickness_yard.value = ''
-    type_of_coating_yard.value = ''
-    color_yard.value = ''
+    priceRetail.value = ''
+    priceDealer.value = ''
+    providesMaterial.value = 'Предоставляет изготовитель'
+    providesPaint.value = 'Предоставляет изготовитель'
+    doesPaintingFrame.value = 'Выполняет изготовитель'
+    doesAssembly.value = 'Выполняет изготовитель'
+    fillSide.value = 'Одна сторона'
+    materialFacadeGlob.value = 'Сайдинг'
+    materialYardGlob.value = null
+    nalichieStolbovName.value = 'Со столбами'
+    nalichieStolbovId.value = 1
+    stolbId.value = ''
+    stolbName.value = ''
+    openingOptionName.value = ''
+    openingOptionId.value = null
+    openingOptionPathPhoto.value = ''
+    peremichkaPolozheniyeId.value = ''
+    peremichkaPolozheniyeName.value = ''
+    peremichkaSortamentId.value = null
+    peremichkaSortamentName.value = null
+    calculationName.value = ''
+    clientName.value = ''
+    clientLastName.value = ''
+    clientSurname.value = ''
+    clientPhone.value = ''
+    clientEmail.value = ''
+    clientAddress.value = ''
+    clientComment.value = ''
+    countryCode.value = '+7'
+    isTherePenName.value = 'Не будет'
+    isTherePenId.value = 0
+    penProvided.value = 'Предоставляет изготовитель'
+    penInstalled.value = 'Устанавливает изготовитель'
+    penColor.value = 'Черная'
+    additionalPenId.value = null
+    additionalPenColor.value = ''
+    additionalPenMarking.value = ''
+    typeLock.value = 'Тип_1'
+    lockSetId.value = null
+    lockPenId.value = null
+    lockPenColor.value = 'Черная'
+    isThereLockName.value = 'Есть'
+    isThereLockId.value = 1
+    providesLock.value = 'Предоставляет изготовитель'
+    lockInstaller.value = 'Выполняет изготовитель'
+    isThereCable.value = 'Изготовитель устанавливает'
+    widthProyema.value = ''
+    heightProyema.value = ''
+    clearanceProyema.value = ''
+    sostoyaniyeProyema.value = 'Готов'
+    raspolozheniyePolotna.value = 'Вертикально'
+    shieldType.value = 'Тип_1'
+    colorShieldId.value = ''
+    colorShieldName.value = ''
+    heightTopPart.value = '0'
+    heightLowerPart.value = '0'
+    widthSidePart.value = '0'
+    assortmentSideGrilleNetId.value = null
+    assortmentHeightUpperNetId.value = null
+    assortmentHeightLowerNetId.value = null
+    grilleLocation.value = 'Возле петель'
+    netWidthProviderTop.value = 'executor'
+    netWidthProviderLower.value = 'executor'
+    netWidthProviderSide.value = 'executor'
+    idFacade.value = ''
+    materialSupplierFacade.value = ''
+    materialFacade.value = ''
+    formFacade.value = ''
+    thicknessFacade.value = ''
+    typeOfCoatingFacade.value = ''
+    colorFacade.value = ''
+    idYard.value = ''
+    materialSupplierYard.value = ''
+    materialYard.value = ''
+    formYard.value = ''
+    thicknessYard.value = ''
+    typeOfCoatingYard.value = ''
+    colorYard.value = ''
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
   function updatePriceBlock(dealer: string | number, retail: string | number) {
-    price_dealer.value = dealer
-    price_retail.value = retail
+    priceDealer.value = dealer
+    priceRetail.value = retail
     updateOrCreateBlock('Цена', [
       { name: 'Дилерская цена', value: String(dealer) },
       { name: 'Рек. розн. цена', value: String(retail) },
@@ -251,38 +251,38 @@ const fields_filled = ref<number>(0)
       let completed = false
       switch (pageId) {
         case 'page1':
-          completed = notEmpty(provides_material.value) && notEmpty(provides_paint.value) && notEmpty(does_painting_frame.value)
+          completed = notEmpty(providesMaterial.value) && notEmpty(providesPaint.value) && notEmpty(doesPaintingFrame.value)
           break
         case 'page2':
-          completed = notEmpty(fill_side.value) || !!(id_facade.value && String(id_facade.value)) || !!(id_yard.value && String(id_yard.value))
+          completed = notEmpty(fillSide.value) || !!(idFacade.value && String(idFacade.value)) || !!(idYard.value && String(idYard.value))
           break
         case 'page3':
-          completed = notEmpty(shield_type.value)
+          completed = notEmpty(shieldType.value)
           break
         case 'page5':
-          completed = opening_option_id.value != null && (Number(opening_option_id.value) || 0) > 0
+          completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
           break
         case 'page6':
-          completed = notEmpty(raspolozheniye_polotna.value)
+          completed = notEmpty(raspolozheniyePolotna.value)
           break
         case 'page7':
-          completed = numGt(width_proyema.value as string | number, 0) && numGt(height_proyema.value as string | number, 0)
+          completed = numGt(widthProyema.value as string | number, 0) && numGt(heightProyema.value as string | number, 0)
           break
         case 'page9':
-          completed = is_there_lock_id.value !== null
+          completed = isThereLockId.value !== null
           break
         case 'page10':
-          completed = is_there_pen_id.value !== null
+          completed = isTherePenId.value !== null
           break
         case 'page11': {
           const snap = apiData?.client_snapshot
           const hasSnapshot = snap != null && String(snap).trim() !== ''
-          const hasClient = notEmpty(client_name.value) || notEmpty(client_phone.value) || notEmpty(client_email.value) || notEmpty(client_address.value)
+          const hasClient = notEmpty(clientName.value) || notEmpty(clientPhone.value) || notEmpty(clientEmail.value) || notEmpty(clientAddress.value)
           completed = hasSnapshot || hasClient
           break
         }
         case 'page12':
-          completed = notEmpty(price_retail.value)
+          completed = notEmpty(priceRetail.value)
           break
         default:
           break
@@ -303,103 +303,101 @@ const fields_filled = ref<number>(0)
     const wizard = useWicketWizardStore()
     const w = storeToRefs(wizard)
     const refMap: Record<string, { value: unknown }> = {
-      order_id: w.number,
       orderId: w.number,
-      model_id: w.modelId,
-      product_type: w.productType,
+      modelId: w.modelId,
+      productType: w.productType,
       model: w.model,
-      provides_material,
-      provides_paint,
-      does_painting_frame,
-      does_assembly,
-      fill_side,
-      material_facade_glob,
-      material_yard_glob,
-      nalichie_stolbov_name,
-      nalichie_stolbov_id,
-      stolb_id,
-      stolb_name,
-      opening_option_name,
-      opening_option_id,
-      opening_option_path_photo,
-      peremichka_polozheniye_id,
-      peremichka_polozheniye_name,
-      peremichka_sortament_id,
-      peremichka_sortament_name,
-      calculation_name,
-      client_name,
-      client_last_name,
-      client_surname,
-      client_phone,
-      client_email,
-      client_address,
-      client_comment,
-      country_code,
-      is_there_pen_name,
-      is_there_pen_id,
-      pen_provided,
-      pen_installed,
-      pen_color,
-      additional_pen_id,
-      additional_pen_color,
-      additional_pen_marking,
-      type_lock,
-      lock_set_id,
-      lock_pen_id,
-      lock_pen_color,
-      is_there_lock_name,
-      is_there_lock_id,
-      provides_lock,
-      lock_installer,
-      is_there_cable,
-      width_proyema,
-      height_proyema,
-      clearance_proyema,
-      sostoyaniye_proyema,
-      raspolozheniye_polotna,
-      shield_type,
-      color_shield_id,
-      color_shield_name,
-      height_top_part,
-      height_lower_part,
-      width_side_part,
-      assortment_side_grille_net_id,
-      assortment_height_upper_net_id,
-      assortment_height_lower_net_id,
-      grille_location,
-      net_width_provider_top,
-      net_width_provider_lower,
-      net_width_provider_side,
-      // Обратная совместимость: до миграции API может вернуть assortment_grille_net_id
-      assortment_grille_net_id: assortment_side_grille_net_id,
-      id_facade,
-      material_supplier_facade,
-      material_facade,
-      form_facade,
-      thickness_facade,
-      type_of_coating_facade,
-      color_facade,
-      id_yard,
-      material_supplier_yard,
-      material_yard,
-      form_yard,
-      thickness_yard,
-      type_of_coating_yard,
-      color_yard,
-      price_retail,
-      price_dealer,
+      providesMaterial,
+      providesPaint,
+      doesPaintingFrame,
+      doesAssembly,
+      fillSide,
+      materialFacadeGlob,
+      materialYardGlob,
+      nalichieStolbovName,
+      nalichieStolbovId,
+      stolbId,
+      stolbName,
+      openingOptionName,
+      openingOptionId,
+      openingOptionPathPhoto,
+      peremichkaPolozheniyeId,
+      peremichkaPolozheniyeName,
+      peremichkaSortamentId,
+      peremichkaSortamentName,
+      calculationName,
+      clientName,
+      clientLastName,
+      clientSurname,
+      clientPhone,
+      clientEmail,
+      clientAddress,
+      clientComment,
+      countryCode,
+      isTherePenName,
+      isTherePenId,
+      penProvided,
+      penInstalled,
+      penColor,
+      additionalPenId,
+      additionalPenColor,
+      additionalPenMarking,
+      typeLock,
+      lockSetId,
+      lockPenId,
+      lockPenColor,
+      isThereLockName,
+      isThereLockId,
+      providesLock,
+      lockInstaller,
+      isThereCable,
+      widthProyema,
+      heightProyema,
+      clearanceProyema,
+      sostoyaniyeProyema,
+      raspolozheniyePolotna,
+      shieldType,
+      colorShieldId,
+      colorShieldName,
+      heightTopPart,
+      heightLowerPart,
+      widthSidePart,
+      assortmentSideGrilleNetId,
+      assortmentHeightUpperNetId,
+      assortmentHeightLowerNetId,
+      grilleLocation,
+      netWidthProviderTop,
+      netWidthProviderLower,
+      netWidthProviderSide,
+      assortmentGrilleNetId: assortmentSideGrilleNetId,
+      idFacade,
+      materialSupplierFacade,
+      materialFacade,
+      formFacade,
+      thicknessFacade,
+      typeOfCoatingFacade,
+      colorFacade,
+      idYard,
+      materialSupplierYard,
+      materialYard,
+      formYard,
+      thicknessYard,
+      typeOfCoatingYard,
+      colorYard,
+      priceRetail,
+      priceDealer,
     }
 
     const modelIdForLoad = String(
-      apiData.model_id != null && apiData.model_id !== ''
-        ? apiData.model_id
+      apiData.modelId != null && apiData.modelId !== ''
+        ? apiData.modelId
         : (w.modelId.value ?? ''),
     )
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
 
-    // Когда additional_pen_id задан, цвет хранится в pen_color — синхронизируем additional_pen_color
-    if (additional_pen_id.value != null && pen_color.value && !additional_pen_color.value) {
-      additional_pen_color.value = pen_color.value
+    // Когда additionalPenId задан, цвет хранится в penColor — синхронизируем additionalPenColor
+    if (additionalPenId.value != null && penColor.value && !additionalPenColor.value) {
+      additionalPenColor.value = penColor.value
     }
 
     // При редактировании — только этапы, до которых пользователь уже дошёл
@@ -430,106 +428,106 @@ const fields_filled = ref<number>(0)
     blocks.push({
       blockName: 'Вариант изготовления',
       params: [
-        { name: 'Материал заполнения', value: provides_material.value },
-        { name: 'Краска', value: provides_paint.value },
-        { name: 'Окраска каркаса', value: does_painting_frame.value },
-        { name: 'Сборка', value: does_assembly.value },
+        { name: 'Материал заполнения', value: providesMaterial.value },
+        { name: 'Краска', value: providesPaint.value },
+        { name: 'Окраска каркаса', value: doesPaintingFrame.value },
+        { name: 'Сборка', value: doesAssembly.value },
       ],
     })
 
     // Заполнение
     const fillParams: CalcBlock['params'] = [
-      { name: 'Сторона заполнения', value: fill_side.value },
-      { name: 'Материал заполнения (фасад)', value: material_facade_glob.value },
+      { name: 'Сторона заполнения', value: fillSide.value },
+      { name: 'Материал заполнения (фасад)', value: materialFacadeGlob.value },
     ]
-    if (fill_side.value === 'Две стороны') {
-      fillParams.push({ name: 'Материал заполнения (двор)', value: material_yard_glob.value ?? '' })
+    if (fillSide.value === 'Две стороны') {
+      fillParams.push({ name: 'Материал заполнения (двор)', value: materialYardGlob.value ?? '' })
     }
     blocks.push({ blockName: 'Заполнение', params: fillParams })
 
     // Заполнение (фасад) — сайдинг или профлист
-    if (id_facade.value || material_facade.value) {
-      const isProfnastil = material_facade_glob.value === 'Профлист'
+    if (idFacade.value || materialFacade.value) {
+      const isProfnastil = materialFacadeGlob.value === 'Профлист'
       blocks.push({
         blockName: 'Заполнение (фасад)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: material_supplier_facade.value },
-              { name: 'Материал', value: material_facade.value },
-              { name: 'Толщина листа', value: thickness_facade.value },
-              { name: 'Тип покрытия', value: type_of_coating_facade.value },
-              { name: 'Цвет', value: color_facade.value },
+              { name: 'Производитель материала', value: materialSupplierFacade.value },
+              { name: 'Материал', value: materialFacade.value },
+              { name: 'Толщина листа', value: thicknessFacade.value },
+              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { name: 'Цвет', value: colorFacade.value },
             ]
           : [
-              { name: 'Производитель материала', value: material_supplier_facade.value },
-              { name: 'Материал', value: material_facade.value },
-              { name: 'Форма', value: form_facade.value },
-              { name: 'Тип покрытия', value: type_of_coating_facade.value },
-              { name: 'Цвет', value: color_facade.value },
+              { name: 'Производитель материала', value: materialSupplierFacade.value },
+              { name: 'Материал', value: materialFacade.value },
+              { name: 'Форма', value: formFacade.value },
+              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { name: 'Цвет', value: colorFacade.value },
             ],
       })
     }
 
     // Заполнение (двор) — только при "Две стороны"
-    if (fill_side.value === 'Две стороны' && (id_yard.value || material_yard.value)) {
-      const isProfnastil = material_yard_glob.value === 'Профлист'
+    if (fillSide.value === 'Две стороны' && (idYard.value || materialYard.value)) {
+      const isProfnastil = materialYardGlob.value === 'Профлист'
       blocks.push({
         blockName: 'Заполнение (двор)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: material_supplier_yard.value },
-              { name: 'Материал', value: material_yard.value },
-              { name: 'Толщина листа', value: thickness_yard.value },
-              { name: 'Тип покрытия', value: type_of_coating_yard.value },
-              { name: 'Цвет', value: color_yard.value },
+              { name: 'Производитель материала', value: materialSupplierYard.value },
+              { name: 'Материал', value: materialYard.value },
+              { name: 'Толщина листа', value: thicknessYard.value },
+              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { name: 'Цвет', value: colorYard.value },
             ]
           : [
-              { name: 'Производитель материала', value: material_supplier_yard.value },
-              { name: 'Материал', value: material_yard.value },
-              { name: 'Форма', value: form_yard.value },
-              { name: 'Тип покрытия', value: type_of_coating_yard.value },
-              { name: 'Цвет', value: color_yard.value },
+              { name: 'Производитель материала', value: materialSupplierYard.value },
+              { name: 'Материал', value: materialYard.value },
+              { name: 'Форма', value: formYard.value },
+              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { name: 'Цвет', value: colorYard.value },
             ],
       })
     }
 
     // Столбы / вариант открытия / перемычка
     const stolbParams: CalcBlock['params'] = [
-      { name: 'Наличие столбов', value: nalichie_stolbov_name.value },
+      { name: 'Наличие столбов', value: nalichieStolbovName.value },
     ]
-    if (nalichie_stolbov_id.value === 1 && stolb_name.value) {
-      stolbParams.push({ name: 'Сортамент столбов', value: stolb_name.value })
+    if (nalichieStolbovId.value === 1 && stolbName.value) {
+      stolbParams.push({ name: 'Сортамент столбов', value: stolbName.value })
     }
-    if (opening_option_name.value) {
-      stolbParams.push({ name: 'Вариант открытия', value: opening_option_name.value })
+    if (openingOptionName.value) {
+      stolbParams.push({ name: 'Вариант открытия', value: openingOptionName.value })
     }
-    if (peremichka_polozheniye_name.value) {
-      stolbParams.push({ name: 'Положение перемычки', value: peremichka_polozheniye_name.value })
+    if (peremichkaPolozheniyeName.value) {
+      stolbParams.push({ name: 'Положение перемычки', value: peremichkaPolozheniyeName.value })
     }
-    if (peremichka_sortament_name.value) {
-      stolbParams.push({ name: 'Сортамент перемычки', value: peremichka_sortament_name.value })
+    if (peremichkaSortamentName.value) {
+      stolbParams.push({ name: 'Сортамент перемычки', value: peremichkaSortamentName.value })
     }
     blocks.push({ blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
 
     // Тип щита
     const shieldParams: CalcBlock['params'] = [
-      { name: 'Тип щита', value: shield_type.value },
+      { name: 'Тип щита', value: shieldType.value },
     ]
-    if (color_shield_name.value) {
-      shieldParams.push({ name: 'Цвет рамы', value: color_shield_name.value })
+    if (colorShieldName.value) {
+      shieldParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
     }
-    if (shield_type.value === 'Тип_3' && height_top_part.value && height_top_part.value !== '0') {
-      shieldParams.push({ name: 'Высота верхней части', value: height_top_part.value })
+    if (shieldType.value === 'Тип_3' && heightTopPart.value && heightTopPart.value !== '0') {
+      shieldParams.push({ name: 'Высота верхней части', value: heightTopPart.value })
     }
-    if ((shield_type.value === 'Тип_2' || shield_type.value === 'Тип_3') && height_lower_part.value && height_lower_part.value !== '0') {
-      shieldParams.push({ name: 'Высота нижней части', value: height_lower_part.value })
+    if ((shieldType.value === 'Тип_2' || shieldType.value === 'Тип_3') && heightLowerPart.value && heightLowerPart.value !== '0') {
+      shieldParams.push({ name: 'Высота нижней части', value: heightLowerPart.value })
     }
-    if (shield_type.value === 'Тип_4') {
-      if (width_side_part.value && width_side_part.value !== '0') {
-        shieldParams.push({ name: 'Ширина боковой части', value: width_side_part.value })
+    if (shieldType.value === 'Тип_4') {
+      if (widthSidePart.value && widthSidePart.value !== '0') {
+        shieldParams.push({ name: 'Ширина боковой части', value: widthSidePart.value })
       }
-      if (grille_location.value) {
-        shieldParams.push({ name: 'Расположение решётки', value: grille_location.value })
+      if (grilleLocation.value) {
+        shieldParams.push({ name: 'Расположение решётки', value: grilleLocation.value })
       }
     }
     blocks.push({ blockName: 'Тип щита', params: shieldParams })
@@ -537,49 +535,49 @@ const fields_filled = ref<number>(0)
     // Расположение полотна
     blocks.push({
       blockName: 'Расположение полотна',
-      params: [{ name: 'Расположение полотна', value: raspolozheniye_polotna.value }],
+      params: [{ name: 'Расположение полотна', value: raspolozheniyePolotna.value }],
     })
 
     // Проем
-    if (width_proyema.value || height_proyema.value || clearance_proyema.value) {
+    if (widthProyema.value || heightProyema.value || clearanceProyema.value) {
       blocks.push({
         blockName: 'Проем',
         params: [
-          { name: 'Ширина', value: width_proyema.value },
-          { name: 'Высота', value: height_proyema.value },
-          { name: 'Просвет', value: clearance_proyema.value },
-          { name: 'Состояние проема', value: sostoyaniye_proyema.value },
+          { name: 'Ширина', value: widthProyema.value },
+          { name: 'Высота', value: heightProyema.value },
+          { name: 'Просвет', value: clearanceProyema.value },
+          { name: 'Состояние проема', value: sostoyaniyeProyema.value },
         ],
       })
     }
 
     // Замок
     const lockParams: CalcBlock['params'] = [
-      { name: 'Замок есть/нет', value: is_there_lock_name.value },
+      { name: 'Замок есть/нет', value: isThereLockName.value },
     ]
-    if (is_there_lock_id.value === 1) {
-      lockParams.push({ name: 'Замок предоставляет', value: provides_lock.value })
-      lockParams.push({ name: 'Врезку замка выполняет', value: lock_installer.value })
-      lockParams.push({ name: 'Кабель для э/м замка', value: is_there_cable.value })
-      lockParams.push({ name: 'Тип замка', value: type_lock.value || '' })
-      if (lock_pen_id.value != null) {
-        lockParams.push({ name: 'Цвет ручки', value: lock_pen_color.value })
+    if (isThereLockId.value === 1) {
+      lockParams.push({ name: 'Замок предоставляет', value: providesLock.value })
+      lockParams.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
+      lockParams.push({ name: 'Кабель для э/м замка', value: isThereCable.value })
+      lockParams.push({ name: 'Тип замка', value: typeLock.value || '' })
+      if (lockPenId.value != null) {
+        lockParams.push({ name: 'Цвет ручки', value: lockPenColor.value })
       }
     }
     blocks.push({ blockName: 'Замок', params: lockParams })
 
     // Дополнительная ручка (скоба)
     const penParams: CalcBlock['params'] = [
-      { name: 'Дополнительная ручка', value: is_there_pen_name.value },
+      { name: 'Дополнительная ручка', value: isTherePenName.value },
     ]
-    if (is_there_pen_id.value === 1) {
-      penParams.push({ name: 'Ручку предоставляет', value: pen_provided.value })
-      penParams.push({ name: 'Ручку устанавливает', value: pen_installed.value })
-      if (pen_provided.value === 'Предоставляет изготовитель') {
-        if (additional_pen_id.value != null && additional_pen_marking.value) {
-          penParams.push({ name: 'Модель ручки', value: additional_pen_marking.value })
+    if (isTherePenId.value === 1) {
+      penParams.push({ name: 'Ручку предоставляет', value: penProvided.value })
+      penParams.push({ name: 'Ручку устанавливает', value: penInstalled.value })
+      if (penProvided.value === 'Предоставляет изготовитель') {
+        if (additionalPenId.value != null && additionalPenMarking.value) {
+          penParams.push({ name: 'Модель ручки', value: additionalPenMarking.value })
         }
-        penParams.push({ name: 'Цвет ручки', value: additional_pen_color.value || pen_color.value })
+        penParams.push({ name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
       }
     }
     blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
@@ -588,24 +586,24 @@ const fields_filled = ref<number>(0)
     blocks.push({
       blockName: 'Клиент',
       params: [
-        { name: 'Название расчета', value: calculation_name.value },
-        { name: 'Имя', value: client_name.value },
-        { name: 'Фамилия', value: client_last_name.value },
-        { name: 'Отчество', value: client_surname.value },
-        { name: 'Телефон', value: client_phone.value },
-        { name: 'Эл. почта', value: client_email.value },
-        { name: 'Адрес', value: client_address.value },
-        { name: 'Комментарий', value: client_comment.value },
+        { name: 'Название расчета', value: calculationName.value },
+        { name: 'Имя', value: clientName.value },
+        { name: 'Фамилия', value: clientLastName.value },
+        { name: 'Отчество', value: clientSurname.value },
+        { name: 'Телефон', value: clientPhone.value },
+        { name: 'Эл. почта', value: clientEmail.value },
+        { name: 'Адрес', value: clientAddress.value },
+        { name: 'Комментарий', value: clientComment.value },
       ],
     })
 
     // Цена
-    if (price_dealer.value || price_retail.value) {
+    if (priceDealer.value || priceRetail.value) {
       blocks.push({
         blockName: 'Цена',
         params: [
-          { name: 'Дилерская цена', value: String(price_dealer.value) },
-          { name: 'Рек. розн. цена', value: String(price_retail.value) },
+          { name: 'Дилерская цена', value: String(priceDealer.value) },
+          { name: 'Рек. розн. цена', value: String(priceRetail.value) },
         ],
       })
     }
@@ -616,85 +614,85 @@ const fields_filled = ref<number>(0)
 
   return {
     data,
-    provides_material,
-    provides_paint,
-    does_painting_frame,
-    does_assembly,
-    fill_side,
-    material_facade_glob,
-    material_yard_glob,
-    nalichie_stolbov_name,
-    nalichie_stolbov_id,
-    stolb_id,
-    stolb_name,
-    opening_option_name,
-    opening_option_id,
-    opening_option_path_photo,
-    peremichka_polozheniye_id,
-    peremichka_polozheniye_name,
-    peremichka_sortament_id,
-    peremichka_sortament_name,
-    calculation_name,
-    client_name,
-    client_last_name,
-    client_surname,
-    client_phone,
-    client_email,
-    client_address,
-    client_comment,
-    country_code,
-    is_there_pen_name,
-    is_there_pen_id,
-    pen_provided,
-    pen_installed,
-    pen_color,
-    additional_pen_id,
-    additional_pen_color,
-    additional_pen_marking,
-    type_lock,
-    lock_set_id,
-    lock_pen_id,
-    lock_pen_color,
-    is_there_lock_name,
-    is_there_lock_id,
-    provides_lock,
-    lock_installer,
-    is_there_cable,
-    width_proyema,
-    height_proyema,
-    clearance_proyema,
-    sostoyaniye_proyema,
-    raspolozheniye_polotna,
-    shield_type,
-    color_shield_id,
-    color_shield_name,
-    height_top_part,
-    height_lower_part,
-    width_side_part,
-    assortment_side_grille_net_id,
-    assortment_height_upper_net_id,
-    assortment_height_lower_net_id,
-    grille_location,
-    net_width_provider_top,
-    net_width_provider_lower,
-    net_width_provider_side,
-    id_facade,
-    material_supplier_facade,
-    material_facade,
-    form_facade,
-    thickness_facade,
-    type_of_coating_facade,
-    color_facade,
-    id_yard,
-    material_supplier_yard,
-    material_yard,
-    form_yard,
-    thickness_yard,
-    type_of_coating_yard,
-    color_yard,
-    price_retail,
-    price_dealer,
-    fields_filled,
+    providesMaterial,
+    providesPaint,
+    doesPaintingFrame,
+    doesAssembly,
+    fillSide,
+    materialFacadeGlob,
+    materialYardGlob,
+    nalichieStolbovName,
+    nalichieStolbovId,
+    stolbId,
+    stolbName,
+    openingOptionName,
+    openingOptionId,
+    openingOptionPathPhoto,
+    peremichkaPolozheniyeId,
+    peremichkaPolozheniyeName,
+    peremichkaSortamentId,
+    peremichkaSortamentName,
+    calculationName,
+    clientName,
+    clientLastName,
+    clientSurname,
+    clientPhone,
+    clientEmail,
+    clientAddress,
+    clientComment,
+    countryCode,
+    isTherePenName,
+    isTherePenId,
+    penProvided,
+    penInstalled,
+    penColor,
+    additionalPenId,
+    additionalPenColor,
+    additionalPenMarking,
+    typeLock,
+    lockSetId,
+    lockPenId,
+    lockPenColor,
+    isThereLockName,
+    isThereLockId,
+    providesLock,
+    lockInstaller,
+    isThereCable,
+    widthProyema,
+    heightProyema,
+    clearanceProyema,
+    sostoyaniyeProyema,
+    raspolozheniyePolotna,
+    shieldType,
+    colorShieldId,
+    colorShieldName,
+    heightTopPart,
+    heightLowerPart,
+    widthSidePart,
+    assortmentSideGrilleNetId,
+    assortmentHeightUpperNetId,
+    assortmentHeightLowerNetId,
+    grilleLocation,
+    netWidthProviderTop,
+    netWidthProviderLower,
+    netWidthProviderSide,
+    idFacade,
+    materialSupplierFacade,
+    materialFacade,
+    formFacade,
+    thicknessFacade,
+    typeOfCoatingFacade,
+    colorFacade,
+    idYard,
+    materialSupplierYard,
+    materialYard,
+    formYard,
+    thicknessYard,
+    typeOfCoatingYard,
+    colorYard,
+    priceRetail,
+    priceDealer,
+    fieldsFilled,
     isFillSectionIncomplete,
     updateOrCreateBlock,
     removeAllBlocksExcept,

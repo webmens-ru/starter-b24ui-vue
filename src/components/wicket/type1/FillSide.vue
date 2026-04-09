@@ -28,31 +28,31 @@ const materialFacadeOptions = computed(() =>
 )
 
 function clearFacadeSelection() {
-  calc.id_facade.value = ''
-  calc.material_supplier_facade.value = ''
-  calc.material_facade.value = ''
-  calc.form_facade.value = ''
-  calc.thickness_facade.value = ''
-  calc.type_of_coating_facade.value = ''
-  calc.color_facade.value = ''
+  calc.idFacade.value = ''
+  calc.materialSupplierFacade.value = ''
+  calc.materialFacade.value = ''
+  calc.formFacade.value = ''
+  calc.thicknessFacade.value = ''
+  calc.typeOfCoatingFacade.value = ''
+  calc.colorFacade.value = ''
 }
 
 function clearYardSelection() {
-  calc.id_yard.value = ''
-  calc.material_supplier_yard.value = ''
-  calc.material_yard.value = ''
-  calc.form_yard.value = ''
-  calc.thickness_yard.value = ''
-  calc.type_of_coating_yard.value = ''
-  calc.color_yard.value = ''
+  calc.idYard.value = ''
+  calc.materialSupplierYard.value = ''
+  calc.materialYard.value = ''
+  calc.formYard.value = ''
+  calc.thicknessYard.value = ''
+  calc.typeOfCoatingYard.value = ''
+  calc.colorYard.value = ''
 }
 
 function onFillSideChange() {
-  if (calc.fill_side.value === 'Одна сторона') {
-    calc.material_yard_glob.value = null
+  if (calc.fillSide.value === 'Одна сторона') {
+    calc.materialYardGlob.value = null
     clearYardSelection()
   } else {
-    calc.material_yard_glob.value = calc.material_facade_glob.value
+    calc.materialYardGlob.value = calc.materialFacadeGlob.value
     clearYardSelection()
   }
   save()
@@ -60,8 +60,8 @@ function onFillSideChange() {
 
 function onMaterialFacadeChange() {
   clearFacadeSelection()
-  if (calc.fill_side.value === 'Две стороны') {
-    calc.material_yard_glob.value = calc.material_facade_glob.value
+  if (calc.fillSide.value === 'Две стороны') {
+    calc.materialYardGlob.value = calc.materialFacadeGlob.value
     clearYardSelection()
   }
   save()
@@ -69,12 +69,12 @@ function onMaterialFacadeChange() {
 
 /** Старые расчёты / API могли вернуть профлист на фасаде — для типа 1 недопустимо. */
 function coerceType1FacadeToSiding(): void {
-  if (!isType1.value || calc.material_facade_glob.value !== 'Профлист') {
+  if (!isType1.value || calc.materialFacadeGlob.value !== 'Профлист') {
     return
   }
-  calc.material_facade_glob.value = 'Сайдинг'
+  calc.materialFacadeGlob.value = 'Сайдинг'
   clearFacadeSelection()
-  // Двор (вторая сторона) для типа 1 по-прежнему может быть профлистом — не трогаем material_yard_glob.
+  // Двор (вторая сторона) для типа 1 по-прежнему может быть профлистом — не трогаем materialYardGlob.
 }
 
 watch(isType1, () => {
@@ -88,46 +88,46 @@ function onMaterialYardChange() {
 
 async function save() {
   const params = [
-    { name: 'Сторона заполнения',          value: calc.fill_side.value },
-    { name: 'Материал заполнения (фасад)', value: calc.material_facade_glob.value },
+    { name: 'Сторона заполнения',          value: calc.fillSide.value },
+    { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
   ]
-  if (calc.fill_side.value === 'Две стороны') {
-    params.push({ name: 'Материал заполнения (двор)', value: calc.material_yard_glob.value ?? '' })
+  if (calc.fillSide.value === 'Две стороны') {
+    params.push({ name: 'Материал заполнения (двор)', value: calc.materialYardGlob.value ?? '' })
   }
   calc.updateOrCreateBlock('Заполнение', params)
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),
-    fill_side:                calc.fill_side.value,
-    material_facade_glob:     calc.material_facade_glob.value,
-    material_yard_glob:       calc.material_yard_glob.value,
-    material_supplier_facade: null,
-    form_facade:              null,
-    thickness_facade:         null,
-    type_of_coating_facade:   null,
-    color_facade:             null,
+    fill_side:                calc.fillSide.value,
+    materialFacadeGlob:     calc.materialFacadeGlob.value,
+    materialYardGlob:       calc.materialYardGlob.value,
+    materialSupplierFacade: null,
+    formFacade:              null,
+    thicknessFacade:         null,
+    typeOfCoatingFacade:   null,
+    colorFacade:             null,
     price_facade:             null,
     delivery_time_facade:     null,
     in_stock_facade:          null,
-    material_supplier_yard:   null,
-    form_yard:                null,
-    thickness_yard:           null,
-    type_of_coating_yard:     null,
-    color_yard:               null,
+    materialSupplierYard:   null,
+    formYard:                null,
+    thicknessYard:           null,
+    typeOfCoatingYard:     null,
+    colorYard:               null,
     price_yard:               null,
     delivery_time_yard:       null,
     in_stock_yard:            null,
   })
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.error('Ошибка пересчёта цены:', e)
     }
@@ -164,7 +164,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.fill_side.value"
+              v-model="calc.fillSide.value"
               type="radio"
               :value="opt.value"
               class="sr-only"
@@ -187,7 +187,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.material_facade_glob.value"
+              v-model="calc.materialFacadeGlob.value"
               type="radio"
               :value="opt.value"
               class="sr-only"
@@ -201,7 +201,7 @@ onMounted(async () => {
       </div>
 
       <!-- Материал заполнения (двор) — только при "Две стороны" -->
-      <div v-if="calc.fill_side.value === 'Две стороны'">
+      <div v-if="calc.fillSide.value === 'Две стороны'">
         <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (двор)</h2>
         <div class="option-grid">
           <label
@@ -210,7 +210,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.material_yard_glob.value"
+              v-model="calc.materialYardGlob.value"
               type="radio"
               :value="opt.value"
               class="sr-only"

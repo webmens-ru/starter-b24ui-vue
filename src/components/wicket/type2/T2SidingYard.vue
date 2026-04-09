@@ -67,7 +67,7 @@ watch(filters, () => {
 }, { deep: true })
 
 // Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.id_yard.value, async (val) => {
+watch(() => calc.idYard.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
@@ -82,25 +82,25 @@ watch(() => calc.id_yard.value, async (val) => {
 
 // ─── Восстановление сохранённой строки ───────────────────────────────────────
 function restoreFromCalc(): SidingRow | null {
-  if (!calc.id_yard.value) return null
+  if (!calc.idYard.value) return null
   return {
-    id:            calc.id_yard.value,
-    company:       calc.material_supplier_yard.value,
-    material:      calc.material_yard.value,
-    form:          calc.form_yard.value,
-    typeOfCoating: calc.type_of_coating_yard.value,
-    color:         calc.color_yard.value,
+    id:            calc.idYard.value,
+    company:       calc.materialSupplierYard.value,
+    material:      calc.materialYard.value,
+    form:          calc.formYard.value,
+    typeOfCoating: calc.typeOfCoatingYard.value,
+    color:         calc.colorYard.value,
   }
 }
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow) {
-  calc.id_yard.value                = row.id
-  calc.material_supplier_yard.value = row.company
-  calc.material_yard.value          = row.material
-  calc.form_yard.value              = row.form
-  calc.type_of_coating_yard.value   = row.typeOfCoating
-  calc.color_yard.value             = row.color
+  calc.idYard.value                = row.id
+  calc.materialSupplierYard.value = row.company
+  calc.materialYard.value          = row.material
+  calc.formYard.value              = row.form
+  calc.typeOfCoatingYard.value   = row.typeOfCoating
+  calc.colorYard.value             = row.color
 
   calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
@@ -113,13 +113,13 @@ async function save(row: SidingRow) {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      id_yard:                  row.id,
-      material_yard_glob:       calc.material_yard_glob.value ?? calc.material_facade_glob.value,
-      material_supplier_yard:   row.company,
-      material_yard:             row.material,
-      form_yard:                row.form,
-      type_of_coating_yard:     row.typeOfCoating,
-      color_yard:               row.color,
+      idYard:                  row.id,
+      materialYardGlob:       calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
+      materialSupplierYard:   row.company,
+      materialYard:             row.material,
+      formYard:                row.form,
+      typeOfCoatingYard:     row.typeOfCoating,
+      colorYard:               row.color,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -127,15 +127,15 @@ async function save(row: SidingRow) {
 }
 
 async function doRecalculate() {
-  if (!calc.price_retail.value) return
+  if (!calc.priceRetail.value) return
   try {
     const result = await recalculate({
-      order_id: Number(calc.number.value),
-      product_type:       calc.productType.value,
+      orderId: Number(calc.number.value),
+      productType:       calc.productType.value,
       model:              calc.model.value,
-      model_id:           calc.modelId.value,
+      modelId:           calc.modelId.value,
     })
-    calc.updatePriceBlock(result.price_dealer, result.price_retail)
+    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
   } catch (e) {
     console.error('Ошибка пересчёта:', e)
   }
@@ -150,7 +150,7 @@ async function selectRow(row: SidingRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.id_yard.value = ''
+  calc.idYard.value = ''
 }
 
 function isSelected(row: SidingRow) {
@@ -168,7 +168,7 @@ function onContinue() {
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
-  const page = calc.material_yard_glob.value === 'Профлист'
+  const page = calc.materialYardGlob.value === 'Профлист'
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
   calc.setActivePage(page)

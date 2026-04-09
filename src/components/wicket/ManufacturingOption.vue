@@ -21,33 +21,33 @@ const paintingOptions = [
 
 async function save() {
   calc.updateOrCreateBlock('Вариант изготовления', [
-    { name: 'Материал заполнения', value: calc.provides_material.value },
-    { name: 'Краска',              value: calc.provides_paint.value },
-    { name: 'Окраска каркаса',     value: calc.does_painting_frame.value },
-    { name: 'Сборка',              value: calc.does_assembly.value },
+    { name: 'Материал заполнения', value: calc.providesMaterial.value },
+    { name: 'Краска',              value: calc.providesPaint.value },
+    { name: 'Окраска каркаса',     value: calc.doesPaintingFrame.value },
+    { name: 'Сборка',              value: calc.doesAssembly.value },
   ])
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      provides_material:   calc.provides_material.value,
-      provides_paint:      calc.provides_paint.value,
-      does_painting_frame: calc.does_painting_frame.value,
-      does_assembly:       calc.does_assembly.value,
+      provides_material:   calc.providesMaterial.value,
+      provides_paint:      calc.providesPaint.value,
+      does_painting_frame: calc.doesPaintingFrame.value,
+      does_assembly:       calc.doesAssembly.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate недоступен:', e)
     }
@@ -87,7 +87,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.provides_material.value"
+              v-model="calc.providesMaterial.value"
               type="radio"
               :value="opt.value"
               class="sr-only"
@@ -110,7 +110,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.provides_paint.value"
+              v-model="calc.providesPaint.value"
               type="radio"
               :value="opt.value"
               class="sr-only"
@@ -133,7 +133,7 @@ onMounted(async () => {
             class="lock-card"
           >
             <input
-              v-model="calc.does_painting_frame.value"
+              v-model="calc.doesPaintingFrame.value"
               type="radio"
               :value="opt.value"
               class="sr-only"

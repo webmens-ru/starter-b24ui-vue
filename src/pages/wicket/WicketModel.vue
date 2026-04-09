@@ -108,8 +108,8 @@ async function onModelSelect(item: (typeof models)[0]) {
     calc.updateOrCreateBlock('Модель', [{ name: 'Модель', value: item.model }])
 
     await createWicketMainMenu({
-      order_id: Number(calc.number.value),
-      model_id: item.id,
+      orderId: Number(calc.number.value),
+      modelId: item.id,
       model: item.model,
     })
 

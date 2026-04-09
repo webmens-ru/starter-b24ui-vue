@@ -32,7 +32,7 @@ export interface SidingRow {
   form: string
   typeOfCoating: string
   color: string
-  price_m2?: string | number
+  priceM2?: string | number
   deliveryTime?: string
   inStock?: string
 }
@@ -74,8 +74,8 @@ export interface ProfnastilTableResponse {
 }
 
 export interface RecalculateResponse {
-  price_dealer: string | number
-  price_retail: string | number
+  priceDealer: string | number
+  priceRetail: string | number
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCalculation } from '../composables/useCalculation'
 
-const { data, number, model, price_dealer, price_retail } = useCalculation()
+const { data, number, model, priceDealer, priceRetail } = useCalculation()
 </script>
 
 <template>
@@ -15,7 +15,7 @@ const { data, number, model, price_dealer, price_retail } = useCalculation()
 
     <!-- Блоки данных + цены в одной таблице -->
     <B24TableWrapper
-      v-if="data.length > 0 || price_dealer || price_retail"
+      v-if="data.length > 0 || priceDealer || priceRetail"
       bordered
       rounded
       zebra
@@ -43,19 +43,19 @@ const { data, number, model, price_dealer, price_retail } = useCalculation()
             </tr>
           </template>
 
-          <template v-if="price_dealer || price_retail">
+          <template v-if="priceDealer || priceRetail">
             <tr>
               <td colspan="2" class="font-semibold bg-(--ui-color-base-200) px-3 py-1.5">
                 Цена
               </td>
             </tr>
-            <tr v-if="price_dealer">
+            <tr v-if="priceDealer">
               <td class="text-(--ui-color-text-secondary) px-3 py-1.5">Дилерская цена</td>
-              <td class="px-3 py-1.5 font-medium">{{ price_dealer }}</td>
+              <td class="px-3 py-1.5 font-medium">{{ priceDealer }}</td>
             </tr>
-            <tr v-if="price_retail">
+            <tr v-if="priceRetail">
               <td class="text-(--ui-color-text-secondary) px-3 py-1.5">Рек. розн. цена</td>
-              <td class="px-3 py-1.5 font-medium">{{ price_retail }}</td>
+              <td class="px-3 py-1.5 font-medium">{{ priceRetail }}</td>
             </tr>
           </template>
         </tbody>
@@ -64,7 +64,7 @@ const { data, number, model, price_dealer, price_retail } = useCalculation()
 
     <!-- Пустое состояние -->
     <div
-      v-if="data.length === 0 && !price_dealer && !price_retail"
+      v-if="data.length === 0 && !priceDealer && !priceRetail"
       class="text-sm text-(--ui-color-text-secondary) italic"
     >
       Данные появятся по мере заполнения шагов

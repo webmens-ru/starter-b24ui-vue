@@ -18,21 +18,21 @@ const testRouter = createRouter({
 
 vi.mock('../../app/api/wicket', () => ({
   saveWicketData: vi.fn().mockResolvedValue(undefined),
-  recalculate: vi.fn().mockResolvedValue({ price_dealer: 10000, price_retail: 13500 }),
+  recalculate: vi.fn().mockResolvedValue({ priceDealer: 10000, priceRetail: 13500 }),
   saveOrderData: vi.fn().mockResolvedValue(undefined),
   saveClientInfo: vi.fn().mockResolvedValue(undefined),
-  getAssortmentStolb: vi.fn().mockResolvedValue({ arr_assortment_pipe: [] }),
-  getPolozhenieJumper: vi.fn().mockResolvedValue({ arr_available_polozheniye_jumper: [] }),
-  getAssortmentJumper: vi.fn().mockResolvedValue({ arr_assortment_jumper: [] }),
-  getColorShield: vi.fn().mockResolvedValue({ arr_color_shield: [] }),
+  getAssortmentStolb: vi.fn().mockResolvedValue({ assortmentPipe: [] }),
+  getPolozhenieJumper: vi.fn().mockResolvedValue({ availablePolozheniyeJumper: [] }),
+  getAssortmentJumper: vi.fn().mockResolvedValue({ assortmentJumper: [] }),
+  getColorShield: vi.fn().mockResolvedValue({ colorShield: [] }),
   getFilterOptions: vi.fn().mockResolvedValue({}),
   getSidingTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getProfnastilTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getAddressSuggestions: vi.fn().mockResolvedValue({ suggestions: [] }),
-  createOrder: vi.fn().mockResolvedValue({ order_id: 42, companyId: null, managerId: 1 }),
+  createOrder: vi.fn().mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 }),
   loadWicketData: vi.fn().mockResolvedValue({}),
   createWicketMainMenu: vi.fn().mockResolvedValue(undefined),
-  finalCalculate: vi.fn().mockResolvedValue({ price_dealer: '15000', price_retail: '22500' }),
+  finalCalculate: vi.fn().mockResolvedValue({ priceDealer: '15000', priceRetail: '22500' }),
   deleteCalculation: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -69,18 +69,18 @@ describe('saveWicketData — данные передаются на бэк', () 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
 
     expect(payload).toMatchObject({
-      order_id: 42,
-      model_id: '1',
-      reached_step: 'page1',
+      orderId: 42,
+      modelId: '1',
+      reachedStep: 'page1',
     })
-    expect(payload).toHaveProperty('visited_pages')
+    expect(payload).toHaveProperty('visitedPages')
     expect(payload).toHaveProperty('provides_material')
     expect(payload).toHaveProperty('provides_paint')
     expect(payload).toHaveProperty('does_painting_frame')
     expect(payload).toHaveProperty('does_assembly')
   })
 
-  it('FillSide передаёт fill_side и material_facade_glob', async () => {
+  it('FillSide передаёт fill_side и materialFacadeGlob', async () => {
     mount(FillSide, {
       global: {
         plugins: [testRouter],
@@ -94,18 +94,18 @@ describe('saveWicketData — данные передаются на бэк', () 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
 
     expect(payload).toMatchObject({
-      order_id: 42,
-      model_id: '1',
-      reached_step: 'page2',
+      orderId: 42,
+      modelId: '1',
+      reachedStep: 'page2',
       fill_side: 'Одна сторона',
-      material_facade_glob: 'Сайдинг',
-      material_yard_glob: null,
+      materialFacadeGlob: 'Сайдинг',
+      materialYardGlob: null,
     })
   })
 
-  it('FillSide при "Две стороны" передаёт material_yard_glob', async () => {
-    calc.fill_side.value = 'Две стороны'
-    calc.material_yard_glob.value = 'Профлист'
+  it('FillSide при "Две стороны" передаёт materialYardGlob', async () => {
+    calc.fillSide.value = 'Две стороны'
+    calc.materialYardGlob.value = 'Профлист'
 
     mount(FillSide, {
       global: {
@@ -117,12 +117,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload.material_yard_glob).toBe('Профлист')
+    expect(payload.materialYardGlob).toBe('Профлист')
   })
 
   it('IsTherelock передаёт is_there_lock_id', async () => {
-    calc.is_there_lock_id.value = 0
-    calc.is_there_lock_name.value = 'Нет'
+    calc.isThereLockId.value = 0
+    calc.isThereLockName.value = 'Нет'
 
     mount(IsTherelock, {
       global: {
@@ -137,7 +137,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
     expect(payload).toHaveProperty('is_there_lock_id')
     expect(payload).toHaveProperty('is_there_lock_name')
-    expect(payload).toHaveProperty('reached_step')
-    expect(payload.model_id).toBe('1')
+    expect(payload).toHaveProperty('reachedStep')
+    expect(payload.modelId).toBe('1')
   })
 })

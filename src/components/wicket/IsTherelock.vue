@@ -12,9 +12,9 @@ const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const is_there_lock  = ref<string>('Есть')
-const provides_lock  = ref<string>('Предоставляет изготовитель')
-const lock_installer = ref<string>('Выполняет изготовитель')
-const is_there_cable = ref<string>('Изготовитель устанавливает')
+const providesLock  = ref<string>('Предоставляет изготовитель')
+const lockInstaller = ref<string>('Выполняет изготовитель')
+const isThereCable = ref<string>('Изготовитель устанавливает')
 
 const showLockDetails = computed(() => is_there_lock.value === 'Есть')
 
@@ -36,38 +36,38 @@ const cableOptions = [
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.is_there_lock_name.value = is_there_lock.value
-  calc.is_there_lock_id.value   = is_there_lock.value === 'Есть' ? 1 : 0
+  calc.isThereLockName.value = is_there_lock.value
+  calc.isThereLockId.value   = is_there_lock.value === 'Есть' ? 1 : 0
 
   if (showLockDetails.value) {
-    calc.provides_lock.value  = provides_lock.value
-    calc.lock_installer.value = lock_installer.value
-    calc.is_there_cable.value = is_there_cable.value
-    if (provides_lock.value === 'Предоставляет заказчик') {
-      calc.type_lock.value      = ''
-      calc.lock_set_id.value    = null
-      calc.lock_pen_id.value    = null
-      calc.lock_pen_color.value = ''
+    calc.providesLock.value  = providesLock.value
+    calc.lockInstaller.value = lockInstaller.value
+    calc.isThereCable.value = isThereCable.value
+    if (providesLock.value === 'Предоставляет заказчик') {
+      calc.typeLock.value      = ''
+      calc.lockSetId.value    = null
+      calc.lockPenId.value    = null
+      calc.lockPenColor.value = ''
     }
   } else {
-    calc.provides_lock.value  = ''
-    calc.lock_installer.value = ''
-    calc.is_there_cable.value = ''
-    calc.type_lock.value      = ''
-    calc.lock_set_id.value    = null
-    calc.lock_pen_id.value    = null
-    calc.lock_pen_color.value = ''
+    calc.providesLock.value  = ''
+    calc.lockInstaller.value = ''
+    calc.isThereCable.value = ''
+    calc.typeLock.value      = ''
+    calc.lockSetId.value    = null
+    calc.lockPenId.value    = null
+    calc.lockPenColor.value = ''
   }
 }
 
 function buildBlock() {
   const params: { name: string; value: string }[] = [
-    { name: 'Замок есть/нет', value: calc.is_there_lock_name.value },
+    { name: 'Замок есть/нет', value: calc.isThereLockName.value },
   ]
   if (showLockDetails.value) {
-    params.push({ name: 'Замок предоставляет',    value: calc.provides_lock.value })
-    params.push({ name: 'Врезку замка выполняет', value: calc.lock_installer.value })
-    params.push({ name: 'Кабель для э/м замка',   value: calc.is_there_cable.value })
+    params.push({ name: 'Замок предоставляет',    value: calc.providesLock.value })
+    params.push({ name: 'Врезку замка выполняет', value: calc.lockInstaller.value })
+    params.push({ name: 'Кабель для э/м замка',   value: calc.isThereCable.value })
   }
   calc.updateOrCreateBlock('Замок', params)
 }
@@ -79,32 +79,32 @@ async function save() {
   try {
     const payload: Record<string, unknown> = {
       ...calc.getBaseSavePayload(),
-      is_there_lock_id:   calc.is_there_lock_id.value,
-      is_there_lock_name: calc.is_there_lock_name.value,
-      provides_lock:      calc.provides_lock.value || null,
-      lock_installer:     calc.lock_installer.value || null,
-      is_there_cable:     calc.is_there_cable.value || null,
+      is_there_lock_id:   calc.isThereLockId.value,
+      is_there_lock_name: calc.isThereLockName.value,
+      providesLock:      calc.providesLock.value || null,
+      lockInstaller:     calc.lockInstaller.value || null,
+      isThereCable:     calc.isThereCable.value || null,
     }
-    if (calc.is_there_lock_id.value === 0 || calc.provides_lock.value === 'Предоставляет заказчик') {
+    if (calc.isThereLockId.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
       payload.type_lock = null
       payload.lock_set_id = null
       payload.lock_pen_id = null
-      payload.lock_pen_color = null
+      payload.lock_penColor = null
     }
     await saveWicketData(payload)
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type:       calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType:       calc.productType.value,
         model:              calc.model.value,
-        model_id:           calc.modelId.value,
+        modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -115,10 +115,10 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page9')
 
-  if (calc.is_there_lock_name.value) is_there_lock.value  = calc.is_there_lock_name.value
-  if (calc.provides_lock.value)      provides_lock.value  = calc.provides_lock.value
-  if (calc.lock_installer.value)     lock_installer.value = calc.lock_installer.value
-  if (calc.is_there_cable.value)     is_there_cable.value = calc.is_there_cable.value
+  if (calc.isThereLockName.value) is_there_lock.value  = calc.isThereLockName.value
+  if (calc.providesLock.value)      providesLock.value  = calc.providesLock.value
+  if (calc.lockInstaller.value)     lockInstaller.value = calc.lockInstaller.value
+  if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
 
   await save()
 })
@@ -161,7 +161,7 @@ onMounted(async () => {
         <div>
           <div class="option-grid">
             <label v-for="opt in providesOptions" :key="opt.value" class="lock-card">
-              <input v-model="provides_lock" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <input v-model="providesLock" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>
@@ -173,7 +173,7 @@ onMounted(async () => {
         <div>
           <div class="option-grid">
             <label v-for="opt in installerOptions" :key="opt.value" class="lock-card">
-              <input v-model="lock_installer" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <input v-model="lockInstaller" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>
@@ -185,7 +185,7 @@ onMounted(async () => {
         <div>
           <div class="option-grid">
             <label v-for="opt in cableOptions" :key="opt.value" class="lock-card">
-              <input v-model="is_there_cable" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <input v-model="isThereCable" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>

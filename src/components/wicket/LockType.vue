@@ -7,14 +7,14 @@ import ImageViewer from './ImageViewer.vue'
 interface LockItem {
   id: number
   marking: string
-  image_urls: string[]
+  imageUrls: string[]
 }
 
 interface PenItem {
   id: number
   marking: string
   colors: string[]
-  image_urls?: string[]
+  imageUrls?: string[]
 }
 
 const DEFAULT_COLORS = ['Черная', 'Коричневая', 'Белая']
@@ -45,14 +45,14 @@ const colorSelectItems = computed(() => {
 function updateLockBlock() {
   const block = calc.data.value.find(b => b.blockName === 'Замок')
   const params: { name: string; value: string }[] = [
-    { name: 'Тип замка', value: (calc.type_lock.value || lockItems.value.find(l => l.id === calc.lock_set_id.value)?.marking) ?? '' },
+    { name: 'Тип замка', value: (calc.typeLock.value || lockItems.value.find(l => l.id === calc.lockSetId.value)?.marking) ?? '' },
   ]
-  if (calc.lock_pen_id.value != null) {
-    const pen = penItems.value.find(p => p.id === calc.lock_pen_id.value)
+  if (calc.lockPenId.value != null) {
+    const pen = penItems.value.find(p => p.id === calc.lockPenId.value)
     if (pen) params.push({ name: 'Ручка', value: pen.marking })
   }
-  if (calc.lock_pen_color.value) {
-    params.push({ name: 'Цвет ручки', value: calc.lock_pen_color.value })
+  if (calc.lockPenColor.value) {
+    params.push({ name: 'Цвет ручки', value: calc.lockPenColor.value })
   }
   if (block) {
     block.params = params
@@ -101,26 +101,26 @@ async function loadPensForLock(lockSetId: number | null) {
 
 watch(selectedLockId, async (id) => {
   const lock = lockItems.value.find(l => l.id === id)
-  calc.lock_set_id.value = id
-  calc.type_lock.value = lock?.marking ?? ''
+  calc.lockSetId.value = id
+  calc.typeLock.value = lock?.marking ?? ''
   await loadPensForLock(id)
   if (penItems.value.length === 0) {
-    calc.lock_pen_id.value = null
-    calc.lock_pen_color.value = ''
+    calc.lockPenId.value = null
+    calc.lockPenColor.value = ''
   } else if (selectedPenId.value && penItems.value.some(p => p.id === selectedPenId.value)) {
-    calc.lock_pen_id.value = selectedPenId.value
-    calc.lock_pen_color.value = selectedColor.value
+    calc.lockPenId.value = selectedPenId.value
+    calc.lockPenColor.value = selectedColor.value
   } else {
     selectedPenId.value = penItems.value[0].id
-    calc.lock_pen_id.value = penItems.value[0].id
-    calc.lock_pen_color.value = selectedColor.value
+    calc.lockPenId.value = penItems.value[0].id
+    calc.lockPenColor.value = selectedColor.value
   }
   updateLockBlock()
   await save()
 })
 
 watch(selectedPenId, (id) => {
-  calc.lock_pen_id.value = id
+  calc.lockPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
   if (!colors.includes(selectedColor.value)) {
@@ -131,25 +131,25 @@ watch(selectedPenId, (id) => {
 })
 
 watch(selectedColor, (color) => {
-  calc.lock_pen_color.value = color
+  calc.lockPenColor.value = color
   updateLockBlock()
   save()
 })
 
 function applySavedSelection() {
   if (!lockItems.value.length) return
-  const savedLockSetId = calc.lock_set_id.value
+  const savedLockSetId = calc.lockSetId.value
   const lockMatch = lockItems.value.find(l => l.id === savedLockSetId)
   selectedLockId.value = lockMatch ? lockMatch.id : lockItems.value[0].id
 
-  const savedPenId = calc.lock_pen_id.value
+  const savedPenId = calc.lockPenId.value
   if (savedPenId != null && penItems.value.some(p => p.id === savedPenId)) {
     selectedPenId.value = savedPenId
   } else if (penItems.value.length > 0) {
     selectedPenId.value = penItems.value[0].id
   }
 
-  const savedColor = calc.lock_pen_color.value
+  const savedColor = calc.lockPenColor.value
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
   if (savedColor && colors.includes(savedColor)) {
@@ -165,23 +165,23 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      lock_set_id:     calc.lock_set_id.value,
-      lock_pen_id:     calc.lock_pen_id.value,
-      lock_pen_color:  calc.lock_pen_color.value || null,
+      lockSetId:     calc.lockSetId.value,
+      lockPenId:     calc.lockPenId.value,
+      lock_penColor:  calc.lockPenColor.value || null,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id:     Number(calc.number.value),
-        product_type: calc.productType.value,
+        orderId:     Number(calc.number.value),
+        productType: calc.productType.value,
         model:        calc.model.value,
-        model_id:     calc.modelId.value,
+        modelId:     calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -191,7 +191,7 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page_lock_type')
   await loadLocks()
-  const savedLockSetId = calc.lock_set_id.value
+  const savedLockSetId = calc.lockSetId.value
   if (savedLockSetId != null && lockItems.value.some(l => l.id === savedLockSetId)) {
     selectedLockId.value = savedLockSetId
   } else if (lockItems.value.length > 0) {
@@ -232,7 +232,7 @@ onMounted(async () => {
           <div class="card-content">
             <ImageViewer
               :title="lock.marking"
-              :images="lock.image_urls ?? []"
+              :images="lock.imageUrls ?? []"
               image-height="160px"
             />
             <span class="block text-sm font-semibold text-center mt-2">{{ lock.marking }}</span>
@@ -259,9 +259,9 @@ onMounted(async () => {
           />
           <div class="card-content">
             <ImageViewer
-              v-if="pen.image_urls?.length"
+              v-if="pen.imageUrls?.length"
               :title="pen.marking"
-              :images="pen.image_urls"
+              :images="pen.imageUrls"
               image-height="100px"
             />
             <div v-else class="pen-placeholder" aria-hidden="true" />

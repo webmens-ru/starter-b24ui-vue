@@ -53,9 +53,9 @@ export type {
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
 
-/** Создаёт новый заказ и возвращает order_id. Вызывать один раз при открытии новой формы. */
+/** Создаёт новый заказ и возвращает orderId. Вызывать один раз при открытии новой формы. */
 export async function createOrder(): Promise<{
-  order_id: number
+  orderId: number
   companyId: number | null
   managerId: number
 }> {
@@ -66,18 +66,18 @@ export async function createOrder(): Promise<{
 
 /** Создаёт запись расчёта в БД при первом открытии новой формы. */
 export async function createWicketMainMenu(payload: {
-  order_id: number
-  model_id: string | number
+  orderId: number
+  modelId: string | number
   model: string
   productType?: string
 }): Promise<void> {
   if (isMock) return
-  const body = {
-    ...payload,
-    modelId: payload.model_id,
+  await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
+    orderId: payload.orderId,
+    modelId: String(payload.modelId),
+    model: payload.model,
     productType: payload.productType ?? 'Калитка',
-  }
-  await api.post(`/api/wicket/type${payload.model_id}/main-menu`, body)
+  })
 }
 
 /** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
@@ -86,9 +86,8 @@ export async function loadWicketData(
   orderId: number,
 ): Promise<Record<string, unknown>> {
   if (isMock) return mockLoadWicketData(orderId)
-  const params: Record<string, string | number> = { order_id: orderId }
-  // Для type2 и выше обязателен model_id в query
-  if (String(modelId) !== '1') params.model_id = modelId
+  const params: Record<string, string | number> = { orderId }
+  if (String(modelId) !== '1') params.modelId = modelId
   const { data } = await api.get(`/api/wicket/type${modelId}/get-data`, { params })
   return data.data
 }
@@ -135,14 +134,13 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 
 export async function saveWicketData(payload: Record<string, unknown>): Promise<void> {
   if (isMock) return mockSaveWicketData(payload)
-  // order_id обязателен во всех эндпоинтах
-  const body = { ...payload, order_id: payload.order_id ?? payload.orderId }
-  await api.post(`/api/wicket/type${payload.model_id}/data`, body)
+  const body = { ...payload, orderId: payload.orderId ?? payload.orderId }
+  await api.post(`/api/wicket/type${payload.modelId}/data`, body)
 }
 
 export async function getAssortmentStolb(
   modelId: string | number
-): Promise<{ arr_assortment_pipe: SelectItem[] }> {
+): Promise<{ assortmentPipe: SelectItem[] }> {
   if (isMock) return mockGetAssortmentStolb()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-stolb`)
   return data.data
@@ -151,17 +149,17 @@ export async function getAssortmentStolb(
 export async function getPolozhenieJumper(
   modelId: string | number,
   openingOptionId: number
-): Promise<{ arr_available_polozheniye_jumper: SelectItem[] }> {
+): Promise<{ availablePolozheniyeJumper: SelectItem[] }> {
   if (isMock) return mockGetPolozhenieJumper()
   const { data } = await api.post(`/api/wicket/type${modelId}/get-available-polozheniye-jumper`, {
-    opening_option_id: openingOptionId,
+    openingOptionId,
   })
   return data.data
 }
 
 export async function getAssortmentJumper(
   modelId: string | number
-): Promise<{ arr_assortment_jumper: SelectItem[] }> {
+): Promise<{ assortmentJumper: SelectItem[] }> {
   if (isMock) return mockGetAssortmentJumper()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-jumper`)
   return data.data
@@ -169,31 +167,31 @@ export async function getAssortmentJumper(
 
 export async function getColorShield(
   modelId: string | number
-): Promise<{ arr_color_shield: ColorShieldItem[] }> {
+): Promise<{ colorShield: ColorShieldItem[] }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
   return data.data
 }
 
-/** Список доступной ширины сетки (size_a из справочника dir_net). */
-export async function getNetWidths(): Promise<{ arr_net_width: { id: string; name: string }[] }> {
+/** Список доступной ширины сетки (sizeA из справочника dir_net). */
+export async function getNetWidths(): Promise<{ netWidths: { id: string; name: string }[] }> {
   if (isMock) return mockGetNetWidths()
   const { data } = await api.get('/api/dict/net/get-available-widths')
   return data.data
 }
 
-/** Сетки по ширине (size_a) — для выбора карточкой. */
+/** Сетки по ширине (sizeA) — для выбора карточкой. */
 export async function getNetsByWidth(sizeA: number | string): Promise<{
-  items: Array<{ id: number; model: string; image_url: string | null; size_a: number; size_b: number; thickness: number; price: number }>
+  items: Array<{ id: number; model: string; imageUrl: string | null; sizeA: number; sizeB: number; thickness: number; price: number }>
 }> {
   if (isMock) return mockGetNetsByWidth(sizeA)
-  const { data } = await api.get('/api/dict/net/get-by-width', { params: { size_a: sizeA } })
+  const { data } = await api.get('/api/dict/net/get-by-width', { params: { sizeA } })
   return data.data
 }
 
 /** Список замков с картинками — для выбора карточкой. */
 export async function getLocks(): Promise<{
-  items: Array<{ id: number; marking: string; image_urls: string[] }>
+  items: Array<{ id: number; marking: string; imageUrls: string[] }>
 }> {
   if (isMock) return mockGetLocks()
   const { data } = await api.get('/api/dict/lock/get-list')
@@ -202,16 +200,16 @@ export async function getLocks(): Promise<{
 
 /** Ручки, совместимые с выбранным комплектом замка (dir_pen_lock). */
 export async function getPensByLock(lockSetId: number): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetPensByLock(lockSetId)
-  const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lock_set_id: lockSetId } })
+  const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lockSetId } })
   return data.data
 }
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
 export async function getAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; image_urls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
   const { data } = await api.get('/api/dict/additional-pen/get-list')
@@ -226,10 +224,10 @@ export async function getAddressSuggestions(
   return data
 }
 
-/** Переименовать расчёт (обновить calculation_name). */
+/** Переименовать расчёт (обновить calculationName). */
 export async function saveOrderData(payload: {
-  order_id: number
-  calculation_name: string
+  orderId: number
+  calculationName: string
 }): Promise<void> {
   if (isMock) return
   await api.post('/api/order/data', payload)
@@ -241,37 +239,37 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
 }
 
 export async function finalCalculate(payload: {
-  order_id: number
-  model_id: string | number
-  product_type?: string
+  orderId: number
+  modelId: string | number
+  productType?: string
   model?: string
-}): Promise<{ price_dealer: string; price_retail: string }> {
+}): Promise<{ priceDealer: string; priceRetail: string }> {
   if (isMock) return mockFinalCalculate()
   const { data } = await api.post('/api/wicket/calculation/index', {
-    model_id:  payload.model_id,
-    order_id:  payload.order_id,
+    modelId: payload.modelId,
+    orderId: payload.orderId,
   })
   return data.data
 }
 
 export async function deleteCalculation(payload: {
-  order_id: number
-  model_id: string | number
+  orderId: number
+  modelId: string | number
 }): Promise<void> {
   if (isMock) return mockDeleteCalculation()
-  await api.post(`/api/wicket/type${payload.model_id}/delete`, payload)
+  await api.post(`/api/wicket/type${payload.modelId}/delete`, payload)
 }
 
 export async function recalculate(payload: {
-  order_id: number
-  model_id: string | number
-  product_type?: string
+  orderId: number
+  modelId: string | number
+  productType?: string
   model?: string
 }): Promise<RecalculateResponse> {
   if (isMock) return mockRecalculate(payload)
   const { data } = await api.post('/api/wicket/calculation/index', {
-    model_id:  payload.model_id,
-    order_id:  payload.order_id,
+    modelId: payload.modelId,
+    orderId: payload.orderId,
   })
   return data.data
 }

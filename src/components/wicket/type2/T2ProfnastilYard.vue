@@ -63,7 +63,7 @@ watch(filters, () => {
 }, { deep: true })
 
 // Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.id_yard.value, async (val) => {
+watch(() => calc.idYard.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
@@ -77,25 +77,25 @@ watch(() => calc.id_yard.value, async (val) => {
 }, { immediate: true })
 
 function restoreFromCalc(): ProfnastilRow | null {
-  if (!calc.id_yard.value) return null
+  if (!calc.idYard.value) return null
   return {
-    id:            calc.id_yard.value,
-    company:       calc.material_supplier_yard.value,
-    material:      calc.material_yard.value,
-    thickness:     calc.thickness_yard.value,
-    typeOfCoating: calc.type_of_coating_yard.value,
-    color:         calc.color_yard.value,
+    id:            calc.idYard.value,
+    company:       calc.materialSupplierYard.value,
+    material:      calc.materialYard.value,
+    thickness:     calc.thicknessYard.value,
+    typeOfCoating: calc.typeOfCoatingYard.value,
+    color:         calc.colorYard.value,
   }
 }
 
 async function save(row: ProfnastilRow) {
-  calc.id_yard.value                = row.id
-  calc.material_supplier_yard.value = row.company
-  calc.material_yard.value          = row.material
-  calc.form_yard.value              = ''
-  calc.thickness_yard.value         = String(row.thickness)
-  calc.type_of_coating_yard.value   = row.typeOfCoating
-  calc.color_yard.value             = row.color
+  calc.idYard.value                = row.id
+  calc.materialSupplierYard.value = row.company
+  calc.materialYard.value          = row.material
+  calc.formYard.value              = ''
+  calc.thicknessYard.value         = String(row.thickness)
+  calc.typeOfCoatingYard.value   = row.typeOfCoating
+  calc.colorYard.value             = row.color
 
   calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
@@ -108,13 +108,13 @@ async function save(row: ProfnastilRow) {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      id_yard:                row.id,
-      material_yard_glob:     calc.material_yard_glob.value ?? calc.material_facade_glob.value,
-      material_supplier_yard: row.company,
-      material_yard:           row.material,
-      thickness_yard:         String(row.thickness),
-      type_of_coating_yard:   row.typeOfCoating,
-      color_yard:             row.color,
+      idYard:                row.id,
+      materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
+      materialSupplierYard: row.company,
+      materialYard:           row.material,
+      thicknessYard:         String(row.thickness),
+      typeOfCoatingYard:   row.typeOfCoating,
+      colorYard:             row.color,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -122,15 +122,15 @@ async function save(row: ProfnastilRow) {
 }
 
 async function doRecalculate() {
-  if (!calc.price_retail.value) return
+  if (!calc.priceRetail.value) return
   try {
     const result = await recalculate({
-      order_id: Number(calc.number.value),
-      product_type:       calc.productType.value,
+      orderId: Number(calc.number.value),
+      productType:       calc.productType.value,
       model:              calc.model.value,
-      model_id:           calc.modelId.value,
+      modelId:           calc.modelId.value,
     })
-    calc.updatePriceBlock(result.price_dealer, result.price_retail)
+    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
   } catch (e) {
     console.error('Ошибка пересчёта:', e)
   }
@@ -144,7 +144,7 @@ async function selectRow(row: ProfnastilRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.id_yard.value = ''
+  calc.idYard.value = ''
 }
 
 function isSelected(row: ProfnastilRow) {

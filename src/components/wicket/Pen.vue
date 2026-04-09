@@ -8,7 +8,7 @@ interface PenItem {
   id: number
   marking: string
   colors: string[]
-  image_urls?: string[]
+  imageUrls?: string[]
 }
 
 const DEFAULT_COLORS = ['Черная', 'Коричневая', 'Белая']
@@ -23,15 +23,15 @@ const calc = useCalculation()
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
 const is_there_pen = ref<string>('Не будет')
-const pen_provided = ref<string>('Предоставляет изготовитель')
-const pen_installed = ref<string>('Устанавливает изготовитель')
+const penProvided = ref<string>('Предоставляет изготовитель')
+const penInstalled = ref<string>('Устанавливает изготовитель')
 const selectedPenId = ref<number | null>(null)
 const selectedColor = ref<string>('Черная')
 
 const showDetails = computed(() => is_there_pen.value === 'Будет')
 
 /** Блок выбора ручки показываем только если её предоставляет изготовитель */
-const showPenSelection = computed(() => pen_provided.value === 'Предоставляет изготовитель')
+const showPenSelection = computed(() => penProvided.value === 'Предоставляет изготовитель')
 
 /** Цвета для выпадающего списка — из выбранной ручки или дефолтные */
 const colorSelectItems = computed(() => {
@@ -50,46 +50,46 @@ const installedOptions = [
 ]
 
 function syncCalcFields() {
-  calc.is_there_pen_name.value = is_there_pen.value
-  calc.is_there_pen_id.value = is_there_pen.value === 'Будет' ? 1 : 0
+  calc.isTherePenName.value = is_there_pen.value
+  calc.isTherePenId.value = is_there_pen.value === 'Будет' ? 1 : 0
 
   if (showDetails.value) {
-    calc.pen_provided.value = pen_provided.value
-    calc.pen_installed.value = pen_installed.value
+    calc.penProvided.value = penProvided.value
+    calc.penInstalled.value = penInstalled.value
     if (showPenSelection.value) {
-      calc.additional_pen_id.value = selectedPenId.value
-      calc.additional_pen_color.value = selectedColor.value
-      calc.pen_color.value = selectedColor.value
+      calc.additionalPenId.value = selectedPenId.value
+      calc.additionalPenColor.value = selectedColor.value
+      calc.penColor.value = selectedColor.value
       const pen = penItems.value.find(p => p.id === selectedPenId.value)
-      calc.additional_pen_marking.value = pen?.marking ?? ''
+      calc.additionalPenMarking.value = pen?.marking ?? ''
     } else {
-      calc.additional_pen_id.value = null
-      calc.additional_pen_color.value = ''
-      calc.additional_pen_marking.value = ''
-      calc.pen_color.value = ''
+      calc.additionalPenId.value = null
+      calc.additionalPenColor.value = ''
+      calc.additionalPenMarking.value = ''
+      calc.penColor.value = ''
     }
   } else {
-    calc.pen_provided.value = ''
-    calc.pen_installed.value = ''
-    calc.additional_pen_id.value = null
-    calc.additional_pen_color.value = ''
-    calc.additional_pen_marking.value = ''
-    calc.pen_color.value = 'Черная'
+    calc.penProvided.value = ''
+    calc.penInstalled.value = ''
+    calc.additionalPenId.value = null
+    calc.additionalPenColor.value = ''
+    calc.additionalPenMarking.value = ''
+    calc.penColor.value = 'Черная'
   }
 }
 
 function buildBlock() {
   const params: { name: string; value: string }[] = [
-    { name: 'Дополнительная ручка', value: calc.is_there_pen_name.value },
+    { name: 'Дополнительная ручка', value: calc.isTherePenName.value },
   ]
   if (showDetails.value) {
-    params.push({ name: 'Ручку предоставляет', value: calc.pen_provided.value })
-    params.push({ name: 'Ручку устанавливает', value: calc.pen_installed.value })
+    params.push({ name: 'Ручку предоставляет', value: calc.penProvided.value })
+    params.push({ name: 'Ручку устанавливает', value: calc.penInstalled.value })
     if (showPenSelection.value) {
-      if (calc.additional_pen_id.value != null && calc.additional_pen_marking.value) {
-        params.push({ name: 'Модель ручки', value: calc.additional_pen_marking.value })
+      if (calc.additionalPenId.value != null && calc.additionalPenMarking.value) {
+        params.push({ name: 'Модель ручки', value: calc.additionalPenMarking.value })
       }
-      params.push({ name: 'Цвет ручки', value: calc.additional_pen_color.value || calc.pen_color.value })
+      params.push({ name: 'Цвет ручки', value: calc.additionalPenColor.value || calc.penColor.value })
     }
   }
   calc.updateOrCreateBlock('Дополнительная ручка (скоба)', params)
@@ -115,21 +115,21 @@ async function loadAdditionalPens() {
 }
 
 watch(selectedPenId, (id) => {
-  calc.additional_pen_id.value = id
+  calc.additionalPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
-  calc.additional_pen_marking.value = pen?.marking ?? ''
+  calc.additionalPenMarking.value = pen?.marking ?? ''
   const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
   if (!colors.includes(selectedColor.value)) {
     selectedColor.value = colors[0]
   }
-  calc.additional_pen_color.value = selectedColor.value
+  calc.additionalPenColor.value = selectedColor.value
   syncCalcFields()
   buildBlock()
   save()
 })
 
 watch(selectedColor, (color) => {
-  calc.additional_pen_color.value = color
+  calc.additionalPenColor.value = color
   syncCalcFields()
   buildBlock()
   save()
@@ -141,7 +141,7 @@ watch(is_there_pen, () => {
   save()
 })
 
-watch([pen_provided, pen_installed], () => {
+watch([penProvided, penInstalled], () => {
   syncCalcFields()
   buildBlock()
   save()
@@ -149,14 +149,14 @@ watch([pen_provided, pen_installed], () => {
 
 function applySavedSelection() {
   if (!penItems.value.length) return
-  const savedPenId = calc.additional_pen_id.value
+  const savedPenId = calc.additionalPenId.value
   if (savedPenId != null && penItems.value.some(p => p.id === savedPenId)) {
     selectedPenId.value = savedPenId
   } else {
     selectedPenId.value = penItems.value[0].id
   }
 
-  const savedColor = calc.additional_pen_color.value
+  const savedColor = calc.additionalPenColor.value
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
   if (savedColor && colors.includes(savedColor)) {
@@ -173,27 +173,27 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      is_there_pen_id: calc.is_there_pen_id.value,
-      is_there_pen_name: calc.is_there_pen_name.value,
-      pen_provided: calc.pen_provided.value || null,
-      pen_installed: calc.pen_installed.value || null,
-      pen_color: calc.additional_pen_color.value || calc.pen_color.value || null,
-      additional_pen_id: calc.additional_pen_id.value,
-      additional_pen_color: calc.additional_pen_color.value || null,
+      is_there_pen_id: calc.isTherePenId.value,
+      is_there_pen_name: calc.isTherePenName.value,
+      penProvided: calc.penProvided.value || null,
+      penInstalled: calc.penInstalled.value || null,
+      penColor: calc.additionalPenColor.value || calc.penColor.value || null,
+      additional_pen_id: calc.additionalPenId.value,
+      additional_penColor: calc.additionalPenColor.value || null,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.price_retail.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
-        order_id: Number(calc.number.value),
-        product_type: calc.productType.value,
+        orderId: Number(calc.number.value),
+        productType: calc.productType.value,
         model: calc.model.value,
-        model_id: calc.modelId.value,
+        modelId: calc.modelId.value,
       })
-      calc.updatePriceBlock(result.price_dealer, result.price_retail)
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
@@ -203,9 +203,9 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page10')
 
-  if (calc.is_there_pen_name.value) is_there_pen.value = calc.is_there_pen_name.value
-  if (calc.pen_provided.value) pen_provided.value = calc.pen_provided.value
-  if (calc.pen_installed.value) pen_installed.value = calc.pen_installed.value
+  if (calc.isTherePenName.value) is_there_pen.value = calc.isTherePenName.value
+  if (calc.penProvided.value) penProvided.value = calc.penProvided.value
+  if (calc.penInstalled.value) penInstalled.value = calc.penInstalled.value
 
   await loadAdditionalPens()
   if (showDetails.value && penItems.value.length) {
@@ -250,7 +250,7 @@ onMounted(async () => {
         <!-- Кто предоставляет -->
         <div class="option-grid">
           <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
-            <input v-model="pen_provided" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="penProvided" type="radio" :value="opt.value" class="sr-only" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
             </div>
@@ -260,7 +260,7 @@ onMounted(async () => {
         <!-- Кто устанавливает -->
         <div class="option-grid">
           <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-            <input v-model="pen_installed" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="penInstalled" type="radio" :value="opt.value" class="sr-only" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
             </div>
@@ -286,9 +286,9 @@ onMounted(async () => {
                 />
                 <div class="card-content">
                   <ImageViewer
-                    v-if="pen.image_urls?.length"
+                    v-if="pen.imageUrls?.length"
                     :title="pen.marking"
-                    :images="pen.image_urls"
+                    :images="pen.imageUrls"
                     image-height="100px"
                   />
                   <div v-else class="pen-placeholder" aria-hidden="true" />
