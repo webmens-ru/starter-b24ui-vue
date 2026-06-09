@@ -11,3 +11,23 @@ export function wicketSidingFilterDataUrl(modelId: string | number | null | unde
 export function wicketProfnastilFilterDataUrl(modelId: string | number | null | undefined): string {
   return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data`
 }
+
+export function wicketZhalyuziFilterDataUrl(modelId: string | number | null | undefined): string {
+  return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data-zhalyuzi`
+}
+
+export function wicketSpFilterDataUrl(modelId: string | number | null | undefined): string {
+  return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data-sp`
+}
+
+export function wicketSheetFilterDataUrl(modelId: string | number | null | undefined): string {
+  return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data-sheet`
+}
+
+export function wicketFenceFilterDataUrl(modelId: string | number | null | undefined): string {
+  return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data-fence`
+}
+
+export function wicketLamelFilterDataUrl(modelId: string | number | null | undefined): string {
+  return `/api/wicket/type${normalizeModelId(modelId)}/get-filter-data-lamel`
+}

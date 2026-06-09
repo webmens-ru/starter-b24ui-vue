@@ -11,12 +11,12 @@ const emit = defineEmits<{
 const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
-const is_there_lock  = ref<string>('Есть')
+const isThereLockName  = ref<string>('Есть')
 const providesLock  = ref<string>('Предоставляет изготовитель')
 const lockInstaller = ref<string>('Выполняет изготовитель')
 const isThereCable = ref<string>('Изготовитель устанавливает')
 
-const showLockDetails = computed(() => is_there_lock.value === 'Есть')
+const showLockDetails = computed(() => isThereLockName.value === 'Есть')
 
 // ─── Группы радио ────────────────────────────────────────────────────────────
 const providesOptions = [
@@ -36,8 +36,8 @@ const cableOptions = [
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.isThereLockName.value = is_there_lock.value
-  calc.isThereLockId.value   = is_there_lock.value === 'Есть' ? 1 : 0
+  calc.isThereLockName.value = isThereLockName.value
+  calc.isThereLock.value   = isThereLockName.value === 'Есть' ? 1 : 0
 
   if (showLockDetails.value) {
     calc.providesLock.value  = providesLock.value
@@ -79,17 +79,17 @@ async function save() {
   try {
     const payload: Record<string, unknown> = {
       ...calc.getBaseSavePayload(),
-      is_there_lock_id:   calc.isThereLockId.value,
-      is_there_lock_name: calc.isThereLockName.value,
+      isThereLock:   calc.isThereLock.value,
+      isThereLockName: calc.isThereLockName.value,
       providesLock:      calc.providesLock.value || null,
       lockInstaller:     calc.lockInstaller.value || null,
       isThereCable:     calc.isThereCable.value || null,
     }
-    if (calc.isThereLockId.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
-      payload.type_lock = null
-      payload.lock_set_id = null
-      payload.lock_pen_id = null
-      payload.lock_penColor = null
+    if (calc.isThereLock.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
+      payload.typeLock = null
+      payload.lockSetId = null
+      payload.lockPenId = null
+      payload.lockPenColor = null
     }
     await saveWicketData(payload)
   } catch (e) {
@@ -115,7 +115,7 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page9')
 
-  if (calc.isThereLockName.value) is_there_lock.value  = calc.isThereLockName.value
+  if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
   if (calc.providesLock.value)      providesLock.value  = calc.providesLock.value
   if (calc.lockInstaller.value)     lockInstaller.value = calc.lockInstaller.value
   if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
@@ -140,13 +140,13 @@ onMounted(async () => {
       <div>
         <div class="option-grid">
           <label class="lock-card">
-            <input v-model="is_there_lock" type="radio" value="Есть" class="sr-only" @change="save" />
+            <input v-model="isThereLockName" type="radio" value="Есть" class="sr-only" @change="save" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">Есть</span>
             </div>
           </label>
           <label class="lock-card">
-            <input v-model="is_there_lock" type="radio" value="Нет" class="sr-only" @change="save" />
+            <input v-model="isThereLockName" type="radio" value="Нет" class="sr-only" @change="save" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">Нет</span>
             </div>

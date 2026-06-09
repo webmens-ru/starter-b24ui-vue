@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { CalcBlock } from './types'
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
+import { laterWizardStep, visitedPagesUpTo } from './wicketStepProgress'
 
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
@@ -21,7 +22,7 @@ const materialYardGlob   = ref<string | null>(null)
 
 // Поля шага "Столбы / Вариант открытия / Перемычка"
 const nalichieStolbovName       = ref<string>('Со столбами')
-const nalichieStolbovId         = ref<number>(1)
+const hasStolby                  = ref<number>(1)
 const stolbId                    = ref<string | number>('')
 const stolbName                  = ref<string>('')
 const openingOptionName         = ref<string>('')
@@ -45,10 +46,11 @@ const countryCode      = ref<string>('+7')
 
 // Поля шага "Ручка" (дополнительная ручка / скоба)
 const isTherePenName   = ref<string>('Не будет')
-const isTherePenId     = ref<number>(0)
+const isTherePen       = ref<number>(0)
 const penProvided        = ref<string>('Предоставляет изготовитель')
 const penInstalled       = ref<string>('Устанавливает изготовитель')
-const penColor           = ref<string>('Черная')
+const penColor           = ref<string>('')
+const penColorId         = ref<number | null>(null)
 const additionalPenId     = ref<number | null>(null)
 const additionalPenColor  = ref<string>('')
 const additionalPenMarking = ref<string>('')
@@ -57,11 +59,12 @@ const additionalPenMarking = ref<string>('')
 const typeLock      = ref<string>('Тип_1')
 const lockSetId    = ref<number | null>(null)
 const lockPenId    = ref<number | null>(null)
-const lockPenColor = ref<string>('Черная')
+const lockPenColor = ref<string>('')
+const lockPenColorId = ref<number | null>(null)
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
-const isThereLockId   = ref<number>(1)
+const isThereLock     = ref<number>(1)
 const providesLock      = ref<string>('Предоставляет изготовитель')
 const lockInstaller     = ref<string>('Выполняет изготовитель')
 const isThereCable     = ref<string>('Изготовитель устанавливает')
@@ -149,7 +152,7 @@ const fieldsFilled = ref<number>(0)
     materialFacadeGlob.value = 'Сайдинг'
     materialYardGlob.value = null
     nalichieStolbovName.value = 'Со столбами'
-    nalichieStolbovId.value = 1
+    hasStolby.value = 1
     stolbId.value = ''
     stolbName.value = ''
     openingOptionName.value = ''
@@ -169,19 +172,21 @@ const fieldsFilled = ref<number>(0)
     clientComment.value = ''
     countryCode.value = '+7'
     isTherePenName.value = 'Не будет'
-    isTherePenId.value = 0
+    isTherePen.value = 0
     penProvided.value = 'Предоставляет изготовитель'
     penInstalled.value = 'Устанавливает изготовитель'
-    penColor.value = 'Черная'
+    penColor.value = ''
+    penColorId.value = null
     additionalPenId.value = null
     additionalPenColor.value = ''
     additionalPenMarking.value = ''
     typeLock.value = 'Тип_1'
     lockSetId.value = null
     lockPenId.value = null
-    lockPenColor.value = 'Черная'
+    lockPenColor.value = ''
+    lockPenColorId.value = null
     isThereLockName.value = 'Есть'
-    isThereLockId.value = 1
+    isThereLock.value = 1
     providesLock.value = 'Предоставляет изготовитель'
     lockInstaller.value = 'Выполняет изготовитель'
     isThereCable.value = 'Изготовитель устанавливает'
@@ -269,10 +274,10 @@ const fieldsFilled = ref<number>(0)
           completed = numGt(widthProyema.value as string | number, 0) && numGt(heightProyema.value as string | number, 0)
           break
         case 'page9':
-          completed = isThereLockId.value !== null
+          completed = isThereLock.value !== null
           break
         case 'page10':
-          completed = isTherePenId.value !== null
+          completed = isTherePen.value !== null
           break
         case 'page11': {
           const snap = apiData?.client_snapshot
@@ -315,7 +320,7 @@ const fieldsFilled = ref<number>(0)
       materialFacadeGlob,
       materialYardGlob,
       nalichieStolbovName,
-      nalichieStolbovId,
+      hasStolby,
       stolbId,
       stolbName,
       openingOptionName,
@@ -335,10 +340,11 @@ const fieldsFilled = ref<number>(0)
       clientComment,
       countryCode,
       isTherePenName,
-      isTherePenId,
+      isTherePen,
       penProvided,
       penInstalled,
       penColor,
+      penColorId,
       additionalPenId,
       additionalPenColor,
       additionalPenMarking,
@@ -346,8 +352,9 @@ const fieldsFilled = ref<number>(0)
       lockSetId,
       lockPenId,
       lockPenColor,
+      lockPenColorId,
       isThereLockName,
-      isThereLockId,
+      isThereLock,
       providesLock,
       lockInstaller,
       isThereCable,
@@ -400,21 +407,30 @@ const fieldsFilled = ref<number>(0)
       additionalPenColor.value = penColor.value
     }
 
-    // При редактировании — только этапы, до которых пользователь уже дошёл
-    const apiVisited = Array.isArray(apiData.visitedPages) ? apiData.visitedPages : []
-    if (apiVisited.length > 0) {
-      w.visitedPages.value = [...apiVisited]
-      if (typeof apiData.activePage === 'string' && apiData.activePage) {
-        w.activePage.value = apiData.activePage
-        if (!w.visitedPages.value.includes(apiData.activePage)) {
-          w.visitedPages.value = [...w.visitedPages.value, apiData.activePage]
-        }
-      }
-    } else {
-      const progress = computeProgressFromState(apiData)
-      w.visitedPages.value = progress.visitedPages
-      w.activePage.value = progress.activePage
+    // Прогресс мастера: reachedStep из API; при уже рассчитанной цене — последний шаг page12.
+    const apiVisited = Array.isArray(apiData.visitedPages)
+      ? (apiData.visitedPages as string[])
+      : []
+    const apiActive =
+      typeof apiData.activePage === 'string' && apiData.activePage
+        ? apiData.activePage
+        : 'page1'
+    const hasPrice =
+      (priceRetail.value !== null && priceRetail.value !== '' && String(priceRetail.value).trim() !== '')
+      || (apiData.priceRetail !== null && apiData.priceRetail !== undefined && String(apiData.priceRetail).trim() !== '')
+
+    let active = apiActive
+    if (hasPrice) {
+      active = laterWizardStep(active, 'page12')
+    } else if (apiVisited.length === 0) {
+      active = computeProgressFromState(apiData).activePage
     }
+
+    w.activePage.value = active
+    w.visitedPages.value =
+      apiVisited.length > 0
+        ? visitedPagesUpTo(active, apiVisited)
+        : computeProgressFromState(apiData).visitedPages
 
     // Восстанавливаем блоки сводки из загруженных данных
     rebuildSummaryBlocks()
@@ -495,7 +511,7 @@ const fieldsFilled = ref<number>(0)
     const stolbParams: CalcBlock['params'] = [
       { name: 'Наличие столбов', value: nalichieStolbovName.value },
     ]
-    if (nalichieStolbovId.value === 1 && stolbName.value) {
+    if (hasStolby.value === 1 && stolbName.value) {
       stolbParams.push({ name: 'Сортамент столбов', value: stolbName.value })
     }
     if (openingOptionName.value) {
@@ -555,7 +571,7 @@ const fieldsFilled = ref<number>(0)
     const lockParams: CalcBlock['params'] = [
       { name: 'Замок есть/нет', value: isThereLockName.value },
     ]
-    if (isThereLockId.value === 1) {
+    if (isThereLock.value === 1) {
       lockParams.push({ name: 'Замок предоставляет', value: providesLock.value })
       lockParams.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
       lockParams.push({ name: 'Кабель для э/м замка', value: isThereCable.value })
@@ -570,7 +586,7 @@ const fieldsFilled = ref<number>(0)
     const penParams: CalcBlock['params'] = [
       { name: 'Дополнительная ручка', value: isTherePenName.value },
     ]
-    if (isTherePenId.value === 1) {
+    if (isTherePen.value === 1) {
       penParams.push({ name: 'Ручку предоставляет', value: penProvided.value })
       penParams.push({ name: 'Ручку устанавливает', value: penInstalled.value })
       if (penProvided.value === 'Предоставляет изготовитель') {
@@ -622,7 +638,7 @@ const fieldsFilled = ref<number>(0)
     materialFacadeGlob,
     materialYardGlob,
     nalichieStolbovName,
-    nalichieStolbovId,
+    hasStolby,
     stolbId,
     stolbName,
     openingOptionName,
@@ -642,10 +658,11 @@ const fieldsFilled = ref<number>(0)
     clientComment,
     countryCode,
     isTherePenName,
-    isTherePenId,
+    isTherePen,
     penProvided,
     penInstalled,
     penColor,
+    penColorId,
     additionalPenId,
     additionalPenColor,
     additionalPenMarking,
@@ -653,8 +670,9 @@ const fieldsFilled = ref<number>(0)
     lockSetId,
     lockPenId,
     lockPenColor,
+    lockPenColorId,
     isThereLockName,
-    isThereLockId,
+    isThereLock,
     providesLock,
     lockInstaller,
     isThereCable,

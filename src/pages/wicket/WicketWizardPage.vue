@@ -106,9 +106,9 @@ function getNavState(): WicketSharedNavState {
   return {
     modelId: String(calc.modelId.value ?? ''),
     materialFacadeGlob: calc.materialFacadeGlob.value,
-    fill_side: calc.fillSide.value,
+    fillSide: calc.fillSide.value,
     materialYardGlob: calc.materialYardGlob.value,
-    is_there_lock_id: calc.isThereLockId.value,
+    isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
   }
 }
@@ -183,7 +183,7 @@ function goBack() {
     </div>
 
     <!-- 3-column layout -->
-    <div class="flex h-screen overflow-hidden bg-gray-100">
+    <div class="flex h-[calc(100vh-50px)] overflow-hidden bg-gray-100">
 
       <!-- Backdrop: mobile left menu overlay -->
       <transition name="fade">

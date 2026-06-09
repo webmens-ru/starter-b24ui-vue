@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { finalCalculate, deleteCalculation } from '../../app/api/wicket'
+import { finalCalculate, deleteCalculation, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
 
 const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
 const calc = useCalculation()
+
+const orderViewHref = computed(() => {
+  const orderId = Number(calc.number.value)
+  return orderId > 0 ? `/orders/view?id=${orderId}` : ''
+})
+
+function goToOrderView() {
+  if (orderViewHref.value) window.location.href = orderViewHref.value
+}
 
 // ─── Модальное окно подтверждения удаления ────────────────────────────────────
 const showDeleteModal = ref(false)
@@ -22,10 +31,62 @@ function openErrModal(msg: string) {
 }
 
 // ─── Состояние расчёта ────────────────────────────────────────────────────────
-const calculating   = ref(false)
-const calculated    = ref(false)
-const priceDealer   = ref('')
-const priceRetail   = ref('')
+const calculating       = ref(false)
+const loadingSavedPrice = ref(false)
+const calculated        = ref(false)
+const priceDealer       = ref('')
+const priceRetail       = ref('')
+const calculatedAtLabel = ref('')
+
+function formatCalculatedAt(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function applyActualSavedPrices(retail: string, dealer: string, lastCalculatedAt?: number) {
+  priceDealer.value = dealer
+  priceRetail.value = retail
+  calc.updatePriceBlock(dealer, retail)
+  calculated.value = true
+  calculatedAtLabel.value =
+    lastCalculatedAt && lastCalculatedAt > 0
+      ? `Расчёт от ${formatCalculatedAt(lastCalculatedAt)}`
+      : ''
+}
+
+async function loadSavedPriceIfActual() {
+  const orderId = Number(calc.number.value)
+  if (!orderId) return
+
+  loadingSavedPrice.value = true
+  try {
+    const status = await fetchSavedOrderPrice(orderId, calc.modelId.value)
+    if (status.isActual && status.priceRetail && status.priceDealer) {
+      applyActualSavedPrices(status.priceRetail, status.priceDealer, status.lastCalculatedAt)
+    } else {
+      calculated.value = false
+      calculatedAtLabel.value = ''
+    }
+  } catch (e) {
+    console.warn('fetchSavedOrderPrice:', e)
+  } finally {
+    loadingSavedPrice.value = false
+  }
+}
+
+/** Сохраняет reachedStep / visitedPages в wicket_type* (иначе при reopen остаётся page11). */
+async function persistWizardProgress() {
+  try {
+    await saveWicketData(calc.getBaseSavePayload())
+  } catch (e) {
+    console.warn('persistWizardProgress:', e)
+  }
+}
 
 // ─── Расчёт цены ─────────────────────────────────────────────────────────────
 async function handleCalculate() {
@@ -37,10 +98,8 @@ async function handleCalculate() {
       model:              calc.model.value,
       modelId:           calc.modelId.value,
     })
-    priceDealer.value = result.priceDealer
-    priceRetail.value = result.priceRetail
-    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-    calculated.value = true
+    applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
+    await persistWizardProgress()
   } catch (e) {
     console.error('finalCalculate:', e)
     openErrModal('Произошла ошибка при выполнении расчёта.')
@@ -70,17 +129,12 @@ async function confirmDelete() {
 }
 
 // ─── Монтирование ─────────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
   calc.setActivePage('page12')
+  await persistWizardProgress()
   calc.fieldsFilled.value = 1
   document.dispatchEvent(new Event('dataUpdated'))
-
-  // Восстановить цену из стора, если уже считалась
-  if (calc.priceDealer.value && calc.priceRetail.value) {
-    priceDealer.value = String(calc.priceDealer.value)
-    priceRetail.value = String(calc.priceRetail.value)
-    calculated.value  = true
-  }
+  await loadSavedPriceIfActual()
 })
 </script>
 
@@ -120,7 +174,12 @@ onMounted(() => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Рассчитать</span>
-      <div class="w-[68px]" />
+      <B24Button
+        label="К заказу"
+        color="air-secondary"
+        :disabled="!orderViewHref"
+        @click="goToOrderView"
+      />
     </div>
 
     <!-- Сообщение -->
@@ -143,6 +202,7 @@ onMounted(() => {
         color="primary"
         size="lg"
         :loading="calculating"
+        :disabled="loadingSavedPrice"
         @click="handleCalculate"
       >
         Рассчитать
@@ -156,6 +216,10 @@ onMounted(() => {
         class="mx-auto mt-4 rounded-xl border border-blue-200 bg-blue-50 px-8 py-6 text-center shadow-sm"
       >
         <p class="text-sm text-gray-500 mb-3 font-medium uppercase tracking-wide">Результат расчёта</p>
+        <p
+          v-if="calculatedAtLabel"
+          class="text-xs text-gray-400 mb-4"
+        >{{ calculatedAtLabel }}</p>
         <div class="flex flex-col sm:flex-row gap-6 justify-center">
           <div class="flex flex-col items-center">
             <span class="text-xs text-gray-400 mb-1">Дилерская цена</span>

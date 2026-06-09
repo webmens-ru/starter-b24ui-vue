@@ -38,10 +38,10 @@ function openModal(msg: string, title = 'Внимание') {
 
 // ─── Цвет рамы ────────────────────────────────────────────────────────────────
 const colorOptions    = ref<ColorShieldItem[]>([])
-const color_shield_id = ref<string | number>('')
+const colorShieldId = ref<string | number>('')
 
 // ─── Тип щита ────────────────────────────────────────────────────────────────
-const shield_type = ref<string>('Тип_1')
+const shieldType = ref<string>('Тип_1')
 
 const TYPES_WITH_HEIGHT_TOP   = ['Тип_3']
 const TYPES_WITH_HEIGHT_LOWER = ['Тип_2', 'Тип_3']
@@ -63,9 +63,9 @@ const providerTop   = ref<string>('executor')
 const providerLower = ref<string>('executor')
 const providerSide  = ref<string>('executor')
 
-const showHeightTop   = computed(() => TYPES_WITH_HEIGHT_TOP.includes(shield_type.value))
-const showHeightLower = computed(() => TYPES_WITH_HEIGHT_LOWER.includes(shield_type.value))
-const showSidePart    = computed(() => TYPES_WITH_SIDE_PART.includes(shield_type.value))
+const showHeightTop   = computed(() => TYPES_WITH_HEIGHT_TOP.includes(shieldType.value))
+const showHeightLower = computed(() => TYPES_WITH_HEIGHT_LOWER.includes(shieldType.value))
+const showSidePart    = computed(() => TYPES_WITH_SIDE_PART.includes(shieldType.value))
 
 const isExecutorTop   = computed(() => providerTop.value === 'executor')
 const isExecutorLower = computed(() => providerLower.value === 'executor')
@@ -81,16 +81,16 @@ const netWidthOptions = ref<{ id: string; name: string }[]>([])
 const heightTopPart   = ref<string>('')  // select
 const heightLowerPart = ref<string>('')  // select
 const widthSidePart   = ref<string>('')  // select
-const grille_location   = ref<string>('Возле петель')
+const grilleLocation   = ref<string>('Возле петель')
 
 const grilleNetItems         = ref<GrilleNetItem[]>([])
-const assortment_grille_net_id = ref<number | null>(null)
+const assortmentSideGrilleNetId = ref<number | null>(null)
 const errGrilleNet            = ref(false)
 const heightLowerNetItems     = ref<GrilleNetItem[]>([])
-const assortment_height_lower_net_id = ref<number | null>(null)
+const assortmentHeightLowerNetId = ref<number | null>(null)
 const errHeightLowerNet       = ref(false)
 const heightUpperNetItems     = ref<GrilleNetItem[]>([])
-const assortment_height_upper_net_id = ref<number | null>(null)
+const assortmentHeightUpperNetId = ref<number | null>(null)
 const errHeightUpperNet       = ref(false)
 
 // ─── Ошибки валидации ────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ const shieldOptions = computed(() => {
   const orient = panelOrientation.value
   const base = shieldImgBase.value
   // z - замок, p - петля (только для Тип_4)
-  const type4Suffix = grille_location.value === 'Возле замка' ? 'z' : 'p'
+  const type4Suffix = grilleLocation.value === 'Возле замка' ? 'z' : 'p'
   return [
     { value: 'Тип_1', label: 'Тип 1', img: `${base}/w_${orient}_1.1.png` },
     { value: 'Тип_2', label: 'Тип 2', img: `${base}/w_${orient}_1.2.png` },
@@ -127,7 +127,7 @@ const shieldOptions = computed(() => {
 })
 
 // Группировка: Стандартная краска / Не стандартная (для B24SelectMenu)
-// id приводим к string — B24SelectMenu сравнивает по value-key строго, color_shield_id хранится как string
+// id приводим к string — B24SelectMenu сравнивает по value-key строго, colorShieldId хранится как string
 const colorSelectItems = computed(() => {
   const standard = colorOptions.value.filter(i => (i.isStandard ?? 1) === 1)
   const custom   = colorOptions.value.filter(i => (i.isStandard ?? 1) === 0)
@@ -149,8 +149,8 @@ async function loadColorShield() {
   try {
     const res = await getColorShield(calc.modelId.value)
     colorOptions.value = res.colorShield
-    if (!color_shield_id.value && colorOptions.value.length) {
-      color_shield_id.value = String(colorOptions.value[0].id)
+    if (!colorShieldId.value && colorOptions.value.length) {
+      colorShieldId.value = String(colorOptions.value[0].id)
     }
   } catch (e) {
     console.warn('getColorShield:', e)
@@ -173,17 +173,17 @@ async function loadNetWidths() {
 async function loadGrilleNetsByWidth(width: string) {
   if (!width || Number(width) <= 0) {
     grilleNetItems.value = []
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
     return
   }
   try {
     const res = await getNetsByWidth(width)
     grilleNetItems.value = res.items
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
   } catch (e) {
     console.warn('getNetsByWidth:', e)
     grilleNetItems.value = []
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
   }
 }
 
@@ -193,7 +193,7 @@ function onWidthSidePartChange(val: string | number) {
 }
 
 function onGrilleNetSelect(net: GrilleNetItem) {
-  assortment_grille_net_id.value = net.id
+  assortmentSideGrilleNetId.value = net.id
   errGrilleNet.value = false
   debouncedSave()
 }
@@ -201,34 +201,34 @@ function onGrilleNetSelect(net: GrilleNetItem) {
 async function loadHeightLowerNetsBySize(size: string) {
   if (!size || Number(size) <= 0) {
     heightLowerNetItems.value = []
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
     return
   }
   try {
     const res = await getNetsByWidth(size)
     heightLowerNetItems.value = res.items
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
   } catch (e) {
     console.warn('getNetsByWidth (height_lower):', e)
     heightLowerNetItems.value = []
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
   }
 }
 
 async function loadHeightUpperNetsBySize(size: string) {
   if (!size || Number(size) <= 0) {
     heightUpperNetItems.value = []
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
     return
   }
   try {
     const res = await getNetsByWidth(size)
     heightUpperNetItems.value = res.items
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
   } catch (e) {
     console.warn('getNetsByWidth (height_upper):', e)
     heightUpperNetItems.value = []
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
   }
 }
 
@@ -243,13 +243,13 @@ function onHeightLowerPartChange(val: string | number) {
 }
 
 function onHeightLowerNetSelect(net: GrilleNetItem) {
-  assortment_height_lower_net_id.value = net.id
+  assortmentHeightLowerNetId.value = net.id
   errHeightLowerNet.value = false
   debouncedSave()
 }
 
 function onHeightUpperNetSelect(net: GrilleNetItem) {
-  assortment_height_upper_net_id.value = net.id
+  assortmentHeightUpperNetId.value = net.id
   errHeightUpperNet.value = false
   debouncedSave()
 }
@@ -266,14 +266,14 @@ function onProviderTopChange() {
   if (providerTop.value === '') {
     heightTopPart.value = ''
     heightUpperNetItems.value = []
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
   } else if (providerTop.value === 'customer') {
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
     heightUpperNetItems.value = []
   } else if (providerTop.value === 'executor') {
     heightTopPart.value = ''
     heightUpperNetItems.value = []
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
   }
   errHeightTop.value = false
   errHeightUpperNet.value = false
@@ -284,14 +284,14 @@ function onProviderLowerChange() {
   if (providerLower.value === '') {
     heightLowerPart.value = ''
     heightLowerNetItems.value = []
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
   } else if (providerLower.value === 'customer') {
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
     heightLowerNetItems.value = []
   } else if (providerLower.value === 'executor') {
     heightLowerPart.value = ''
     heightLowerNetItems.value = []
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
   }
   errHeightLower.value = false
   errHeightLowerNet.value = false
@@ -302,14 +302,14 @@ function onProviderSideChange() {
   if (providerSide.value === '') {
     widthSidePart.value = ''
     grilleNetItems.value = []
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
   } else if (providerSide.value === 'customer') {
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
     grilleNetItems.value = []
   } else if (providerSide.value === 'executor') {
     widthSidePart.value = ''
     grilleNetItems.value = []
-    assortment_grille_net_id.value = null
+    assortmentSideGrilleNetId.value = null
   }
   errWidthSide.value = false
   errGrilleNet.value = false
@@ -321,18 +321,18 @@ async function onShieldTypeChange() {
   if (!showHeightTop.value) {
     heightTopPart.value = ''
     heightUpperNetItems.value = []
-    assortment_height_upper_net_id.value = null
+    assortmentHeightUpperNetId.value = null
   }
   if (!showHeightLower.value) {
     heightLowerPart.value = ''
     heightLowerNetItems.value = []
-    assortment_height_lower_net_id.value = null
+    assortmentHeightLowerNetId.value = null
   }
   if (!showSidePart.value) {
     widthSidePart.value  = ''
     grilleNetItems.value   = []
-    assortment_grille_net_id.value = null
-    grille_location.value  = 'Возле петель'
+    assortmentSideGrilleNetId.value = null
+    grilleLocation.value  = 'Возле петель'
   }
   errHeightTop.value       = false
   errHeightUpperNet.value  = false
@@ -345,7 +345,7 @@ async function onShieldTypeChange() {
 
 function onColorChange() {
   save().then(() => {
-    const sid = String(color_shield_id.value ?? '')
+    const sid = String(colorShieldId.value ?? '')
     const name = colorOptions.value.find(i => String(i.id) === sid)?.name ?? ''
     openModal(`Внесены изменения: Цвет рамы '${name}'`, 'Изменения сохранены')
   })
@@ -353,26 +353,26 @@ function onColorChange() {
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.shieldType.value       = shield_type.value
-  calc.colorShieldId.value   = String(color_shield_id.value ?? '')
-  const colorItem = colorOptions.value.find(i => String(i.id) === String(color_shield_id.value))
+  calc.shieldType.value       = shieldType.value
+  calc.colorShieldId.value   = String(colorShieldId.value ?? '')
+  const colorItem = colorOptions.value.find(i => String(i.id) === String(colorShieldId.value))
   calc.colorShieldName.value = colorItem?.name ?? ''
   calc.heightTopPart.value   = heightTopPart.value
   calc.heightLowerPart.value = heightLowerPart.value
   calc.widthSidePart.value   = widthSidePart.value
   if (showHeightLower.value) {
-    calc.assortmentHeightLowerNetId.value = assortment_height_lower_net_id.value
+    calc.assortmentHeightLowerNetId.value = assortmentHeightLowerNetId.value
     calc.assortmentSideGrilleNetId.value = null
   } else {
     calc.assortmentHeightLowerNetId.value = null
     if (showSidePart.value) {
-      calc.assortmentSideGrilleNetId.value = assortment_grille_net_id.value
+      calc.assortmentSideGrilleNetId.value = assortmentSideGrilleNetId.value
     } else {
       calc.assortmentSideGrilleNetId.value = null
     }
   }
-  calc.assortmentHeightUpperNetId.value = showHeightTop.value ? assortment_height_upper_net_id.value : null
-  calc.grilleLocation.value = grille_location.value
+  calc.assortmentHeightUpperNetId.value = showHeightTop.value ? assortmentHeightUpperNetId.value : null
+  calc.grilleLocation.value = grilleLocation.value
   calc.netWidthProviderTop.value = providerTop.value
   calc.netWidthProviderLower.value = providerLower.value
   calc.netWidthProviderSide.value = providerSide.value
@@ -390,7 +390,7 @@ function buildBlock() {
   if (showHeightTop.value && provTop !== '' && topVal && topVal !== '0' && Number(topVal) > 0) {
     params.push({ name: 'Высота верхней части', value: topVal })
     if (provTop === 'executor') {
-      const selUpperNet = heightUpperNetItems.value.find(n => n.id === assortment_height_upper_net_id.value)
+      const selUpperNet = heightUpperNetItems.value.find(n => n.id === assortmentHeightUpperNetId.value)
       if (selUpperNet) params.push({ name: 'Сетка верхней части', value: selUpperNet.model })
     }
   }
@@ -399,7 +399,7 @@ function buildBlock() {
   if (showHeightLower.value && provLower !== '' && lowerVal && lowerVal !== '0' && Number(lowerVal) > 0) {
     params.push({ name: 'Высота нижней части', value: lowerVal })
     if (provLower === 'executor') {
-      const selLowerNet = heightLowerNetItems.value.find(n => n.id === assortment_height_lower_net_id.value)
+      const selLowerNet = heightLowerNetItems.value.find(n => n.id === assortmentHeightLowerNetId.value)
       if (selLowerNet) params.push({ name: 'Сетка нижней части', value: selLowerNet.model })
     }
   }
@@ -408,7 +408,7 @@ function buildBlock() {
   if (showSidePart.value && provSide !== '' && sideVal && sideVal !== '0' && Number(sideVal) > 0) {
     params.push({ name: 'Ширина боковой части', value: sideVal })
     if (provSide === 'executor') {
-      const selNet = grilleNetItems.value.find(n => n.id === assortment_grille_net_id.value)
+      const selNet = grilleNetItems.value.find(n => n.id === assortmentSideGrilleNetId.value)
       if (selNet) params.push({ name: 'Сетка боковой решётки', value: selNet.model })
     }
   }
@@ -433,19 +433,19 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      shield_type:        calc.shieldType.value,
+      shieldType:        calc.shieldType.value,
       colorShieldName:  calc.colorShieldName.value,
-      color_shield_id:    calc.colorShieldId.value,
+      colorShieldId:    calc.colorShieldId.value,
       heightTopPart:    topVal,
       heightLowerPart:  lowerVal,
       widthSidePart:    sideVal,
       netWidthProviderTop:  showHeightTop.value ? provTop : undefined,
       netWidthProviderLower: showHeightLower.value ? provLower : undefined,
       netWidthProviderSide:  showSidePart.value ? provSide : undefined,
-      assortment_height_lower_net_id: showHeightLower.value && provLower === 'executor' ? (assortment_height_lower_net_id.value ?? undefined) : undefined,
-      assortment_side_grille_net_id: showSidePart.value && provSide === 'executor' ? (assortment_grille_net_id.value ?? undefined) : undefined,
-      assortment_height_upper_net_id: showHeightTop.value && provTop === 'executor' ? (assortment_height_upper_net_id.value ?? undefined) : undefined,
-      grille_location:         calc.grilleLocation.value,
+      assortmentHeightLowerNetId: showHeightLower.value && provLower === 'executor' ? (assortmentHeightLowerNetId.value ?? undefined) : undefined,
+      assortmentSideGrilleNetId: showSidePart.value && provSide === 'executor' ? (assortmentSideGrilleNetId.value ?? undefined) : undefined,
+      assortmentHeightUpperNetId: showHeightTop.value && provTop === 'executor' ? (assortmentHeightUpperNetId.value ?? undefined) : undefined,
+      grilleLocation:         calc.grilleLocation.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -484,7 +484,7 @@ function validate(): boolean {
       msgs.push('Выберите значение больше 0: Высота верхней части')
     } else {
       errHeightTop.value = false
-      if (provTop === 'executor' && !assortment_height_upper_net_id.value) {
+      if (provTop === 'executor' && !assortmentHeightUpperNetId.value) {
         errHeightUpperNet.value = true
         msgs.push('Выберите конкретную сетку верхней части')
       } else {
@@ -499,7 +499,7 @@ function validate(): boolean {
       msgs.push('Выберите значение больше 0: Высота нижней части')
     } else {
       errHeightLower.value = false
-      if (provLower === 'executor' && !assortment_height_lower_net_id.value) {
+      if (provLower === 'executor' && !assortmentHeightLowerNetId.value) {
         errHeightLowerNet.value = true
         msgs.push('Выберите конкретную сетку нижней части')
       } else {
@@ -514,7 +514,7 @@ function validate(): boolean {
       msgs.push('Выберите значение больше 0: Ширина боковой решётки')
     } else {
       errWidthSide.value = false
-      if (provSide === 'executor' && !assortment_grille_net_id.value) {
+      if (provSide === 'executor' && !assortmentSideGrilleNetId.value) {
         errGrilleNet.value = true
         msgs.push('Выберите конкретную сетку боковой решётки')
       } else {
@@ -540,7 +540,7 @@ onMounted(async () => {
   calc.setActivePage('page3')
 
   // Восстанавливаем сохранённые значения
-  if (calc.shieldType.value)       shield_type.value       = calc.shieldType.value
+  if (calc.shieldType.value)       shieldType.value       = calc.shieldType.value
   // Инициализация provider из calc (при загрузке сохранённых данных)
   const savedProvTop = calc.netWidthProviderTop.value
   const savedProvLower = calc.netWidthProviderLower.value
@@ -560,7 +560,7 @@ onMounted(async () => {
   if (savedSide && savedSide !== '0' && Number(savedSide) > 0) {
     widthSidePart.value = String(savedSide)
   }
-  if (calc.grilleLocation.value)   grille_location.value   = calc.grilleLocation.value
+  if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
 
   await loadColorShield()
   await loadNetWidths()
@@ -570,16 +570,16 @@ onMounted(async () => {
   // Восстанавливаем выбор сеток после загрузки (loadXXX сбрасывает selection)
   if (showHeightLower.value) {
     const lowerId = calc.assortmentHeightLowerNetId.value ?? calc.assortmentSideGrilleNetId.value
-    if (lowerId) assortment_height_lower_net_id.value = Number(lowerId)
+    if (lowerId) assortmentHeightLowerNetId.value = Number(lowerId)
   } else if (showSidePart.value && calc.assortmentSideGrilleNetId.value) {
-    assortment_grille_net_id.value = Number(calc.assortmentSideGrilleNetId.value)
+    assortmentSideGrilleNetId.value = Number(calc.assortmentSideGrilleNetId.value)
   }
   if (calc.assortmentHeightUpperNetId.value && showHeightTop.value) {
-    assortment_height_upper_net_id.value = Number(calc.assortmentHeightUpperNetId.value)
+    assortmentHeightUpperNetId.value = Number(calc.assortmentHeightUpperNetId.value)
   }
 
   if (calc.colorShieldId.value) {
-    color_shield_id.value = String(calc.colorShieldId.value)
+    colorShieldId.value = String(calc.colorShieldId.value)
   }
 
   await save()
@@ -613,7 +613,7 @@ onMounted(async () => {
         <span class="font-bold text-base whitespace-nowrap">Цвет рамы:</span>
         <div class="select-full-width">
           <B24SelectMenu
-            v-model="color_shield_id"
+            v-model="colorShieldId"
             value-key="id"
             :items="colorSelectItems"
             placeholder="Выберите цвет"
@@ -632,7 +632,7 @@ onMounted(async () => {
           class="lock-card"
         >
           <input
-            v-model="shield_type"
+            v-model="shieldType"
             type="radio"
             :value="opt.value"
             class="sr-only"
@@ -690,11 +690,11 @@ onMounted(async () => {
             </div>
           </div>
           <div v-if="showInputTop" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="heightTopPart_custom">
+            <label class="font-semibold text-sm whitespace-nowrap" for="heightTopPartCustom">
               Высота верхней части (мм):
             </label>
             <input
-              id="heightTopPart_custom"
+              id="heightTopPartCustom"
               v-model="heightTopPart"
               type="number"
               min="1"
@@ -718,7 +718,7 @@ onMounted(async () => {
                 role="button"
                 tabindex="0"
                 class="lock-card grille-net-card"
-                :class="{ 'card-selected': assortment_height_upper_net_id === net.id }"
+                :class="{ 'card-selected': assortmentHeightUpperNetId === net.id }"
                 @click="onHeightUpperNetSelect(net)"
                 @keydown.enter="onHeightUpperNetSelect(net)"
               >
@@ -777,11 +777,11 @@ onMounted(async () => {
             </div>
           </div>
           <div v-if="showInputLower" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="heightLowerPart_custom">
+            <label class="font-semibold text-sm whitespace-nowrap" for="heightLowerPartCustom">
               Высота нижней части (мм):
             </label>
             <input
-              id="heightLowerPart_custom"
+              id="heightLowerPartCustom"
               v-model="heightLowerPart"
               type="number"
               min="1"
@@ -804,7 +804,7 @@ onMounted(async () => {
                 role="button"
                 tabindex="0"
                 class="lock-card grille-net-card"
-                :class="{ 'card-selected': assortment_height_lower_net_id === net.id }"
+                :class="{ 'card-selected': assortmentHeightLowerNetId === net.id }"
                 @click="onHeightLowerNetSelect(net)"
                 @keydown.enter="onHeightLowerNetSelect(net)"
               >
@@ -863,11 +863,11 @@ onMounted(async () => {
             </div>
           </div>
           <div v-if="showInputSide" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="widthSidePart_custom">
+            <label class="font-semibold text-sm whitespace-nowrap" for="widthSidePartCustom">
               Ширина боковой решётки (мм):
             </label>
             <input
-              id="widthSidePart_custom"
+              id="widthSidePartCustom"
               v-model="widthSidePart"
               type="number"
               min="1"
@@ -890,7 +890,7 @@ onMounted(async () => {
                 role="button"
                 tabindex="0"
                 class="lock-card grille-net-card"
-                :class="{ 'card-selected': assortment_grille_net_id === net.id }"
+                :class="{ 'card-selected': assortmentSideGrilleNetId === net.id }"
                 @click="onGrilleNetSelect(net)"
                 @keydown.enter="onGrilleNetSelect(net)"
               >
@@ -914,7 +914,7 @@ onMounted(async () => {
             class="lock-card provider-card"
           >
             <input
-              v-model="grille_location"
+              v-model="grilleLocation"
               type="radio"
               :value="opt.value"
               class="sr-only"

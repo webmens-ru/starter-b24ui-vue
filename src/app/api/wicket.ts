@@ -20,6 +20,7 @@ import {
   mockDeleteCalculation,
   mockLoadWicketData,
   mockCreateOrder,
+  mockFetchSavedOrderPrice,
 } from './mockWicket'
 import type {
   SelectItem,
@@ -33,7 +34,24 @@ import type {
   ProfnastilFilters,
   ProfnastilRow,
   ProfnastilTableResponse,
+  ZhalyuziFilters,
+  ZhalyuziRow,
+  ZhalyuziTableResponse,
+  SpFilters,
+  SpRow,
+  SpTableResponse,
+  SheetFilters,
+  SheetRow,
+  SheetTableResponse,
+  FenceFilters,
+  FenceRow,
+  FenceTableResponse,
+  LamelFilters,
+  LamelRow,
+  LamelTableResponse,
   RecalculateResponse,
+  OrderSavedPriceResponse,
+  CompanyScopedPayload,
 } from './wicket.types'
 
 export type {
@@ -48,19 +66,36 @@ export type {
   ProfnastilFilters,
   ProfnastilRow,
   ProfnastilTableResponse,
+  ZhalyuziFilters,
+  ZhalyuziRow,
+  ZhalyuziTableResponse,
+  SpFilters,
+  SpRow,
+  SpTableResponse,
+  SheetFilters,
+  SheetRow,
+  SheetTableResponse,
+  FenceFilters,
+  FenceRow,
+  FenceTableResponse,
+  LamelFilters,
+  LamelRow,
+  LamelTableResponse,
   RecalculateResponse,
+  OrderSavedPriceResponse,
+  CompanyScopedPayload,
 }
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
 
 /** Создаёт новый заказ и возвращает orderId. Вызывать один раз при открытии новой формы. */
-export async function createOrder(): Promise<{
+export async function createOrder(payload: CompanyScopedPayload): Promise<{
   orderId: number
   companyId: number | null
   managerId: number
 }> {
   if (isMock) return mockCreateOrder()
-  const { data } = await api.post('/api/order/create')
+  const { data } = await api.post('/api/order/create', payload)
   return data.data
 }
 
@@ -116,6 +151,91 @@ export async function getProfnastilTable(
   if (isMock) return mockGetProfnastilTable(filters, page)
   const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, { ...filters, page })
   const result: ProfnastilTableResponse = data.data ?? data
+  const table = result.table ?? []
+  const pagination = result.pagination ?? {
+    page:       1,
+    pageSize:   table.length,
+    totalCount: table.length,
+    pageCount:  1,
+  }
+  return { table, pagination }
+}
+
+export async function getZhalyuziTable(
+  modelId: string | number,
+  filters: import('./wicket.types').ZhalyuziFilters,
+  page = 1,
+): Promise<Required<import('./wicket.types').ZhalyuziTableResponse>> {
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-zhalyuzi`, { ...filters, page })
+  const result: import('./wicket.types').ZhalyuziTableResponse = data.data ?? data
+  const table = result.table ?? []
+  const pagination = result.pagination ?? {
+    page:       1,
+    pageSize:   table.length,
+    totalCount: table.length,
+    pageCount:  1,
+  }
+  return { table, pagination }
+}
+
+export async function getSpTable(
+  modelId: string | number,
+  filters: import('./wicket.types').SpFilters,
+  page = 1,
+): Promise<Required<import('./wicket.types').SpTableResponse>> {
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-sp`, { ...filters, page })
+  const result: import('./wicket.types').SpTableResponse = data.data ?? data
+  const table = result.table ?? []
+  const pagination = result.pagination ?? {
+    page:       1,
+    pageSize:   table.length,
+    totalCount: table.length,
+    pageCount:  1,
+  }
+  return { table, pagination }
+}
+
+export async function getSheetTable(
+  modelId: string | number,
+  filters: import('./wicket.types').SheetFilters,
+  page = 1,
+): Promise<Required<import('./wicket.types').SheetTableResponse>> {
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-sheet`, { ...filters, page })
+  const result: import('./wicket.types').SheetTableResponse = data.data ?? data
+  const table = result.table ?? []
+  const pagination = result.pagination ?? {
+    page:       1,
+    pageSize:   table.length,
+    totalCount: table.length,
+    pageCount:  1,
+  }
+  return { table, pagination }
+}
+
+export async function getFenceTable(
+  modelId: string | number,
+  filters: import('./wicket.types').FenceFilters,
+  page = 1,
+): Promise<Required<import('./wicket.types').FenceTableResponse>> {
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, { ...filters, page })
+  const result: import('./wicket.types').FenceTableResponse = data.data ?? data
+  const table = result.table ?? []
+  const pagination = result.pagination ?? {
+    page:       1,
+    pageSize:   table.length,
+    totalCount: table.length,
+    pageCount:  1,
+  }
+  return { table, pagination }
+}
+
+export async function getLamelTable(
+  modelId: string | number,
+  filters: import('./wicket.types').LamelFilters,
+  page = 1,
+): Promise<Required<import('./wicket.types').LamelTableResponse>> {
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-lamel`, { ...filters, page })
+  const result: import('./wicket.types').LamelTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {
     page:       1,
@@ -200,7 +320,7 @@ export async function getLocks(): Promise<{
 
 /** Ручки, совместимые с выбранным комплектом замка (dir_pen_lock). */
 export async function getPensByLock(lockSetId: number): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetPensByLock(lockSetId)
   const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lockSetId } })
@@ -209,7 +329,7 @@ export async function getPensByLock(lockSetId: number): Promise<{
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
 export async function getAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
   const { data } = await api.get('/api/dict/additional-pen/get-list')
@@ -227,6 +347,7 @@ export async function getAddressSuggestions(
 /** Переименовать расчёт (обновить calculationName). */
 export async function saveOrderData(payload: {
   orderId: number
+  companyId: number
   calculationName: string
 }): Promise<void> {
   if (isMock) return
@@ -238,16 +359,30 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
   await api.post('/client/data', payload)
 }
 
+/** Проверка сохранённых цен заказа на актуальность (шаг «Рассчитать»). */
+export async function fetchSavedOrderPrice(
+  orderId: number,
+  modelId: string | number,
+): Promise<OrderSavedPriceResponse> {
+  if (isMock) return mockFetchSavedOrderPrice()
+  const { data } = await api.get('/api/order/saved-price', {
+    params: { orderId, modelId: String(modelId) },
+  })
+  return data.data
+}
+
 export async function finalCalculate(payload: {
   orderId: number
+  companyId: number
   modelId: string | number
   productType?: string
   model?: string
 }): Promise<{ priceDealer: string; priceRetail: string }> {
   if (isMock) return mockFinalCalculate()
-  const { data } = await api.post('/api/wicket/calculation/index', {
-    modelId: payload.modelId,
+  const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
+    companyId: payload.companyId,
+    modelId: String(payload.modelId),
   })
   return data.data
 }
@@ -262,14 +397,16 @@ export async function deleteCalculation(payload: {
 
 export async function recalculate(payload: {
   orderId: number
+  companyId: number
   modelId: string | number
   productType?: string
   model?: string
 }): Promise<RecalculateResponse> {
   if (isMock) return mockRecalculate(payload)
-  const { data } = await api.post('/api/wicket/calculation/index', {
-    modelId: payload.modelId,
+  const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
+    companyId: payload.companyId,
+    modelId: String(payload.modelId),
   })
   return data.data
 }

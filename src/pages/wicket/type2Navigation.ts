@@ -1,29 +1,25 @@
-/** Логика навигации по шагам формы калитки типа 2. Автономна от type1Navigation. */
+/** Логика навигации по шагам формы калитки типа 2. Автономна от type1Navigation.
+ *  Type2 поддерживает только профнастил (сайдинг отсутствует).
+ */
 
 import { WICKET_MENU_ITEMS } from './wicketMenuConfig'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 export type Type2NavState = WicketSharedNavState
 
-function facadeMaterialDetailPage(state: Type2NavState): 'page2_facade_siding' | 'page2_facade_profnastil' {
-  return state.materialFacadeGlob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
-}
-
 const MENU_ITEMS = WICKET_MENU_ITEMS
 
 export function getNextPage(from: string, state: Type2NavState): string | null {
   switch (from) {
     case 'page2':
-      return facadeMaterialDetailPage(state)
-    case 'page2_facade_siding':
+      return 'page2_facade_profnastil'
     case 'page2_facade_profnastil':
-      if (state.fill_side === 'Одна сторона') return 'page5'
-      return state.materialYardGlob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
-    case 'page2_yard_siding':
+      if (state.fillSide === 'Одна сторона') return 'page5'
+      return 'page2_yard_profnastil'
     case 'page2_yard_profnastil':
       return 'page5'
     case 'page9':
-      if (state.is_there_lock_id === 1 && state.providesLock !== 'Предоставляет заказчик') {
+      if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
         return 'page_lock_type'
       }
       return 'page10'
@@ -38,21 +34,19 @@ export function getNextPage(from: string, state: Type2NavState): string | null {
 
 export function getPrevPage(from: string, state: Type2NavState): string | null {
   switch (from) {
-    case 'page2_facade_siding':
     case 'page2_facade_profnastil':
       return 'page2'
-    case 'page2_yard_siding':
     case 'page2_yard_profnastil':
-      return facadeMaterialDetailPage(state)
+      return 'page2_facade_profnastil'
     case 'page5':
-      if (state.fill_side === 'Одна сторона') {
-        return facadeMaterialDetailPage(state)
+      if (state.fillSide === 'Одна сторона') {
+        return 'page2_facade_profnastil'
       }
-      return state.materialYardGlob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
+      return 'page2_yard_profnastil'
     case 'page_lock_type':
       return 'page9'
     case 'page10':
-      if (state.is_there_lock_id === 1 && state.providesLock !== 'Предоставляет заказчик') {
+      if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
         return 'page_lock_type'
       }
       return 'page9'

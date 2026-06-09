@@ -32,9 +32,9 @@ function openModal(msg: string, title = 'Внимание') {
 
 // ─── Столбы ──────────────────────────────────────────────────────────────────
 const stolbOptions      = ref<SelectItem[]>([])
-const nalichie_stolbov  = ref<'Со столбами' | 'Без столбов'>('Со столбами')
-const stolb_id          = ref<string>('')
-const showStolbList     = computed(() => nalichie_stolbov.value === 'Со столбами')
+const nalichieStolbovName  = ref<'Со столбами' | 'Без столбов'>('Со столбами')
+const stolbId          = ref<string>('')
+const showStolbList     = computed(() => nalichieStolbovName.value === 'Со столбами')
 
 // ─── Вариант открытия ────────────────────────────────────────────────────────
 const openingOptions = computed(() => {
@@ -46,15 +46,15 @@ const openingOptions = computed(() => {
     { label: 'Внутрь / Правая', id: 4, img: `${base}/web/img/wicket_opening_diagram_04.jpg` },
   ]
 })
-const opening_option_id = ref<number | null>(null)
+const openingOptionId = ref<number | null>(null)
 
 // ─── Перемычка ───────────────────────────────────────────────────────────────
 const showPeremichka         = ref(false)
 const peremichkaOptions      = ref<SelectItem[]>([])
-const peremichka_polozheniye = ref<string>('')
+const peremichkaPolozheniyeId = ref<string>('')
 const showSortament          = ref(false)
 const sortamentOptions       = ref<SelectItem[]>([])
-const peremichka_sortament   = ref<string>('')
+const peremichkaSortamentId   = ref<string>('')
 
 // Формат для B24SelectMenu: { id, label }
 const stolbSelectItems       = computed(() => stolbOptions.value.map(o => ({ id: String(o.id), label: o.name })))
@@ -67,9 +67,9 @@ async function loadStolbOptions() {
     const res = await getAssortmentStolb(calc.modelId.value)
     stolbOptions.value = res.assortmentPipe
     // Дефолтный выбор id=7 при первом открытии
-    if (!stolb_id.value) {
+    if (!stolbId.value) {
       const defaultItem = stolbOptions.value.find(i => i.id === 7)
-      stolb_id.value = String(defaultItem?.id ?? stolbOptions.value[0]?.id ?? '')
+      stolbId.value = String(defaultItem?.id ?? stolbOptions.value[0]?.id ?? '')
     }
   } catch (e) {
     console.warn('getAssortmentStolb:', e)
@@ -80,8 +80,8 @@ async function loadPolozhenieOptions(openingId: number) {
   try {
     const res = await getPolozhenieJumper(calc.modelId.value, openingId)
     peremichkaOptions.value = res.availablePolozheniyeJumper
-    if (!peremichka_polozheniye.value) {
-      peremichka_polozheniye.value = String(peremichkaOptions.value[0]?.id ?? '')
+    if (!peremichkaPolozheniyeId.value) {
+      peremichkaPolozheniyeId.value = String(peremichkaOptions.value[0]?.id ?? '')
     }
   } catch (e) {
     console.warn('getPolozhenieJumper:', e)
@@ -93,9 +93,9 @@ async function loadSortamentOptions() {
     const res = await getAssortmentJumper(calc.modelId.value)
     sortamentOptions.value = res.assortmentJumper
     // Дефолтный выбор id=11 при первом открытии
-    if (!peremichka_sortament.value) {
+    if (!peremichkaSortamentId.value) {
       const defaultItem = sortamentOptions.value.find(i => i.id === 11)
-      peremichka_sortament.value = String(defaultItem?.id ?? sortamentOptions.value[0]?.id ?? '')
+      peremichkaSortamentId.value = String(defaultItem?.id ?? sortamentOptions.value[0]?.id ?? '')
     }
   } catch (e) {
     console.warn('getAssortmentJumper:', e)
@@ -112,25 +112,25 @@ async function onStolbChange() {
 }
 
 async function onOpeningOptionChange() {
-  if (opening_option_id.value === null) return
+  if (openingOptionId.value === null) return
   showPeremichka.value = true
   showSortament.value  = false
-  peremichka_sortament.value = ''
+  peremichkaSortamentId.value = ''
   peremichkaOptions.value    = []
   sortamentOptions.value     = []
   calc.peremichkaPolozheniyeId.value   = ''
   calc.peremichkaPolozheniyeName.value = ''
   calc.peremichkaSortamentId.value     = null
   calc.peremichkaSortamentName.value   = null
-  peremichka_polozheniye.value = ''
-  await loadPolozhenieOptions(opening_option_id.value)
+  peremichkaPolozheniyeId.value = ''
+  await loadPolozhenieOptions(openingOptionId.value)
   await save()
 }
 
 async function onPolozhenieChange() {
-  showSortament.value = peremichka_polozheniye.value !== '1'
+  showSortament.value = peremichkaPolozheniyeId.value !== '1'
   sortamentOptions.value = []
-  peremichka_sortament.value = ''
+  peremichkaSortamentId.value = ''
   if (showSortament.value) {
     await loadSortamentOptions()
   }
@@ -143,30 +143,30 @@ async function onSortamentChange() {
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.nalichieStolbovName.value = nalichie_stolbov.value
-  calc.nalichieStolbovId.value   = nalichie_stolbov.value === 'Со столбами' ? 1 : 0
+  calc.nalichieStolbovName.value = nalichieStolbovName.value
+  calc.hasStolby.value   = nalichieStolbovName.value === 'Со столбами' ? 1 : 0
 
-  if (nalichie_stolbov.value === 'Со столбами') {
-    calc.stolbId.value   = stolb_id.value
-    const item = stolbOptions.value.find(i => String(i.id) === stolb_id.value)
+  if (nalichieStolbovName.value === 'Со столбами') {
+    calc.stolbId.value   = stolbId.value
+    const item = stolbOptions.value.find(i => String(i.id) === stolbId.value)
     calc.stolbName.value = item?.name ?? ''
   } else {
     calc.stolbId.value   = ''
     calc.stolbName.value = ''
   }
 
-  const openingItem = openingOptions.value.find(o => o.id === opening_option_id.value)
+  const openingItem = openingOptions.value.find(o => o.id === openingOptionId.value)
   calc.openingOptionName.value       = openingItem?.label ?? ''
-  calc.openingOptionId.value         = opening_option_id.value
+  calc.openingOptionId.value         = openingOptionId.value
   calc.openingOptionPathPhoto.value = openingItem?.img ?? ''
 
-  calc.peremichkaPolozheniyeId.value = peremichka_polozheniye.value
-  const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichka_polozheniye.value)
+  calc.peremichkaPolozheniyeId.value = peremichkaPolozheniyeId.value
+  const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichkaPolozheniyeId.value)
   calc.peremichkaPolozheniyeName.value = polItem?.name ?? ''
 
   if (calc.peremichkaPolozheniyeName.value && calc.peremichkaPolozheniyeName.value !== 'Без перемычки') {
-    calc.peremichkaSortamentId.value = peremichka_sortament.value || null
-    const sortItem = sortamentOptions.value.find(i => String(i.id) === peremichka_sortament.value)
+    calc.peremichkaSortamentId.value = peremichkaSortamentId.value || null
+    const sortItem = sortamentOptions.value.find(i => String(i.id) === peremichkaSortamentId.value)
     calc.peremichkaSortamentName.value = sortItem?.name ?? null
   } else {
     calc.peremichkaSortamentId.value   = null
@@ -178,7 +178,7 @@ function buildBlock() {
   const params: { name: string; value: string }[] = [
     { name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
   ]
-  if (nalichie_stolbov.value === 'Со столбами' && calc.stolbName.value) {
+  if (nalichieStolbovName.value === 'Со столбами' && calc.stolbName.value) {
     params.push({ name: 'Сортамент столбов', value: calc.stolbName.value })
   }
   if (calc.openingOptionName.value) {
@@ -201,7 +201,7 @@ async function save() {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       nalichieStolbovName:     calc.nalichieStolbovName.value,
-      nalichieStolbovId:       calc.nalichieStolbovId.value,
+      hasStolby:               calc.hasStolby.value,
       stolbName:                calc.stolbName.value,
       stolbId:                  calc.stolbId.value,
       openingOptionName:       calc.openingOptionName.value,
@@ -233,7 +233,7 @@ async function save() {
 
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
 function handleNext() {
-  if (opening_option_id.value === null) {
+  if (openingOptionId.value === null) {
     openModal('Выберите вариант открытия')
     return
   }
@@ -246,30 +246,30 @@ onMounted(async () => {
 
   // Восстанавливаем сохранённые значения
   if (calc.nalichieStolbovName.value) {
-    nalichie_stolbov.value = calc.nalichieStolbovName.value as 'Со столбами' | 'Без столбов'
+    nalichieStolbovName.value = calc.nalichieStolbovName.value as 'Со столбами' | 'Без столбов'
   }
   if (calc.openingOptionId.value !== null) {
-    opening_option_id.value = calc.openingOptionId.value
+    openingOptionId.value = calc.openingOptionId.value
   }
 
   await loadStolbOptions()
 
-  // Восстанавливаем stolb_id после загрузки списка
+  // Восстанавливаем stolbId после загрузки списка
   if (calc.stolbId.value) {
-    stolb_id.value = String(calc.stolbId.value)
+    stolbId.value = String(calc.stolbId.value)
   }
 
-  if (opening_option_id.value !== null) {
+  if (openingOptionId.value !== null) {
     showPeremichka.value = true
-    await loadPolozhenieOptions(opening_option_id.value)
+    await loadPolozhenieOptions(openingOptionId.value)
     if (calc.peremichkaPolozheniyeId.value) {
-      peremichka_polozheniye.value = String(calc.peremichkaPolozheniyeId.value)
+      peremichkaPolozheniyeId.value = String(calc.peremichkaPolozheniyeId.value)
     }
-    if (peremichka_polozheniye.value && peremichka_polozheniye.value !== '1') {
+    if (peremichkaPolozheniyeId.value && peremichkaPolozheniyeId.value !== '1') {
       showSortament.value = true
       await loadSortamentOptions()
       if (calc.peremichkaSortamentId.value) {
-        peremichka_sortament.value = String(calc.peremichkaSortamentId.value)
+        peremichkaSortamentId.value = String(calc.peremichkaSortamentId.value)
       }
     }
   }
@@ -305,7 +305,7 @@ onMounted(async () => {
         <div class="stolb-grid">
           <label class="lock-card">
             <input
-              v-model="nalichie_stolbov"
+              v-model="nalichieStolbovName"
               type="radio"
               value="Со столбами"
               class="sr-only"
@@ -317,7 +317,7 @@ onMounted(async () => {
           </label>
           <label class="lock-card">
             <input
-              v-model="nalichie_stolbov"
+              v-model="nalichieStolbovName"
               type="radio"
               value="Без столбов"
               class="sr-only"
@@ -332,7 +332,7 @@ onMounted(async () => {
           <span class="text-sm font-semibold whitespace-nowrap">Столб:</span>
           <div class="select-full-width">
             <B24SelectMenu
-              v-model="stolb_id"
+              v-model="stolbId"
               value-key="id"
               :items="stolbSelectItems"
               placeholder="Выберите столб"
@@ -351,7 +351,7 @@ onMounted(async () => {
           class="lock-card"
         >
           <input
-            v-model="opening_option_id"
+            v-model="openingOptionId"
             type="radio"
             :value="opt.id"
             class="sr-only"
@@ -374,7 +374,7 @@ onMounted(async () => {
           <span class="text-sm font-semibold whitespace-nowrap">Перемычка:</span>
           <div class="select-full-width">
             <B24SelectMenu
-              v-model="peremichka_polozheniye"
+              v-model="peremichkaPolozheniyeId"
               value-key="id"
               :items="peremichkaSelectItems"
               placeholder="Выберите перемычку"
@@ -387,7 +387,7 @@ onMounted(async () => {
           <span class="text-sm font-semibold whitespace-nowrap">Труба:</span>
           <div class="select-full-width">
             <B24SelectMenu
-              v-model="peremichka_sortament"
+              v-model="peremichkaSortamentId"
               value-key="id"
               :items="sortamentSelectItems"
               placeholder="Выберите трубу"

@@ -22,14 +22,14 @@ export function getNextPage(from: string, state: Type1NavState): string | null {
       return facadeMaterialDetailPage(state)
     case 'page2_facade_siding':
     case 'page2_facade_profnastil':
-      if (state.fill_side === 'Одна сторона') return 'page5'
+      if (state.fillSide === 'Одна сторона') return 'page5'
       return state.materialYardGlob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
     case 'page2_yard_siding':
     case 'page2_yard_profnastil':
       return 'page5'
     case 'page9':
       // Замок есть + предоставляет изготовитель → выбор комплекта; иначе → ручка (пропуск)
-      if (state.is_there_lock_id === 1 && state.providesLock !== 'Предоставляет заказчик') {
+      if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
         return 'page_lock_type'
       }
       return 'page10'
@@ -51,14 +51,14 @@ export function getPrevPage(from: string, state: Type1NavState): string | null {
     case 'page2_yard_profnastil':
       return facadeMaterialDetailPage(state)
     case 'page5':
-      if (state.fill_side === 'Одна сторона') {
+      if (state.fillSide === 'Одна сторона') {
         return facadeMaterialDetailPage(state)
       }
       return state.materialYardGlob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
     case 'page_lock_type':
       return 'page9'
     case 'page10':
-      if (state.is_there_lock_id === 1 && state.providesLock !== 'Предоставляет заказчик') {
+      if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
         return 'page_lock_type'
       }
       return 'page9'

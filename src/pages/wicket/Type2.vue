@@ -4,8 +4,6 @@ import WicketWizardPage from './WicketWizardPage.vue'
 import ManufacturingOption from '../../components/wicket/ManufacturingOption.vue'
 /** Шаги page2–page2_yard: только калитка типа 2 (`components/wicket/type2/`). */
 import FillSide from '../../components/wicket/type2/T2FillSide.vue'
-import SidingFacade from '../../components/wicket/type2/T2SidingFacade.vue'
-import SidingYard from '../../components/wicket/type2/T2SidingYard.vue'
 import ProfnastilFacade from '../../components/wicket/type2/T2ProfnastilFacade.vue'
 import ProfnastilYard from '../../components/wicket/type2/T2ProfnastilYard.vue'
 import StolbVariantOtkritiya from '../../components/wicket/StolbVariantOtkritiya.vue'
@@ -22,9 +20,7 @@ import { getNextPage, getPrevPage } from './type2Navigation'
 const stepComponents: Record<string, Component> = {
   page1: ManufacturingOption,
   page2: FillSide,
-  page2_facade_siding: SidingFacade,
   page2_facade_profnastil: ProfnastilFacade,
-  page2_yard_siding: SidingYard,
   page2_yard_profnastil: ProfnastilYard,
   page5: StolbVariantOtkritiya,
   page3: ShieldType,

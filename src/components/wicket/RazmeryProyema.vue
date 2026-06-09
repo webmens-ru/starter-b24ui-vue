@@ -97,9 +97,9 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      width_proyema:       calc.widthProyema.value,
-      height_proyema:      calc.heightProyema.value,
-      clearance_proyema:   calc.clearanceProyema.value,
+      widthProyema:       calc.widthProyema.value,
+      heightProyema:      calc.heightProyema.value,
+      clearanceProyema:   calc.clearanceProyema.value,
       sostoyaniyeProyema: calc.sostoyaniyeProyema.value,
     })
   } catch (e) {

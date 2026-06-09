@@ -5,8 +5,8 @@
 export interface WicketSharedNavState {
   modelId: string
   materialFacadeGlob: string
-  fill_side: string
+  fillSide: string
   materialYardGlob: string | null
-  is_there_lock_id: number
+  isThereLock: number
   providesLock: string
 }

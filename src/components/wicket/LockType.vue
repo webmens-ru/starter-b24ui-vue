@@ -13,11 +13,9 @@ interface LockItem {
 interface PenItem {
   id: number
   marking: string
-  colors: string[]
+  colors: { id: number; name: string }[]
   imageUrls?: string[]
 }
-
-const DEFAULT_COLORS = ['Черная', 'Коричневая', 'Белая']
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -33,13 +31,13 @@ const loadingPens = ref(false)
 /** Выбранный комплект замка (id из get-list) */
 const selectedLockId = ref<number | null>(null)
 const selectedPenId = ref<number | null>(null)
-const selectedColor = ref<string>('Черная')
+const selectedColor = ref<number | null>(null)
 
-/** Цвета для выпадающего списка — из выбранной ручки или дефолтные */
+/** Цвета для выпадающего списка — из выбранной ручки */
 const colorSelectItems = computed(() => {
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  return colors.map(c => ({ id: c, label: c }))
+  const colors = pen?.colors ?? []
+  return colors.map(c => ({ id: c.id, label: c.name }))
 })
 
 function updateLockBlock() {
@@ -106,14 +104,19 @@ watch(selectedLockId, async (id) => {
   await loadPensForLock(id)
   if (penItems.value.length === 0) {
     calc.lockPenId.value = null
+    calc.lockPenColorId.value = null
     calc.lockPenColor.value = ''
   } else if (selectedPenId.value && penItems.value.some(p => p.id === selectedPenId.value)) {
     calc.lockPenId.value = selectedPenId.value
-    calc.lockPenColor.value = selectedColor.value
+    calc.lockPenColorId.value = selectedColor.value
+    const colorObj = penItems.value.find(p => p.id === selectedPenId.value)?.colors?.find(c => c.id === selectedColor.value)
+    calc.lockPenColor.value = colorObj?.name ?? ''
   } else {
     selectedPenId.value = penItems.value[0].id
     calc.lockPenId.value = penItems.value[0].id
-    calc.lockPenColor.value = selectedColor.value
+    calc.lockPenColorId.value = selectedColor.value
+    const colorObj = penItems.value[0]?.colors?.find(c => c.id === selectedColor.value)
+    calc.lockPenColor.value = colorObj?.name ?? ''
   }
   updateLockBlock()
   await save()
@@ -122,16 +125,19 @@ watch(selectedLockId, async (id) => {
 watch(selectedPenId, (id) => {
   calc.lockPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  if (!colors.includes(selectedColor.value)) {
-    selectedColor.value = colors[0]
+  const colors = pen?.colors ?? []
+  if (!colors.some(c => c.id === selectedColor.value)) {
+    selectedColor.value = colors[0]?.id ?? null
   }
   updateLockBlock()
   save()
 })
 
-watch(selectedColor, (color) => {
-  calc.lockPenColor.value = color
+watch(selectedColor, (colorId) => {
+  calc.lockPenColorId.value = colorId
+  const pen = penItems.value.find(p => p.id === selectedPenId.value)
+  const colorObj = pen?.colors?.find(c => c.id === colorId)
+  calc.lockPenColor.value = colorObj?.name ?? ''
   updateLockBlock()
   save()
 })
@@ -149,13 +155,13 @@ function applySavedSelection() {
     selectedPenId.value = penItems.value[0].id
   }
 
-  const savedColor = calc.lockPenColor.value
+  const savedColorId = calc.lockPenColorId.value
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  if (savedColor && colors.includes(savedColor)) {
-    selectedColor.value = savedColor
+  const colors = pen?.colors ?? []
+  if (savedColorId != null && colors.some(c => c.id === savedColorId)) {
+    selectedColor.value = savedColorId
   } else if (colors.length) {
-    selectedColor.value = colors[0]
+    selectedColor.value = colors[0].id
   }
 }
 
@@ -165,9 +171,9 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      lockSetId:     calc.lockSetId.value,
-      lockPenId:     calc.lockPenId.value,
-      lock_penColor:  calc.lockPenColor.value || null,
+      lockSetId:        calc.lockSetId.value,
+      lockPenId:        calc.lockPenId.value,
+      lockPenColorId:   calc.lockPenColorId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)

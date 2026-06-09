@@ -7,11 +7,9 @@ import ImageViewer from './ImageViewer.vue'
 interface PenItem {
   id: number
   marking: string
-  colors: string[]
+  colors: { id: number; name: string }[]
   imageUrls?: string[]
 }
-
-const DEFAULT_COLORS = ['Черная', 'Коричневая', 'Белая']
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -22,22 +20,22 @@ const calc = useCalculation()
 
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
-const is_there_pen = ref<string>('Не будет')
+const isTherePenName = ref<string>('Не будет')
 const penProvided = ref<string>('Предоставляет изготовитель')
 const penInstalled = ref<string>('Устанавливает изготовитель')
 const selectedPenId = ref<number | null>(null)
-const selectedColor = ref<string>('Черная')
+const selectedColor = ref<number | null>(null)
 
-const showDetails = computed(() => is_there_pen.value === 'Будет')
+const showDetails = computed(() => isTherePenName.value === 'Будет')
 
 /** Блок выбора ручки показываем только если её предоставляет изготовитель */
 const showPenSelection = computed(() => penProvided.value === 'Предоставляет изготовитель')
 
-/** Цвета для выпадающего списка — из выбранной ручки или дефолтные */
+/** Цвета для выпадающего списка — из выбранной ручки */
 const colorSelectItems = computed(() => {
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  return colors.map(c => ({ id: c, label: c }))
+  const colors = pen?.colors ?? []
+  return colors.map(c => ({ id: c.id, label: c.name }))
 })
 
 const providedOptions = [
@@ -50,22 +48,25 @@ const installedOptions = [
 ]
 
 function syncCalcFields() {
-  calc.isTherePenName.value = is_there_pen.value
-  calc.isTherePenId.value = is_there_pen.value === 'Будет' ? 1 : 0
+  calc.isTherePenName.value = isTherePenName.value
+  calc.isTherePen.value = isTherePenName.value === 'Будет' ? 1 : 0
 
   if (showDetails.value) {
     calc.penProvided.value = penProvided.value
     calc.penInstalled.value = penInstalled.value
     if (showPenSelection.value) {
       calc.additionalPenId.value = selectedPenId.value
-      calc.additionalPenColor.value = selectedColor.value
-      calc.penColor.value = selectedColor.value
       const pen = penItems.value.find(p => p.id === selectedPenId.value)
+      const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
+      calc.penColorId.value = selectedColor.value ?? null
+      calc.additionalPenColor.value = colorObj?.name ?? ''
+      calc.penColor.value = colorObj?.name ?? ''
       calc.additionalPenMarking.value = pen?.marking ?? ''
     } else {
       calc.additionalPenId.value = null
       calc.additionalPenColor.value = ''
       calc.additionalPenMarking.value = ''
+      calc.penColorId.value = null
       calc.penColor.value = ''
     }
   } else {
@@ -74,7 +75,8 @@ function syncCalcFields() {
     calc.additionalPenId.value = null
     calc.additionalPenColor.value = ''
     calc.additionalPenMarking.value = ''
-    calc.penColor.value = 'Черная'
+    calc.penColorId.value = null
+    calc.penColor.value = ''
   }
 }
 
@@ -118,24 +120,26 @@ watch(selectedPenId, (id) => {
   calc.additionalPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   calc.additionalPenMarking.value = pen?.marking ?? ''
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  if (!colors.includes(selectedColor.value)) {
-    selectedColor.value = colors[0]
+  const colors = pen?.colors ?? []
+  if (!colors.some(c => c.id === selectedColor.value)) {
+    selectedColor.value = colors[0]?.id ?? null
   }
-  calc.additionalPenColor.value = selectedColor.value
+  calc.additionalPenColor.value = colors.find(c => c.id === selectedColor.value)?.name ?? ''
   syncCalcFields()
   buildBlock()
   save()
 })
 
-watch(selectedColor, (color) => {
-  calc.additionalPenColor.value = color
+watch(selectedColor, (colorId) => {
+  const pen = penItems.value.find(p => p.id === selectedPenId.value)
+  const colorObj = pen?.colors?.find(c => c.id === colorId)
+  calc.additionalPenColor.value = colorObj?.name ?? ''
   syncCalcFields()
   buildBlock()
   save()
 })
 
-watch(is_there_pen, () => {
+watch(isTherePenName, () => {
   syncCalcFields()
   buildBlock()
   save()
@@ -156,13 +160,13 @@ function applySavedSelection() {
     selectedPenId.value = penItems.value[0].id
   }
 
-  const savedColor = calc.additionalPenColor.value
+  const savedColorId = calc.penColorId.value
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors?.length ? pen.colors : DEFAULT_COLORS
-  if (savedColor && colors.includes(savedColor)) {
-    selectedColor.value = savedColor
+  const colors = pen?.colors ?? []
+  if (savedColorId != null && colors.some(c => c.id === savedColorId)) {
+    selectedColor.value = savedColorId
   } else if (colors.length) {
-    selectedColor.value = colors[0]
+    selectedColor.value = colors[0].id
   }
 }
 
@@ -173,13 +177,13 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      is_there_pen_id: calc.isTherePenId.value,
-      is_there_pen_name: calc.isTherePenName.value,
+      isTherePen: calc.isTherePen.value,
+      isTherePenName: calc.isTherePenName.value,
       penProvided: calc.penProvided.value || null,
       penInstalled: calc.penInstalled.value || null,
-      penColor: calc.additionalPenColor.value || calc.penColor.value || null,
-      additional_pen_id: calc.additionalPenId.value,
-      additional_penColor: calc.additionalPenColor.value || null,
+      penColorId: calc.penColorId.value,
+      additionalPenId: calc.additionalPenId.value,
+      additionalPenColor: calc.additionalPenColor.value || null,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -203,7 +207,7 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page10')
 
-  if (calc.isTherePenName.value) is_there_pen.value = calc.isTherePenName.value
+  if (calc.isTherePenName.value) isTherePenName.value = calc.isTherePenName.value
   if (calc.penProvided.value) penProvided.value = calc.penProvided.value
   if (calc.penInstalled.value) penInstalled.value = calc.penInstalled.value
 
@@ -231,13 +235,13 @@ onMounted(async () => {
       <!-- Будет / Не будет -->
       <div class="option-grid">
         <label class="lock-card">
-          <input v-model="is_there_pen" type="radio" value="Будет" class="sr-only" />
+          <input v-model="isTherePenName" type="radio" value="Будет" class="sr-only" />
           <div class="card-content">
             <span class="block text-sm font-semibold text-center">Будет</span>
           </div>
         </label>
         <label class="lock-card">
-          <input v-model="is_there_pen" type="radio" value="Не будет" class="sr-only" />
+          <input v-model="isTherePenName" type="radio" value="Не будет" class="sr-only" />
           <div class="card-content">
             <span class="block text-sm font-semibold text-center">Не будет</span>
           </div>

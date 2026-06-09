@@ -523,6 +523,23 @@ export async function mockFinalCalculate(): Promise<{ priceDealer: string; price
   return { priceDealer: '15 000', priceRetail: '22 500' }
 }
 
+export async function mockFetchSavedOrderPrice(): Promise<{
+  hasSavedPrice: boolean
+  isActual: boolean
+  priceRetail?: string
+  priceDealer?: string
+  lastCalculatedAt?: number
+}> {
+  await delay(150)
+  return {
+    hasSavedPrice: true,
+    isActual: true,
+    priceRetail: '22500.00',
+    priceDealer: '15000.00',
+    lastCalculatedAt: Math.floor(Date.now() / 1000) - 3600,
+  }
+}
+
 export async function mockDeleteCalculation(): Promise<void> {
   await delay(200)
 }
@@ -569,7 +586,7 @@ export async function mockLoadWicketData(
     materialFacadeGlob: 'Сайдинг',
     materialYardGlob: null,
     nalichieStolbovName: 'Со столбами',
-    nalichieStolbovId: 1,
+    hasStolby: 1,
     stolbId: 7,
     stolbName: '60/60/2',
     openingOptionId: 1,
@@ -587,9 +604,9 @@ export async function mockLoadWicketData(
     clientAddress: 'Москва, ул. Ленина, 1',
     clientComment: '',
     countryCode: '+7',
-    isTherePenId: 0,
+    isTherePen: 0,
     isTherePenName: 'Не будет',
-    isThereLockId: 1,
+    isThereLock: 1,
     isThereLockName: 'Есть',
     providesLock: 'Предоставляет изготовитель',
     lockInstaller: 'Выполняет изготовитель',
@@ -602,7 +619,6 @@ export async function mockLoadWicketData(
     raspolozheniyePolotna: 'Вертикально',
     shieldType: 'Тип_1',
     colorShieldId: 1,
-    colorShieldName: 'RAL 7024',
     heightTopPart: '0',
     heightLowerPart: '0',
     widthSidePart: '0',

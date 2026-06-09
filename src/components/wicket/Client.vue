@@ -29,14 +29,14 @@ function openModal(msg: string, title = 'Внимание') {
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const calculationName = ref('')
-const client_name      = ref('')
-const client_last_name = ref('')
-const client_surname   = ref('')
-const country_code     = ref('+7')
-const phone            = ref('')
-const client_email     = ref('')
-const address          = ref('')
-const client_comment   = ref('')
+const clientName      = ref('')
+const clientLastName  = ref('')
+const clientSurname   = ref('')
+const countryCode     = ref('+7')
+const phone           = ref('')
+const clientEmail     = ref('')
+const address         = ref('')
+const clientComment   = ref('')
 
 // ─── Ошибки ──────────────────────────────────────────────────────────────────
 const errName  = ref('')
@@ -45,20 +45,20 @@ const errEmail = ref('')
 
 // ─── Yup схема ───────────────────────────────────────────────────────────────
 const schema = yup.object({
-  client_name:  yup.string().nullable(),
-  phone:        yup.string().nullable().test(
+  clientName:  yup.string().nullable(),
+  phone:       yup.string().nullable().test(
     'digits',
     'Введите корректный номер (10 цифр)',
     v => !v || (v ?? '').replace(/\D/g, '').length === 0 || (v ?? '').replace(/\D/g, '').length === 10,
   ),
-  client_email: yup.string().email('Некорректный email').nullable(),
+  clientEmail: yup.string().email('Некорректный email').nullable(),
 })
 
-type FieldName = 'client_name' | 'phone' | 'client_email'
+type FieldName = 'clientName' | 'phone' | 'clientEmail'
 const errRefs: Record<FieldName, typeof errName> = {
-  client_name:  errName,
-  phone:        errPhone,
-  client_email: errEmail,
+  clientName:  errName,
+  phone:       errPhone,
+  clientEmail: errEmail,
 }
 
 async function validateField(field: FieldName, value: string) {
@@ -73,7 +73,7 @@ async function validateField(field: FieldName, value: string) {
 async function validateAll(): Promise<boolean> {
   try {
     await schema.validate(
-      { client_name: client_name.value, phone: phone.value, client_email: client_email.value || null },
+      { clientName: clientName.value, phone: phone.value, clientEmail: clientEmail.value || null },
       { abortEarly: false },
     )
     errName.value = errPhone.value = errEmail.value = ''
@@ -120,9 +120,9 @@ function onPhoneKeydown(e: KeyboardEvent) {
 const VALID_CODES = ['+1', '+7', '+31', '+33', '+44', '+49', '+380', '+375']
 
 function onCountryCodeBlur() {
-  if (!VALID_CODES.includes(country_code.value)) {
+  if (!VALID_CODES.includes(countryCode.value)) {
     openModal('Неверный код страны!')
-    country_code.value = ''
+    countryCode.value = ''
   }
 }
 
@@ -177,14 +177,14 @@ function debouncedSync() {
 // ─── Синхронизация ───────────────────────────────────────────────────────────
 function syncCalcFields() {
   calc.calculationName.value = calculationName.value
-  calc.clientName.value      = client_name.value
-  calc.clientLastName.value = client_last_name.value
-  calc.clientSurname.value   = client_surname.value
-  calc.clientPhone.value     = country_code.value + ' ' + phone.value
-  calc.clientEmail.value     = client_email.value
+  calc.clientName.value      = clientName.value
+  calc.clientLastName.value  = clientLastName.value
+  calc.clientSurname.value   = clientSurname.value
+  calc.clientPhone.value     = countryCode.value + ' ' + phone.value
+  calc.clientEmail.value     = clientEmail.value
   calc.clientAddress.value   = address.value
-  calc.clientComment.value   = client_comment.value
-  calc.countryCode.value     = country_code.value
+  calc.clientComment.value   = clientComment.value
+  calc.countryCode.value     = countryCode.value
 
   calc.updateOrCreateBlock('Клиент', [
     { name: 'Название расчета', value: calc.calculationName.value },
@@ -202,30 +202,30 @@ async function handleNext() {
   syncCalcFields()
   if (!(await validateAll())) return
 
-  const client_phone_raw = calc.clientPhone.value || ''
-  const client_phone =
-    client_phone_raw.replace(/\D/g, '').length >= 10 ? client_phone_raw : ''
+  const clientPhoneRaw = calc.clientPhone.value || ''
+  const clientPhoneValue =
+    clientPhoneRaw.replace(/\D/g, '').length >= 10 ? clientPhoneRaw : ''
 
   const payload = {
     ...calc.getBaseSavePayload(),
     calculationName:   calc.calculationName.value,
-    client_name:        calc.clientName.value,
-    client_last_name:   calc.clientLastName.value,
-    client_surname:     calc.clientSurname.value,
-    client_phone,
-    client_email:       calc.clientEmail.value,
-    client_address:     calc.clientAddress.value,
-    client_comment:     calc.clientComment.value,
+    clientName:        calc.clientName.value,
+    clientLastName:   calc.clientLastName.value,
+    clientSurname:     calc.clientSurname.value,
+    clientPhone: clientPhoneValue,
+    clientEmail:       calc.clientEmail.value,
+    clientAddress:     calc.clientAddress.value,
+    clientComment:     calc.clientComment.value,
   }
 
   const clientFilled =
-    client_phone !== '' ||
-    (payload.client_name || '').trim() !== '' ||
-    (payload.client_last_name || '').trim() !== '' ||
-    (payload.client_surname || '').trim() !== '' ||
-    (payload.client_email || '').trim() !== '' ||
-    (payload.client_address || '').trim() !== '' ||
-    (payload.client_comment || '').trim() !== ''
+    clientPhoneValue !== '' ||
+    (payload.clientName || '').trim() !== '' ||
+    (payload.clientLastName || '').trim() !== '' ||
+    (payload.clientSurname || '').trim() !== '' ||
+    (payload.clientEmail || '').trim() !== '' ||
+    (payload.clientAddress || '').trim() !== '' ||
+    (payload.clientComment || '').trim() !== ''
 
   try {
     await saveWicketData(payload)
@@ -245,14 +245,14 @@ onMounted(() => {
   calc.setActivePage('page11')
 
   calculationName.value = calc.calculationName.value
-  client_name.value      = calc.clientName.value
-  client_last_name.value = calc.clientLastName.value
-  client_surname.value   = calc.clientSurname.value
-  client_email.value     = calc.clientEmail.value
-  address.value          = calc.clientAddress.value
-  client_comment.value   = calc.clientComment.value
+  clientName.value      = calc.clientName.value
+  clientLastName.value  = calc.clientLastName.value
+  clientSurname.value   = calc.clientSurname.value
+  clientEmail.value     = calc.clientEmail.value
+  address.value         = calc.clientAddress.value
+  clientComment.value   = calc.clientComment.value
 
-  if (calc.countryCode.value)  country_code.value = calc.countryCode.value
+  if (calc.countryCode.value) countryCode.value = calc.countryCode.value
   if (calc.clientPhone.value) {
     const parts = calc.clientPhone.value.split(' ')
     if (parts.length > 1) phone.value = parts.slice(1).join(' ')
@@ -304,13 +304,13 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Имя:</label>
         <input
-          v-model="client_name"
+          v-model="clientName"
           type="text"
           placeholder="Введите имя"
           class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
           :class="errName ? 'border-red-500' : 'border-gray-300'"
-          @blur="validateField('client_name', client_name)"
-          @input="errName ? validateField('client_name', client_name) : debouncedSync()"
+          @blur="validateField('clientName', clientName)"
+          @input="errName ? validateField('clientName', clientName) : debouncedSync()"
         />
         <span v-if="errName" class="text-xs text-red-500">{{ errName }}</span>
       </div>
@@ -319,7 +319,7 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Фамилия:</label>
         <input
-          v-model="client_last_name"
+          v-model="clientLastName"
           type="text"
           placeholder="Введите фамилию"
           class="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -331,7 +331,7 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Отчество:</label>
         <input
-          v-model="client_surname"
+          v-model="clientSurname"
           type="text"
           placeholder="Введите отчество"
           class="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -344,7 +344,7 @@ onUnmounted(() => {
         <label class="font-semibold text-sm">Телефон:</label>
         <div class="flex gap-2">
           <input
-            v-model="country_code"
+            v-model="countryCode"
             type="text"
             list="country-codes"
             placeholder="+7"
@@ -374,13 +374,13 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Электронная почта:</label>
         <input
-          v-model="client_email"
+          v-model="clientEmail"
           type="email"
           placeholder="Введите электронную почту"
           class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
           :class="errEmail ? 'border-red-500' : 'border-gray-300'"
-          @blur="validateField('client_email', client_email)"
-          @input="errEmail ? validateField('client_email', client_email) : debouncedSync()"
+          @blur="validateField('clientEmail', clientEmail)"
+          @input="errEmail ? validateField('clientEmail', clientEmail) : debouncedSync()"
         />
         <span v-if="errEmail" class="text-xs text-red-500">{{ errEmail }}</span>
       </div>
@@ -415,7 +415,7 @@ onUnmounted(() => {
       <div class="flex flex-col gap-1">
         <label class="font-semibold text-sm">Комментарий:</label>
         <textarea
-          v-model="client_comment"
+          v-model="clientComment"
           rows="4"
           placeholder="Ваш комментарий"
           class="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"

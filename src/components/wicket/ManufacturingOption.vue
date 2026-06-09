@@ -30,10 +30,10 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      provides_material:   calc.providesMaterial.value,
-      provides_paint:      calc.providesPaint.value,
-      does_painting_frame: calc.doesPaintingFrame.value,
-      does_assembly:       calc.doesAssembly.value,
+      providesMaterial:   calc.providesMaterial.value,
+      providesPaint:      calc.providesPaint.value,
+      doesPaintingFrame: calc.doesPaintingFrame.value,
+      doesAssembly:      calc.doesAssembly.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -43,9 +43,9 @@ async function save() {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
-        productType:       calc.productType.value,
-        model:              calc.model.value,
-        modelId:           calc.modelId.value,
+        modelId: calc.modelId.value,
+        productType: calc.productType.value,
+        model: calc.model.value,
       })
       calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {

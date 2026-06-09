@@ -25,7 +25,7 @@ describe('useCalculation', () => {
       materialFacadeGlob: 'Профлист',
       materialYardGlob: 'Сайдинг',
       nalichieStolbovName: 'Со столбами',
-      nalichieStolbovId: 1,
+      hasStolby: 1,
       stolbId: 7,
       stolbName: '60/60/2',
       openingOptionId: 2,
@@ -43,13 +43,13 @@ describe('useCalculation', () => {
       clientAddress: 'Москва, ул. Пушкина, 1',
       clientComment: 'Позвонить',
       countryCode: '+7',
-      isTherePenId: 1,
+      isTherePen: 1,
       isTherePenName: 'Будет',
       penProvided: 'Предоставляет заказчик',
       penInstalled: 'Устанавливает заказчик',
       penColor: 'Белая',
       typeLock: 'Тип_2',
-      isThereLockId: 0,
+      isThereLock: 0,
       isThereLockName: 'Нет',
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет изготовитель',
@@ -97,13 +97,13 @@ describe('useCalculation', () => {
       expect(calc.fillSide.value).toBe('Две стороны')
       expect(calc.materialFacadeGlob.value).toBe('Профлист')
       expect(calc.materialYardGlob.value).toBe('Сайдинг')
-      expect(calc.nalichieStolbovId.value).toBe(1)
+      expect(calc.hasStolby.value).toBe(1)
       expect(calc.openingOptionId.value).toBe(2)
       expect(calc.peremichkaSortamentId.value).toBe(11)
       expect(calc.clientName.value).toBe('Иван')
       expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
-      expect(calc.isTherePenId.value).toBe(1)
-      expect(calc.isThereLockId.value).toBe(0)
+      expect(calc.isTherePen.value).toBe(1)
+      expect(calc.isThereLock.value).toBe(0)
       expect(calc.widthProyema.value).toBe('1100')
       expect(calc.shieldType.value).toBe('Тип_3')
       expect(calc.heightTopPart.value).toBe('150')
@@ -114,14 +114,14 @@ describe('useCalculation', () => {
 
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {
       calc.loadFromApi({
-        nalichieStolbovId: '1',
+        hasStolby: '1',
         openingOptionId: '2',
-        isTherePenId: '1',
-        isThereLockId: '0',
+        isTherePen: '1',
+        isThereLock: '0',
       })
 
-      expect(calc.nalichieStolbovId.value).toBe(1)
-      expect(typeof calc.nalichieStolbovId.value).toBe('number')
+      expect(calc.hasStolby.value).toBe(1)
+      expect(typeof calc.hasStolby.value).toBe('number')
     })
 
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
@@ -159,6 +159,31 @@ describe('useCalculation', () => {
       expect(calc.isPageAccessible('page5')).toBe(false)
       expect(calc.isPageAccessible('page12')).toBe(false)
     })
+
+    it('при сохранённом page11 и уже рассчитанной цене открывает page12', () => {
+      calc.loadFromApi({
+        orderId: 42,
+        visitedPages: ['page1', 'page2', 'page3', 'page5', 'page6', 'page7', 'page9', 'page10', 'page11'],
+        activePage: 'page11',
+        priceRetail: '19978.49',
+        priceDealer: '17980.64',
+        providesMaterial: 'Предоставляет изготовитель',
+        providesPaint: 'Предоставляет изготовитель',
+        doesPaintingFrame: 'Выполняет изготовитель',
+        fillSide: 'Одна сторона',
+        shieldType: 'Тип_1',
+        openingOptionId: 1,
+        raspolozheniyePolotna: 'Вертикально',
+        widthProyema: '1000',
+        heightProyema: '2000',
+        isThereLock: 1,
+        isTherePen: 0,
+        clientName: 'Иван',
+      })
+
+      expect(calc.activePage.value).toBe('page12')
+      expect(calc.isPageAccessible('page12')).toBe(true)
+    })
   })
 
   describe('rebuildSummaryBlocks (через loadFromApi)', () => {
@@ -168,7 +193,7 @@ describe('useCalculation', () => {
         fillSide: 'Две стороны',
         materialFacadeGlob: 'Сайдинг',
         materialYardGlob: 'Профлист',
-        isThereLockId: 1,
+        isThereLock: 1,
         clientName: 'Тест',
       })
 

@@ -98,7 +98,7 @@ async function save() {
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),
-    fill_side:                calc.fillSide.value,
+    fillSide:                calc.fillSide.value,
     materialFacadeGlob:     calc.materialFacadeGlob.value,
     materialYardGlob:       calc.materialYardGlob.value,
     materialSupplierFacade: null,
@@ -106,17 +106,17 @@ async function save() {
     thicknessFacade:         null,
     typeOfCoatingFacade:   null,
     colorFacade:             null,
-    price_facade:             null,
-    delivery_time_facade:     null,
-    in_stock_facade:          null,
+    priceFacade:             null,
+    deliveryTimeFacade:     null,
+    inStockFacade:          null,
     materialSupplierYard:   null,
     formYard:                null,
     thicknessYard:           null,
     typeOfCoatingYard:     null,
     colorYard:               null,
-    price_yard:               null,
-    delivery_time_yard:       null,
-    in_stock_yard:            null,
+    priceYard:               null,
+    deliveryTimeYard:       null,
+    inStockYard:            null,
   })
 
   if (calc.priceRetail.value) {

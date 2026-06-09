@@ -74,13 +74,13 @@ describe('saveWicketData — данные передаются на бэк', () 
       reachedStep: 'page1',
     })
     expect(payload).toHaveProperty('visitedPages')
-    expect(payload).toHaveProperty('provides_material')
-    expect(payload).toHaveProperty('provides_paint')
-    expect(payload).toHaveProperty('does_painting_frame')
-    expect(payload).toHaveProperty('does_assembly')
+    expect(payload).toHaveProperty('providesMaterial')
+    expect(payload).toHaveProperty('providesPaint')
+    expect(payload).toHaveProperty('doesPaintingFrame')
+    expect(payload).toHaveProperty('doesAssembly')
   })
 
-  it('FillSide передаёт fill_side и materialFacadeGlob', async () => {
+  it('FillSide передаёт fillSide и materialFacadeGlob', async () => {
     mount(FillSide, {
       global: {
         plugins: [testRouter],
@@ -97,7 +97,7 @@ describe('saveWicketData — данные передаются на бэк', () 
       orderId: 42,
       modelId: '1',
       reachedStep: 'page2',
-      fill_side: 'Одна сторона',
+      fillSide: 'Одна сторона',
       materialFacadeGlob: 'Сайдинг',
       materialYardGlob: null,
     })
@@ -120,8 +120,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload.materialYardGlob).toBe('Профлист')
   })
 
-  it('IsTherelock передаёт is_there_lock_id', async () => {
-    calc.isThereLockId.value = 0
+  it('IsTherelock передаёт isThereLock', async () => {
+    calc.isThereLock.value = 0
     calc.isThereLockName.value = 'Нет'
 
     mount(IsTherelock, {
@@ -135,8 +135,8 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(saveWicketData).toHaveBeenCalled()
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload).toHaveProperty('is_there_lock_id')
-    expect(payload).toHaveProperty('is_there_lock_name')
+    expect(payload).toHaveProperty('isThereLock')
+    expect(payload).toHaveProperty('isThereLockName')
     expect(payload).toHaveProperty('reachedStep')
     expect(payload.modelId).toBe('1')
   })
