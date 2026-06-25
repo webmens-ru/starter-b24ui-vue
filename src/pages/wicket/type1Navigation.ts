@@ -1,6 +1,6 @@
 /** Логика навигации по шагам формы Type1. Вынесена для тестирования. */
 
-import { WICKET_MENU_ITEMS } from './wicketMenuConfig'
+import { linearNext, linearPrev } from './wicketAddonNav'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 /** Состояние навигации типа 1 (совпадает с общим контрактом; см. `facadeMaterialDetailPage`). */
@@ -13,8 +13,6 @@ function facadeMaterialDetailPage(state: Type1NavState): 'page2_facade_siding' |
   }
   return state.materialFacadeGlob === 'Профлист' ? 'page2_facade_profnastil' : 'page2_facade_siding'
 }
-
-const MENU_ITEMS = WICKET_MENU_ITEMS
 
 export function getNextPage(from: string, state: Type1NavState): string | null {
   switch (from) {
@@ -35,10 +33,8 @@ export function getNextPage(from: string, state: Type1NavState): string | null {
       return 'page10'
     case 'page_lock_type':
       return 'page10'
-    default: {
-      const idx = MENU_ITEMS.findIndex(m => m.page === from)
-      return idx !== -1 && idx < MENU_ITEMS.length - 1 ? MENU_ITEMS[idx + 1].page : null
-    }
+    default:
+      return linearNext(from, state)
   }
 }
 
@@ -62,9 +58,7 @@ export function getPrevPage(from: string, state: Type1NavState): string | null {
         return 'page_lock_type'
       }
       return 'page9'
-    default: {
-      const idx = MENU_ITEMS.findIndex(m => m.page === from)
-      return idx > 0 ? MENU_ITEMS[idx - 1].page : null
-    }
+    default:
+      return linearPrev(from, state)
   }
 }

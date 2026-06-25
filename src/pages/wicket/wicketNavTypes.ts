@@ -9,4 +9,5 @@ export interface WicketSharedNavState {
   materialYardGlob: string | null
   isThereLock: number
   providesLock: string
+  availableSections: string[]
 }

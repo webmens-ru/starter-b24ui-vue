@@ -2,7 +2,7 @@
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadWicketData, createOrder, createWicketMainMenu } from '../../app/api/wicket'
+import { loadWicketData, createOrder, createWicketMainMenu, getAddonList } from '../../app/api/wicket'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import { WICKET_MENU_ITEMS, type WicketMenuItem } from './wicketMenuConfig'
 import type { WicketSharedNavState } from './wicketNavTypes'
@@ -51,6 +51,7 @@ async function initCalculation() {
   const existingOrderId = calc.number.value ? Number(calc.number.value) : null
   calc.modelId.value = resolvedModelId()
   try {
+    await loadAddonAvailability()
     if (placementId) {
       const orderId = Number(placementId)
       const apiData = await loadWicketData(calc.modelId.value, orderId)
@@ -98,7 +99,28 @@ watch(isMobile, (mobile) => {
   showSummary.value = !mobile
 })
 
-const menuItems = WICKET_MENU_ITEMS
+const ADDON_PAGES = ['page_door_closer', 'page_bumper', 'page_skud']
+async function loadAddonAvailability() {
+  const modelId = Number(calc.modelId.value)
+  const map: Array<['doorCloser' | 'bumper' | 'skud', 'door-closer' | 'bumper' | 'skud', string]> = [
+    ['doorCloser', 'door-closer', 'page_door_closer'],
+    ['bumper', 'bumper', 'page_bumper'],
+    ['skud', 'skud', 'page_skud'],
+  ]
+  const avail: string[] = []
+  await Promise.all(map.map(async ([key, section, page]) => {
+    try {
+      const res = await getAddonList(section, modelId)
+      calc.addonItems.value[key] = res.items
+      if (res.items.length) avail.push(page)
+    } catch (e) { console.warn('getAddonList', section, e) }
+  }))
+  calc.availableSections.value = avail
+}
+
+const menuItems = computed(() =>
+  WICKET_MENU_ITEMS.filter(m => !ADDON_PAGES.includes(m.page) || calc.availableSections.value.includes(m.page)),
+)
 
 const currentComponent = shallowRef<Component | null>(null)
 
@@ -110,6 +132,7 @@ function getNavState(): WicketSharedNavState {
     materialYardGlob: calc.materialYardGlob.value,
     isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
+    availableSections: calc.availableSections.value,
   }
 }
 

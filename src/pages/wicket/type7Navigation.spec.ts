@@ -9,6 +9,7 @@ function state(overrides: Partial<Type7NavState> = {}): Type7NavState {
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
+    availableSections: ['page_door_closer', 'page_bumper', 'page_skud'],
     ...overrides,
   }
 }

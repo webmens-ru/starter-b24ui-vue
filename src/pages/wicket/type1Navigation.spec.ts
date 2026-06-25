@@ -9,6 +9,7 @@ function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
+    availableSections: ['page_door_closer', 'page_bumper', 'page_skud'],
     ...overrides,
   }
 }
@@ -151,6 +152,21 @@ describe('type1Navigation', () => {
       it('page1 → null', () => {
         expect(getPrevPage('page1', state())).toBeNull()
       })
+    })
+  })
+
+  describe('furniture-разделы (динамическая видимость)', () => {
+    it('page10 → первый доступный addon (все доступны)', () => {
+      expect(getNextPage('page10', state())).toBe('page_door_closer')
+    })
+    it('page10 → page11 (client), когда addon-разделов нет', () => {
+      expect(getNextPage('page10', state({ availableSections: [] }))).toBe('page11')
+    })
+    it('page10 → page_bumper, когда доступен только bumper', () => {
+      expect(getNextPage('page10', state({ availableSections: ['page_bumper'] }))).toBe('page_bumper')
+    })
+    it('page11 (client).prev → последний доступный addon', () => {
+      expect(getPrevPage('page11', state({ availableSections: ['page_skud'] }))).toBe('page_skud')
     })
   })
 })
