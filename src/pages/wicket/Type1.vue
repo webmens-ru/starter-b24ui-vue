@@ -17,6 +17,9 @@ import LockType from '../../components/wicket/LockType.vue'
 import Pen from '../../components/wicket/Pen.vue'
 import Client from '../../components/wicket/Client.vue'
 import End from '../../components/wicket/End.vue'
+import DoorCloserStep from '../../components/wicket/steps/DoorCloserStep.vue'
+import BumperStep from '../../components/wicket/steps/BumperStep.vue'
+import SkudStep from '../../components/wicket/steps/SkudStep.vue'
 import { getNextPage, getPrevPage } from './type1Navigation'
 
 const stepComponents: Record<string, Component> = {
@@ -33,6 +36,9 @@ const stepComponents: Record<string, Component> = {
   page9: IsTherelock,
   page_lock_type: LockType,
   page10: Pen,
+  page_door_closer: DoorCloserStep,
+  page_bumper: BumperStep,
+  page_skud: SkudStep,
   page11: Client,
   page12: End,
 }
