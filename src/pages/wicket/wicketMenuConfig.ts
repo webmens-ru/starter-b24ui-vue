@@ -15,6 +15,9 @@ export const WICKET_MENU_ITEMS: WicketMenuItem[] = [
   { url: 'razmery-proyema', page: 'page7', label: 'Проем' },
   { url: 'is-there-lock', page: 'page9', label: 'Комплект замка' },
   { url: 'pen', page: 'page10', label: 'Дополнительная ручка' },
+  { url: 'door-closer', page: 'page_door_closer', label: 'Доводчик' },
+  { url: 'bumper', page: 'page_bumper', label: 'Отбойник' },
+  { url: 'skud', page: 'page_skud', label: 'СКУД' },
   { url: 'client', page: 'page11', label: 'Клиент' },
   { url: 'end', page: 'page12', label: 'Рассчитать' },
 ]

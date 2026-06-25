@@ -336,6 +336,15 @@ export async function getAdditionalPens(): Promise<{
   return data.data
 }
 
+/** Список моделей furniture-раздела (доводчик/отбойник/скуд), отфильтрованный по типу калитки. */
+export async function getAddonList(
+  section: 'door-closer' | 'bumper' | 'skud',
+  modelId: number | string,
+): Promise<{ items: Array<{ id: number; marking: string; imageUrls?: string[] }> }> {
+  const { data } = await api.get(`/api/dict/${section}/get-list`, { params: { modelId } })
+  return data.data
+}
+
 export async function getAddressSuggestions(
   query: string
 ): Promise<{ suggestions: { value: string }[] }> {

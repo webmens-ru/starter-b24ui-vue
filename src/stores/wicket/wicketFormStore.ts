@@ -55,6 +55,16 @@ const additionalPenId     = ref<number | null>(null)
 const additionalPenColor  = ref<string>('')
 const additionalPenMarking = ref<string>('')
 
+// Поля furniture-разделов (доводчик/отбойник/скуд)
+type AddonKey = 'doorCloser' | 'bumper' | 'skud'
+interface AddonState { isThere: number; provided: string; installed: string; itemId: number | null; marking: string }
+function emptyAddon(): AddonState {
+  return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '' }
+}
+const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
+const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
+const availableSections = ref<string[]>([])
+
 // Поля шага "Тип замка" и ручки в комплекте
 const typeLock      = ref<string>('Тип_1')
 const lockSetId    = ref<number | null>(null)
@@ -180,6 +190,9 @@ const fieldsFilled = ref<number>(0)
     additionalPenId.value = null
     additionalPenColor.value = ''
     additionalPenMarking.value = ''
+    addons.value = { doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() }
+    addonItems.value = { doorCloser: [], bumper: [], skud: [] }
+    availableSections.value = []
     typeLock.value = 'Тип_1'
     lockSetId.value = null
     lockPenId.value = null
@@ -402,6 +415,18 @@ const fieldsFilled = ref<number>(0)
     )
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
 
+    const A = apiData as Record<string, unknown>
+    const numOrNull = (v: unknown) => (v == null || v === '' ? null : Number(v))
+    const fillAddon = (k: AddonKey, isThere: unknown, id: unknown, prov: unknown, inst: unknown) => {
+      addons.value[k].isThere = Number(isThere ?? 0)
+      addons.value[k].itemId = numOrNull(id)
+      addons.value[k].provided = String(prov ?? 'Предоставляет изготовитель')
+      addons.value[k].installed = String(inst ?? 'Устанавливает изготовитель')
+    }
+    fillAddon('doorCloser', A.isThereDoorCloser, A.doorCloserId, A.doorCloserProvided, A.doorCloserInstalled)
+    fillAddon('bumper', A.isThereBumper, A.bumperId, A.bumperProvided, A.bumperInstalled)
+    fillAddon('skud', A.isThereSkud, A.skudId, A.skudProvided, A.skudInstalled)
+
     // Когда additionalPenId задан, цвет хранится в penColor — синхронизируем additionalPenColor
     if (additionalPenId.value != null && penColor.value && !additionalPenColor.value) {
       additionalPenColor.value = penColor.value
@@ -598,6 +623,20 @@ const fieldsFilled = ref<number>(0)
     }
     blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
+    // Доводчик / Отбойник / СКУД
+    for (const [key, label] of [['doorCloser', 'Доводчик'], ['bumper', 'Отбойник'], ['skud', 'СКУД']] as const) {
+      const ad = addons.value[key]
+      const p: CalcBlock['params'] = [{ name: label, value: ad.isThere === 1 ? 'Будет' : 'Не будет' }]
+      if (ad.isThere === 1) {
+        p.push({ name: 'Предоставляет', value: ad.provided })
+        p.push({ name: 'Устанавливает', value: ad.installed })
+        if (ad.provided === 'Предоставляет изготовитель' && ad.itemId != null && ad.marking) {
+          p.push({ name: 'Модель', value: ad.marking })
+        }
+      }
+      blocks.push({ blockName: label, params: p })
+    }
+
     // Клиент
     blocks.push({
       blockName: 'Клиент',
@@ -717,5 +756,8 @@ const fieldsFilled = ref<number>(0)
     updatePriceBlock,
     loadFromApi,
     resetFormFields,
+    addons,
+    addonItems,
+    availableSections,
   }
 })
