@@ -14,6 +14,7 @@ export const WICKET_MENU_ITEMS: WicketMenuItem[] = [
   { url: 'raspolozheniye-polotna', page: 'page6', label: 'Расположение полотна' },
   { url: 'razmery-proyema', page: 'page7', label: 'Проем' },
   { url: 'is-there-lock', page: 'page9', label: 'Комплект замка' },
+  { url: 'lock-components', page: 'page_lock_components', label: 'Комплектующие замка' },
   { url: 'pen', page: 'page10', label: 'Дополнительная ручка' },
   { url: 'door-closer', page: 'page_door_closer', label: 'Доводчик' },
   { url: 'bumper', page: 'page_bumper', label: 'Отбойник' },
