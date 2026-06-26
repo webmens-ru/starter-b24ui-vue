@@ -32,6 +32,8 @@ export function getNextPage(from: string, state: Type1NavState): string | null {
       }
       return 'page10'
     case 'page_lock_type':
+      return 'page_lock_components'
+    case 'page_lock_components':
       return 'page10'
     default:
       return linearNext(from, state)
@@ -53,9 +55,11 @@ export function getPrevPage(from: string, state: Type1NavState): string | null {
       return state.materialYardGlob === 'Профлист' ? 'page2_yard_profnastil' : 'page2_yard_siding'
     case 'page_lock_type':
       return 'page9'
+    case 'page_lock_components':
+      return 'page_lock_type'
     case 'page10':
       if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
-        return 'page_lock_type'
+        return 'page_lock_components'
       }
       return 'page9'
     default:

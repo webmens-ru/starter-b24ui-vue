@@ -57,12 +57,12 @@ const additionalPenMarking = ref<string>('')
 
 // Поля furniture-разделов (доводчик/отбойник/скуд)
 type AddonKey = 'doorCloser' | 'bumper' | 'skud'
-interface AddonState { isThere: number; provided: string; installed: string; itemId: number | null; marking: string }
+interface AddonState { isThere: number; provided: string; installed: string; itemId: number | null; marking: string; itemIds: number[] }
 function emptyAddon(): AddonState {
-  return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '' }
+  return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '', itemIds: [] }
 }
 const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
-const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
+const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
 const availableSections = ref<string[]>([])
 
 // Поля шага "Тип замка" и ручки в комплекте
@@ -71,6 +71,7 @@ const lockSetId    = ref<number | null>(null)
 const lockPenId    = ref<number | null>(null)
 const lockPenColor = ref<string>('')
 const lockPenColorId = ref<number | null>(null)
+const lockComponentIds = ref<number[]>([])
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
@@ -198,6 +199,7 @@ const fieldsFilled = ref<number>(0)
     lockPenId.value = null
     lockPenColor.value = ''
     lockPenColorId.value = null
+    lockComponentIds.value = []
     isThereLockName.value = 'Есть'
     isThereLock.value = 1
     providesLock.value = 'Предоставляет изготовитель'
@@ -366,6 +368,7 @@ const fieldsFilled = ref<number>(0)
       lockPenId,
       lockPenColor,
       lockPenColorId,
+      lockComponentIds,
       isThereLockName,
       isThereLock,
       providesLock,
@@ -417,15 +420,25 @@ const fieldsFilled = ref<number>(0)
 
     const A = apiData as Record<string, unknown>
     const numOrNull = (v: unknown) => (v == null || v === '' ? null : Number(v))
-    const fillAddon = (k: AddonKey, isThere: unknown, id: unknown, prov: unknown, inst: unknown) => {
+    const fillAddon = (k: AddonKey, isThere: unknown, id: unknown, prov: unknown, inst: unknown, ids?: unknown) => {
       addons.value[k].isThere = Number(isThere ?? 0)
       addons.value[k].itemId = numOrNull(id)
       addons.value[k].provided = String(prov ?? 'Предоставляет изготовитель')
       addons.value[k].installed = String(inst ?? 'Устанавливает изготовитель')
+      if (ids !== undefined && ids !== null && ids !== '') {
+        try {
+          const parsed = typeof ids === 'string' ? JSON.parse(ids) : ids
+          addons.value[k].itemIds = Array.isArray(parsed) ? parsed.map(Number) : []
+        } catch {
+          addons.value[k].itemIds = id ? [Number(id)] : []
+        }
+      } else {
+        addons.value[k].itemIds = id ? [Number(id)] : []
+      }
     }
     fillAddon('doorCloser', A.isThereDoorCloser, A.doorCloserId, A.doorCloserProvided, A.doorCloserInstalled)
     fillAddon('bumper', A.isThereBumper, A.bumperId, A.bumperProvided, A.bumperInstalled)
-    fillAddon('skud', A.isThereSkud, A.skudId, A.skudProvided, A.skudInstalled)
+    fillAddon('skud', A.isThereSkud, A.skudId, A.skudProvided, A.skudInstalled, A.skudIds)
 
     // Когда additionalPenId задан, цвет хранится в penColor — синхронизируем additionalPenColor
     if (additionalPenId.value != null && penColor.value && !additionalPenColor.value) {
@@ -630,8 +643,18 @@ const fieldsFilled = ref<number>(0)
       if (ad.isThere === 1) {
         p.push({ name: 'Предоставляет', value: ad.provided })
         p.push({ name: 'Устанавливает', value: ad.installed })
-        if (ad.provided === 'Предоставляет изготовитель' && ad.itemId != null && ad.marking) {
-          p.push({ name: 'Модель', value: ad.marking })
+        if (ad.provided === 'Предоставляет изготовитель') {
+          if (key === 'skud' && ad.itemIds.length > 0) {
+            const skudItems = addonItems.value.skud
+            const selectedMarkings = ad.itemIds
+              .map(id => skudItems.find(i => i.id === id)?.marking)
+              .filter(Boolean)
+            if (selectedMarkings.length > 0) {
+              p.push({ name: 'Модели', value: selectedMarkings.join(', ') })
+            }
+          } else if (ad.itemId != null && ad.marking) {
+            p.push({ name: 'Модель', value: ad.marking })
+          }
         }
       }
       blocks.push({ blockName: label, params: p })
@@ -710,6 +733,7 @@ const fieldsFilled = ref<number>(0)
     lockPenId,
     lockPenColor,
     lockPenColorId,
+    lockComponentIds,
     isThereLockName,
     isThereLock,
     providesLock,

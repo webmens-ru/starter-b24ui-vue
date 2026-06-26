@@ -19,6 +19,8 @@ export function getNextPage(from: string, state: Type9NavState): string | null {
       }
       return 'page10'
     case 'page_lock_type':
+      return 'page_lock_components'
+    case 'page_lock_components':
       return 'page10'
     default:
       return linearNext(from, state)
@@ -35,7 +37,7 @@ export function getPrevPage(from: string, state: Type9NavState): string | null {
       return 'page9'
     case 'page10':
       if (state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик') {
-        return 'page_lock_type'
+        return 'page_lock_components'
       }
       return 'page9'
     default:

@@ -318,6 +318,14 @@ export async function getLocks(): Promise<{
   return data.data
 }
 
+/** Комплектующие замка (dir_lock_component), отфильтрованные по типу калитки. */
+export async function getLockComponents(
+  modelId: number | string,
+): Promise<{ items: Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }> }> {
+  const { data } = await api.get('/api/dict/lock-component/get-list', { params: { modelId } })
+  return data.data
+}
+
 /** Ручки, совместимые с выбранным комплектом замка (dir_pen_lock). */
 export async function getPensByLock(lockSetId: number): Promise<{
   items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
@@ -340,7 +348,7 @@ export async function getAdditionalPens(): Promise<{
 export async function getAddonList(
   section: 'door-closer' | 'bumper' | 'skud',
   modelId: number | string,
-): Promise<{ items: Array<{ id: number; marking: string; imageUrls?: string[] }> }> {
+): Promise<{ items: Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }> }> {
   const { data } = await api.get(`/api/dict/${section}/get-list`, { params: { modelId } })
   return data.data
 }
