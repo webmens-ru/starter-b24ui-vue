@@ -9,7 +9,13 @@ const calc = useCalculation()
 
 const items = ref<Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>([])
 const selectedIds = ref<number[]>([])
+const installed = ref<string>('Устанавливает изготовитель')
 const loading = ref(false)
+
+const installedOptions = [
+  { value: 'Устанавливает изготовитель', label: 'Устанавливает изготовитель' },
+  { value: 'Устанавливает заказчик', label: 'Устанавливает заказчик' },
+]
 
 const lightboxImages = ref<string[]>([])
 const lightboxTitle = ref('')
@@ -62,12 +68,14 @@ async function save() {
 
   calc.updateOrCreateBlock('Комплектующие замка', [
     { name: 'Комплектующие', value: marking || 'Не выбрано' },
+    { name: 'Устанавливает', value: installed.value },
   ])
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       lockComponentIds: JSON.stringify(selectedIds.value),
+      lockComponentsInstalled: installed.value,
     })
   } catch (e) { console.warn('saveWicketData:', e) }
 
@@ -99,6 +107,12 @@ onMounted(async () => {
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Комплектующие замка</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+    </div>
+
+    <div class="option-grid">
+      <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
+        <input v-model="installed" type="radio" :value="opt.value" class="sr-only" />
+        <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
     </div>
 
     <div v-if="loading" class="text-center py-4 text-gray-400">Загрузка...</div>
@@ -185,4 +199,13 @@ onMounted(async () => {
 }
 .lightbox-dot.active { background: #fff; }
 .lightbox-title { color: #fff; font-size: 14px; }
+</style>
+
+<style scoped>
+.option-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 4px; }
+@media (min-width: 640px) { .option-grid { grid-template-columns: repeat(2, 1fr); min-width: 350px; max-width: 600px; margin-inline: auto; } }
+.lock-card { cursor: pointer; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.lock-card:hover { border-color: #93c5fd; }
+.lock-card:has(input:checked) { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); background: #eff6ff; }
+.card-content { padding: 12px; }
 </style>

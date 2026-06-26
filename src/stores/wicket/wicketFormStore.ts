@@ -72,6 +72,7 @@ const lockPenId    = ref<number | null>(null)
 const lockPenColor = ref<string>('')
 const lockPenColorId = ref<number | null>(null)
 const lockComponentIds = ref<number[]>([])
+const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
@@ -200,6 +201,7 @@ const fieldsFilled = ref<number>(0)
     lockPenColor.value = ''
     lockPenColorId.value = null
     lockComponentIds.value = []
+    lockComponentsInstalled.value = 'Устанавливает изготовитель'
     isThereLockName.value = 'Есть'
     isThereLock.value = 1
     providesLock.value = 'Предоставляет изготовитель'
@@ -368,7 +370,8 @@ const fieldsFilled = ref<number>(0)
       lockPenId,
       lockPenColor,
       lockPenColorId,
-      lockComponentIds,
+    lockComponentIds,
+    lockComponentsInstalled,
       isThereLockName,
       isThereLock,
       providesLock,
@@ -734,6 +737,7 @@ const fieldsFilled = ref<number>(0)
     lockPenColor,
     lockPenColorId,
     lockComponentIds,
+    lockComponentsInstalled,
     isThereLockName,
     isThereLock,
     providesLock,
