@@ -1,8 +1,13 @@
 import { createRequire } from 'node:module'
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import bitrix24UIPluginVite from '@bitrix24/b24ui-nuxt/vite'
+
+const gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+const buildTime = new Date().toISOString().replace('T', ' ').slice(0, 19)
+const APP_VERSION = `${gitHash} (${buildTime})`
 
 // Явный root — чтобы при сборке из разных cwd пути не ломались (rollup fileName)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -32,6 +37,9 @@ const vueuseCoreToValuePlugin = {
 // https://vitejs.dev/config/
 export default defineConfig({
   root: __dirname,
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   resolve: {
     // `frontend/` в этом репозитории может быть symlink на другой каталог — без этого Vitest
     // резолвит realpath и ищет тесты не в рабочей копии.

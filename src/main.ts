@@ -6,6 +6,10 @@ import b24UiPlugin from '@bitrix24/b24ui-nuxt/vue-plugin'
 import { router } from './app/router'
 import App from './App.vue'
 
+declare const __APP_VERSION__: string
+window.__APP_VERSION__ = __APP_VERSION__
+
+console.log('[app] version:', __APP_VERSION__)
 console.log('[app] init', {
   DEV: import.meta.env.DEV,
   _PARAMS_: window._PARAMS_,

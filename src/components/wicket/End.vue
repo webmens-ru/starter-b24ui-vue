@@ -89,7 +89,17 @@ async function persistWizardProgress() {
 }
 
 // ─── Расчёт цены ─────────────────────────────────────────────────────────────
+const lockIncomplete = computed(() =>
+  calc.isThereLock.value === 1
+  && calc.providesLock.value === 'Предоставляет изготовитель'
+  && calc.lockSetId.value == null
+)
+
 async function handleCalculate() {
+  if (lockIncomplete.value) {
+    openErrModal('Не выбран тип замка. Вернитесь на шаг «Комплект замка» и выберите комплект.')
+    return
+  }
   calculating.value = true
   try {
     const result = await finalCalculate({

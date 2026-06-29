@@ -18,6 +18,22 @@ const isThereCable = ref<string>('Изготовитель устанавлив�
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
 
+const lockTypeMissing = computed(() =>
+  showLockDetails.value
+  && providesLock.value === 'Предоставляет изготовитель'
+  && calc.lockSetId.value == null
+)
+
+function handleNext() {
+  if (lockTypeMissing.value) {
+    showLockWarning.value = true
+    return
+  }
+  emit('next')
+}
+
+const showLockWarning = ref(false)
+
 // ─── Группы радио ────────────────────────────────────────────────────────────
 const providesOptions = [
   { value: 'Предоставляет изготовитель', label: 'Замок предоставляет изготовитель' },
@@ -96,7 +112,7 @@ async function save() {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.priceRetail.value) {
+  if (calc.priceRetail.value && !lockTypeMissing.value) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -131,7 +147,7 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Замок</span>
-      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
@@ -196,6 +212,16 @@ onMounted(async () => {
       </template>
 
     </div>
+
+    <B24Modal
+      v-model:open="showLockWarning"
+      title="Выберите тип замка"
+      description="Вы указали, что замок предоставляет изготовитель, но не выбрали конкретный тип. Перейдите на следующий шаг и выберите комплект замка."
+    >
+      <template #footer="{ close }">
+        <B24Button color="air-primary" @click="close">Понятно</B24Button>
+      </template>
+    </B24Modal>
   </div>
 </template>
 

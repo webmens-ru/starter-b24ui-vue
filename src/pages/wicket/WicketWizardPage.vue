@@ -122,6 +122,17 @@ const menuItems = computed(() =>
   WICKET_MENU_ITEMS.filter(m => !ADDON_PAGES.includes(m.page) || calc.availableSections.value.includes(m.page)),
 )
 
+const incompletePages = computed(() => {
+  const pages: string[] = []
+  if (isFillSectionIncomplete.value) pages.push('page2')
+  if (calc.isThereLock.value === 1
+    && calc.providesLock.value === 'Предоставляет изготовитель'
+    && calc.lockSetId.value == null) {
+    pages.push('page9')
+  }
+  return pages
+})
+
 const currentComponent = shallowRef<Component | null>(null)
 
 function getNavState(): WicketSharedNavState {
@@ -272,7 +283,7 @@ function goBack() {
             :active-page="activePage"
             :visited-pages="visitedPages"
             :is-page-accessible="isPageAccessible"
-            :incomplete-pages="isFillSectionIncomplete ? ['page2'] : []"
+            :incomplete-pages="incompletePages"
             :collapsed="isMobile || menuCollapsed"
             @select="onMenuSelect"
           />
@@ -303,7 +314,7 @@ function goBack() {
               :active-page="activePage"
               :visited-pages="visitedPages"
               :is-page-accessible="isPageAccessible"
-              :incomplete-pages="isFillSectionIncomplete ? ['page2'] : []"
+              :incomplete-pages="incompletePages"
               :collapsed="false"
               @select="(item) => { onMenuSelect(item); menuOpen = false }"
             />
