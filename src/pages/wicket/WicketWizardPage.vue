@@ -5,6 +5,7 @@ import { useCalculation } from '../../composables/useCalculation'
 import { loadWicketData, createOrder, createWicketMainMenu, getAddonList } from '../../app/api/wicket'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import { WICKET_MENU_ITEMS, type WicketMenuItem } from './wicketMenuConfig'
+import { WICKET_SECTIONS, computeSectionValidation } from './wicketSections'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 declare const window: Window & {
@@ -23,7 +24,7 @@ const props = defineProps<{
 const calc: WicketCalculationApi = useCalculation()
 provide(WICKET_CALCULATION_KEY, calc)
 
-const { activePage, visitedPages, isPageAccessible, isFillSectionIncomplete, setActivePage, loadFromApi, reset } = calc
+const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi, reset } = calc
 
 const route = useRoute()
 /** modelId из _PARAMS_, из пути /wicket/typeN или '1' по умолчанию */
@@ -99,7 +100,6 @@ watch(isMobile, (mobile) => {
   showSummary.value = !mobile
 })
 
-const ADDON_PAGES = ['page_door_closer', 'page_bumper', 'page_skud']
 async function loadAddonAvailability() {
   const modelId = Number(calc.modelId.value)
   const map: Array<['doorCloser' | 'bumper' | 'skud', 'door-closer' | 'bumper' | 'skud', string]> = [
@@ -118,20 +118,36 @@ async function loadAddonAvailability() {
   calc.availableSections.value = avail
 }
 
-const menuItems = computed(() =>
-  WICKET_MENU_ITEMS.filter(m => !ADDON_PAGES.includes(m.page) || calc.availableSections.value.includes(m.page)),
+const sectionState = computed(() => ({
+  modelId: String(calc.modelId.value ?? ''),
+  materialFacadeGlob: calc.materialFacadeGlob.value,
+  fillSide: calc.fillSide.value,
+  materialYardGlob: calc.materialYardGlob.value,
+  isThereLock: calc.isThereLock.value,
+  providesLock: calc.providesLock.value,
+  availableSections: calc.availableSections.value,
+  idFacade: calc.idFacade.value,
+  idYard: calc.idYard.value,
+  lockSetId: calc.lockSetId.value,
+  widthProyema: calc.widthProyema.value,
+  heightProyema: calc.heightProyema.value,
+}))
+
+const sectionValidations = computed(() =>
+  computeSectionValidation(WICKET_SECTIONS, sectionState.value),
 )
 
-const incompletePages = computed(() => {
-  const pages: string[] = []
-  if (isFillSectionIncomplete.value) pages.push('page2')
-  if (calc.isThereLock.value === 1
-    && calc.providesLock.value === 'Предоставляет изготовитель'
-    && calc.lockSetId.value == null) {
-    pages.push('page9')
-  }
-  return pages
-})
+const menuItems = computed(() =>
+  WICKET_SECTIONS
+    .filter(s => s.visible(sectionState.value))
+    .map(s => s.menu),
+)
+
+const incompletePages = computed(() =>
+  Array.from(sectionValidations.value.entries())
+    .filter(([, v]) => !v.valid)
+    .map(([page]) => page),
+)
 
 const currentComponent = shallowRef<Component | null>(null)
 
