@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { finalCalculate, deleteCalculation, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
+import { WICKET_SECTIONS, computeSectionValidation } from '../../pages/wicket/wicketSections'
 
 const emit = defineEmits<{
   (e: 'back'): void
@@ -89,15 +90,30 @@ async function persistWizardProgress() {
 }
 
 // ─── Расчёт цены ─────────────────────────────────────────────────────────────
-const lockIncomplete = computed(() =>
-  calc.isThereLock.value === 1
-  && calc.providesLock.value === 'Предоставляет изготовитель'
-  && calc.lockSetId.value == null
-)
+const sectionState = computed(() => ({
+  isThereLock: calc.isThereLock.value,
+  providesLock: calc.providesLock.value,
+  lockSetId: calc.lockSetId.value,
+  idFacade: calc.idFacade.value,
+  idYard: calc.idYard.value,
+  fillSide: calc.fillSide.value,
+  widthProyema: calc.widthProyema.value,
+  heightProyema: calc.heightProyema.value,
+  availableSections: calc.availableSections.value,
+}))
+
+const sectionErrors = computed(() => {
+  const validations = computeSectionValidation(WICKET_SECTIONS, sectionState.value)
+  const errors: string[] = []
+  validations.forEach((v) => { if (!v.valid) errors.push(...v.errors) })
+  return errors
+})
+
+const allSectionsValid = computed(() => sectionErrors.value.length === 0)
 
 async function handleCalculate() {
-  if (lockIncomplete.value) {
-    openErrModal('Не выбран тип замка. Вернитесь на шаг «Комплект замка» и выберите комплект.')
+  if (!allSectionsValid.value) {
+    openErrModal(sectionErrors.value.join('\n'))
     return
   }
   calculating.value = true
