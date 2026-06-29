@@ -71,10 +71,10 @@ export const WICKET_SECTIONS: SectionDefinition[] = [
     subPages: ['page7'],
     visible: () => true,
     validate: (s) => {
-      const w = s.widthProyema as string
-      const h = s.heightProyema as string
-      if (!w || !w.trim()) return fail('Не указана ширина проёма')
-      if (!h || !h.trim()) return fail('Не указана высота проёма')
+      const w = String(s.widthProyema ?? '')
+      const h = String(s.heightProyema ?? '')
+      if (!w.trim()) return fail('Не указана ширина проёма')
+      if (!h.trim()) return fail('Не указана высота проёма')
       return ok()
     },
   },
