@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
+import { WICKET_SECTIONS, computeSectionValidation } from '../../pages/wicket/wicketSections'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -18,11 +19,24 @@ const isThereCable = ref<string>('Изготовитель устанавлив�
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
 
-const lockTypeMissing = computed(() =>
-  showLockDetails.value
-  && providesLock.value === 'Предоставляет изготовитель'
-  && calc.lockSetId.value == null
-)
+const sectionState = computed(() => ({
+  isThereLock: showLockDetails.value ? 1 : 0,
+  providesLock: providesLock.value,
+  lockSetId: calc.lockSetId.value,
+  idFacade: calc.idFacade.value,
+  idYard: calc.idYard.value,
+  fillSide: calc.fillSide.value,
+  widthProyema: calc.widthProyema.value,
+  heightProyema: calc.heightProyema.value,
+  availableSections: calc.availableSections.value,
+}))
+
+const lockSection = computed(() => {
+  const validations = computeSectionValidation(WICKET_SECTIONS, sectionState.value)
+  return validations.get('page9')
+})
+
+const lockTypeMissing = computed(() => lockSection.value != null && !lockSection.value.valid)
 
 function handleNext() {
   if (lockTypeMissing.value) {
