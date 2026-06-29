@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
-import { WICKET_SECTIONS, computeSectionValidation } from '../../pages/wicket/wicketSections'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -18,35 +17,6 @@ const lockInstaller = ref<string>('Выполняет изготовитель')
 const isThereCable = ref<string>('Изготовитель устанавливает')
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
-
-const sectionState = computed(() => ({
-  isThereLock: showLockDetails.value ? 1 : 0,
-  providesLock: providesLock.value,
-  lockSetId: calc.lockSetId.value,
-  idFacade: calc.idFacade.value,
-  idYard: calc.idYard.value,
-  fillSide: calc.fillSide.value,
-  widthProyema: calc.widthProyema.value,
-  heightProyema: calc.heightProyema.value,
-  availableSections: calc.availableSections.value,
-}))
-
-const lockSection = computed(() => {
-  const validations = computeSectionValidation(WICKET_SECTIONS, sectionState.value)
-  return validations.get('page9')
-})
-
-const lockTypeMissing = computed(() => lockSection.value != null && !lockSection.value.valid)
-
-function handleNext() {
-  if (lockTypeMissing.value) {
-    showLockWarning.value = true
-    return
-  }
-  emit('next')
-}
-
-const showLockWarning = ref(false)
 
 // ─── Группы радио ────────────────────────────────────────────────────────────
 const providesOptions = [
@@ -126,7 +96,7 @@ async function save() {
     console.warn('saveWicketData:', e)
   }
 
-  if (calc.priceRetail.value && !lockTypeMissing.value) {
+  if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -161,7 +131,7 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Замок</span>
-      <B24Button label="Далее" color="air-secondary" @click="handleNext" />
+      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
     </div>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
@@ -226,16 +196,6 @@ onMounted(async () => {
       </template>
 
     </div>
-
-    <B24Modal
-      v-model:open="showLockWarning"
-      title="Выберите тип замка"
-      description="Вы указали, что замок предоставляет изготовитель, но не выбрали конкретный тип. Перейдите на следующий шаг и выберите комплект замка."
-    >
-      <template #footer="{ close }">
-        <B24Button color="air-primary" @click="close">Понятно</B24Button>
-      </template>
-    </B24Modal>
   </div>
 </template>
 
