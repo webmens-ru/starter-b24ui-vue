@@ -80,7 +80,7 @@ export const WICKET_SECTIONS: SectionDefinition[] = [
   },
   {
     menu: { page: 'page9', label: 'Комплект замка', url: 'is-there-lock' },
-    subPages: ['page9', 'page_lock_type', 'page_lock_components'],
+    subPages: ['page9', 'page_lock_type'],
     visible: () => true,
     validate: (s) => {
       const isThereLock = s.isThereLock as number
@@ -90,6 +90,16 @@ export const WICKET_SECTIONS: SectionDefinition[] = [
       if (lockSetId == null) return fail('Не выбран тип замка')
       return ok()
     },
+  },
+  {
+    menu: { page: 'page_lock_components', label: 'Комплектующие замка', url: 'lock-components' },
+    subPages: ['page_lock_components'],
+    visible: (s) => {
+      const isThereLock = s.isThereLock as number
+      const providesLock = s.providesLock as string
+      return isThereLock === 1 && providesLock !== 'Предоставляет заказчик'
+    },
+    validate: () => ok(),
   },
   {
     menu: { page: 'page10', label: 'Дополнительная ручка', url: 'pen' },
