@@ -25,6 +25,11 @@ const penProvided = ref<string>('Предоставляет изготовите
 const penInstalled = ref<string>('Устанавливает изготовитель')
 const selectedPenId = ref<number | null>(null)
 const selectedColor = ref<number | null>(null)
+let isRestoringSelection = false
+const selectedColorModel = computed<number | undefined>({
+  get: () => selectedColor.value ?? undefined,
+  set: value => { selectedColor.value = value ?? null },
+})
 
 const showDetails = computed(() => isTherePenName.value === 'Будет')
 
@@ -117,6 +122,7 @@ async function loadAdditionalPens() {
 }
 
 watch(selectedPenId, (id) => {
+  if (isRestoringSelection) return
   calc.additionalPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   calc.additionalPenMarking.value = pen?.marking ?? ''
@@ -131,6 +137,7 @@ watch(selectedPenId, (id) => {
 })
 
 watch(selectedColor, (colorId) => {
+  if (isRestoringSelection) return
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colorObj = pen?.colors?.find(c => c.id === colorId)
   calc.additionalPenColor.value = colorObj?.name ?? ''
@@ -140,12 +147,14 @@ watch(selectedColor, (colorId) => {
 })
 
 watch(isTherePenName, () => {
+  if (isRestoringSelection) return
   syncCalcFields()
   buildBlock()
   save()
 })
 
 watch([penProvided, penInstalled], () => {
+  if (isRestoringSelection) return
   syncCalcFields()
   buildBlock()
   save()
@@ -206,16 +215,20 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page10')
+  isRestoringSelection = true
 
   if (calc.isTherePenName.value) isTherePenName.value = calc.isTherePenName.value
   if (calc.penProvided.value) penProvided.value = calc.penProvided.value
   if (calc.penInstalled.value) penInstalled.value = calc.penInstalled.value
+  selectedPenId.value = calc.additionalPenId.value
+  selectedColor.value = calc.penColorId.value
 
   await loadAdditionalPens()
   if (showDetails.value && penItems.value.length) {
     applySavedSelection()
   }
 
+  isRestoringSelection = false
   await save()
 })
 </script>
@@ -308,7 +321,7 @@ onMounted(async () => {
             <h2 class="text-lg font-semibold mb-2">Цвет ручки</h2>
             <div class="select-full-width w-full">
               <B24SelectMenu
-                v-model="selectedColor"
+                v-model="selectedColorModel"
                 value-key="id"
                 :items="colorSelectItems"
                 placeholder="Выберите цвет"

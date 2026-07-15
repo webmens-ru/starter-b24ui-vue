@@ -48,6 +48,9 @@ function syncCalcFields() {
       calc.lockSetId.value    = null
       calc.lockPenId.value    = null
       calc.lockPenColor.value = ''
+      calc.lockPenColorId.value = null
+      calc.lockComponentIds.value = []
+      calc.lockComponentsInstalled.value = 'Устанавливает изготовитель'
     }
   } else {
     calc.providesLock.value  = ''
@@ -57,6 +60,9 @@ function syncCalcFields() {
     calc.lockSetId.value    = null
     calc.lockPenId.value    = null
     calc.lockPenColor.value = ''
+    calc.lockPenColorId.value = null
+    calc.lockComponentIds.value = []
+    calc.lockComponentsInstalled.value = 'Устанавливает изготовитель'
   }
 }
 
@@ -90,6 +96,9 @@ async function save() {
       payload.lockSetId = null
       payload.lockPenId = null
       payload.lockPenColor = null
+      payload.lockPenColorId = null
+      payload.lockComponentIds = JSON.stringify([])
+      payload.lockComponentsInstalled = null
     }
     await saveWicketData(payload)
   } catch (e) {

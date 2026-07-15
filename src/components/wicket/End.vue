@@ -83,7 +83,7 @@ async function loadSavedPriceIfActual() {
 /** Сохраняет reachedStep / visitedPages в wicket_type* (иначе при reopen остаётся page11). */
 async function persistWizardProgress() {
   try {
-    await saveWicketData(calc.getBaseSavePayload())
+    await saveWicketData(calc.getFullSavePayload())
   } catch (e) {
     console.warn('persistWizardProgress:', e)
   }

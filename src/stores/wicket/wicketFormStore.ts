@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { CalcBlock } from './types'
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
-import { laterWizardStep, visitedPagesUpTo } from './wicketStepProgress'
+import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
@@ -257,7 +257,26 @@ const fieldsFilled = ref<number>(0)
    * Логика повторяет BaseModel::isStepCompleted / getReachedStepProgress.
    */
   function computeProgressFromState(apiData?: Record<string, unknown>): { visitedPages: string[]; activePage: string } {
-    const stepOrder = ['page1', 'page2', 'page3', 'page5', 'page6', 'page7', 'page9', 'page10', 'page11', 'page12']
+    const modelId = String(apiData?.modelId ?? useWicketWizardStore().modelId ?? '')
+    const addonPages = ['page_door_closer', 'page_bumper', 'page_skud'].filter(page => availableSections.value.includes(page))
+    const stepOrder = modelId === '2'
+      ? [
+          'page1',
+          'page2',
+          'page2_facade_profnastil',
+          'page5',
+          'page3',
+          'page6',
+          'page7',
+          'page9',
+          'page_lock_type',
+          'page_lock_components',
+          'page10',
+          ...addonPages,
+          'page11',
+          'page12',
+        ]
+      : ['page1', 'page2', 'page3', 'page5', 'page6', 'page7', 'page9', 'page10', 'page11', 'page12']
     const visited: string[] = []
     let active = 'page1'
 
@@ -278,6 +297,9 @@ const fieldsFilled = ref<number>(0)
         case 'page2':
           completed = notEmpty(fillSide.value) || !!(idFacade.value && String(idFacade.value)) || !!(idYard.value && String(idYard.value))
           break
+        case 'page2_facade_profnastil':
+          completed = !!(idFacade.value && String(idFacade.value))
+          break
         case 'page3':
           completed = notEmpty(shieldType.value)
           break
@@ -293,8 +315,23 @@ const fieldsFilled = ref<number>(0)
         case 'page9':
           completed = isThereLock.value !== null
           break
+        case 'page_lock_type':
+          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockSetId.value != null
+          break
+        case 'page_lock_components':
+          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockSetId.value != null
+          break
         case 'page10':
           completed = isTherePen.value !== null
+          break
+        case 'page_door_closer':
+          completed = addons.value.doorCloser.isThere !== null
+          break
+        case 'page_bumper':
+          completed = addons.value.bumper.isThere !== null
+          break
+        case 'page_skud':
+          completed = addons.value.skud.isThere !== null
           break
         case 'page11': {
           const snap = apiData?.client_snapshot
@@ -467,11 +504,13 @@ const fieldsFilled = ref<number>(0)
       active = computeProgressFromState(apiData).activePage
     }
 
-    w.activePage.value = active
+    const computedProgress = computeProgressFromState(apiData)
+    const shouldStartFromFirstPage = modelIdForLoad === '2'
+    w.activePage.value = shouldStartFromFirstPage ? 'page1' : active
     w.visitedPages.value =
       apiVisited.length > 0
-        ? visitedPagesUpTo(active, apiVisited)
-        : computeProgressFromState(apiData).visitedPages
+        ? mergeVisitedPages(visitedPagesUpTo(active, apiVisited), computedProgress.visitedPages)
+        : computedProgress.visitedPages
 
     // Восстанавливаем блоки сводки из загруженных данных
     rebuildSummaryBlocks()

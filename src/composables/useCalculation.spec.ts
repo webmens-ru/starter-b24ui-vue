@@ -124,6 +124,16 @@ describe('useCalculation', () => {
       expect(typeof calc.hasStolby.value).toBe('number')
     })
 
+    it('восстанавливает lockComponentIds из JSON-строки API', () => {
+      calc.loadFromApi({
+        lockComponentIds: '[2,5]',
+        lockComponentsInstalled: 'Устанавливает заказчик',
+      })
+
+      expect(calc.lockComponentIds.value).toEqual([2, 5])
+      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает заказчик')
+    })
+
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
       calc.loadFromApi({
         fillSide: 'Одна сторона',
@@ -158,6 +168,71 @@ describe('useCalculation', () => {
       expect(calc.isPageAccessible('page2')).toBe(true)
       expect(calc.isPageAccessible('page5')).toBe(false)
       expect(calc.isPageAccessible('page12')).toBe(false)
+    })
+
+    it('для type2 при редактировании восстанавливает реальный маршрут заполнения с первого шага', () => {
+      calc.loadFromApi({
+        orderId: 42,
+        modelId: '2',
+        providesMaterial: 'Предоставляет изготовитель',
+        providesPaint: 'Предоставляет изготовитель',
+        doesPaintingFrame: 'Выполняет изготовитель',
+        fillSide: 'Одна сторона',
+        materialFacadeGlob: 'Профлист',
+        idFacade: 5,
+        openingOptionId: 1,
+        raspolozheniyePolotna: 'Вертикально',
+        widthProyema: '1000',
+        heightProyema: '2000',
+        isThereLock: 1,
+        isTherePen: 0,
+      })
+
+      expect(calc.activePage.value).toBe('page1')
+      expect(calc.isPageAccessible('page1')).toBe(true)
+      expect(calc.isPageAccessible('page2')).toBe(true)
+      expect(calc.isPageAccessible('page2_facade_profnastil')).toBe(true)
+      expect(calc.isPageAccessible('page5')).toBe(true)
+      expect(calc.visitedPages.value.indexOf('page2_facade_profnastil'))
+        .toBeLessThan(calc.visitedPages.value.indexOf('page5'))
+    })
+
+    it('для type2 при редактировании не блокирует вложенные шаги замка из старого visitedPages', () => {
+      calc.loadFromApi({
+        orderId: 42,
+        modelId: '2',
+        visitedPages: [
+          'page1', 'page2', 'page5', 'page3', 'page6',
+          'page7', 'page9', 'page10', 'page11', 'page12',
+        ],
+        activePage: 'page12',
+        providesMaterial: 'Предоставляет изготовитель',
+        providesPaint: 'Предоставляет изготовитель',
+        doesPaintingFrame: 'Выполняет изготовитель',
+        fillSide: 'Одна сторона',
+        materialFacadeGlob: 'Профлист',
+        idFacade: 5,
+        openingOptionId: 1,
+        raspolozheniyePolotna: 'Вертикально',
+        widthProyema: '1000',
+        heightProyema: '2000',
+        isThereLock: 1,
+        providesLock: 'Предоставляет изготовитель',
+        lockSetId: 7,
+        lockComponentIds: '[2]',
+        lockComponentsInstalled: 'Устанавливает изготовитель',
+        isTherePen: 0,
+        clientName: 'Иван',
+        priceRetail: '1000',
+      })
+
+      expect(calc.activePage.value).toBe('page1')
+      expect(calc.isPageAccessible('page_lock_type')).toBe(true)
+      expect(calc.isPageAccessible('page_lock_components')).toBe(true)
+      expect(calc.visitedPages.value.indexOf('page9'))
+        .toBeLessThan(calc.visitedPages.value.indexOf('page_lock_type'))
+      expect(calc.visitedPages.value.indexOf('page_lock_type'))
+        .toBeLessThan(calc.visitedPages.value.indexOf('page_lock_components'))
     })
 
     it('при сохранённом page11 и уже рассчитанной цене открывает page12', () => {
@@ -225,6 +300,36 @@ describe('useCalculation', () => {
         visitedPages: JSON.stringify(calc.visitedPages.value),
       })
       expect(JSON.parse(payload.visitedPages)).toContain('page5')
+    })
+
+    it('getFullSavePayload досылает данные второго типа вместе с прогрессом', () => {
+      calc.number.value = 42
+      calc.modelId.value = '2'
+      calc.setActivePage('page12')
+      calc.lockSetId.value = 7
+      calc.lockPenId.value = 3
+      calc.lockPenColorId.value = 5
+      calc.lockComponentIds.value = [2, 4]
+      calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
+      calc.addons.value.doorCloser.isThere = 1
+      calc.addons.value.doorCloser.itemId = 9
+      calc.addons.value.skud.itemIds = [10, 11]
+
+      const payload = calc.getFullSavePayload()
+
+      expect(payload).toMatchObject({
+        orderId: 42,
+        modelId: '2',
+        reachedStep: 'page12',
+        lockSetId: 7,
+        lockPenId: 3,
+        lockPenColorId: 5,
+        lockComponentsInstalled: 'Устанавливает заказчик',
+        isThereDoorCloser: 1,
+        doorCloserId: 9,
+      })
+      expect(payload.lockComponentIds).toBe('[2,4]')
+      expect(payload.skudIds).toBe('[10,11]')
     })
   })
 

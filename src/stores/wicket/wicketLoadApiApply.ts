@@ -16,6 +16,11 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'penColorId',
 ])
 
+/** Поля, которые приходят из API как JSON-массив ID. */
+export const WICKET_API_ARRAY_KEYS = new Set([
+  'lockComponentIds',
+])
+
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
   providesMaterial: 'Предоставляет изготовитель',
   providesPaint: 'Предоставляет изготовитель',
@@ -71,6 +76,19 @@ export function applyWicketApiFieldMappings(
     let v: unknown
     if (key === 'orderId') {
       v = val != null ? (typeof val === 'number' ? val : Number(val) || val) : ''
+    } else if (WICKET_API_ARRAY_KEYS.has(key)) {
+      if (Array.isArray(val)) {
+        v = val.map(Number).filter(Number.isFinite)
+      } else if (typeof val === 'string' && val.trim() !== '') {
+        try {
+          const parsed = JSON.parse(val)
+          v = Array.isArray(parsed) ? parsed.map(Number).filter(Number.isFinite) : []
+        } catch {
+          v = []
+        }
+      } else {
+        v = []
+      }
     } else if (WICKET_API_NUMERIC_KEYS.has(key)) {
       if (val === null || val === '') {
         v = key in WICKET_API_FIELD_DEFAULTS ? WICKET_API_FIELD_DEFAULTS[key] : null

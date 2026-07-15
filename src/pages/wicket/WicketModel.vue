@@ -33,30 +33,35 @@ const models = [
     model: '"Стандарт" 50/50/штакетник',
     route: '/wicket/type3',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
+    soon: true,
   },
   {
     id: '4',
     model: '"Стандарт" 50/50/ламель RH77',
     route: '/wicket/type4',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
+    soon: true,
   },
   {
     id: '5',
     model: '"Стандарт" 60/60/СП40',
     route: '/wicket/type5',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
+    soon: true,
   },
   {
     id: '7',
     model: '"Стандарт" 50/50/СП50',
     route: '/wicket/type7',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
+    soon: true,
   },
   {
     id: '8',
     model: '"Стандарт" 60/60/для накладного заполнения листовым материалом',
     route: '/wicket/type8',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
+    soon: true,
   },
 ]
 
@@ -98,7 +103,7 @@ function onImageError(e: Event) {
 }
 
 async function onModelSelect(item: (typeof models)[0]) {
-  if (loading.value || !calc.number.value) return
+  if (loading.value || !calc.number.value || item.soon) return
   loading.value = item.id
   errorMessage.value = null
 
@@ -154,16 +159,24 @@ async function onModelSelect(item: (typeof models)[0]) {
             >
               <button
                 type="button"
-                class="w-full text-center py-1.5 px-1 text-lg font-semibold text-blue-600 underline rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-air-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                :disabled="!!loading"
+                class="w-full text-center py-1.5 px-1 text-lg font-semibold rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-air-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
+                :class="item.soon ? 'text-gray-500 no-underline cursor-default' : 'text-blue-600 underline'"
+                :disabled="!!loading || item.soon"
                 @click="onModelSelect(item)"
               >
                 {{ item.model }}
+                <span
+                  v-if="item.soon"
+                  class="absolute -top-2.5 -right-2.5 bg-amber-400 text-amber-900 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm border border-amber-500"
+                >
+                  Скоро
+                </span>
               </button>
 
               <div class="mt-2 w-full border border-gray-200 rounded overflow-hidden bg-white">
                 <div
                   class="flex gap-4 overflow-x-auto scroll-smooth pb-2.5"
+                  :class="{ 'opacity-50 grayscale': item.soon }"
                   style="scrollbar-width: thin; max-width: 100%;"
                 >
                   <img

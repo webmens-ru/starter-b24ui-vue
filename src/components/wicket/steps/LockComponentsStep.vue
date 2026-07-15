@@ -47,6 +47,28 @@ function toggleMulti(id: number) {
 
 function isMultiSelected(id: number) { return selectedIds.value.includes(id) }
 
+function normalizeComponentIds(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    return value.map(Number).filter(Number.isFinite)
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isFinite) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function applySavedSelection() {
+  const availableIds = new Set(items.value.map(item => item.id))
+  selectedIds.value = normalizeComponentIds(calc.lockComponentIds.value)
+    .filter(id => availableIds.has(id))
+  installed.value = calc.lockComponentsInstalled.value || 'Устанавливает изготовитель'
+}
+
 async function loadItems() {
   loading.value = true
   try {
@@ -65,6 +87,9 @@ async function save() {
     .map(id => items.value.find(i => i.id === id)?.marking)
     .filter(Boolean)
     .join(', ')
+
+  calc.lockComponentIds.value = [...selectedIds.value]
+  calc.lockComponentsInstalled.value = installed.value
 
   calc.updateOrCreateBlock('Комплектующие замка', [
     { name: 'Комплектующие', value: marking || 'Не выбрано' },
@@ -93,10 +118,12 @@ async function save() {
 }
 
 watch(selectedIds, () => save(), { deep: true })
+watch(installed, () => save())
 
 onMounted(async () => {
   calc.setActivePage('page_lock_components')
   await loadItems()
+  applySavedSelection()
   await save()
 })
 </script>

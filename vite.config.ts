@@ -58,19 +58,16 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://test-lk.doorhan-krd.ru',
+        target: 'http://localhost:8001',
         changeOrigin: true,
-        secure: false,
       },
       '/address': {
-        target: 'https://test-lk.doorhan-krd.ru',
+        target: 'http://localhost:8001',
         changeOrigin: true,
-        secure: false,
       },
       '/client': {
-        target: 'https://test-lk.doorhan-krd.ru',
+        target: 'http://localhost:8001',
         changeOrigin: true,
-        secure: false,
       },
     },
   },

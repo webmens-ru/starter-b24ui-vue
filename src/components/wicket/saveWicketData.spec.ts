@@ -10,6 +10,8 @@ import { useCalculation } from '../../composables/useCalculation'
 import ManufacturingOption from './ManufacturingOption.vue'
 import FillSide from './type1/FillSide.vue'
 import IsTherelock from './IsTherelock.vue'
+import LockType from './LockType.vue'
+import Pen from './Pen.vue'
 
 const testRouter = createRouter({
   history: createMemoryHistory(),
@@ -28,6 +30,24 @@ vi.mock('../../app/api/wicket', () => ({
   getFilterOptions: vi.fn().mockResolvedValue({}),
   getSidingTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getProfnastilTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
+  getLocks: vi.fn().mockResolvedValue({
+    items: [
+      { id: 1, marking: 'Первый замок', imageUrls: [] },
+      { id: 7, marking: 'Сохранённый замок', imageUrls: [] },
+    ],
+  }),
+  getPensByLock: vi.fn().mockResolvedValue({
+    items: [
+      { id: 1, marking: 'Первая ручка', colors: [{ id: 1, name: 'Первый цвет' }], imageUrls: [] },
+      { id: 3, marking: 'Сохранённая ручка', colors: [{ id: 5, name: 'Сохранённый цвет' }], imageUrls: [] },
+    ],
+  }),
+  getAdditionalPens: vi.fn().mockResolvedValue({
+    items: [
+      { id: 1, marking: 'Первая доп. ручка', colors: [{ id: 1, name: 'Первый цвет' }], imageUrls: [] },
+      { id: 9, marking: 'Сохранённая доп. ручка', colors: [{ id: 6, name: 'Сохранённый цвет' }], imageUrls: [] },
+    ],
+  }),
   getAddressSuggestions: vi.fn().mockResolvedValue({ suggestions: [] }),
   createOrder: vi.fn().mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 }),
   loadWicketData: vi.fn().mockResolvedValue({}),
@@ -123,6 +143,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   it('IsTherelock передаёт isThereLock', async () => {
     calc.isThereLock.value = 0
     calc.isThereLockName.value = 'Нет'
+    calc.lockPenColorId.value = 7
 
     mount(IsTherelock, {
       global: {
@@ -139,5 +160,56 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload).toHaveProperty('isThereLockName')
     expect(payload).toHaveProperty('reachedStep')
     expect(payload.modelId).toBe('1')
+    expect(payload.lockPenColorId).toBeNull()
+  })
+
+  it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
+    calc.modelId.value = '2'
+    calc.lockSetId.value = 7
+    calc.lockPenId.value = 3
+    calc.lockPenColorId.value = 5
+
+    mount(LockType, {
+      global: {
+        plugins: [testRouter],
+        stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
+      },
+    })
+
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(saveWicketData).toHaveBeenCalled()
+    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    expect(payload).toMatchObject({
+      lockSetId: 7,
+      lockPenId: 3,
+      lockPenColorId: 5,
+    })
+  })
+
+  it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {
+    calc.modelId.value = '2'
+    calc.isTherePenName.value = 'Будет'
+    calc.isTherePen.value = 1
+    calc.additionalPenId.value = 9
+    calc.penColorId.value = 6
+
+    mount(Pen, {
+      global: {
+        plugins: [testRouter],
+        stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
+      },
+    })
+
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(saveWicketData).toHaveBeenCalled()
+    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    expect(payload).toMatchObject({
+      isTherePen: 1,
+      additionalPenId: 9,
+      penColorId: 6,
+      additionalPenColor: 'Сохранённый цвет',
+    })
   })
 })

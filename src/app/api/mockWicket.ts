@@ -472,25 +472,40 @@ export async function mockGetLocks(): Promise<{
 }
 
 export async function mockGetPensByLock(_lockSetId: number): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   await delay(80)
+  const colors = [
+    { id: 1, name: 'Черная' },
+    { id: 2, name: 'Коричневая' },
+    { id: 3, name: 'Белая' },
+  ]
   return {
     items: [
-      { id: 1, marking: 'Ручка STUBLINA 1032', colors: ['Черная', 'Коричневая', 'Белая'], imageUrls: [] },
-      { id: 2, marking: 'Ручка STUBLINA 1028', colors: ['Черная', 'Коричневая', 'Белая'], imageUrls: [] },
+      { id: 1, marking: 'Ручка STUBLINA 1032', colors, imageUrls: [] },
+      { id: 2, marking: 'Ручка STUBLINA 1028', colors, imageUrls: [] },
     ],
   }
 }
 
 export async function mockGetAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; colors: string[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   await delay(80)
   return {
     items: [
-      { id: 1, marking: 'Скоба СК-101', colors: ['Черная', 'Коричневая', 'Белая'], imageUrls: [] },
-      { id: 2, marking: 'Скоба СК-102', colors: ['Черная', 'Коричневая'], imageUrls: [] },
+      {
+        id: 1,
+        marking: 'Скоба СК-101',
+        colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }, { id: 3, name: 'Белая' }],
+        imageUrls: [],
+      },
+      {
+        id: 2,
+        marking: 'Скоба СК-102',
+        colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }],
+        imageUrls: [],
+      },
     ],
   }
 }

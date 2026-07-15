@@ -32,6 +32,11 @@ const loadingPens = ref(false)
 const selectedLockId = ref<number | null>(null)
 const selectedPenId = ref<number | null>(null)
 const selectedColor = ref<number | null>(null)
+let isRestoringSelection = false
+const selectedColorModel = computed<number | undefined>({
+  get: () => selectedColor.value ?? undefined,
+  set: value => { selectedColor.value = value ?? null },
+})
 
 /** Цвета для выпадающего списка — из выбранной ручки */
 const colorSelectItems = computed(() => {
@@ -39,6 +44,17 @@ const colorSelectItems = computed(() => {
   const colors = pen?.colors ?? []
   return colors.map(c => ({ id: c.id, label: c.name }))
 })
+
+function syncSelectionToCalc() {
+  const lock = lockItems.value.find(l => l.id === selectedLockId.value)
+  calc.lockSetId.value = selectedLockId.value
+  calc.typeLock.value = lock?.marking ?? ''
+  calc.lockPenId.value = selectedPenId.value
+  calc.lockPenColorId.value = selectedColor.value
+  const pen = penItems.value.find(p => p.id === selectedPenId.value)
+  const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
+  calc.lockPenColor.value = colorObj?.name ?? ''
+}
 
 function updateLockBlock() {
   const block = calc.data.value.find(b => b.blockName === 'Замок')
@@ -98,31 +114,26 @@ async function loadPensForLock(lockSetId: number | null) {
 }
 
 watch(selectedLockId, async (id) => {
-  const lock = lockItems.value.find(l => l.id === id)
-  calc.lockSetId.value = id
-  calc.typeLock.value = lock?.marking ?? ''
+  if (isRestoringSelection) return
   await loadPensForLock(id)
   if (penItems.value.length === 0) {
-    calc.lockPenId.value = null
-    calc.lockPenColorId.value = null
-    calc.lockPenColor.value = ''
-  } else if (selectedPenId.value && penItems.value.some(p => p.id === selectedPenId.value)) {
-    calc.lockPenId.value = selectedPenId.value
-    calc.lockPenColorId.value = selectedColor.value
-    const colorObj = penItems.value.find(p => p.id === selectedPenId.value)?.colors?.find(c => c.id === selectedColor.value)
-    calc.lockPenColor.value = colorObj?.name ?? ''
-  } else {
+    selectedPenId.value = null
+    selectedColor.value = null
+  } else if (!selectedPenId.value || !penItems.value.some(p => p.id === selectedPenId.value)) {
     selectedPenId.value = penItems.value[0].id
-    calc.lockPenId.value = penItems.value[0].id
-    calc.lockPenColorId.value = selectedColor.value
-    const colorObj = penItems.value[0]?.colors?.find(c => c.id === selectedColor.value)
-    calc.lockPenColor.value = colorObj?.name ?? ''
   }
+  const pen = penItems.value.find(p => p.id === selectedPenId.value)
+  const colors = pen?.colors ?? []
+  if (!colors.some(c => c.id === selectedColor.value)) {
+    selectedColor.value = colors[0]?.id ?? null
+  }
+  syncSelectionToCalc()
   updateLockBlock()
   await save()
 })
 
 watch(selectedPenId, (id) => {
+  if (isRestoringSelection) return
   calc.lockPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   const colors = pen?.colors ?? []
@@ -134,6 +145,7 @@ watch(selectedPenId, (id) => {
 })
 
 watch(selectedColor, (colorId) => {
+  if (isRestoringSelection) return
   calc.lockPenColorId.value = colorId
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colorObj = pen?.colors?.find(c => c.id === colorId)
@@ -166,6 +178,7 @@ function applySavedSelection() {
 }
 
 async function save() {
+  syncSelectionToCalc()
   updateLockBlock()
 
   try {
@@ -196,8 +209,11 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page_lock_type')
+  isRestoringSelection = true
   await loadLocks()
   const savedLockSetId = calc.lockSetId.value
+  selectedPenId.value = calc.lockPenId.value
+  selectedColor.value = calc.lockPenColorId.value
   if (savedLockSetId != null && lockItems.value.some(l => l.id === savedLockSetId)) {
     selectedLockId.value = savedLockSetId
   } else if (lockItems.value.length > 0) {
@@ -205,6 +221,7 @@ onMounted(async () => {
   }
   await loadPensForLock(selectedLockId.value)
   applySavedSelection()
+  isRestoringSelection = false
   await save()
 })
 </script>
@@ -283,7 +300,7 @@ onMounted(async () => {
       <h2 class="text-lg font-semibold mb-2">Цвет ручки</h2>
       <div class="select-full-width w-full">
         <B24SelectMenu
-          v-model="selectedColor"
+          v-model="selectedColorModel"
           value-key="id"
           :items="colorSelectItems"
           placeholder="Выберите цвет"

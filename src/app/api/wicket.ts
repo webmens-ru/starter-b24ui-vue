@@ -364,7 +364,7 @@ export async function getAddressSuggestions(
 /** Переименовать расчёт (обновить calculationName). */
 export async function saveOrderData(payload: {
   orderId: number
-  companyId: number
+  companyId?: number | null
   calculationName: string
 }): Promise<void> {
   if (isMock) return
@@ -390,7 +390,7 @@ export async function fetchSavedOrderPrice(
 
 export async function finalCalculate(payload: {
   orderId: number
-  companyId: number
+  companyId?: number | null
   modelId: string | number
   productType?: string
   model?: string
@@ -414,7 +414,7 @@ export async function deleteCalculation(payload: {
 
 export async function recalculate(payload: {
   orderId: number
-  companyId: number
+  companyId?: number | null
   modelId: string | number
   productType?: string
   model?: string

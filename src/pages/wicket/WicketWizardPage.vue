@@ -13,6 +13,7 @@ declare const window: Window & {
 }
 
 import WicketMenu from '../../components/WicketMenu.vue'
+import DrawingPanel from '../../components/DrawingPanel.vue'
 import CalculateTable from '../../components/CalculateTable.vue'
 
 const props = defineProps<{
@@ -374,21 +375,12 @@ function goBack() {
           : ['shrink-0 w-[430px]', showSummary ? '' : 'hidden']
         "
       >
-        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Сводка расчёта</span>
-          <button
-            v-if="isMobile"
-            class="flex items-center justify-center w-5 h-5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
-            title="Закрыть"
-            @click="showSummary = false"
-          >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="flex-1 p-[10px]">
-          <CalculateTable />
+        <div class="flex-1">
+          <DrawingPanel />
+          <CalculateTable
+            :closable="isMobile"
+            @close="showSummary = false"
+          />
         </div>
       </aside>
 
