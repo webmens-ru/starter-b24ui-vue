@@ -20,6 +20,8 @@ const calc = {
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
   colorFacade: ref('RAL 7016'),
+  colorFacadeHex: ref(''),
+  colorFacadeImage: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
 
