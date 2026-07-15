@@ -1,3 +1,9 @@
+<script lang="ts">
+let drawingInstanceId = 0
+// Fixed MVP tile size keeps textures repeating instead of stretching over the wicket.
+const TEXTURE_TILE_SIZE = 240
+</script>
+
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
@@ -6,6 +12,7 @@ import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './t
 
 const calc = useCalculation()
 const showFill = ref(true)
+const texturePatternId = `type2-fill-texture-${drawingInstanceId++}`
 
 const geometry = computed(() => computeType2Geometry({
   widthProyema: calc.widthProyema.value,
@@ -24,6 +31,8 @@ const geometry = computed(() => computeType2Geometry({
   materialFacadeGlob: calc.materialFacadeGlob.value,
   materialFacade: calc.materialFacade.value,
   colorFacade: calc.colorFacade.value,
+  colorFacadeHex: calc.colorFacadeHex.value,
+  colorFacadeImage: calc.colorFacadeImage.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
 }))
 
@@ -91,12 +100,35 @@ const fillLines = computed(() => {
         v-if="showFill && geometry.fill.material === 'c8'"
         data-testid="type2-drawing-fill"
       >
+        <defs v-if="geometry.fill.image">
+          <pattern
+            :id="texturePatternId"
+            patternUnits="userSpaceOnUse"
+            :width="TEXTURE_TILE_SIZE"
+            :height="TEXTURE_TILE_SIZE"
+          >
+            <image
+              :href="geometry.fill.image"
+              :width="TEXTURE_TILE_SIZE"
+              :height="TEXTURE_TILE_SIZE"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </pattern>
+        </defs>
         <rect
           :x="geometry.fillArea.x"
           :y="geometry.fillArea.y"
           :width="geometry.fillArea.width"
           :height="geometry.fillArea.height"
           :fill="geometry.fill.color"
+        />
+        <rect
+          v-if="geometry.fill.image"
+          :x="geometry.fillArea.x"
+          :y="geometry.fillArea.y"
+          :width="geometry.fillArea.width"
+          :height="geometry.fillArea.height"
+          :fill="`url(#${texturePatternId})`"
         />
         <line
           v-for="(line, index) in fillLines"

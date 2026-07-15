@@ -19,6 +19,8 @@ const calc = {
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
   colorFacade: ref('RAL 7016'),
+  colorFacadeHex: ref('#704214'),
+  colorFacadeImage: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
 
@@ -59,5 +61,36 @@ describe('Type2Drawing', () => {
     await toggle.setValue(true)
 
     expect(wrapper.find('[data-testid="type2-drawing-fill"]').exists()).toBe(true)
+  })
+
+  it('накладывает плиточную текстуру только на область заполнения', async () => {
+    calc.colorFacadeImage.value = '/uploads/colors/wood.webp'
+    const wrapper = mount(Type2Drawing)
+    const fillGroup = wrapper.get('[data-testid="type2-drawing-fill"]')
+    const pattern = wrapper.get('pattern')
+    const patternId = pattern.attributes('id')
+
+    expect(wrapper.findAll('pattern')).toHaveLength(1)
+    expect(pattern.attributes('patternUnits')).toBe('userSpaceOnUse')
+    expect(pattern.get('image').attributes('href')).toBe('/uploads/colors/wood.webp')
+    expect(pattern.get('image').attributes('preserveAspectRatio')).toBe('xMidYMid slice')
+    expect(fillGroup.findAll(`rect[fill="url(#${patternId})"]`)).toHaveLength(1)
+    expect(fillGroup.findAll('rect')[0]?.attributes('fill')).toBe('#704214')
+    expect(wrapper.findAll(`rect[fill="url(#${patternId})"]`)).toHaveLength(1)
+
+    await wrapper.get('[data-testid="type2-drawing-fill-toggle"]').setValue(false)
+    expect(wrapper.find('[data-testid="type2-drawing-fill"]').exists()).toBe(false)
+
+    calc.colorFacadeImage.value = ''
+  })
+
+  it('создаёт уникальный pattern id для каждого экземпляра', () => {
+    calc.colorFacadeImage.value = '/uploads/colors/wood.webp'
+    const first = mount(Type2Drawing)
+    const second = mount(Type2Drawing)
+
+    expect(first.get('pattern').attributes('id')).not.toBe(second.get('pattern').attributes('id'))
+
+    calc.colorFacadeImage.value = ''
   })
 })

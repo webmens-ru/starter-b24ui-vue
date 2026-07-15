@@ -33,6 +33,8 @@ describe('computeType2Geometry', () => {
       materialFacadeGlob: 'Профлист',
       materialFacade: 'С-8',
       colorFacade: 'RAL 7016',
+      colorFacadeHex: '#704214',
+      colorFacadeImage: '  /uploads/colors/wood.webp  ',
       raspolozheniyePolotna: 'Вертикально',
     })
 
@@ -44,7 +46,26 @@ describe('computeType2Geometry', () => {
     expect(geometry.subtype).toBe('type4')
     expect(geometry.rails.verticalSubtype.width).toBe(60)
     expect(geometry.extraRail).toMatchObject({ visible: true, placement: 'behind', height: 40 })
-    expect(geometry.fill).toEqual({ material: 'c8', color: '#383e42', direction: 'vertical' })
+    expect(geometry.fill).toEqual({
+      material: 'c8',
+      color: '#704214',
+      image: '/uploads/colors/wood.webp',
+      direction: 'vertical',
+    })
+  })
+
+  it('uses only a valid explicit HEX and falls back safely', () => {
+    expect(computeType2Geometry({
+      colorFacade: 'RAL 7016',
+      colorFacadeHex: '#A1b2C3',
+    }).fill.color).toBe('#A1b2C3')
+
+    expect(computeType2Geometry({
+      colorFacade: 'RAL 7016',
+      colorFacadeHex: '#123',
+    }).fill.color).toBe('#f6f6f6')
+
+    expect(computeType2Geometry({ colorFacade: 'RAL 7016' }).fill.color).toBe('#f6f6f6')
   })
 
   it.each([

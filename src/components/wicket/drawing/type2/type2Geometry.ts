@@ -15,6 +15,8 @@ export interface Type2DrawingSource {
   materialFacadeGlob?: unknown
   materialFacade?: unknown
   colorFacade?: unknown
+  colorFacadeHex?: unknown
+  colorFacadeImage?: unknown
   raspolozheniyePolotna?: unknown
 }
 
@@ -50,7 +52,7 @@ export interface Type2DrawingGeometry {
   extraRail: VisibleRect & { placement: 'above' | 'behind' }
   hinges: DrawingRect[]
   strip: DrawingRect[]
-  fill: { material: 'none' | 'c8'; color: string; direction: 'horizontal' | 'vertical' }
+  fill: { material: 'none' | 'c8'; color: string; image: string; direction: 'horizontal' | 'vertical' }
 }
 
 const RAIL_SIZE = 50
@@ -62,17 +64,6 @@ const HINGE_HEIGHT = 75
 const HINGE_OFFSET = 100
 const GAP_HINGE_SIDE = 4
 const GAP_LOCK_SIDE = 10
-
-const RAL_COLORS: Record<string, string> = {
-  '3005': '#5e2028',
-  '5005': '#005387',
-  '6005': '#114232',
-  '7016': '#383e42',
-  '8017': '#45322e',
-  '9003': '#f4f4f4',
-  '9005': '#0a0a0d',
-  '9010': '#f1ece1',
-}
 
 function numberInRange(value: unknown, fallback: number, min: number, max: number): number {
   const parsed = Number(value)
@@ -95,9 +86,7 @@ function subtype(value: unknown): Type2GateSubtype {
 
 function fillColor(value: unknown): string {
   const valueText = text(value)
-  if (/^#[0-9a-f]{6}$/i.test(valueText)) return valueText
-  const ral = valueText.match(/\b(\d{4})\b/)?.[1]
-  return ral ? (RAL_COLORS[ral] ?? '#f6f6f6') : '#f6f6f6'
+  return /^#[0-9a-f]{6}$/i.test(valueText) ? valueText : '#f6f6f6'
 }
 
 function safeRect(x: number, y: number, width: number, height: number): DrawingRect {
@@ -257,7 +246,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     strip,
     fill: {
       material,
-      color: fillColor(source.colorFacade),
+      color: fillColor(source.colorFacadeHex),
+      image: text(source.colorFacadeImage),
       direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
     },
   }
