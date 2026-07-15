@@ -85,6 +85,8 @@ function restoreFromCalc(): ProfnastilRow | null {
     thickness:     calc.thicknessFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
     color:         calc.colorFacade.value,
+    colorHex:      calc.colorFacadeHex.value,
+    colorImage:    calc.colorFacadeImage.value,
   }
 }
 
@@ -96,6 +98,8 @@ async function save(row: ProfnastilRow) {
   calc.thicknessFacade.value         = String(row.thickness)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.colorFacade.value             = row.color
+  calc.colorFacadeHex.value          = row.colorHex ?? ''
+  calc.colorFacadeImage.value        = row.colorImage ?? ''
 
   calc.updateOrCreateBlock('Заполнение (фасад)', [
     { name: 'Производитель материала', value: row.company },
@@ -145,6 +149,8 @@ async function selectRow(row: ProfnastilRow) {
 function deselectRow() {
   selectedRow.value = null
   calc.idFacade.value = ''
+  calc.colorFacadeHex.value = ''
+  calc.colorFacadeImage.value = ''
 }
 
 function isSelected(row: ProfnastilRow) {

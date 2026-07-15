@@ -27,6 +27,8 @@ function clearFacadeSelection() {
   calc.thicknessFacade.value = ''
   calc.typeOfCoatingFacade.value = ''
   calc.colorFacade.value = ''
+  calc.colorFacadeHex.value = ''
+  calc.colorFacadeImage.value = ''
 }
 
 function clearYardSelection() {

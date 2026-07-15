@@ -60,11 +60,14 @@ export interface ProfnastilFilters {
 
 export interface ProfnastilRow {
   id: string | number
+  colorId?: string | number | null
   company: string
   material: string
   thickness: string | number
   typeOfCoating: string
   color: string
+  colorHex?: string | null
+  colorImage?: string | null
   /** camelCase, как в API и в БД dir_filling_profnastil */
   priceM2?: string | number
   weightM2?: string | number

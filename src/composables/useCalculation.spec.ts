@@ -331,6 +331,16 @@ describe('useCalculation', () => {
       expect(payload.lockComponentIds).toBe('[2,4]')
       expect(payload.skudIds).toBe('[10,11]')
     })
+
+    it('не сохраняет внешний вид заполнения в payload заказа', () => {
+      calc.colorFacadeHex.value = '#704214'
+      calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
+
+      const payload = calc.getFullSavePayload()
+
+      expect(payload).not.toHaveProperty('colorFacadeHex')
+      expect(payload).not.toHaveProperty('colorFacadeImage')
+    })
   })
 
   describe('reset', () => {
@@ -338,12 +348,16 @@ describe('useCalculation', () => {
       calc.number.value = '123'
       calc.clientName.value = 'Иван'
       calc.fillSide.value = 'Две стороны'
+      calc.colorFacadeHex.value = '#704214'
+      calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
 
       calc.reset()
 
       expect(calc.number.value).toBe('')
       expect(calc.clientName.value).toBe('')
       expect(calc.fillSide.value).toBe('Одна сторона')
+      expect(calc.colorFacadeHex.value).toBe('')
+      expect(calc.colorFacadeImage.value).toBe('')
       expect(calc.data.value).toHaveLength(0)
       expect(calc.visitedPages.value).toHaveLength(0)
     })

@@ -113,6 +113,8 @@ const formFacade              = ref<string>('')
 const thicknessFacade         = ref<string>('')
 const typeOfCoatingFacade   = ref<string>('')
 const colorFacade             = ref<string>('')
+const colorFacadeHex          = ref<string>('')
+const colorFacadeImage        = ref<string>('')
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
@@ -232,6 +234,8 @@ const fieldsFilled = ref<number>(0)
     thicknessFacade.value = ''
     typeOfCoatingFacade.value = ''
     colorFacade.value = ''
+    colorFacadeHex.value = ''
+    colorFacadeImage.value = ''
     idYard.value = ''
     materialSupplierYard.value = ''
     materialYard.value = ''
@@ -807,6 +811,8 @@ const fieldsFilled = ref<number>(0)
     thicknessFacade,
     typeOfCoatingFacade,
     colorFacade,
+    colorFacadeHex,
+    colorFacadeImage,
     idYard,
     materialSupplierYard,
     materialYard,
