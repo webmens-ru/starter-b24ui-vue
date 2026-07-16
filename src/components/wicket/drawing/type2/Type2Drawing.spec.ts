@@ -22,6 +22,7 @@ const calc = {
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
   colorShieldHex: ref(''),
+  sideGrilleNetImage: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
 
@@ -47,6 +48,51 @@ describe('Type2Drawing', () => {
     expect(svg.attributes('viewBox')).toBe('0 0 1200 2100')
   })
 
+  it('обновляет ширину столбов при смене профиля', async () => {
+    calc.stolbName.value = '60/60/2'
+    const wrapper = mount(Type2Drawing)
+    const posts = wrapper.get('[data-testid="type2-drawing-posts"]')
+
+    expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['60', '60'])
+
+    calc.stolbName.value = '80/80/3'
+    await wrapper.vm.$nextTick()
+
+    expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['80', '80'])
+
+    calc.stolbName.value = '50/100/3'
+    await wrapper.vm.$nextTick()
+
+    expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['100', '100'])
+
+    calc.stolbName.value = 'Труба 50×50×2'
+  })
+
+  it('вставляет картинку выбранной сетки только в боковую область подтипа 4', async () => {
+    calc.shieldType.value = 'Тип_4'
+    calc.widthSidePart.value = '300'
+    calc.sideGrilleNetImage.value = 'https://backend.test/uploads/net.jpg'
+    const wrapper = mount(Type2Drawing)
+    const net = wrapper.get('[data-testid="type2-drawing-net"]')
+    const netImage = wrapper.get('[data-testid="type2-drawing-net-image"]')
+    const netPattern = netImage.element.parentElement
+
+    expect(netImage.attributes('href')).toBe('https://backend.test/uploads/net.jpg')
+    expect(Number(net.attributes('width'))).toBeGreaterThan(0)
+    expect(Number(net.attributes('height'))).toBeGreaterThan(0)
+    expect(netImage.attributes('preserveAspectRatio')).toBe('xMidYMid meet')
+    expect(netImage.attributes('transform')).toContain('rotate(90)')
+    expect(netPattern?.getAttribute('patternUnits')).toBe('userSpaceOnUse')
+    expect(Number(netPattern?.getAttribute('height'))).toBeGreaterThan(0)
+    expect(net.attributes('fill')).toMatch(/^url\(#type2-net-pattern-\d+\)$/)
+
+    calc.shieldType.value = 'Тип_1'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="type2-drawing-net"]').exists()).toBe(false)
+
+    calc.sideGrilleNetImage.value = ''
+  })
+
   it('скрывает и возвращает только заполнение', async () => {
     const wrapper = mount(Type2Drawing)
     const toggle = wrapper.get('[data-testid="type2-drawing-fill-toggle"]')
@@ -62,6 +108,55 @@ describe('Type2Drawing', () => {
     await toggle.setValue(true)
 
     expect(wrapper.find('[data-testid="type2-drawing-fill"]').exists()).toBe(true)
+  })
+
+  it('переносит петли за раму при открывании внутрь', async () => {
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
+      .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+
+    calc.openingOptionName.value = 'Внутрь / Левая'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+
+    calc.openingOptionName.value = 'Наружу / Левая'
+  })
+
+  it('зеркалит чертёж и меняет план петель при переключении на вид со двора', async () => {
+    calc.openingOptionName.value = 'Внутрь / Левая'
+    const wrapper = mount(Type2Drawing)
+    const drawingView = wrapper.get('[data-testid="type2-drawing-view"]')
+
+    expect(drawingView.attributes('transform')).toBeUndefined()
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+
+    expect(drawingView.attributes('transform')).toBe(`translate(${calc.widthProyema.value} 0) scale(-1 1)`)
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
+      .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+
+    calc.openingOptionName.value = 'Наружу / Левая'
+  })
+
+  it('переносит профлист и притворную полосу за каркас при виде со двора', async () => {
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-fill"'))
+      .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-strip"'))
+      .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-fill"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-strip"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
   })
 
   it('накладывает плиточную текстуру только на область заполнения', async () => {
@@ -93,5 +188,24 @@ describe('Type2Drawing', () => {
     expect(first.get('pattern').attributes('id')).not.toBe(second.get('pattern').attributes('id'))
 
     calc.colorFacadeImage.value = ''
+  })
+
+  it('переключает реалистичную палитру на контрастную схематичную', async () => {
+    calc.colorFacadeImage.value = '/uploads/colors/wood.webp'
+    calc.colorShieldHex.value = '#332211'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="type2-drawing-frame"]').attributes('fill')).toBe('#332211')
+    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
+    expect(wrapper.find('pattern').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="type2-drawing-color-schematic"]').setValue(true)
+
+    expect(wrapper.get('[data-testid="type2-drawing-frame"]').attributes('fill')).toBe('#d1d5db')
+    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#bfdbfe')
+    expect(wrapper.find('pattern').exists()).toBe(false)
+
+    calc.colorFacadeImage.value = ''
+    calc.colorShieldHex.value = ''
   })
 })

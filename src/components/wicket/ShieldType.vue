@@ -194,6 +194,7 @@ function onWidthSidePartChange(val: string | number) {
 
 function onGrilleNetSelect(net: GrilleNetItem) {
   assortmentSideGrilleNetId.value = net.id
+  calc.sideGrilleNetImage.value = net.imageUrl ?? ''
   errGrilleNet.value = false
   debouncedSave()
 }
@@ -364,12 +365,17 @@ function syncCalcFields() {
   if (showHeightLower.value) {
     calc.assortmentHeightLowerNetId.value = assortmentHeightLowerNetId.value
     calc.assortmentSideGrilleNetId.value = null
+    calc.sideGrilleNetImage.value = ''
   } else {
     calc.assortmentHeightLowerNetId.value = null
     if (showSidePart.value) {
       calc.assortmentSideGrilleNetId.value = assortmentSideGrilleNetId.value
+      calc.sideGrilleNetImage.value = grilleNetItems.value.find(
+        net => net.id === assortmentSideGrilleNetId.value,
+      )?.imageUrl ?? ''
     } else {
       calc.assortmentSideGrilleNetId.value = null
+      calc.sideGrilleNetImage.value = ''
     }
   }
   calc.assortmentHeightUpperNetId.value = showHeightTop.value ? assortmentHeightUpperNetId.value : null

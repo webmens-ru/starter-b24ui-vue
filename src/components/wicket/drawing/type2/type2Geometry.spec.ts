@@ -35,6 +35,7 @@ describe('computeType2Geometry', () => {
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#704214',
       colorFacadeImage: '  /uploads/colors/wood.webp  ',
+      sideGrilleNetImage: '  /uploads/nets/side.webp  ',
       raspolozheniyePolotna: 'Вертикально',
     })
 
@@ -45,6 +46,9 @@ describe('computeType2Geometry', () => {
     expect(geometry.hingeSide).toBe('right')
     expect(geometry.subtype).toBe('type4')
     expect(geometry.rails.verticalSubtype.width).toBe(60)
+    expect(geometry.netArea.visible).toBe(true)
+    expect(geometry.netArea.width).toBeGreaterThan(0)
+    expect(geometry.netImage).toBe('/uploads/nets/side.webp')
     expect(geometry.extraRail).toMatchObject({ visible: true, placement: 'behind', height: 40 })
     expect(geometry.fill).toEqual({
       material: 'c8',
@@ -52,6 +56,34 @@ describe('computeType2Geometry', () => {
       image: '/uploads/colors/wood.webp',
       direction: 'vertical',
     })
+  })
+
+  it.each([
+    ['60/60/2', 60],
+    ['80/80/3', 80],
+    ['50/100/3', 100],
+    ['60/100/3', 60],
+    ['Труба 50×80×3', 80],
+    ['Труба 100×100×4', 100],
+  ])('берёт ширину столба из маркировки %s', (stolbName, expectedWidth) => {
+    const geometry = computeType2Geometry({ stolbName, hasStolby: 1 })
+
+    expect(geometry.posts.left.width).toBe(expectedWidth)
+    expect(geometry.posts.right.width).toBe(expectedWidth)
+  })
+
+  it.each([
+    ['50/100/3', 100],
+    ['60/30/2', 60],
+    ['Труба 50×80×3', 80],
+  ])('берёт видимую высоту перемычки из маркировки %s', (peremichkaSortamentName, expectedHeight) => {
+    const geometry = computeType2Geometry({
+      peremichkaPolozheniyeName: 'Над калиткой',
+      peremichkaSortamentName,
+    })
+
+    expect(geometry.extraRail.height).toBe(expectedHeight)
+    expect(geometry.drawing.height).toBe(2000 + expectedHeight)
   })
 
   it('uses only a valid explicit HEX and falls back safely', () => {

@@ -99,6 +99,7 @@ const heightTopPart   = ref<string>('0')
 const heightLowerPart = ref<string>('0')
 const widthSidePart         = ref<string>('0')
 const assortmentSideGrilleNetId = ref<string | number | null>(null)
+const sideGrilleNetImage = ref<string>('')
 const assortmentHeightUpperNetId = ref<string | number | null>(null)
 const assortmentHeightLowerNetId = ref<string | number | null>(null)
 const grilleLocation         = ref<string>('Возле петель')
@@ -223,6 +224,7 @@ const fieldsFilled = ref<number>(0)
     heightLowerPart.value = '0'
     widthSidePart.value = '0'
     assortmentSideGrilleNetId.value = null
+    sideGrilleNetImage.value = ''
     assortmentHeightUpperNetId.value = null
     assortmentHeightLowerNetId.value = null
     grilleLocation.value = 'Возле петель'
@@ -433,6 +435,7 @@ const fieldsFilled = ref<number>(0)
       heightLowerPart,
       widthSidePart,
       assortmentSideGrilleNetId,
+      sideGrilleNetImage,
       assortmentHeightUpperNetId,
       assortmentHeightLowerNetId,
       grilleLocation,
@@ -820,6 +823,7 @@ const fieldsFilled = ref<number>(0)
     heightLowerPart,
     widthSidePart,
     assortmentSideGrilleNetId,
+    sideGrilleNetImage,
     assortmentHeightUpperNetId,
     assortmentHeightLowerNetId,
     grilleLocation,

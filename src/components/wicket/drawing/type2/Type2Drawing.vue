@@ -2,6 +2,8 @@
 let drawingInstanceId = 0
 // Fixed MVP tile size keeps textures repeating instead of stretching over the wicket.
 const TEXTURE_TILE_SIZE = 240
+const SCHEMATIC_FRAME_COLOR = '#d1d5db'
+const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
 
 <script setup lang="ts">
@@ -12,7 +14,11 @@ import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './t
 
 const calc = useCalculation()
 const showFill = ref(true)
-const texturePatternId = `type2-fill-texture-${drawingInstanceId++}`
+const colorMode = ref<'realistic' | 'schematic'>('realistic')
+const viewSide = ref<'street' | 'yard'>('street')
+const instanceId = drawingInstanceId++
+const texturePatternId = `type2-fill-texture-${instanceId}`
+const netPatternId = `type2-net-pattern-${instanceId}`
 
 const geometry = computed(() => computeType2Geometry({
   widthProyema: calc.widthProyema.value,
@@ -35,6 +41,7 @@ const geometry = computed(() => computeType2Geometry({
   colorFacadeImage: calc.colorFacadeImage.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
   colorShieldHex: calc.colorShieldHex.value,
+  sideGrilleNetImage: calc.sideGrilleNetImage?.value,
 }))
 
 if (import.meta.env.DEV) {
@@ -62,6 +69,38 @@ if (import.meta.env.DEV) {
 }
 
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
+const realisticColors = computed(() => colorMode.value === 'realistic')
+const displayedFrameColor = computed(() => realisticColors.value
+  ? geometry.value.frameColor
+  : SCHEMATIC_FRAME_COLOR)
+const displayedFillColor = computed(() => realisticColors.value
+  ? geometry.value.fill.color
+  : SCHEMATIC_FILL_COLOR)
+const displayedFillImage = computed(() => realisticColors.value ? geometry.value.fill.image : '')
+const netImageWidthToHeight = ref(1)
+const netTileHeight = computed(() => Math.max(1, geometry.value.netArea.width * netImageWidthToHeight.value))
+const opensInward = computed(() => /внутрь/i.test(String(calc.openingOptionName.value ?? '')))
+const viewedFromYard = computed(() => viewSide.value === 'yard')
+const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
+const viewTransform = computed(() => viewedFromYard.value
+  ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
+  : undefined)
+
+watch(
+  () => geometry.value.netImage,
+  (imageUrl) => {
+    netImageWidthToHeight.value = 1
+    if (!imageUrl || typeof window === 'undefined') return
+
+    const image = new window.Image()
+    image.onload = () => {
+      if (geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
+      netImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
+    }
+    image.src = imageUrl
+  },
+  { immediate: true },
+)
 const topRailPath = computed(() => buildTopRailPath({
   x: geometry.value.gate.x,
   y: geometry.value.gate.y,
@@ -101,6 +140,7 @@ const fillLines = computed(() => {
       aria-label="Чертёж калитки типа 2"
       role="img"
     >
+      <g data-testid="type2-drawing-view" :transform="viewTransform">
       <!-- Проём -->
       <rect
         :x="geometry.opening.x"
@@ -123,8 +163,125 @@ const fillLines = computed(() => {
         fill="rgba(37, 99, 235, 0.08)"
       />
 
+      <!-- При открывании внутрь петли находятся за рамой -->
+      <g
+        v-if="hingesBehind"
+        data-testid="type2-drawing-hinges"
+        fill="#e8b923"
+        stroke="#000"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+      >
+        <rect
+          v-for="(hinge, index) in geometry.hinges"
+          :key="`back-hinge-${index}`"
+          :x="hinge.x"
+          :y="hinge.y"
+          :width="hinge.width"
+          :height="hinge.height"
+        />
+      </g>
+
+      <!-- Выбранная сетка в боковой области подтипа 4 -->
+      <defs v-if="geometry.netArea.visible && geometry.netImage">
+        <pattern
+          :id="netPatternId"
+          patternUnits="userSpaceOnUse"
+          :x="geometry.netArea.x"
+          :y="geometry.netArea.y"
+          :width="geometry.netArea.width"
+          :height="netTileHeight"
+        >
+          <image
+            data-testid="type2-drawing-net-image"
+            :href="geometry.netImage"
+            :x="-netTileHeight / 2"
+            :y="-geometry.netArea.width / 2"
+            :width="netTileHeight"
+            :height="geometry.netArea.width"
+            :transform="`translate(${geometry.netArea.width / 2} ${netTileHeight / 2}) rotate(90)`"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </pattern>
+      </defs>
+      <rect
+        v-if="geometry.netArea.visible && geometry.netImage"
+        data-testid="type2-drawing-net"
+        :x="geometry.netArea.x"
+        :y="geometry.netArea.y"
+        :width="geometry.netArea.width"
+        :height="geometry.netArea.height"
+        :fill="`url(#${netPatternId})`"
+      />
+
+      <!-- Со двора профлист находится за каркасом -->
+      <g
+        v-if="viewedFromYard && showFill && geometry.fill.material === 'c8'"
+        data-testid="type2-drawing-fill"
+      >
+        <defs v-if="displayedFillImage">
+          <pattern
+            :id="texturePatternId"
+            patternUnits="userSpaceOnUse"
+            :width="TEXTURE_TILE_SIZE"
+            :height="TEXTURE_TILE_SIZE"
+          >
+            <image
+              :href="displayedFillImage"
+              :width="TEXTURE_TILE_SIZE"
+              :height="TEXTURE_TILE_SIZE"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </pattern>
+        </defs>
+        <rect
+          :x="geometry.fillArea.x"
+          :y="geometry.fillArea.y"
+          :width="geometry.fillArea.width"
+          :height="geometry.fillArea.height"
+          :fill="displayedFillColor"
+        />
+        <rect
+          v-if="displayedFillImage"
+          :x="geometry.fillArea.x"
+          :y="geometry.fillArea.y"
+          :width="geometry.fillArea.width"
+          :height="geometry.fillArea.height"
+          :fill="`url(#${texturePatternId})`"
+        />
+        <line
+          v-for="(line, index) in fillLines"
+          :key="`fill-line-${index}`"
+          :x1="line.x1"
+          :y1="line.y1"
+          :x2="line.x2"
+          :y2="line.y2"
+          stroke="rgba(0, 0, 0, 0.25)"
+          stroke-width="5"
+        />
+      </g>
+
+      <!-- Со двора притворная полоса находится за рамой -->
+      <g
+        v-if="viewedFromYard"
+        data-testid="type2-drawing-strip"
+        :fill="displayedFrameColor"
+        stroke="#000"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+      >
+        <rect
+          v-for="(strip, index) in geometry.strip"
+          :key="`back-strip-${index}`"
+          :x="strip.x"
+          :y="strip.y"
+          :width="strip.width"
+          :height="strip.height"
+        />
+      </g>
+
       <!-- Внутренний каркас и подтипные рейки -->
-      <g data-testid="type2-drawing-frame" :fill="geometry.frameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
+      <g data-testid="type2-drawing-frame" :fill="displayedFrameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
         <rect
           :x="geometry.innerFrame.top.x"
           :y="geometry.innerFrame.top.y"
@@ -180,19 +337,19 @@ const fillLines = computed(() => {
       </g>
 
       <!-- Боковые рамки (лево/право) -->
-      <g :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
+      <g :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
         <rect :x="geometry.gate.x" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
         <rect :x="geometry.gate.x + Math.max(0, geometry.gate.width - 50)" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
       </g>
 
       <!-- Направляющие верх/низ — поверх боковых рамок для видимости трапеции -->
-      <g :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
+      <g :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
         <path :d="topRailPath"/>
         <path :d="bottomRailPath"/>
       </g>
 
       <!-- Столбы -->
-      <g v-if="geometry.posts.visible" :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
+      <g v-if="geometry.posts.visible" data-testid="type2-drawing-posts" :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
         <rect
           :x="geometry.posts.left.x"
           :y="geometry.posts.left.y"
@@ -208,7 +365,14 @@ const fillLines = computed(() => {
       </g>
 
       <!-- Петли -->
-      <g fill="#e8b923" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
+      <g
+        v-if="!hingesBehind"
+        data-testid="type2-drawing-hinges"
+        fill="#e8b923"
+        stroke="#000"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+      >
         <rect
           v-for="(hinge, index) in geometry.hinges"
           :key="`hinge-${index}`"
@@ -219,8 +383,15 @@ const fillLines = computed(() => {
         />
       </g>
 
-      <!-- Защёлка -->
-      <g :fill="geometry.frameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
+      <!-- Притворная полоса с улицы -->
+      <g
+        v-if="!viewedFromYard"
+        data-testid="type2-drawing-strip"
+        :fill="displayedFrameColor"
+        stroke="#000"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+      >
         <rect
           v-for="(strip, index) in geometry.strip"
           :key="`strip-${index}`"
@@ -238,19 +409,19 @@ const fillLines = computed(() => {
         :y="geometry.extraRail.y"
         :width="geometry.extraRail.width"
         :height="geometry.extraRail.height"
-        :fill="geometry.extraRail.placement === 'above' ? geometry.frameColor : 'none'"
+        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
         stroke="#000"
         stroke-width="1"
         :stroke-dasharray="geometry.extraRail.placement === 'behind' ? '12 8' : undefined"
         vector-effect="non-scaling-stroke"
       />
 
-      <!-- Заполнение — на переднем плане -->
+      <!-- С улицы профлист находится перед каркасом -->
       <g
-        v-if="showFill && geometry.fill.material === 'c8'"
+        v-if="!viewedFromYard && showFill && geometry.fill.material === 'c8'"
         data-testid="type2-drawing-fill"
       >
-        <defs v-if="geometry.fill.image">
+        <defs v-if="displayedFillImage">
           <pattern
             :id="texturePatternId"
             patternUnits="userSpaceOnUse"
@@ -258,7 +429,7 @@ const fillLines = computed(() => {
             :height="TEXTURE_TILE_SIZE"
           >
             <image
-              :href="geometry.fill.image"
+              :href="displayedFillImage"
               :width="TEXTURE_TILE_SIZE"
               :height="TEXTURE_TILE_SIZE"
               preserveAspectRatio="xMidYMid slice"
@@ -270,10 +441,10 @@ const fillLines = computed(() => {
           :y="geometry.fillArea.y"
           :width="geometry.fillArea.width"
           :height="geometry.fillArea.height"
-          :fill="geometry.fill.color"
+          :fill="displayedFillColor"
         />
         <rect
-          v-if="geometry.fill.image"
+          v-if="displayedFillImage"
           :x="geometry.fillArea.x"
           :y="geometry.fillArea.y"
           :width="geometry.fillArea.width"
@@ -282,7 +453,7 @@ const fillLines = computed(() => {
         />
         <line
           v-for="(line, index) in fillLines"
-          :key="`fill-line-${index}`"
+          :key="`front-fill-line-${index}`"
           :x1="line.x1"
           :y1="line.y1"
           :x2="line.x2"
@@ -292,17 +463,69 @@ const fillLines = computed(() => {
         />
       </g>
 
-
+      </g>
     </svg>
 
-    <label class="flex items-center gap-2 text-sm text-(--ui-color-text-secondary) cursor-pointer">
-      <input
-        v-model="showFill"
-        data-testid="type2-drawing-fill-toggle"
-        type="checkbox"
-        class="size-4"
-      >
-      <span>Показывать заполнение</span>
-    </label>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-(--ui-color-text-secondary)">
+      <label class="flex cursor-pointer items-center gap-2">
+        <input
+          v-model="showFill"
+          data-testid="type2-drawing-fill-toggle"
+          type="checkbox"
+          class="size-4"
+        >
+        <span>Показывать заполнение</span>
+      </label>
+
+      <fieldset class="flex flex-wrap items-center gap-3">
+        <legend class="sr-only">Цвета чертежа</legend>
+        <span>Цвета:</span>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="colorMode"
+            data-testid="type2-drawing-color-realistic"
+            type="radio"
+            value="realistic"
+            class="size-4"
+          >
+          <span>Реалистичные</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="colorMode"
+            data-testid="type2-drawing-color-schematic"
+            type="radio"
+            value="schematic"
+            class="size-4"
+          >
+          <span>Схематичные</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="flex flex-wrap items-center gap-3">
+        <legend class="sr-only">Сторона просмотра чертежа</legend>
+        <span>Вид:</span>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="viewSide"
+            data-testid="type2-drawing-view-street"
+            type="radio"
+            value="street"
+            class="size-4"
+          >
+          <span>С улицы</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="viewSide"
+            data-testid="type2-drawing-view-yard"
+            type="radio"
+            value="yard"
+            class="size-4"
+          >
+          <span>Со двора</span>
+        </label>
+      </fieldset>
+    </div>
   </div>
 </template>

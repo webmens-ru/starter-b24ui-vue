@@ -19,6 +19,7 @@ export interface Type2DrawingSource {
   colorFacadeImage?: unknown
   raspolozheniyePolotna?: unknown
   colorShieldHex?: unknown
+  sideGrilleNetImage?: unknown
 }
 
 export interface DrawingRect {
@@ -43,6 +44,8 @@ export interface Type2DrawingGeometry {
   subtype: Type2GateSubtype
   hingeSide: 'left' | 'right'
   fillArea: DrawingRect
+  netArea: DrawingRect & { visible: boolean }
+  netImage: string
   innerFrame: { top: DrawingRect; bottom: DrawingRect; left: DrawingRect; right: DrawingRect }
   rails: {
     lowerSubtype: VisibleRect
@@ -76,9 +79,11 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function profileSize(value: unknown, fallback: number): number {
-  const match = text(value).match(/(\d+(?:[.,]\d+)?)\s*[xх×]/i)
-  return numberInRange(match?.[1]?.replace(',', '.'), fallback, 20, 200)
+function type2VisibleProfileSize(value: unknown, fallback: number): number {
+  const match = text(value).match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
+  const first = numberInRange(match?.[1]?.replace(',', '.'), fallback, 20, 200)
+  const second = numberInRange(match?.[2]?.replace(',', '.'), fallback, 20, 200)
+  return first === 50 ? second : first
 }
 
 function subtype(value: unknown): Type2GateSubtype {
@@ -120,7 +125,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const openingHeight = numberInRange(source.heightProyema, 2000, 500, 5000)
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
   const hasPosts = source.hasStolby === undefined ? true : Number(source.hasStolby) !== 0
-  const postWidth = profileSize(source.stolbName, 50)
+  const postWidth = type2VisibleProfileSize(source.stolbName, 50)
   const hingeSide: 'left' | 'right' = /правая/i.test(text(source.openingOptionName)) ? 'right' : 'left'
   const gateSubtype = subtype(source.shieldType)
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)
@@ -131,7 +136,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const extraRailName = text(source.peremichkaPolozheniyeName)
   const extraRailVisible = extraRailName !== '' && !/без/i.test(extraRailName)
   const extraRailPlacement: 'above' | 'behind' = /за/i.test(extraRailName) ? 'behind' : 'above'
-  const extraRailSize = profileSize(source.peremichkaSortamentName, 60)
+  const extraRailSize = type2VisibleProfileSize(source.peremichkaSortamentName, 60)
   const topOffset = extraRailVisible && extraRailPlacement === 'above' ? extraRailSize : 0
 
   const gateZoneX = hasPosts ? postWidth : 0
@@ -187,6 +192,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
 
   let meshArea = baseFill
   let fillArea = gateInner
+  let netArea = { ...safeRect(0, 0, 0, 0), visible: false }
   if (gateSubtype === 'type2') {
     meshArea = safeRect(baseFill.x, baseFill.y, baseFill.width, lowerSubtype.y - INNER_FRAME_SIZE - baseFill.y)
     fillArea = safeRect(gateInner.x, gateInner.y, gateInner.width, lowerSubtype.y - gateInner.y)
@@ -197,11 +203,20 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     fillArea = safeRect(gateInner.x, fillY, gateInner.width, lowerSubtype.y - fillY)
   } else if (gateSubtype === 'type4') {
     if (meshOnLeft) {
+      netArea = {
+        ...safeRect(gateInner.x, gateInner.y, verticalSubtype.x - gateInner.x, gateInner.height),
+        visible: true,
+      }
       const meshX = verticalSubtype.x + verticalSubtype.width + INNER_FRAME_SIZE
       meshArea = safeRect(meshX, baseFill.y, baseFill.x + baseFill.width - meshX, baseFill.height)
       const fillX = verticalSubtype.x + verticalSubtype.width
       fillArea = safeRect(fillX, gateInner.y, gateInner.x + gateInner.width - fillX, gateInner.height)
     } else {
+      const netX = verticalSubtype.x + verticalSubtype.width
+      netArea = {
+        ...safeRect(netX, gateInner.y, gateInner.x + gateInner.width - netX, gateInner.height),
+        visible: true,
+      }
       meshArea = safeRect(baseFill.x, baseFill.y, verticalSubtype.x - INNER_FRAME_SIZE - baseFill.x, baseFill.height)
       fillArea = safeRect(gateInner.x, gateInner.y, verticalSubtype.x - gateInner.x, gateInner.height)
     }
@@ -247,6 +262,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     subtype: gateSubtype,
     hingeSide,
     fillArea,
+    netArea,
+    netImage: text(source.sideGrilleNetImage),
     innerFrame,
     rails: { lowerSubtype, upperSubtype, verticalSubtype, centerFill },
     extraRail: {
