@@ -357,6 +357,7 @@ function syncCalcFields() {
   calc.colorShieldId.value   = String(colorShieldId.value ?? '')
   const colorItem = colorOptions.value.find(i => String(i.id) === String(colorShieldId.value))
   calc.colorShieldName.value = colorItem?.name ?? ''
+  calc.colorShieldHex.value  = colorItem?.hex ?? ''
   calc.heightTopPart.value   = heightTopPart.value
   calc.heightLowerPart.value = heightLowerPart.value
   calc.widthSidePart.value   = widthSidePart.value

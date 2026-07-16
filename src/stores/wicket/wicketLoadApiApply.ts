@@ -58,6 +58,7 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   additionalPenId: null,
   additionalPenColor: '',
   additionalPenMarking: '',
+  colorShieldHex: '',
   countryCode: '+7',
 }
 

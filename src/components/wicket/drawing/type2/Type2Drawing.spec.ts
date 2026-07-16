@@ -21,6 +21,7 @@ const calc = {
   colorFacade: ref('RAL 7016'),
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
+  colorShieldHex: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
 

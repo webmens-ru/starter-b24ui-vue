@@ -73,6 +73,8 @@ describe('useCalculation', () => {
       thicknessFacade: '0.45',
       typeOfCoatingFacade: 'Глянец',
       colorFacade: 'RAL 7004',
+      colorFacadeHex: '#704214',
+      colorFacadeImage: '/uploads/colors/wood.jpg',
       idYard: 12,
       materialSupplierYard: 'Кровельный центр',
       materialYard: 'Сайдинг «Бревно»',
@@ -108,6 +110,8 @@ describe('useCalculation', () => {
       expect(calc.shieldType.value).toBe('Тип_3')
       expect(calc.heightTopPart.value).toBe('150')
       expect(calc.idFacade.value).toBe(5)
+      expect(calc.colorFacadeHex.value).toBe('#704214')
+      expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
       expect(calc.idYard.value).toBe(12)
       expect(calc.priceRetail.value).toBe('18500')
     })
@@ -332,7 +336,7 @@ describe('useCalculation', () => {
       expect(payload.skudIds).toBe('[10,11]')
     })
 
-    it('не сохраняет внешний вид заполнения в payload заказа', () => {
+    it('не сохраняет вычисляемый внешний вид заполнения в payload заказа', () => {
       calc.colorFacadeHex.value = '#704214'
       calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
 

@@ -416,15 +416,15 @@ export async function mockGetAssortmentJumper(): Promise<{ assortmentJumper: Sel
 // ─── Моки цвет щита ──────────────────────────────────────────────────────────
 
 const MOCK_COLOR_SHIELD: ColorShieldItem[] = [
-  { id: 1,  name: 'RAL 7024 (Графитовый серый)', isStandard: 1 },
-  { id: 2,  name: 'RAL 8017 (Шоколадно-коричневый)', isStandard: 1 },
-  { id: 3,  name: 'RAL 9003 (Сигнальный белый)', isStandard: 1 },
-  { id: 4,  name: 'RAL 3005 (Винно-красный)', isStandard: 1 },
-  { id: 5,  name: 'RAL 6020 (Хромовый зелёный)', isStandard: 1 },
-  { id: 6,  name: 'RAL 1014 (Слоновая кость)', isStandard: 1 },
-  { id: 7,  name: 'RAL 7004 (Сигнальный серый)', isStandard: 1 },
-  { id: 101, name: 'RAL 9001 (Кремово-белый)', isStandard: 0 },
-  { id: 102, name: 'RAL 5010 (Горечавково-синий)', isStandard: 0 },
+  { id: 1,  name: 'RAL 7024 (Графитовый серый)', isStandard: 1, hex: '#474A51' },
+  { id: 2,  name: 'RAL 8017 (Шоколадно-коричневый)', isStandard: 1, hex: '#4E3629' },
+  { id: 3,  name: 'RAL 9003 (Сигнальный белый)', isStandard: 1, hex: '#F4F4F4' },
+  { id: 4,  name: 'RAL 3005 (Винно-красный)', isStandard: 1, hex: '#5B1F2A' },
+  { id: 5,  name: 'RAL 6020 (Хромовый зелёный)', isStandard: 1, hex: '#3E4F3D' },
+  { id: 6,  name: 'RAL 1014 (Слоновая кость)', isStandard: 1, hex: '#E8DBC4' },
+  { id: 7,  name: 'RAL 7004 (Сигнальный серый)', isStandard: 1, hex: '#9EA2A5' },
+  { id: 101, name: 'RAL 9001 (Кремово-белый)', isStandard: 0, hex: '#F3ECE0' },
+  { id: 102, name: 'RAL 5010 (Горечавково-синий)', isStandard: 0, hex: '#1B3F6E' },
 ]
 
 export async function mockGetColorShield(): Promise<{ colorShield: ColorShieldItem[] }> {

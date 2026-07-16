@@ -94,6 +94,7 @@ const raspolozheniyePolotna = ref<string>('Вертикально')
 const shieldType       = ref<string>('Тип_1')
 const colorShieldId   = ref<string | number>('')
 const colorShieldName = ref<string>('')
+const colorShieldHex  = ref<string>('')
 const heightTopPart   = ref<string>('0')
 const heightLowerPart = ref<string>('0')
 const widthSidePart         = ref<string>('0')
@@ -217,6 +218,7 @@ const fieldsFilled = ref<number>(0)
     shieldType.value = 'Тип_1'
     colorShieldId.value = ''
     colorShieldName.value = ''
+    colorShieldHex.value = ''
     heightTopPart.value = '0'
     heightLowerPart.value = '0'
     widthSidePart.value = '0'
@@ -426,6 +428,7 @@ const fieldsFilled = ref<number>(0)
       shieldType,
       colorShieldId,
       colorShieldName,
+      colorShieldHex,
       heightTopPart,
       heightLowerPart,
       widthSidePart,
@@ -444,6 +447,8 @@ const fieldsFilled = ref<number>(0)
       thicknessFacade,
       typeOfCoatingFacade,
       colorFacade,
+      colorFacadeHex,
+      colorFacadeImage,
       idYard,
       materialSupplierYard,
       materialYard,
@@ -460,7 +465,23 @@ const fieldsFilled = ref<number>(0)
         ? apiData.modelId
         : (w.modelId.value ?? ''),
     )
+    if (import.meta.env.DEV && modelIdForLoad === '2') {
+      console.info('[type2-drawing] API get-data', {
+        idFacade: apiData.idFacade,
+        colorFacade: apiData.colorFacade,
+        colorFacadeHex: apiData.colorFacadeHex,
+        colorFacadeImage: apiData.colorFacadeImage,
+      })
+    }
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    if (import.meta.env.DEV && modelIdForLoad === '2') {
+      console.info('[type2-drawing] Pinia after loadFromApi', {
+        idFacade: idFacade.value,
+        colorFacade: colorFacade.value,
+        colorFacadeHex: colorFacadeHex.value,
+        colorFacadeImage: colorFacadeImage.value,
+      })
+    }
 
     const A = apiData as Record<string, unknown>
     const numOrNull = (v: unknown) => (v == null || v === '' ? null : Number(v))
@@ -794,6 +815,7 @@ const fieldsFilled = ref<number>(0)
     shieldType,
     colorShieldId,
     colorShieldName,
+    colorShieldHex,
     heightTopPart,
     heightLowerPart,
     widthSidePart,

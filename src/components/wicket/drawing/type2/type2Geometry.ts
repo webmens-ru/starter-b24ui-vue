@@ -18,6 +18,7 @@ export interface Type2DrawingSource {
   colorFacadeHex?: unknown
   colorFacadeImage?: unknown
   raspolozheniyePolotna?: unknown
+  colorShieldHex?: unknown
 }
 
 export interface DrawingRect {
@@ -53,6 +54,7 @@ export interface Type2DrawingGeometry {
   hinges: DrawingRect[]
   strip: DrawingRect[]
   fill: { material: 'none' | 'c8'; color: string; image: string; direction: 'horizontal' | 'vertical' }
+  frameColor: string
 }
 
 const RAIL_SIZE = 50
@@ -86,7 +88,17 @@ function subtype(value: unknown): Type2GateSubtype {
 
 function fillColor(value: unknown): string {
   const valueText = text(value)
-  return /^#[0-9a-f]{6}$/i.test(valueText) ? valueText : '#f6f6f6'
+  // Поддерживает #RRGGBB и RRGGBB (с и без решётки)
+  if (/^#[0-9a-f]{6}$/i.test(valueText)) return valueText
+  if (/^[0-9a-f]{6}$/i.test(valueText)) return `#${valueText}`
+  return '#f6f6f6'
+}
+
+function frameColorHex(value: unknown): string {
+  const valueText = text(value)
+  if (/^#[0-9a-f]{6}$/i.test(valueText)) return valueText
+  if (/^[0-9a-f]{6}$/i.test(valueText)) return `#${valueText}`
+  return '#66686c'
 }
 
 function safeRect(x: number, y: number, width: number, height: number): DrawingRect {
@@ -250,5 +262,6 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
       image: text(source.colorFacadeImage),
       direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
     },
+    frameColor: frameColorHex(source.colorShieldHex),
   }
 }

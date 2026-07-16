@@ -245,8 +245,12 @@ onMounted(async () => {
   calc.setActivePage('page5')
 
   // Восстанавливаем сохранённые значения
-  if (calc.nalichieStolbovName.value) {
-    nalichieStolbovName.value = calc.nalichieStolbovName.value as 'Со столбами' | 'Без столбов'
+  // Важно: восстанавливаем через hasStolby (1/0), а не через nalichieStolbovName,
+  // потому что бэкенд возвращает 'Есть'/'Нет', а компонент использует 'Со столбами'/'Без столбов'
+  if (calc.hasStolby.value === 1) {
+    nalichieStolbovName.value = 'Со столбами'
+  } else if (calc.hasStolby.value === 0) {
+    nalichieStolbovName.value = 'Без столбов'
   }
   if (calc.openingOptionId.value !== null) {
     openingOptionId.value = calc.openingOptionId.value

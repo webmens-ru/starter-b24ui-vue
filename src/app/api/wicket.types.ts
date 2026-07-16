@@ -8,6 +8,8 @@ export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
   /** Категория краски (dir_paints.paintCategory), хранится по-русски */
   paintCategory?: 'Эмаль' | 'Молотковая' | 'Маслянная' | string | null
+  /** HEX-цвет для визуализации (из dir_color.hex через dir_paints.color) */
+  hex?: string | null
 }
 
 export interface FilterOptionItem {

@@ -5,7 +5,7 @@ const TEXTURE_TILE_SIZE = 240
 </script>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
@@ -34,7 +34,32 @@ const geometry = computed(() => computeType2Geometry({
   colorFacadeHex: calc.colorFacadeHex.value,
   colorFacadeImage: calc.colorFacadeImage.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
+  colorShieldHex: calc.colorShieldHex.value,
 }))
+
+if (import.meta.env.DEV) {
+  watch(
+    () => [
+      calc.idFacade?.value,
+      calc.colorFacade.value,
+      calc.colorFacadeHex.value,
+      calc.colorFacadeImage.value,
+      geometry.value.fill.color,
+      geometry.value.fill.image,
+    ],
+    ([idFacade, colorFacade, colorFacadeHex, colorFacadeImage, fillColor, fillImage]) => {
+      console.info('[type2-drawing] SVG fill', {
+        idFacade,
+        colorFacade,
+        colorFacadeHex,
+        colorFacadeImage,
+        fillColor,
+        fillImage,
+      })
+    },
+    { immediate: true },
+  )
+}
 
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
 const topRailPath = computed(() => buildTopRailPath({
@@ -76,6 +101,7 @@ const fillLines = computed(() => {
       aria-label="Чертёж калитки типа 2"
       role="img"
     >
+      <!-- Проём -->
       <rect
         :x="geometry.opening.x"
         :y="geometry.opening.y"
@@ -83,11 +109,12 @@ const fillLines = computed(() => {
         :height="geometry.opening.height"
         fill="none"
         stroke="#d9dde5"
-        stroke-width="2"
+        stroke-width="1"
         stroke-dasharray="12 8"
         vector-effect="non-scaling-stroke"
       />
 
+      <!-- Зона калитки -->
       <rect
         :x="geometry.gateZone.x"
         :y="geometry.gateZone.y"
@@ -96,53 +123,8 @@ const fillLines = computed(() => {
         fill="rgba(37, 99, 235, 0.08)"
       />
 
-      <g
-        v-if="showFill && geometry.fill.material === 'c8'"
-        data-testid="type2-drawing-fill"
-      >
-        <defs v-if="geometry.fill.image">
-          <pattern
-            :id="texturePatternId"
-            patternUnits="userSpaceOnUse"
-            :width="TEXTURE_TILE_SIZE"
-            :height="TEXTURE_TILE_SIZE"
-          >
-            <image
-              :href="geometry.fill.image"
-              :width="TEXTURE_TILE_SIZE"
-              :height="TEXTURE_TILE_SIZE"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </pattern>
-        </defs>
-        <rect
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="geometry.fill.color"
-        />
-        <rect
-          v-if="geometry.fill.image"
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="`url(#${texturePatternId})`"
-        />
-        <line
-          v-for="(line, index) in fillLines"
-          :key="`fill-line-${index}`"
-          :x1="line.x1"
-          :y1="line.y1"
-          :x2="line.x2"
-          :y2="line.y2"
-          stroke="rgba(0, 0, 0, 0.25)"
-          stroke-width="5"
-        />
-      </g>
-
-      <g data-testid="type2-drawing-frame" fill="#66686c" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
+      <!-- Внутренний каркас и подтипные рейки -->
+      <g data-testid="type2-drawing-frame" :fill="geometry.frameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
         <rect
           :x="geometry.innerFrame.top.x"
           :y="geometry.innerFrame.top.y"
@@ -197,14 +179,20 @@ const fillLines = computed(() => {
         />
       </g>
 
-      <g fill="#8a8b8e" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
-        <path :d="topRailPath"/>
-        <path :d="bottomRailPath"/>
+      <!-- Боковые рамки (лево/право) -->
+      <g :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
         <rect :x="geometry.gate.x" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
         <rect :x="geometry.gate.x + Math.max(0, geometry.gate.width - 50)" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
       </g>
 
-      <g v-if="geometry.posts.visible" fill="#b1b2b5" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
+      <!-- Направляющие верх/низ — поверх боковых рамок для видимости трапеции -->
+      <g :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
+        <path :d="topRailPath"/>
+        <path :d="bottomRailPath"/>
+      </g>
+
+      <!-- Столбы -->
+      <g v-if="geometry.posts.visible" :fill="geometry.frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
         <rect
           :x="geometry.posts.left.x"
           :y="geometry.posts.left.y"
@@ -219,6 +207,7 @@ const fillLines = computed(() => {
         />
       </g>
 
+      <!-- Петли -->
       <g fill="#e8b923" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
         <rect
           v-for="(hinge, index) in geometry.hinges"
@@ -230,7 +219,8 @@ const fillLines = computed(() => {
         />
       </g>
 
-      <g fill="#8a8b8e" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
+      <!-- Защёлка -->
+      <g :fill="geometry.frameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
         <rect
           v-for="(strip, index) in geometry.strip"
           :key="`strip-${index}`"
@@ -241,18 +231,68 @@ const fillLines = computed(() => {
         />
       </g>
 
+      <!-- Перемычка -->
       <rect
         v-if="geometry.extraRail.visible"
         :x="geometry.extraRail.x"
         :y="geometry.extraRail.y"
         :width="geometry.extraRail.width"
         :height="geometry.extraRail.height"
-        :fill="geometry.extraRail.placement === 'above' ? '#b1b2b5' : 'none'"
+        :fill="geometry.extraRail.placement === 'above' ? geometry.frameColor : 'none'"
         stroke="#000"
-        stroke-width="2"
+        stroke-width="1"
         :stroke-dasharray="geometry.extraRail.placement === 'behind' ? '12 8' : undefined"
         vector-effect="non-scaling-stroke"
       />
+
+      <!-- Заполнение — на переднем плане -->
+      <g
+        v-if="showFill && geometry.fill.material === 'c8'"
+        data-testid="type2-drawing-fill"
+      >
+        <defs v-if="geometry.fill.image">
+          <pattern
+            :id="texturePatternId"
+            patternUnits="userSpaceOnUse"
+            :width="TEXTURE_TILE_SIZE"
+            :height="TEXTURE_TILE_SIZE"
+          >
+            <image
+              :href="geometry.fill.image"
+              :width="TEXTURE_TILE_SIZE"
+              :height="TEXTURE_TILE_SIZE"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </pattern>
+        </defs>
+        <rect
+          :x="geometry.fillArea.x"
+          :y="geometry.fillArea.y"
+          :width="geometry.fillArea.width"
+          :height="geometry.fillArea.height"
+          :fill="geometry.fill.color"
+        />
+        <rect
+          v-if="geometry.fill.image"
+          :x="geometry.fillArea.x"
+          :y="geometry.fillArea.y"
+          :width="geometry.fillArea.width"
+          :height="geometry.fillArea.height"
+          :fill="`url(#${texturePatternId})`"
+        />
+        <line
+          v-for="(line, index) in fillLines"
+          :key="`fill-line-${index}`"
+          :x1="line.x1"
+          :y1="line.y1"
+          :x2="line.x2"
+          :y2="line.y2"
+          stroke="rgba(0, 0, 0, 0.25)"
+          stroke-width="5"
+        />
+      </g>
+
+
     </svg>
 
     <label class="flex items-center gap-2 text-sm text-(--ui-color-text-secondary) cursor-pointer">

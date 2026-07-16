@@ -91,6 +91,14 @@ function restoreFromCalc(): ProfnastilRow | null {
 }
 
 async function save(row: ProfnastilRow) {
+  if (import.meta.env.DEV) {
+    console.info('[type2-drawing] selected profnastil', {
+      id: row.id,
+      color: row.color,
+      colorHex: row.colorHex,
+      colorImage: row.colorImage,
+    })
+  }
   calc.idFacade.value                = row.id
   calc.materialSupplierFacade.value = row.company
   calc.materialFacade.value          = row.material
