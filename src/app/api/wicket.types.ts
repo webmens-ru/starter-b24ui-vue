@@ -36,6 +36,8 @@ export interface SidingRow {
   form: string
   typeOfCoating: string
   color: string
+  colorHex?: string | null
+  colorImage?: string | null
   priceM2?: string | number
   deliveryTime?: string
   inStock?: string

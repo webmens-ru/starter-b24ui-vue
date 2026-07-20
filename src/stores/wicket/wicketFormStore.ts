@@ -100,6 +100,8 @@ const heightLowerPart = ref<string>('0')
 const widthSidePart         = ref<string>('0')
 const assortmentSideGrilleNetId = ref<string | number | null>(null)
 const sideGrilleNetImage = ref<string>('')
+const lowerGrilleNetImage = ref<string>('')
+const upperGrilleNetImage = ref<string>('')
 const assortmentHeightUpperNetId = ref<string | number | null>(null)
 const assortmentHeightLowerNetId = ref<string | number | null>(null)
 const grilleLocation         = ref<string>('Возле петель')
@@ -117,6 +119,8 @@ const typeOfCoatingFacade   = ref<string>('')
 const colorFacade             = ref<string>('')
 const colorFacadeHex          = ref<string>('')
 const colorFacadeImage        = ref<string>('')
+const colorFacadeReverseHex   = ref<string>('')
+const colorFacadeReverseImage = ref<string>('')
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
@@ -126,6 +130,8 @@ const formYard              = ref<string>('')
 const thicknessYard         = ref<string>('')
 const typeOfCoatingYard   = ref<string>('')
 const colorYard             = ref<string>('')
+const colorYardHex          = ref<string>('')
+const colorYardImage        = ref<string>('')
 
 // Цена
 const priceRetail  = ref<string | number>('')
@@ -225,6 +231,8 @@ const fieldsFilled = ref<number>(0)
     widthSidePart.value = '0'
     assortmentSideGrilleNetId.value = null
     sideGrilleNetImage.value = ''
+    lowerGrilleNetImage.value = ''
+    upperGrilleNetImage.value = ''
     assortmentHeightUpperNetId.value = null
     assortmentHeightLowerNetId.value = null
     grilleLocation.value = 'Возле петель'
@@ -240,6 +248,8 @@ const fieldsFilled = ref<number>(0)
     colorFacade.value = ''
     colorFacadeHex.value = ''
     colorFacadeImage.value = ''
+    colorFacadeReverseHex.value = ''
+    colorFacadeReverseImage.value = ''
     idYard.value = ''
     materialSupplierYard.value = ''
     materialYard.value = ''
@@ -247,6 +257,8 @@ const fieldsFilled = ref<number>(0)
     thicknessYard.value = ''
     typeOfCoatingYard.value = ''
     colorYard.value = ''
+    colorYardHex.value = ''
+    colorYardImage.value = ''
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
@@ -436,6 +448,8 @@ const fieldsFilled = ref<number>(0)
       widthSidePart,
       assortmentSideGrilleNetId,
       sideGrilleNetImage,
+      lowerGrilleNetImage,
+      upperGrilleNetImage,
       assortmentHeightUpperNetId,
       assortmentHeightLowerNetId,
       grilleLocation,
@@ -452,6 +466,8 @@ const fieldsFilled = ref<number>(0)
       colorFacade,
       colorFacadeHex,
       colorFacadeImage,
+      colorFacadeReverseHex,
+      colorFacadeReverseImage,
       idYard,
       materialSupplierYard,
       materialYard,
@@ -459,6 +475,8 @@ const fieldsFilled = ref<number>(0)
       thicknessYard,
       typeOfCoatingYard,
       colorYard,
+      colorYardHex,
+      colorYardImage,
       priceRetail,
       priceDealer,
     }
@@ -824,6 +842,8 @@ const fieldsFilled = ref<number>(0)
     widthSidePart,
     assortmentSideGrilleNetId,
     sideGrilleNetImage,
+    lowerGrilleNetImage,
+    upperGrilleNetImage,
     assortmentHeightUpperNetId,
     assortmentHeightLowerNetId,
     grilleLocation,
@@ -839,6 +859,8 @@ const fieldsFilled = ref<number>(0)
     colorFacade,
     colorFacadeHex,
     colorFacadeImage,
+    colorFacadeReverseHex,
+    colorFacadeReverseImage,
     idYard,
     materialSupplierYard,
     materialYard,
@@ -846,6 +868,8 @@ const fieldsFilled = ref<number>(0)
     thicknessYard,
     typeOfCoatingYard,
     colorYard,
+    colorYardHex,
+    colorYardImage,
     priceRetail,
     priceDealer,
     fieldsFilled,

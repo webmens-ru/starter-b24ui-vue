@@ -87,6 +87,8 @@ function restoreFromCalc(): ProfnastilRow | null {
     color:         calc.colorFacade.value,
     colorHex:      calc.colorFacadeHex.value,
     colorImage:    calc.colorFacadeImage.value,
+    colorReverseHex: calc.colorFacadeReverseHex.value,
+    colorReverseImage: calc.colorFacadeReverseImage.value,
   }
 }
 
@@ -108,6 +110,8 @@ async function save(row: ProfnastilRow) {
   calc.colorFacade.value             = row.color
   calc.colorFacadeHex.value          = row.colorHex ?? ''
   calc.colorFacadeImage.value        = row.colorImage ?? ''
+  calc.colorFacadeReverseHex.value   = row.colorReverseHex ?? '#D7D5C6'
+  calc.colorFacadeReverseImage.value = row.colorReverseImage ?? ''
 
   calc.updateOrCreateBlock('Заполнение (фасад)', [
     { name: 'Производитель материала', value: row.company },
@@ -159,6 +163,8 @@ function deselectRow() {
   calc.idFacade.value = ''
   calc.colorFacadeHex.value = ''
   calc.colorFacadeImage.value = ''
+  calc.colorFacadeReverseHex.value = ''
+  calc.colorFacadeReverseImage.value = ''
 }
 
 function isSelected(row: ProfnastilRow) {

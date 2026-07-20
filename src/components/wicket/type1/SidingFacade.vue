@@ -90,6 +90,8 @@ function restoreFromCalc(): SidingRow | null {
     form:          calc.formFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
     color:         calc.colorFacade.value,
+    colorHex:      calc.colorFacadeHex.value,
+    colorImage:    calc.colorFacadeImage.value,
   }
 }
 
@@ -102,6 +104,8 @@ async function save(row: SidingRow) {
   calc.formFacade.value              = row.form
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.colorFacade.value             = row.color
+  calc.colorFacadeHex.value          = row.colorHex ?? ''
+  calc.colorFacadeImage.value        = row.colorImage ?? ''
 
   // Блок данных
   calc.updateOrCreateBlock('Заполнение (фасад)', [
@@ -153,6 +157,8 @@ async function selectRow(row: SidingRow) {
 function deselectRow() {
   selectedRow.value = null
   calc.idFacade.value = ''
+  calc.colorFacadeHex.value = ''
+  calc.colorFacadeImage.value = ''
 }
 
 function isSelected(row: SidingRow) {

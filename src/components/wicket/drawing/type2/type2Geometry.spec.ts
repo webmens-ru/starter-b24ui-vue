@@ -35,6 +35,8 @@ describe('computeType2Geometry', () => {
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#704214',
       colorFacadeImage: '  /uploads/colors/wood.webp  ',
+      colorFacadeReverseHex: '#D7D5C6',
+      colorFacadeReverseImage: '  /uploads/colors/reverse.webp  ',
       sideGrilleNetImage: '  /uploads/nets/side.webp  ',
       raspolozheniyePolotna: 'Вертикально',
     })
@@ -54,6 +56,8 @@ describe('computeType2Geometry', () => {
       material: 'c8',
       color: '#704214',
       image: '/uploads/colors/wood.webp',
+      reverseColor: '#D7D5C6',
+      reverseImage: '/uploads/colors/reverse.webp',
       direction: 'vertical',
     })
   })
@@ -117,6 +121,39 @@ describe('computeType2Geometry', () => {
     expect(geometry.rails.lowerSubtype.visible).toBe(subtype === 'type2' || subtype === 'type3')
     expect(geometry.rails.upperSubtype.visible).toBe(subtype === 'type3')
     expect(geometry.rails.verticalSubtype.visible).toBe(subtype === 'type4')
+  })
+
+  it.each(['Тип_2', 'Тип_3'])('выделяет нижнюю область сетки для %s', (shieldType) => {
+    const geometry = computeType2Geometry({
+      shieldType,
+      heightLowerPart: '300',
+      lowerGrilleNetImage: '/uploads/nets/lower.webp',
+    })
+
+    expect(geometry.netArea.visible).toBe(true)
+    expect(geometry.netArea.width).toBeGreaterThan(0)
+    expect(geometry.netArea.height).toBeGreaterThan(0)
+    expect(geometry.netArea.y).toBeGreaterThan(geometry.rails.lowerSubtype.y)
+    expect(geometry.netImage).toBe('/uploads/nets/lower.webp')
+  })
+
+  it('выделяет верхнюю область сетки только для подтипа 3', () => {
+    const geometry = computeType2Geometry({
+      shieldType: 'Тип_3',
+      heightTopPart: '300',
+      upperGrilleNetImage: '/uploads/nets/upper.webp',
+    })
+
+    expect(geometry.upperNetArea.visible).toBe(true)
+    expect(geometry.upperNetArea.width).toBeGreaterThan(0)
+    expect(geometry.upperNetArea.height).toBeGreaterThan(0)
+    expect(geometry.upperNetArea.y).toBe(geometry.gate.y + 50)
+    expect(geometry.upperNetImage).toBe('/uploads/nets/upper.webp')
+
+    expect(computeType2Geometry({
+      shieldType: 'Тип_2',
+      upperGrilleNetImage: '/uploads/nets/upper.webp',
+    }).upperNetArea.visible).toBe(false)
   })
 
   it('не возвращает отрицательные размеры для предельных значений', () => {

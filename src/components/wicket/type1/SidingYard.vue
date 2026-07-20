@@ -90,6 +90,8 @@ function restoreFromCalc(): SidingRow | null {
     form:          calc.formYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
     color:         calc.colorYard.value,
+    colorHex:      calc.colorYardHex.value,
+    colorImage:    calc.colorYardImage.value,
   }
 }
 
@@ -101,6 +103,8 @@ async function save(row: SidingRow) {
   calc.formYard.value              = row.form
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.colorYard.value             = row.color
+  calc.colorYardHex.value          = row.colorHex ?? ''
+  calc.colorYardImage.value        = row.colorImage ?? ''
 
   calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
@@ -151,6 +155,8 @@ async function selectRow(row: SidingRow) {
 function deselectRow() {
   selectedRow.value = null
   calc.idYard.value = ''
+  calc.colorYardHex.value = ''
+  calc.colorYardImage.value = ''
 }
 
 function isSelected(row: SidingRow) {

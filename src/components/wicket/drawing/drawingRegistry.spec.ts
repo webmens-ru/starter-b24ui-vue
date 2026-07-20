@@ -7,8 +7,11 @@ describe('resolveDrawingComponent', () => {
     expect(resolveDrawingComponent('2')).not.toBeNull()
   })
 
+  it('возвращает отдельный компонент для типа 1', () => {
+    expect(resolveDrawingComponent('1')).not.toBeNull()
+  })
+
   it('не подставляет чертёж другого типа', () => {
-    expect(resolveDrawingComponent('1')).toBeNull()
     expect(resolveDrawingComponent('11')).toBeNull()
   })
 })

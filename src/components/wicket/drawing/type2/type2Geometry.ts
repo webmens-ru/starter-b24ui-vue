@@ -17,9 +17,13 @@ export interface Type2DrawingSource {
   colorFacade?: unknown
   colorFacadeHex?: unknown
   colorFacadeImage?: unknown
+  colorFacadeReverseHex?: unknown
+  colorFacadeReverseImage?: unknown
   raspolozheniyePolotna?: unknown
   colorShieldHex?: unknown
   sideGrilleNetImage?: unknown
+  lowerGrilleNetImage?: unknown
+  upperGrilleNetImage?: unknown
 }
 
 export interface DrawingRect {
@@ -46,6 +50,8 @@ export interface Type2DrawingGeometry {
   fillArea: DrawingRect
   netArea: DrawingRect & { visible: boolean }
   netImage: string
+  upperNetArea: DrawingRect & { visible: boolean }
+  upperNetImage: string
   innerFrame: { top: DrawingRect; bottom: DrawingRect; left: DrawingRect; right: DrawingRect }
   rails: {
     lowerSubtype: VisibleRect
@@ -56,7 +62,14 @@ export interface Type2DrawingGeometry {
   extraRail: VisibleRect & { placement: 'above' | 'behind' }
   hinges: DrawingRect[]
   strip: DrawingRect[]
-  fill: { material: 'none' | 'c8'; color: string; image: string; direction: 'horizontal' | 'vertical' }
+  fill: {
+    material: 'none' | 'c8'
+    color: string
+    image: string
+    reverseColor: string
+    reverseImage: string
+    direction: 'horizontal' | 'vertical'
+  }
   frameColor: string
 }
 
@@ -193,10 +206,25 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   let meshArea = baseFill
   let fillArea = gateInner
   let netArea = { ...safeRect(0, 0, 0, 0), visible: false }
+  let upperNetArea = { ...safeRect(0, 0, 0, 0), visible: false }
   if (gateSubtype === 'type2') {
+    const netY = lowerSubtype.y + lowerSubtype.height
+    netArea = {
+      ...safeRect(gateInner.x, netY, gateInner.width, gateInner.y + gateInner.height - netY),
+      visible: true,
+    }
     meshArea = safeRect(baseFill.x, baseFill.y, baseFill.width, lowerSubtype.y - INNER_FRAME_SIZE - baseFill.y)
     fillArea = safeRect(gateInner.x, gateInner.y, gateInner.width, lowerSubtype.y - gateInner.y)
   } else if (gateSubtype === 'type3') {
+    upperNetArea = {
+      ...safeRect(gateInner.x, gateInner.y, gateInner.width, upperSubtype.y - gateInner.y),
+      visible: true,
+    }
+    const netY = lowerSubtype.y + lowerSubtype.height
+    netArea = {
+      ...safeRect(gateInner.x, netY, gateInner.width, gateInner.y + gateInner.height - netY),
+      visible: true,
+    }
     const meshY = upperSubtype.y + upperSubtype.height + INNER_FRAME_SIZE
     meshArea = safeRect(baseFill.x, meshY, baseFill.width, lowerSubtype.y - INNER_FRAME_SIZE - meshY)
     const fillY = upperSubtype.y + upperSubtype.height
@@ -263,7 +291,11 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     hingeSide,
     fillArea,
     netArea,
-    netImage: text(source.sideGrilleNetImage),
+    netImage: gateSubtype === 'type4'
+      ? text(source.sideGrilleNetImage)
+      : text(source.lowerGrilleNetImage),
+    upperNetArea,
+    upperNetImage: gateSubtype === 'type3' ? text(source.upperGrilleNetImage) : '',
     innerFrame,
     rails: { lowerSubtype, upperSubtype, verticalSubtype, centerFill },
     extraRail: {
@@ -277,6 +309,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
       material,
       color: fillColor(source.colorFacadeHex),
       image: text(source.colorFacadeImage),
+      reverseColor: fillColor(source.colorFacadeReverseHex || '#D7D5C6'),
+      reverseImage: text(source.colorFacadeReverseImage),
       direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
     },
     frameColor: frameColorHex(source.colorShieldHex),

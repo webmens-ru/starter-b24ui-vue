@@ -241,6 +241,13 @@ export async function mockGetFilterOptions(url: string, _type?: string): Promise
   return FILTER_MAIN
 }
 
+const SIDING_COLOR_HEX:Record<string,string>={
+  'RAL 1014':'#DED09F','RAL 1015':'#E6D2B5','RAL 2004':'#E25303','RAL 3003':'#861A22','RAL 3005':'#59191F',
+  'RAL 5005':'#1E2460','RAL 5021':'#007577','RAL 6002':'#2D572C','RAL 6005':'#0E4438','RAL 6020':'#37422F',
+  'RAL 7004':'#999A9F','RAL 7005':'#6D7270','RAL 7024':'#45494E','RAL 7035':'#CBD0CC','RAL 8004':'#8F4E35',
+  'RAL 8017':'#442F29','RAL 8019':'#3D3635','RAL 9002':'#D7D5CB','RAL 9003':'#F4F4F4','RAL 9005':'#0A0A0A','RAL 9006':'#A5A5A5',
+}
+
 export async function mockGetSidingTable(filters: SidingFilters, page = 1): Promise<{ table: SidingRow[]; pagination: { page: number; pageSize: number; totalCount: number; pageCount: number } }> {
   await delay(200)
   let rows = [...SIDING_ROWS]
@@ -253,7 +260,7 @@ export async function mockGetSidingTable(filters: SidingFilters, page = 1): Prom
   const totalCount = rows.length
   const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage   = Math.min(Math.max(1, page), pageCount)
-  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize).map(row=>({...row,colorHex:SIDING_COLOR_HEX[row.color]}))
   return { table, pagination: { page: safePage, pageSize, totalCount, pageCount } }
 }
 

@@ -66,6 +66,10 @@ describe('useCalculation', () => {
       heightLowerPart: '200',
       widthSidePart: '0',
       grilleLocation: 'Возле петель',
+      assortmentHeightUpperNetId: 11,
+      assortmentHeightLowerNetId: 12,
+      upperGrilleNetImage: 'https://backend.test/uploads/upper.png',
+      lowerGrilleNetImage: 'https://backend.test/uploads/lower.png',
       idFacade: 5,
       materialSupplierFacade: 'Кровельный центр',
       materialFacade: 'Профлист С-20',
@@ -75,6 +79,8 @@ describe('useCalculation', () => {
       colorFacade: 'RAL 7004',
       colorFacadeHex: '#704214',
       colorFacadeImage: '/uploads/colors/wood.jpg',
+      colorFacadeReverseHex: '#D7D5C6',
+      colorFacadeReverseImage: '/uploads/colors/reverse.jpg',
       idYard: 12,
       materialSupplierYard: 'Кровельный центр',
       materialYard: 'Сайдинг «Бревно»',
@@ -109,9 +115,15 @@ describe('useCalculation', () => {
       expect(calc.widthProyema.value).toBe('1100')
       expect(calc.shieldType.value).toBe('Тип_3')
       expect(calc.heightTopPart.value).toBe('150')
+      expect(calc.assortmentHeightUpperNetId.value).toBe(11)
+      expect(calc.assortmentHeightLowerNetId.value).toBe(12)
+      expect(calc.upperGrilleNetImage.value).toBe('https://backend.test/uploads/upper.png')
+      expect(calc.lowerGrilleNetImage.value).toBe('https://backend.test/uploads/lower.png')
       expect(calc.idFacade.value).toBe(5)
       expect(calc.colorFacadeHex.value).toBe('#704214')
       expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+      expect(calc.colorFacadeReverseHex.value).toBe('#D7D5C6')
+      expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
       expect(calc.idYard.value).toBe(12)
       expect(calc.priceRetail.value).toBe('18500')
     })

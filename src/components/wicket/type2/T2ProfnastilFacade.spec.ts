@@ -52,6 +52,8 @@ describe('T2ProfnastilFacade appearance state', () => {
       color: 'Дуб',
       colorHex: '#704214',
       colorImage: '/uploads/colors/wood.jpg',
+      colorReverseHex: '#D7D5C6',
+      colorReverseImage: '/uploads/colors/reverse.jpg',
     })
     const wrapper = mountComponent()
     await flushPromises()
@@ -62,10 +64,14 @@ describe('T2ProfnastilFacade appearance state', () => {
     const calc = useCalculation()
     expect(calc.colorFacadeHex.value).toBe('#704214')
     expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+    expect(calc.colorFacadeReverseHex.value).toBe('#D7D5C6')
+    expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
 
     await checkbox.setValue(false)
     expect(calc.colorFacadeHex.value).toBe('')
     expect(calc.colorFacadeImage.value).toBe('')
+    expect(calc.colorFacadeReverseHex.value).toBe('')
+    expect(calc.colorFacadeReverseImage.value).toBe('')
   })
 
   it('accepts an old API row without appearance fields', async () => {

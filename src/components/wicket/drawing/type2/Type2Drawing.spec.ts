@@ -194,9 +194,16 @@ describe('Type2Drawing', () => {
     expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
     expect(wrapper.get('[data-testid="type2-drawing-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
 
+    calc.shieldType.value = 'Тип_4'
+    calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
+
     calc.shieldType.value = 'Тип_1'
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
+    calc.sideGrilleNetImage.value = ''
   })
 
   it('скрывает и возвращает только заполнение', async () => {

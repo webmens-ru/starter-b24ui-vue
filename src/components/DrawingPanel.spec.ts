@@ -22,6 +22,13 @@ const calc = {
   colorFacade: ref('RAL 7016'),
   colorFacadeHex: ref(''),
   colorFacadeImage: ref(''),
+  colorFacadeReverseHex: ref('#D7D5C6'),
+  colorFacadeReverseImage: ref(''),
+  fillSide: ref('Одна сторона'),
+  materialYardGlob: ref('Профлист'),
+  materialYard: ref('С-8'),
+  colorYardHex: ref(''),
+  colorYardImage: ref(''),
   colorShieldHex: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
@@ -56,7 +63,7 @@ describe('DrawingPanel accordion', () => {
     expect(wrapper.find('[data-testid="drawing-panel-content"]').exists()).toBe(true)
   })
 
-  it('показывает чертёж только для типа 2', async () => {
+  it('переключает отдельные чертежи типов 1 и 2', async () => {
     const wrapper = mount(DrawingPanel)
 
     expect(wrapper.find('[data-testid="type2-drawing-svg"]').exists()).toBe(true)
@@ -65,6 +72,7 @@ describe('DrawingPanel accordion', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="type2-drawing-svg"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="type1-drawing-svg"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="drawing-panel-content"]').exists()).toBe(true)
   })
 })

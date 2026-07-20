@@ -245,12 +245,14 @@ function onHeightLowerPartChange(val: string | number) {
 
 function onHeightLowerNetSelect(net: GrilleNetItem) {
   assortmentHeightLowerNetId.value = net.id
+  calc.lowerGrilleNetImage.value = net.imageUrl ?? ''
   errHeightLowerNet.value = false
   debouncedSave()
 }
 
 function onHeightUpperNetSelect(net: GrilleNetItem) {
   assortmentHeightUpperNetId.value = net.id
+  calc.upperGrilleNetImage.value = net.imageUrl ?? ''
   errHeightUpperNet.value = false
   debouncedSave()
 }
@@ -366,7 +368,11 @@ function syncCalcFields() {
     calc.assortmentHeightLowerNetId.value = assortmentHeightLowerNetId.value
     calc.assortmentSideGrilleNetId.value = null
     calc.sideGrilleNetImage.value = ''
+    calc.lowerGrilleNetImage.value = heightLowerNetItems.value.find(
+      net => net.id === assortmentHeightLowerNetId.value,
+    )?.imageUrl ?? ''
   } else {
+    calc.lowerGrilleNetImage.value = ''
     calc.assortmentHeightLowerNetId.value = null
     if (showSidePart.value) {
       calc.assortmentSideGrilleNetId.value = assortmentSideGrilleNetId.value
@@ -379,6 +385,9 @@ function syncCalcFields() {
     }
   }
   calc.assortmentHeightUpperNetId.value = showHeightTop.value ? assortmentHeightUpperNetId.value : null
+  calc.upperGrilleNetImage.value = showHeightTop.value
+    ? heightUpperNetItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
+    : ''
   calc.grilleLocation.value = grilleLocation.value
   calc.netWidthProviderTop.value = providerTop.value
   calc.netWidthProviderLower.value = providerLower.value
@@ -537,8 +546,13 @@ function validate(): boolean {
   return true
 }
 
-function handleNext() {
+async function handleNext() {
   if (!validate()) return
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
+  await save()
   emit('next')
 }
 

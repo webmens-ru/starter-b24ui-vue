@@ -29,6 +29,10 @@ const materialFacadeOptions = computed(() =>
 
 function clearFacadeSelection() {
   calc.idFacade.value = ''
+  calc.colorFacadeHex.value = ''
+  calc.colorFacadeImage.value = ''
+  calc.colorFacadeReverseHex.value = ''
+  calc.colorFacadeReverseImage.value = ''
   calc.materialSupplierFacade.value = ''
   calc.materialFacade.value = ''
   calc.formFacade.value = ''
@@ -45,6 +49,8 @@ function clearYardSelection() {
   calc.thicknessYard.value = ''
   calc.typeOfCoatingYard.value = ''
   calc.colorYard.value = ''
+  calc.colorYardHex.value = ''
+  calc.colorYardImage.value = ''
 }
 
 function onFillSideChange() {
