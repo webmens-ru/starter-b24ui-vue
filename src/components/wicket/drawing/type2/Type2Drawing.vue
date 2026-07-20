@@ -19,6 +19,8 @@ const viewSide = ref<'street' | 'yard'>('street')
 const instanceId = drawingInstanceId++
 const texturePatternId = `type2-fill-texture-${instanceId}`
 const netPatternId = `type2-net-pattern-${instanceId}`
+const lowerNetPatternId = `type2-lower-net-pattern-${instanceId}`
+const upperNetPatternId = `type2-upper-net-pattern-${instanceId}`
 
 const geometry = computed(() => computeType2Geometry({
   widthProyema: calc.widthProyema.value,
@@ -39,9 +41,13 @@ const geometry = computed(() => computeType2Geometry({
   colorFacade: calc.colorFacade.value,
   colorFacadeHex: calc.colorFacadeHex.value,
   colorFacadeImage: calc.colorFacadeImage.value,
+  colorFacadeReverseHex: calc.colorFacadeReverseHex?.value,
+  colorFacadeReverseImage: calc.colorFacadeReverseImage?.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
   colorShieldHex: calc.colorShieldHex.value,
   sideGrilleNetImage: calc.sideGrilleNetImage?.value,
+  lowerGrilleNetImage: calc.lowerGrilleNetImage?.value,
+  upperGrilleNetImage: calc.upperGrilleNetImage?.value,
 }))
 
 if (import.meta.env.DEV) {
@@ -70,17 +76,30 @@ if (import.meta.env.DEV) {
 
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
 const realisticColors = computed(() => colorMode.value === 'realistic')
+const viewedFromYard = computed(() => viewSide.value === 'yard')
 const displayedFrameColor = computed(() => realisticColors.value
   ? geometry.value.frameColor
   : SCHEMATIC_FRAME_COLOR)
 const displayedFillColor = computed(() => realisticColors.value
-  ? geometry.value.fill.color
+  ? (viewedFromYard.value && calc.fillSide.value === 'Одна сторона'
+      ? geometry.value.fill.reverseColor
+      : geometry.value.fill.color)
   : SCHEMATIC_FILL_COLOR)
-const displayedFillImage = computed(() => realisticColors.value ? geometry.value.fill.image : '')
+const displayedFillImage = computed(() => {
+  if (!realisticColors.value) return ''
+  return viewedFromYard.value && calc.fillSide.value === 'Одна сторона'
+    ? geometry.value.fill.reverseImage
+    : geometry.value.fill.image
+})
 const netImageWidthToHeight = ref(1)
 const netTileHeight = computed(() => Math.max(1, geometry.value.netArea.width * netImageWidthToHeight.value))
+const netTileWidth = computed(() => Math.max(1, geometry.value.netArea.height * netImageWidthToHeight.value))
+const upperNetImageWidthToHeight = ref(1)
+const upperNetTileWidth = computed(() => Math.max(
+  1,
+  geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
+))
 const opensInward = computed(() => /внутрь/i.test(String(calc.openingOptionName.value ?? '')))
-const viewedFromYard = computed(() => viewSide.value === 'yard')
 const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
 const viewTransform = computed(() => viewedFromYard.value
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
@@ -96,6 +115,21 @@ watch(
     image.onload = () => {
       if (geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
       netImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
+    }
+    image.src = imageUrl
+  },
+  { immediate: true },
+)
+watch(
+  () => geometry.value.upperNetImage,
+  (imageUrl) => {
+    upperNetImageWidthToHeight.value = 1
+    if (!imageUrl || typeof window === 'undefined') return
+
+    const image = new window.Image()
+    image.onload = () => {
+      if (geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
+      upperNetImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
   },
@@ -183,7 +217,7 @@ const fillLines = computed(() => {
       </g>
 
       <!-- Выбранная сетка в боковой области подтипа 4 -->
-      <defs v-if="geometry.netArea.visible && geometry.netImage">
+      <defs v-if="geometry.subtype === 'type4' && geometry.netArea.visible && geometry.netImage">
         <pattern
           :id="netPatternId"
           patternUnits="userSpaceOnUse"
@@ -205,13 +239,102 @@ const fillLines = computed(() => {
         </pattern>
       </defs>
       <rect
-        v-if="geometry.netArea.visible && geometry.netImage"
+        v-if="geometry.subtype === 'type4' && geometry.netArea.visible && geometry.netImage"
+        data-testid="type2-drawing-net-background"
+        :x="geometry.netArea.x"
+        :y="geometry.netArea.y"
+        :width="geometry.netArea.width"
+        :height="geometry.netArea.height"
+        :fill="displayedFrameColor"
+      />
+      <rect
+        v-if="geometry.subtype === 'type4' && geometry.netArea.visible && geometry.netImage"
         data-testid="type2-drawing-net"
         :x="geometry.netArea.x"
         :y="geometry.netArea.y"
         :width="geometry.netArea.width"
         :height="geometry.netArea.height"
         :fill="`url(#${netPatternId})`"
+      />
+
+      <!-- Нижняя сетка подтипов 2 и 3: целые плитки слева направо -->
+      <defs v-if="(geometry.subtype === 'type2' || geometry.subtype === 'type3') && geometry.netArea.visible && geometry.netImage">
+        <pattern
+          :id="lowerNetPatternId"
+          patternUnits="userSpaceOnUse"
+          :x="geometry.netArea.x"
+          :y="geometry.netArea.y"
+          :width="netTileWidth"
+          :height="geometry.netArea.height"
+        >
+          <image
+            data-testid="type2-drawing-net-image"
+            :href="geometry.netImage"
+            x="0"
+            y="0"
+            :width="netTileWidth"
+            :height="geometry.netArea.height"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </pattern>
+      </defs>
+      <rect
+        v-if="(geometry.subtype === 'type2' || geometry.subtype === 'type3') && geometry.netArea.visible && geometry.netImage"
+        data-testid="type2-drawing-net-background"
+        :x="geometry.netArea.x"
+        :y="geometry.netArea.y"
+        :width="geometry.netArea.width"
+        :height="geometry.netArea.height"
+        :fill="displayedFrameColor"
+      />
+      <rect
+        v-if="(geometry.subtype === 'type2' || geometry.subtype === 'type3') && geometry.netArea.visible && geometry.netImage"
+        data-testid="type2-drawing-net"
+        :x="geometry.netArea.x"
+        :y="geometry.netArea.y"
+        :width="geometry.netArea.width"
+        :height="geometry.netArea.height"
+        :fill="`url(#${lowerNetPatternId})`"
+      />
+
+      <!-- Верхняя сетка подтипа 3: целые плитки слева направо -->
+      <defs v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage">
+        <pattern
+          :id="upperNetPatternId"
+          patternUnits="userSpaceOnUse"
+          :x="geometry.upperNetArea.x"
+          :y="geometry.upperNetArea.y"
+          :width="upperNetTileWidth"
+          :height="geometry.upperNetArea.height"
+        >
+          <image
+            data-testid="type2-drawing-upper-net-image"
+            :href="geometry.upperNetImage"
+            x="0"
+            y="0"
+            :width="upperNetTileWidth"
+            :height="geometry.upperNetArea.height"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </pattern>
+      </defs>
+      <rect
+        v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage"
+        data-testid="type2-drawing-upper-net-background"
+        :x="geometry.upperNetArea.x"
+        :y="geometry.upperNetArea.y"
+        :width="geometry.upperNetArea.width"
+        :height="geometry.upperNetArea.height"
+        :fill="displayedFrameColor"
+      />
+      <rect
+        v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage"
+        data-testid="type2-drawing-upper-net"
+        :x="geometry.upperNetArea.x"
+        :y="geometry.upperNetArea.y"
+        :width="geometry.upperNetArea.width"
+        :height="geometry.upperNetArea.height"
+        :fill="`url(#${upperNetPatternId})`"
       />
 
       <!-- Со двора профлист находится за каркасом -->

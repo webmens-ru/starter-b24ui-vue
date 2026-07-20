@@ -21,8 +21,13 @@ const calc = {
   colorFacade: ref('RAL 7016'),
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
+  colorFacadeReverseHex: ref('#D7D5C6'),
+  colorFacadeReverseImage: ref(''),
+  fillSide: ref('Одна сторона'),
   colorShieldHex: ref(''),
   sideGrilleNetImage: ref(''),
+  lowerGrilleNetImage: ref(''),
+  upperGrilleNetImage: ref(''),
   raspolozheniyePolotna: ref('Вертикально'),
 }
 
@@ -91,6 +96,107 @@ describe('Type2Drawing', () => {
     expect(wrapper.find('[data-testid="type2-drawing-net"]').exists()).toBe(false)
 
     calc.sideGrilleNetImage.value = ''
+  })
+
+  it.each(['Тип_2', 'Тип_3'])('замощает нижнюю сетку слева направо для %s', (shieldType) => {
+    calc.shieldType.value = shieldType
+    calc.heightLowerPart.value = '300'
+    calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
+    const wrapper = mount(Type2Drawing)
+    const net = wrapper.get('[data-testid="type2-drawing-net"]')
+    const netImage = wrapper.get('[data-testid="type2-drawing-net-image"]')
+    const pattern = netImage.element.parentElement
+
+    expect(netImage.attributes('href')).toBe('https://backend.test/uploads/lower-net.jpg')
+    expect(netImage.attributes('transform')).toBeUndefined()
+    expect(netImage.attributes('preserveAspectRatio')).toBe('xMidYMid meet')
+    expect(pattern?.getAttribute('width')).toBe(netImage.attributes('width'))
+    expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
+    expect(net.attributes('fill')).toMatch(/^url\(#type2-lower-net-pattern-\d+\)$/)
+
+    calc.shieldType.value = 'Тип_1'
+    calc.lowerGrilleNetImage.value = ''
+  })
+
+  it('замощает верхнюю сетку слева направо только для подтипа 3', async () => {
+    calc.shieldType.value = 'Тип_3'
+    calc.heightTopPart.value = '300'
+    calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
+    const wrapper = mount(Type2Drawing)
+    const net = wrapper.get('[data-testid="type2-drawing-upper-net"]')
+    const netImage = wrapper.get('[data-testid="type2-drawing-upper-net-image"]')
+    const pattern = netImage.element.parentElement
+
+    expect(netImage.attributes('href')).toBe('https://backend.test/uploads/upper-net.jpg')
+    expect(netImage.attributes('transform')).toBeUndefined()
+    expect(pattern?.getAttribute('width')).toBe(netImage.attributes('width'))
+    expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
+    expect(net.attributes('fill')).toMatch(/^url\(#type2-upper-net-pattern-\d+\)$/)
+
+    calc.shieldType.value = 'Тип_2'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="type2-drawing-upper-net"]').exists()).toBe(false)
+
+    calc.shieldType.value = 'Тип_1'
+    calc.upperGrilleNetImage.value = ''
+  })
+
+  it.each(['Тип_2', 'Тип_4'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {
+    calc.shieldType.value = shieldType
+    calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
+    calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
+    const wrapper = mount(Type2Drawing)
+    const background = wrapper.get('[data-testid="type2-drawing-net-background"]')
+    const net = wrapper.get('[data-testid="type2-drawing-net"]')
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-net-background"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-net"'))
+    expect(background.attributes('x')).toBe(net.attributes('x'))
+    expect(background.attributes('y')).toBe(net.attributes('y'))
+    expect(background.attributes('width')).toBe(net.attributes('width'))
+    expect(background.attributes('height')).toBe(net.attributes('height'))
+    expect(background.attributes('fill')).toBe('#66686c')
+
+    calc.shieldType.value = 'Тип_1'
+    calc.lowerGrilleNetImage.value = ''
+    calc.sideGrilleNetImage.value = ''
+  })
+
+  it('рисует фон верхней сетки перед PNG с той же геометрией', () => {
+    calc.shieldType.value = 'Тип_3'
+    calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
+    calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
+    const wrapper = mount(Type2Drawing)
+    const background = wrapper.get('[data-testid="type2-drawing-upper-net-background"]')
+    const net = wrapper.get('[data-testid="type2-drawing-upper-net"]')
+
+    expect(wrapper.html().indexOf('data-testid="type2-drawing-upper-net-background"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-upper-net"'))
+    expect(background.attributes('x')).toBe(net.attributes('x'))
+    expect(background.attributes('y')).toBe(net.attributes('y'))
+    expect(background.attributes('width')).toBe(net.attributes('width'))
+    expect(background.attributes('height')).toBe(net.attributes('height'))
+    expect(background.attributes('fill')).toBe('#66686c')
+
+    calc.shieldType.value = 'Тип_1'
+    calc.lowerGrilleNetImage.value = ''
+    calc.upperGrilleNetImage.value = ''
+  })
+
+  it('использует схематичный цвет для фонов сеток', async () => {
+    calc.shieldType.value = 'Тип_3'
+    calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
+    calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
+    const wrapper = mount(Type2Drawing)
+
+    await wrapper.get('input[value="schematic"]').setValue(true)
+
+    expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
+    expect(wrapper.get('[data-testid="type2-drawing-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
+
+    calc.shieldType.value = 'Тип_1'
+    calc.lowerGrilleNetImage.value = ''
+    calc.upperGrilleNetImage.value = ''
   })
 
   it('скрывает и возвращает только заполнение', async () => {
@@ -207,5 +313,29 @@ describe('Type2Drawing', () => {
 
     calc.colorFacadeImage.value = ''
     calc.colorShieldHex.value = ''
+  })
+
+  it('со двора показывает обратную сторону одностороннего профлиста', async () => {
+    calc.colorFacadeImage.value = '/uploads/colors/front.webp'
+    calc.colorFacadeReverseHex.value = '#D7D5C6'
+    calc.colorFacadeReverseImage.value = '/uploads/colors/reverse.webp'
+    calc.fillSide.value = 'Одна сторона'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
+    expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+
+    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#D7D5C6')
+    expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/reverse.webp')
+
+    calc.fillSide.value = 'Две стороны'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
+
+    calc.colorFacadeImage.value = ''
+    calc.colorFacadeReverseImage.value = ''
+    calc.fillSide.value = 'Одна сторона'
   })
 })
