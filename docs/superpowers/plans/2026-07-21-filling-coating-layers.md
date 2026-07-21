@@ -15,6 +15,7 @@
 - Draw texture opaque, without the base, and prefer it when HEX and texture both exist.
 - Draw neither base nor coating when both appearance values are empty.
 - Draw profile relief after the appearance layer.
+- Use `appearanceMode: 'coating' | 'solid'`: realistic materials use `coating`, schematic drawings use `solid`.
 - Do not add normalizers or intermediate appearance models.
 
 ---
@@ -23,11 +24,13 @@
 
 **Files:**
 - Modify: `src/components/wicket/drawing/fillings/FillingDrawing.spec.ts`
+- Modify: `src/components/wicket/drawing/fillings/fillingDrawingTypes.ts`
+- Modify: `src/components/wicket/drawing/fillings/FillingDrawing.vue`
 - Modify: `src/components/wicket/drawing/fillings/ProfiledSheetDrawing.vue`
 - Modify: `src/components/wicket/drawing/fillings/LogSidingDrawing.vue`
 
 **Interfaces:**
-- Consumes: `FillingVisualProps.color` and `FillingVisualProps.image`.
+- Consumes: `FillingVisualProps.color`, `FillingVisualProps.image`, and `FillingVisualProps.appearanceMode`.
 - Produces: optional `filling-surface`, `filling-color-coating`, or `filling-texture` nodes before relief geometry.
 
 - [ ] **Step 1: Write failing tests**
@@ -58,6 +61,12 @@ it('draws no appearance layers without HEX or texture', () => {
   expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
   expect(wrapper.find('[data-testid="filling-texture"]').exists()).toBe(false)
 })
+
+it('draws schematic color directly in solid mode', () => {
+  const wrapper = mountDrawing({ color: '#bfdbfe', image: '', appearanceMode: 'solid' })
+  expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#bfdbfe')
+  expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
+})
 ```
 
 Add the siding layer-order case explicitly:
@@ -85,7 +94,13 @@ Expected: FAIL because the current surface always uses `color` and no `filling-c
 
 - [ ] **Step 3: Implement the minimal SVG layers**
 
-Use the following node order in both concrete renderers, before existing shadows or waves:
+Add the prop to `FillingVisualProps`:
+
+```ts
+appearanceMode: 'coating' | 'solid'
+```
+
+Pass it unchanged from `FillingDrawing` to the concrete renderer. Use the following node order in both concrete renderers, before existing shadows or waves:
 
 ```vue
 <rect v-if="!image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
@@ -97,7 +112,15 @@ Use the following node order in both concrete renderers, before existing shadows
   opacity="0.1"
 />
 <rect v-if="image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
+<rect
+  v-if="appearanceMode === 'solid'"
+  data-testid="filling-surface"
+  v-bind="area"
+  :fill="color"
+/>
 ```
+
+Restrict the base, HEX, and texture conditions to `appearanceMode === 'coating'`. Existing callers pass `appearanceMode="coating"`; schematic drawing modes pass `appearanceMode="solid"`.
 
 - [ ] **Step 4: Verify GREEN**
 
@@ -116,6 +139,7 @@ Stage only the three Task 1 files and commit with message `feat: render filling 
 **Files:**
 - Modify: `src/components/wicket/drawing/type2/Type2Drawing.spec.ts`
 - Modify: `src/components/wicket/drawing/type2/Type2Drawing.vue`
+- Modify: `src/components/wicket/drawing/type1/Type1Drawing.vue`
 
 **Interfaces:**
 - Consumes: `FillingDrawing` with existing material, direction, color, image, area, and ID-prefix props.
@@ -154,11 +178,14 @@ Import `FillingDrawing` from `../fillings/FillingDrawing.vue`. In both existing 
   :direction="geometry.fill.direction"
   :color="displayedFillColor"
   :image="displayedFillImage"
+  :appearance-mode="realisticColors ? 'coating' : 'solid'"
   :id-prefix="`type2-${instanceId}-${viewedFromYard ? 'yard' : 'street'}`"
 />
 ```
 
 Keep the outer groups in their current positions so yard fill stays behind the frame and street fill stays in front. Remove only local texture/fill-line code that becomes unused.
+
+In `Type1Drawing.vue`, pass `:appearance-mode="real ? 'coating' : 'solid'"` to both existing `FillingDrawing` instances.
 
 - [ ] **Step 4: Verify integration**
 
