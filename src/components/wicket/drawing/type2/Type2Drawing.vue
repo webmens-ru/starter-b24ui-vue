@@ -1,7 +1,5 @@
 <script lang="ts">
 let drawingInstanceId = 0
-// Fixed MVP tile size keeps textures repeating instead of stretching over the wicket.
-const TEXTURE_TILE_SIZE = 240
 const SCHEMATIC_FRAME_COLOR = '#d1d5db'
 const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
@@ -10,6 +8,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
+import FillingDrawing from '../fillings/FillingDrawing.vue'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
 
 const calc = useCalculation()
@@ -17,7 +16,6 @@ const showFill = ref(true)
 const colorMode = ref<'realistic' | 'schematic'>('realistic')
 const viewSide = ref<'street' | 'yard'>('street')
 const instanceId = drawingInstanceId++
-const texturePatternId = `type2-fill-texture-${instanceId}`
 const netPatternId = `type2-net-pattern-${instanceId}`
 const lowerNetPatternId = `type2-lower-net-pattern-${instanceId}`
 const upperNetPatternId = `type2-upper-net-pattern-${instanceId}`
@@ -148,18 +146,6 @@ const bottomRailPath = computed(() => buildBottomRailPath({
   height: Math.min(50, geometry.value.gate.height),
 }))
 
-const fillLines = computed(() => {
-  const area = geometry.value.fillArea
-  const vertical = geometry.value.fill.direction === 'vertical'
-  const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
-  const limit = vertical ? area.x + area.width : area.y + area.height
-  for (let position = (vertical ? area.x : area.y) + 52.5; position < limit; position += 57.5) {
-    lines.push(vertical
-      ? { x1: position, y1: area.y, x2: position, y2: area.y + area.height }
-      : { x1: area.x, y1: position, x2: area.x + area.width, y2: position })
-  }
-  return lines
-})
 </script>
 
 <template>
@@ -342,45 +328,15 @@ const fillLines = computed(() => {
         v-if="viewedFromYard && showFill && geometry.fill.material === 'c8'"
         data-testid="type2-drawing-fill"
       >
-        <defs v-if="displayedFillImage">
-          <pattern
-            :id="texturePatternId"
-            patternUnits="userSpaceOnUse"
-            :width="TEXTURE_TILE_SIZE"
-            :height="TEXTURE_TILE_SIZE"
-          >
-            <image
-              :href="displayedFillImage"
-              :width="TEXTURE_TILE_SIZE"
-              :height="TEXTURE_TILE_SIZE"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </pattern>
-        </defs>
-        <rect
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="displayedFillColor"
-        />
-        <rect
-          v-if="displayedFillImage"
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="`url(#${texturePatternId})`"
-        />
-        <line
-          v-for="(line, index) in fillLines"
-          :key="`fill-line-${index}`"
-          :x1="line.x1"
-          :y1="line.y1"
-          :x2="line.x2"
-          :y2="line.y2"
-          stroke="rgba(0, 0, 0, 0.25)"
-          stroke-width="5"
+        <FillingDrawing
+          :area="geometry.fillArea"
+          :material-group="calc.materialFacadeGlob.value"
+          :material-name="calc.materialFacade.value"
+          :direction="geometry.fill.direction"
+          :color="displayedFillColor"
+          :image="displayedFillImage"
+          :appearance-mode="realisticColors ? 'coating' : 'solid'"
+          :id-prefix="`type2-${instanceId}-yard`"
         />
       </g>
 
@@ -544,45 +500,15 @@ const fillLines = computed(() => {
         v-if="!viewedFromYard && showFill && geometry.fill.material === 'c8'"
         data-testid="type2-drawing-fill"
       >
-        <defs v-if="displayedFillImage">
-          <pattern
-            :id="texturePatternId"
-            patternUnits="userSpaceOnUse"
-            :width="TEXTURE_TILE_SIZE"
-            :height="TEXTURE_TILE_SIZE"
-          >
-            <image
-              :href="displayedFillImage"
-              :width="TEXTURE_TILE_SIZE"
-              :height="TEXTURE_TILE_SIZE"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </pattern>
-        </defs>
-        <rect
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="displayedFillColor"
-        />
-        <rect
-          v-if="displayedFillImage"
-          :x="geometry.fillArea.x"
-          :y="geometry.fillArea.y"
-          :width="geometry.fillArea.width"
-          :height="geometry.fillArea.height"
-          :fill="`url(#${texturePatternId})`"
-        />
-        <line
-          v-for="(line, index) in fillLines"
-          :key="`front-fill-line-${index}`"
-          :x1="line.x1"
-          :y1="line.y1"
-          :x2="line.x2"
-          :y2="line.y2"
-          stroke="rgba(0, 0, 0, 0.25)"
-          stroke-width="5"
+        <FillingDrawing
+          :area="geometry.fillArea"
+          :material-group="calc.materialFacadeGlob.value"
+          :material-name="calc.materialFacade.value"
+          :direction="geometry.fill.direction"
+          :color="displayedFillColor"
+          :image="displayedFillImage"
+          :appearance-mode="realisticColors ? 'coating' : 'solid'"
+          :id-prefix="`type2-${instanceId}-street`"
         />
       </g>
 

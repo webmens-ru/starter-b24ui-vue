@@ -272,6 +272,19 @@ describe('Type2Drawing', () => {
       .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
   })
 
+  it('рисует покрытие второго типа через общий renderer заполнения', () => {
+    calc.colorFacadeHex.value = '#704214'
+    calc.colorFacadeImage.value = ''
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="filling-c8"]')).toBeTruthy()
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
+    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes()).toMatchObject({
+      fill: '#704214',
+      opacity: '0.1',
+    })
+  })
+
   it('накладывает плиточную текстуру только на область заполнения', async () => {
     calc.colorFacadeImage.value = '/uploads/colors/wood.webp'
     const wrapper = mount(Type2Drawing)
@@ -283,9 +296,9 @@ describe('Type2Drawing', () => {
     expect(pattern.attributes('patternUnits')).toBe('userSpaceOnUse')
     expect(pattern.get('image').attributes('href')).toBe('/uploads/colors/wood.webp')
     expect(pattern.get('image').attributes('preserveAspectRatio')).toBe('xMidYMid slice')
-    expect(fillGroup.findAll(`rect[fill="url(#${patternId})"]`)).toHaveLength(1)
-    expect(fillGroup.findAll('rect')[0]?.attributes('fill')).toBe('#704214')
-    expect(wrapper.findAll(`rect[fill="url(#${patternId})"]`)).toHaveLength(1)
+    expect(fillGroup.get('[data-testid="filling-texture"]').attributes('fill')).toBe(`url(#${patternId})`)
+    expect(fillGroup.find('[data-testid="filling-surface"]').exists()).toBe(false)
+    expect(fillGroup.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="type2-drawing-fill-toggle"]').setValue(false)
     expect(wrapper.find('[data-testid="type2-drawing-fill"]').exists()).toBe(false)
@@ -309,13 +322,13 @@ describe('Type2Drawing', () => {
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('[data-testid="type2-drawing-frame"]').attributes('fill')).toBe('#332211')
-    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
+    expect(wrapper.find('[data-testid="filling-surface"]').exists()).toBe(false)
     expect(wrapper.find('pattern').exists()).toBe(true)
 
     await wrapper.get('[data-testid="type2-drawing-color-schematic"]').setValue(true)
 
     expect(wrapper.get('[data-testid="type2-drawing-frame"]').attributes('fill')).toBe('#d1d5db')
-    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#bfdbfe')
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#bfdbfe')
     expect(wrapper.find('pattern').exists()).toBe(false)
 
     calc.colorFacadeImage.value = ''
@@ -329,17 +342,15 @@ describe('Type2Drawing', () => {
     calc.fillSide.value = 'Одна сторона'
     const wrapper = mount(Type2Drawing)
 
-    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
 
     await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
 
-    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#D7D5C6')
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/reverse.webp')
 
     calc.fillSide.value = 'Две стороны'
     await wrapper.vm.$nextTick()
-    expect(wrapper.get('[data-testid="type2-drawing-fill"] rect').attributes('fill')).toBe('#704214')
+    expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
 
     calc.colorFacadeImage.value = ''
     calc.colorFacadeReverseImage.value = ''
