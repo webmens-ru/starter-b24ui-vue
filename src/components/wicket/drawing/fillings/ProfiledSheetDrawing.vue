@@ -31,19 +31,25 @@ const shadows = computed(() => {
   <g :clip-path="`url(#${clipId})`">
     <defs>
       <clipPath :id="clipId"><rect v-bind="area" /></clipPath>
-      <pattern v-if="image" :id="textureId" patternUnits="userSpaceOnUse" width="240" height="240">
+      <pattern v-if="appearanceMode === 'coating' && image" :id="textureId" patternUnits="userSpaceOnUse" width="240" height="240">
         <image :href="image" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
       </pattern>
     </defs>
-    <rect v-if="!image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
     <rect
-      v-if="!image && color"
+      v-if="appearanceMode === 'solid'"
+      data-testid="filling-surface"
+      v-bind="area"
+      :fill="color"
+    />
+    <rect v-if="appearanceMode === 'coating' && !image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
+    <rect
+      v-if="appearanceMode === 'coating' && !image && color"
       data-testid="filling-color-coating"
       v-bind="area"
       :fill="color"
       opacity="0.1"
     />
-    <rect v-if="image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
+    <rect v-if="appearanceMode === 'coating' && image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
     <rect
       v-for="(shadow, index) in shadows"
       :key="index"

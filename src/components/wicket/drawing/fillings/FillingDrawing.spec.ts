@@ -14,6 +14,7 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
       direction: 'vertical',
       color: '#704214',
       image: '/uploads/colors/wood.webp',
+      appearanceMode: 'coating',
       idPrefix: 'fill-a',
       ...props,
     })]),
@@ -57,6 +58,13 @@ describe('FillingDrawing', () => {
     expect(wrapper.find('[data-testid="filling-surface"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="filling-texture"]').exists()).toBe(false)
+  })
+
+  it('draws schematic color directly in solid mode', () => {
+    const wrapper = mountDrawing({ color: '#bfdbfe', image: '', appearanceMode: 'solid' })
+
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#bfdbfe')
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
   })
 
   it('draws siding coating before its relief', () => {
@@ -116,8 +124,8 @@ describe('FillingDrawing', () => {
   it('keeps texture, gradient and clip IDs distinct between instances', () => {
     const Wrapper = defineComponent({
       setup: () => () => h('svg', [
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/a.webp', idPrefix: 'a' }),
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/b.webp', idPrefix: 'b' }),
+        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/a.webp', appearanceMode: 'coating', idPrefix: 'a' }),
+        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/b.webp', appearanceMode: 'coating', idPrefix: 'b' }),
       ]),
     })
     const wrapper = mount(Wrapper)

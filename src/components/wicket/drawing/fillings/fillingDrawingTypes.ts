@@ -12,6 +12,7 @@ export interface FillingVisualProps {
   direction: FillingDirection
   color: string
   image: string
+  appearanceMode: 'coating' | 'solid'
   idPrefix: string
 }
 

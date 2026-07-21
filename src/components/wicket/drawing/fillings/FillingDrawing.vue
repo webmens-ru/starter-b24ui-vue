@@ -24,6 +24,14 @@ const renderer = computed(() => {
 
 <template>
   <g v-if="renderer" data-testid="filling-drawing">
-    <component :is="renderer" :area="area" :direction="direction" :color="color" :image="image" :id-prefix="idPrefix" />
+    <component
+      :is="renderer"
+      :area="area"
+      :direction="direction"
+      :color="color"
+      :image="image"
+      :appearance-mode="appearanceMode"
+      :id-prefix="idPrefix"
+    />
   </g>
 </template>
