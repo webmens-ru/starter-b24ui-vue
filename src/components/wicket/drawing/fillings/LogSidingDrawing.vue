@@ -41,7 +41,14 @@ const seams = computed(() => waves.value.flatMap((_, index) => {
         <stop offset="100%" stop-color="#000" stop-opacity=".28" />
       </linearGradient>
     </defs>
-    <rect data-testid="filling-surface" v-bind="area" :fill="color" />
+    <rect v-if="!image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
+    <rect
+      v-if="!image && color"
+      data-testid="filling-color-coating"
+      v-bind="area"
+      :fill="color"
+      opacity="0.1"
+    />
     <rect v-if="image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
     <g data-testid="filling-log-waves" :clip-path="`url(#${clipId})`">
       <rect v-for="(wave, index) in waves" :key="index" data-testid="filling-log-wave" v-bind="wave" :fill="`url(#${gradientId})`" />

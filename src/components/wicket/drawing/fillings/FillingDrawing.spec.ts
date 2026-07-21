@@ -21,15 +21,56 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
 }
 
 describe('FillingDrawing', () => {
-  it('renders the C8 profile with clipped surface, texture and shadows', () => {
+  it('renders the C8 profile with clipped texture and shadows', () => {
     const wrapper = mountDrawing()
 
     expect(wrapper.get('[data-testid="filling-drawing"]')).toBeTruthy()
     expect(wrapper.get('[data-testid="filling-c8"]')).toBeTruthy()
     expect(wrapper.findAll('[data-testid="filling-profile-shadow"]')[0].attributes('width')).toBe('5')
-    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#704214')
     expect(wrapper.get('[data-testid="filling-texture"]').attributes('fill')).toContain('fill-a-texture')
     expect(wrapper.get('[data-testid="filling-c8"]').attributes('clip-path')).toContain('fill-a-clip')
+  })
+
+  it('draws a neutral base and a 10% HEX coating before profile relief', () => {
+    const wrapper = mountDrawing({ color: '#704214', image: '' })
+
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
+    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes()).toMatchObject({
+      fill: '#704214',
+      opacity: '0.1',
+    })
+    expect(wrapper.html().indexOf('data-testid="filling-color-coating"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-profile-shadow"'))
+  })
+
+  it('draws an opaque texture without a base or HEX layer', () => {
+    const wrapper = mountDrawing({ color: '#704214', image: '/wood.webp' })
+
+    expect(wrapper.find('[data-testid="filling-surface"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="filling-texture"]').attributes('opacity')).toBeUndefined()
+  })
+
+  it('draws no appearance layers without HEX or texture', () => {
+    const wrapper = mountDrawing({ color: '', image: '' })
+
+    expect(wrapper.find('[data-testid="filling-surface"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-texture"]').exists()).toBe(false)
+  })
+
+  it('draws siding coating before its relief', () => {
+    const wrapper = mountDrawing({
+      materialGroup: 'Сайдинг',
+      materialName: 'Сайдинг «Бревно»',
+      color: '#704214',
+      image: '',
+    })
+
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
+    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes('opacity')).toBe('0.1')
+    expect(wrapper.html().indexOf('data-testid="filling-color-coating"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-log-waves"'))
   })
 
   it.each([

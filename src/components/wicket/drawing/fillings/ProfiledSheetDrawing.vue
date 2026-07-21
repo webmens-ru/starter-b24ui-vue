@@ -35,7 +35,14 @@ const shadows = computed(() => {
         <image :href="image" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
       </pattern>
     </defs>
-    <rect data-testid="filling-surface" v-bind="area" :fill="color" />
+    <rect v-if="!image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
+    <rect
+      v-if="!image && color"
+      data-testid="filling-color-coating"
+      v-bind="area"
+      :fill="color"
+      opacity="0.1"
+    />
     <rect v-if="image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
     <rect
       v-for="(shadow, index) in shadows"
