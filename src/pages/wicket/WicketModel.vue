@@ -33,7 +33,6 @@ const models = [
     model: '"Стандарт" 50/50/штакетник',
     route: '/wicket/type3',
     images: ['/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg', '/web/k2.jpg', '/web/k3.jpg'],
-    soon: true,
   },
   {
     id: '4',
