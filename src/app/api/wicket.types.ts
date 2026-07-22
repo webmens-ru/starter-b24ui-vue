@@ -202,6 +202,12 @@ export interface FenceTableResponse {
   pagination?: SidingPagination
 }
 
+export interface FenceGapOption {
+  id: number
+  name: number
+  quantity: number
+}
+
 export interface LamelFilters {
   companies:     string[]
   materials:     string[]

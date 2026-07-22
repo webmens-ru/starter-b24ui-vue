@@ -229,6 +229,14 @@ export async function getFenceTable(
   return { table, pagination }
 }
 
+export async function getFenceGapOptions(
+  payload: Record<string, unknown>,
+): Promise<import('./wicket.types').FenceGapOption[]> {
+  const { data } = await api.post('/api/wicket/type3/get-gap', payload)
+  const result = data.data ?? data
+  return result.gaps ?? []
+}
+
 export async function getLamelTable(
   modelId: string | number,
   filters: import('./wicket.types').LamelFilters,
