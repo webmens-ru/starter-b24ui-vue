@@ -11,6 +11,10 @@ describe('resolveDrawingComponent', () => {
     expect(resolveDrawingComponent('1')).not.toBeNull()
   })
 
+  it('возвращает отдельный компонент для типа 3', () => {
+    expect(resolveDrawingComponent('3')).not.toBeNull()
+  })
+
   it('не подставляет чертёж другого типа', () => {
     expect(resolveDrawingComponent('11')).toBeNull()
   })
