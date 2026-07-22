@@ -17,6 +17,9 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'assortmentSideGrilleNetId',
   'assortmentHeightUpperNetId',
   'assortmentHeightLowerNetId',
+  'gapId',
+  'gapName',
+  'numberOfSticks',
 ])
 
 /** Поля, которые приходят из API как JSON-массив ID. */

@@ -64,16 +64,11 @@ watch(filters, () => {
 }, { deep: true })
 
 // Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.idYard.value, async (val) => {
+watch(() => calc.idYard.value, (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
-    try {
-      await save(saved)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
   }
 }, { immediate: true })
 

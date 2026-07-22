@@ -124,6 +124,9 @@ const coatingFacadeImage      = ref<string>('')
 const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
+const gapId                    = ref<number | null>(null)
+const gapName                  = ref<number | null>(null)
+const numberOfSticks           = ref<number | null>(null)
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
@@ -258,6 +261,9 @@ const fieldsFilled = ref<number>(0)
     coatingFacadeImage.value = ''
     reliefFacadeImage.value = ''
     colorFacadeReverseHex.value = ''
+    gapId.value = null
+    gapName.value = null
+    numberOfSticks.value = null
     colorFacadeReverseImage.value = ''
     idYard.value = ''
     materialSupplierYard.value = ''
@@ -483,6 +489,9 @@ const fieldsFilled = ref<number>(0)
       reliefFacadeImage,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
+      gapId,
+      gapName,
+      numberOfSticks,
       idYard,
       materialSupplierYard,
       materialYard,
@@ -882,6 +891,9 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeImage,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
+    gapId,
+    gapName,
+    numberOfSticks,
     idYard,
     materialSupplierYard,
     materialYard,

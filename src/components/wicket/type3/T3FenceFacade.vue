@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
+import { getFenceGapOptions, getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
+import type { FenceGapOption } from '../../../app/api/wicket.types'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -37,6 +38,9 @@ const selectedRow  = ref<FenceRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
+const gapOptions   = ref<FenceGapOption[]>([])
+const gapLoading   = ref(false)
+const selectedGapId = computed(() => calc.gapId.value)
 
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
@@ -69,13 +73,54 @@ watch(() => calc.idFacade.value, async (val) => {
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
-    try {
-      await save(saved)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
+    await loadGapOptions()
   }
 }, { immediate: true })
+
+async function loadGapOptions() {
+  if (!calc.idFacade.value) {
+    gapOptions.value = []
+    return
+  }
+  gapLoading.value = true
+  try {
+    gapOptions.value = await getFenceGapOptions({
+      ...calc.getFullSavePayload(),
+      widthFenceFacade: calc.thicknessFacade.value,
+    })
+    const restored = gapOptions.value.find(option => option.name === Number(calc.gapName.value))
+    if (calc.gapName.value != null && !restored) clearGap()
+  } catch (e) {
+    console.warn('getFenceGapOptions недоступен:', e)
+    gapOptions.value = []
+  } finally {
+    gapLoading.value = false
+  }
+}
+
+function clearGap() {
+  calc.gapId.value = null
+  calc.gapName.value = null
+  calc.numberOfSticks.value = null
+}
+
+async function selectGap(event: Event) {
+  const option = gapOptions.value.find(item => item.id === Number((event.target as HTMLSelectElement).value))
+  if (!option) {
+    clearGap()
+    return
+  }
+  calc.gapId.value = option.id
+  calc.gapName.value = option.name
+  calc.numberOfSticks.value = option.quantity
+  await saveWicketData({
+    ...calc.getBaseSavePayload(),
+    gapId: option.id,
+    gapName: option.name,
+    numberOfSticks: option.quantity,
+  })
+  await doRecalculate()
+}
 
 function restoreFromCalc(): FenceRow | null {
   if (!calc.idFacade.value) return null
@@ -140,13 +185,17 @@ async function doRecalculate() {
 
 async function selectRow(row: FenceRow) {
   selectedRow.value = row
+  clearGap()
   await save(row)
+  await loadGapOptions()
   await doRecalculate()
 }
 
 function deselectRow() {
   selectedRow.value = null
   calc.idFacade.value = ''
+  clearGap()
+  gapOptions.value = []
 }
 
 function isSelected(row: FenceRow) {
@@ -154,7 +203,7 @@ function isSelected(row: FenceRow) {
 }
 
 function onContinue() {
-  if (!selectedRow.value) {
+  if (!selectedRow.value || calc.gapName.value == null) {
     openModal('Вы не заполнили этот блок!')
     return
   }
@@ -218,6 +267,22 @@ onMounted(async () => {
         v-model="filters.colors"
       />
     </div>
+
+    <label v-if="selectedRow" class="flex flex-col gap-2 rounded border border-gray-200 bg-white p-3">
+      <span class="font-semibold">Зазор между штакетинами</span>
+      <select
+        class="rounded border border-gray-300 bg-white px-3 py-2"
+        :disabled="gapLoading"
+        :value="selectedGapId ?? ''"
+        data-testid="type3-gap-select"
+        @change="selectGap"
+      >
+        <option value="">Выберите зазор</option>
+        <option v-for="option in gapOptions" :key="option.id" :value="option.id">
+          {{ option.name }} мм — {{ option.quantity }} шт.
+        </option>
+      </select>
+    </label>
 
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
