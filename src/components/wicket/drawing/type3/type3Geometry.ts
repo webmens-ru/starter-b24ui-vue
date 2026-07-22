@@ -41,7 +41,9 @@ export interface Type3Geometry {
 }
 
 function numberValue(value: unknown, fallback: number, min = 0, max = 10000): number {
-  const parsed = Number(value)
+  const parsed = value === null || (typeof value === 'string' && value.trim() === '')
+    ? Number.NaN
+    : Number(value)
   return Math.min(max, Math.max(min, Number.isFinite(parsed) ? parsed : fallback))
 }
 
@@ -59,9 +61,9 @@ function rect(x: number, y: number, width: number, height: number): Type3Rect {
 }
 
 export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
-  const width = numberValue(source.widthProyema, 1200, 400, 5000)
-  const height = numberValue(source.heightProyema, 2100, 600, 5000)
-  const clearance = numberValue(source.clearanceProyema, 100, 0, 500)
+  const width = numberValue(source.widthProyema, 1000, 400, 5000)
+  const height = numberValue(source.heightProyema, 2000, 600, 5000)
+  const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
   const postsVisible = Number(source.hasStolby) === 1
   const postSize = postsVisible ? profileSize(source.stolbName) : 0
   const gate = rect(postSize + 4, 0, width - postSize * 2 - 14, height - clearance)

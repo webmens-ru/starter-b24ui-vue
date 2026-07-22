@@ -15,6 +15,17 @@ const base = {
 }
 
 describe('buildType3Geometry', () => {
+  it('uses 1000/2000/50 as the initial opening before dimensions are filled', () => {
+    const geometry = buildType3Geometry({
+      widthProyema: '',
+      heightProyema: '',
+      clearanceProyema: '',
+    })
+
+    expect(geometry.opening).toEqual({ x: 0, y: 0, width: 1000, height: 2000 })
+    expect(geometry.gate.height).toBe(1950)
+  })
+
   it('builds the exact saved number of vertical pickets', () => {
     const geometry = buildType3Geometry(base)
     expect(geometry.facadePickets).toHaveLength(8)
