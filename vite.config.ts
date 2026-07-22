@@ -69,6 +69,14 @@ export default defineConfig({
         target: 'http://localhost:8001',
         changeOrigin: true,
       },
+      '/web': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
     },
   },
   plugins: [

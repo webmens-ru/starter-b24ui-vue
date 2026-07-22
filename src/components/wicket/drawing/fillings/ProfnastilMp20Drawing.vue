@@ -5,10 +5,10 @@ import type { FillingVisualProps } from './fillingDrawingTypes'
 defineProps<FillingVisualProps>()
 
 const segments = [
-  { size: 67.5, shadow: false },
-  { size: 17.5, shadow: true },
-  { size: 35, shadow: false },
-  { size: 17.5, shadow: true },
+  { size: 17.5, shadow: true },   // узкая — блик (перед 67.5)
+  { size: 67.5, shadow: false },  // широкая — цвет
+  { size: 17.5, shadow: true },   // узкая — тень
+  { size: 35, shadow: false },    // средняя — цвет
 ]
 </script>
 

@@ -1,7 +1,8 @@
-export type FillingType = 'none' | 'c8' | 'c20' | 'mp10' | 'mp20' | 'logSiding'
+export type FillingType = 'none' | 'c8' | 'c20' | 'mp10' | 'mp20' | 'logSiding' | 'shipLap'
 
 export function resolveFillingType(materialGroup: string, materialName: string): FillingType {
   const value = `${materialGroup} ${materialName}`.trim()
+  if (/корабельн/i.test(value)) return 'shipLap'
   if (/сайдинг[\s«"]*бревно/i.test(value)) return 'logSiding'
   if (/мп\s*[-–]?\s*20|mp\s*[-–]?\s*20/i.test(value)) return 'mp20'
   if (/мп\s*[-–]?\s*10|mp\s*[-–]?\s*10/i.test(value)) return 'mp10'

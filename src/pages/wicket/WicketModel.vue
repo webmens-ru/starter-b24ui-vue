@@ -131,7 +131,7 @@ async function onModelSelect(item: (typeof models)[0]) {
   <B24App>
     <B24SidebarLayout :use-light-content="false" :b24ui="{ container: 'mt-0' }">
       <div class="flex flex-col h-[calc(100vh-50px)] overflow-hidden bg-gray-50">
-        <div class="flex items-center justify-between flex-wrap gap-2 shrink-0 px-4 py-3 mb-6 border-b border-gray-200 bg-white">
+        <div class="flex items-center justify-between flex-wrap gap-2 shrink-0 px-4 py-3 border-b border-gray-200 bg-white">
           <B24Button
             label="Назад"
             color="air-secondary"
@@ -143,7 +143,7 @@ async function onModelSelect(item: (typeof models)[0]) {
           <div class="w-[68px]" />
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 pb-4">
+        <div class="flex-1 overflow-y-auto px-4 pt-4 pb-4">
           <div
             v-if="errorMessage"
             class="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200"
@@ -155,16 +155,17 @@ async function onModelSelect(item: (typeof models)[0]) {
             <div
               v-for="item in models"
               :key="item.id"
-              class="flex flex-col items-center w-full max-w-[310px] sm:max-w-[400px]"
+              class="flex flex-col items-center w-full max-w-[310px] sm:max-w-[400px] pt-2.5"
             >
               <button
                 type="button"
+                :title="item.model"
                 class="w-full text-center py-1.5 px-1 text-lg font-semibold rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-air-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
                 :class="item.soon ? 'text-gray-500 no-underline cursor-default' : 'text-blue-600 underline'"
                 :disabled="!!loading || item.soon"
                 @click="onModelSelect(item)"
               >
-                {{ item.model }}
+                <span class="block truncate">{{ item.model }}</span>
                 <span
                   v-if="item.soon"
                   class="absolute -top-2.5 -right-2.5 bg-amber-400 text-amber-900 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm border border-amber-500"

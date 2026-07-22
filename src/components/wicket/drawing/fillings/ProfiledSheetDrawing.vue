@@ -8,23 +8,9 @@ const props = defineProps<FillingVisualProps & {
 
 const clipId = `${props.idPrefix}-clip`
 const textureId = `${props.idPrefix}-texture`
-const limit = computed(() => props.direction === 'vertical' ? props.area.width : props.area.height)
-const shadows = computed(() => {
-  const result: Array<{ x: number; y: number; width: number; height: number }> = []
-  for (let offset = 0; offset < limit.value;) {
-    for (const segment of props.segments) {
-      if (offset >= limit.value) break
-      const size = Math.min(segment.size, limit.value - offset)
-      if (segment.shadow) {
-        result.push(props.direction === 'vertical'
-          ? { x: props.area.x + offset, y: props.area.y, width: size, height: props.area.height }
-          : { x: props.area.x, y: props.area.y + offset, width: props.area.width, height: size })
-      }
-      offset += segment.size
-    }
-  }
-  return result
-})
+const coatingTextureId = `${props.idPrefix}-coating-texture`
+const reliefTextureId = `${props.idPrefix}-relief-texture`
+const reliefTileWidth = computed(() => props.segments.reduce((sum, segment) => sum + segment.size, 0))
 </script>
 
 <template>
@@ -34,6 +20,12 @@ const shadows = computed(() => {
       <pattern v-if="appearanceMode === 'coating' && image" :id="textureId" patternUnits="userSpaceOnUse" width="240" height="240">
         <image :href="image" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
       </pattern>
+      <pattern v-if="appearanceMode === 'coating' && coatingImage" :id="coatingTextureId" patternUnits="userSpaceOnUse" width="240" height="240">
+        <image :href="coatingImage" width="240" height="240" preserveAspectRatio="xMidYMid slice" />
+      </pattern>
+      <pattern v-if="reliefImage" :id="reliefTextureId" patternUnits="userSpaceOnUse" :width="reliefTileWidth" height="240" :patternTransform="direction === 'horizontal' ? 'rotate(90)' : undefined">
+        <image :href="reliefImage" :width="reliefTileWidth" height="240" preserveAspectRatio="none" />
+      </pattern>
     </defs>
     <rect
       v-if="appearanceMode === 'solid'"
@@ -41,21 +33,16 @@ const shadows = computed(() => {
       v-bind="area"
       :fill="color"
     />
-    <rect v-if="appearanceMode === 'coating' && !image && color" data-testid="filling-surface" v-bind="area" fill="#f6f6f6" />
+    <rect v-if="appearanceMode === 'coating' && !image && color" data-testid="filling-surface" v-bind="area" :fill="color" />
     <rect
-      v-if="appearanceMode === 'coating' && !image && color"
+      v-if="appearanceMode === 'coating' && !coatingImage && coatingColor"
       data-testid="filling-color-coating"
       v-bind="area"
-      :fill="color"
+      :fill="coatingColor"
       opacity="0.1"
     />
     <rect v-if="appearanceMode === 'coating' && image" data-testid="filling-texture" v-bind="area" :fill="`url(#${textureId})`" />
-    <rect
-      v-for="(shadow, index) in shadows"
-      :key="index"
-      data-testid="filling-profile-shadow"
-      v-bind="shadow"
-      fill="rgba(0,0,0,.25)"
-    />
+    <rect v-if="appearanceMode === 'coating' && coatingImage" data-testid="filling-coating-texture" v-bind="area" :fill="`url(#${coatingTextureId})`" />
+    <rect v-if="reliefImage" data-testid="filling-relief-texture" v-bind="area" :fill="`url(#${reliefTextureId})`" />
   </g>
 </template>

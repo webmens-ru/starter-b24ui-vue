@@ -496,7 +496,7 @@ export async function mockGetPensByLock(_lockSetId: number): Promise<{
 }
 
 export async function mockGetAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; canUseFrameColor: boolean; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   await delay(80)
   return {
@@ -504,12 +504,14 @@ export async function mockGetAdditionalPens(): Promise<{
       {
         id: 1,
         marking: 'Скоба СК-101',
+        canUseFrameColor: true,
         colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }, { id: 3, name: 'Белая' }],
         imageUrls: [],
       },
       {
         id: 2,
         marking: 'Скоба СК-102',
+        canUseFrameColor: false,
         colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }],
         imageUrls: [],
       },
@@ -655,6 +657,10 @@ export async function mockLoadWicketData(
     thicknessFacade: '',
     typeOfCoatingFacade: 'Глянец',
     colorFacade: 'RAL 7004',
+    colorFacadeHex: '#704214',
+    colorFacadeImage: '',
+    colorFacadeReverseHex: '',
+    colorFacadeReverseImage: '',
     idYard: '',
     materialSupplierYard: '',
     materialYard: '',
@@ -662,6 +668,8 @@ export async function mockLoadWicketData(
     thicknessYard: '',
     typeOfCoatingYard: '',
     colorYard: '',
+    colorYardHex: '',
+    colorYardImage: '',
     priceRetail: '13500',
     priceDealer: '10000',
     reachedStep: 'page12',

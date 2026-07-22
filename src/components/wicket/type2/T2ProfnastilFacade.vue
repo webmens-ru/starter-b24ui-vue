@@ -87,6 +87,9 @@ function restoreFromCalc(): ProfnastilRow | null {
     color:         calc.colorFacade.value,
     colorHex:      calc.colorFacadeHex.value,
     colorImage:    calc.colorFacadeImage.value,
+    coatingHex:    calc.coatingFacadeHex.value,
+    coatingImage:  calc.coatingFacadeImage.value,
+    reliefImage:   calc.reliefFacadeImage.value,
     colorReverseHex: calc.colorFacadeReverseHex.value,
     colorReverseImage: calc.colorFacadeReverseImage.value,
   }
@@ -110,6 +113,9 @@ async function save(row: ProfnastilRow) {
   calc.colorFacade.value             = row.color
   calc.colorFacadeHex.value          = row.colorHex ?? ''
   calc.colorFacadeImage.value        = row.colorImage ?? ''
+  calc.coatingFacadeHex.value        = row.coatingHex ?? ''
+  calc.coatingFacadeImage.value      = row.coatingImage ?? ''
+  calc.reliefFacadeImage.value       = row.reliefImage ?? ''
   calc.colorFacadeReverseHex.value   = row.colorReverseHex ?? '#D7D5C6'
   calc.colorFacadeReverseImage.value = row.colorReverseImage ?? ''
 
@@ -163,6 +169,9 @@ function deselectRow() {
   calc.idFacade.value = ''
   calc.colorFacadeHex.value = ''
   calc.colorFacadeImage.value = ''
+  calc.coatingFacadeHex.value = ''
+  calc.coatingFacadeImage.value = ''
+  calc.reliefFacadeImage.value = ''
   calc.colorFacadeReverseHex.value = ''
   calc.colorFacadeReverseImage.value = ''
 }

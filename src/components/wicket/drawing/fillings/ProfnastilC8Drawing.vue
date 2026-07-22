@@ -7,6 +7,8 @@ defineProps<FillingVisualProps>()
 const segments = [
   { size: 52.5, shadow: false },
   { size: 5, shadow: true },
+  { size: 52.5, shadow: false },
+  { size: 5, shadow: true },
 ]
 </script>
 

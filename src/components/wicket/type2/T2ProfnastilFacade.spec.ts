@@ -52,6 +52,8 @@ describe('T2ProfnastilFacade appearance state', () => {
       color: 'Дуб',
       colorHex: '#704214',
       colorImage: '/uploads/colors/wood.jpg',
+      coatingHex: '#ffffff',
+      coatingImage: '',
       colorReverseHex: '#D7D5C6',
       colorReverseImage: '/uploads/colors/reverse.jpg',
     })
@@ -64,12 +66,16 @@ describe('T2ProfnastilFacade appearance state', () => {
     const calc = useCalculation()
     expect(calc.colorFacadeHex.value).toBe('#704214')
     expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+    expect(calc.coatingFacadeHex.value).toBe('#ffffff')
+    expect(calc.coatingFacadeImage.value).toBe('')
     expect(calc.colorFacadeReverseHex.value).toBe('#D7D5C6')
     expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
 
     await checkbox.setValue(false)
     expect(calc.colorFacadeHex.value).toBe('')
     expect(calc.colorFacadeImage.value).toBe('')
+    expect(calc.coatingFacadeHex.value).toBe('')
+    expect(calc.coatingFacadeImage.value).toBe('')
     expect(calc.colorFacadeReverseHex.value).toBe('')
     expect(calc.colorFacadeReverseImage.value).toBe('')
   })
@@ -103,6 +109,7 @@ describe('T2ProfnastilFacade appearance state', () => {
     calc.colorFacade.value = 'Дуб'
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
+    calc.coatingFacadeHex.value = '#ffffff'
 
     const wrapper = mountComponent()
     await flushPromises()
@@ -110,6 +117,7 @@ describe('T2ProfnastilFacade appearance state', () => {
     expect(wrapper.get('tbody tr').classes()).toContain('bg-blue-100')
     expect(calc.colorFacadeHex.value).toBe('#704214')
     expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+    expect(calc.coatingFacadeHex.value).toBe('#ffffff')
   })
 })
 
@@ -124,6 +132,7 @@ describe('T2FillSide appearance clearing', () => {
     calc.idFacade.value = 7
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
+    calc.coatingFacadeHex.value = '#ffffff'
     const wrapper = mount(T2FillSide, {
       global: { stubs: { B24Button: true } },
     })
@@ -134,5 +143,6 @@ describe('T2FillSide appearance clearing', () => {
     expect(calc.idFacade.value).toBe('')
     expect(calc.colorFacadeHex.value).toBe('')
     expect(calc.colorFacadeImage.value).toBe('')
+    expect(calc.coatingFacadeHex.value).toBe('')
   })
 })

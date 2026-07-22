@@ -14,7 +14,12 @@ export interface Type1Geometry {
 }
 const R=60, I=20, S=60, C=40, GAP=5
 const t=(v:unknown)=>typeof v==='string'?v.trim():''
-function n(v:unknown,f:number,min:number,max:number){const p=Number(v);return Math.min(max,Math.max(min,Number.isFinite(p)?p:f))}
+function n(v:unknown,f:number,min:number,max:number){
+  const empty = v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+  if (empty) return f;
+  const p=Number(v);
+  return Math.min(max,Math.max(min,Number.isFinite(p)?p:f))
+}
 function rect(x:number,y:number,width:number,height:number):Rect{return{x,y,width:Math.max(0,width),height:Math.max(0,height)}}
 function size(v:unknown,f:number){const m=t(v).match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i);const a=n(m?.[1]?.replace(',','.'),f,20,200),b=n(m?.[2]?.replace(',','.'),f,20,200);return a===50?b:a}
 function color(v:unknown,f:string){const s=t(v);return /^#[\da-f]{6}$/i.test(s)?s:/^[\da-f]{6}$/i.test(s)?`#${s}`:f}
@@ -37,5 +42,5 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
  const inner={top:rect(framed.x-I,framed.y-I,framed.width+I*2,I),bottom:rect(framed.x-I,framed.y+framed.height,framed.width+I*2,I),left:rect(framed.x-I,framed.y,I,framed.height),right:rect(framed.x+framed.width,framed.y,I,framed.height)}
  const center={...rect(framed.x,framed.y+(framed.height-C)/2,framed.width,C),visible:framed.width>0&&framed.height>0},hx=right?gate.x+gate.width-6:gate.x-10
  const hinges=[gate.y+100,gate.y+gate.height-250].flatMap(y=>[rect(hx,y,16,75),rect(hx,y+75,16,75)]),sx=right?gate.x-25:gate.x+gate.width-15,strip=[14,12,14].map((w,i,a)=>rect(sx+a.slice(0,i).reduce((q,z)=>q+z,0),gate.y,w,gate.height))
- return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,0,pw,postHeight),right:rect(ow-pw,0,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,placement==='above'?0:off,ow,extraSize),visible:extraVisible,placement},hinges,strip,fill:{color:color(s.colorFacadeHex,'#f6f6f6'),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},yardFill:{color:color(s.colorYardHex,'#f6f6f6'),image:t(s.colorYardImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},netImage:sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:sub==='type3'?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
+return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,0,pw,postHeight),right:rect(ow-pw,0,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,placement==='above'?0:off,ow,extraSize),visible:extraVisible,placement},hinges,strip,fill:{color:color(s.colorFacadeHex,''),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},yardFill:{color:color(s.colorYardHex,''),image:t(s.colorYardImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},netImage:sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:sub==='type3'?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
 }

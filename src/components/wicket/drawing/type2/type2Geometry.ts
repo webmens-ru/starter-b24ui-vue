@@ -84,6 +84,8 @@ const GAP_HINGE_SIDE = 4
 const GAP_LOCK_SIDE = 10
 
 function numberInRange(value: unknown, fallback: number, min: number, max: number): number {
+  const empty = value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
+  if (empty) return fallback;
   const parsed = Number(value)
   return Math.min(max, Math.max(min, Number.isFinite(parsed) ? parsed : fallback))
 }
@@ -109,7 +111,7 @@ function fillColor(value: unknown): string {
   // Поддерживает #RRGGBB и RRGGBB (с и без решётки)
   if (/^#[0-9a-f]{6}$/i.test(valueText)) return valueText
   if (/^[0-9a-f]{6}$/i.test(valueText)) return `#${valueText}`
-  return '#f6f6f6'
+  return ''
 }
 
 function frameColorHex(value: unknown): string {

@@ -6,6 +6,7 @@ import ProfnastilC20Drawing from './ProfnastilC20Drawing.vue'
 import ProfnastilMp10Drawing from './ProfnastilMp10Drawing.vue'
 import ProfnastilMp20Drawing from './ProfnastilMp20Drawing.vue'
 import LogSidingDrawing from './LogSidingDrawing.vue'
+import ShipLapSidingDrawing from './ShipLapSidingDrawing.vue'
 import type { FillingDrawingProps } from './fillingDrawingTypes'
 
 const props = defineProps<FillingDrawingProps>()
@@ -15,6 +16,7 @@ const renderers = {
   mp10: ProfnastilMp10Drawing,
   mp20: ProfnastilMp20Drawing,
   logSiding: LogSidingDrawing,
+  shipLap: ShipLapSidingDrawing,
 }
 const renderer = computed(() => {
   const fillingType = resolveFillingType(props.materialGroup, props.materialName)
@@ -30,6 +32,9 @@ const renderer = computed(() => {
       :direction="direction"
       :color="color"
       :image="image"
+      :coating-color="coatingColor"
+      :coating-image="coatingImage"
+      :relief-image="reliefImage"
       :appearance-mode="appearanceMode"
       :id-prefix="idPrefix"
     />

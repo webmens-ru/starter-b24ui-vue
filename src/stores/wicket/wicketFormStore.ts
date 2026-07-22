@@ -119,6 +119,9 @@ const typeOfCoatingFacade   = ref<string>('')
 const colorFacade             = ref<string>('')
 const colorFacadeHex          = ref<string>('')
 const colorFacadeImage        = ref<string>('')
+const coatingFacadeHex        = ref<string>('')
+const coatingFacadeImage      = ref<string>('')
+const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
 
@@ -132,6 +135,9 @@ const typeOfCoatingYard   = ref<string>('')
 const colorYard             = ref<string>('')
 const colorYardHex          = ref<string>('')
 const colorYardImage        = ref<string>('')
+const coatingYardHex        = ref<string>('')
+const coatingYardImage      = ref<string>('')
+const reliefYardImage       = ref<string>('')
 
 // Цена
 const priceRetail  = ref<string | number>('')
@@ -248,6 +254,9 @@ const fieldsFilled = ref<number>(0)
     colorFacade.value = ''
     colorFacadeHex.value = ''
     colorFacadeImage.value = ''
+    coatingFacadeHex.value = ''
+    coatingFacadeImage.value = ''
+    reliefFacadeImage.value = ''
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
     idYard.value = ''
@@ -259,6 +268,9 @@ const fieldsFilled = ref<number>(0)
     colorYard.value = ''
     colorYardHex.value = ''
     colorYardImage.value = ''
+    coatingYardHex.value = ''
+    coatingYardImage.value = ''
+    reliefYardImage.value = ''
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
@@ -466,6 +478,9 @@ const fieldsFilled = ref<number>(0)
       colorFacade,
       colorFacadeHex,
       colorFacadeImage,
+      coatingFacadeHex,
+      coatingFacadeImage,
+      reliefFacadeImage,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
       idYard,
@@ -477,6 +492,9 @@ const fieldsFilled = ref<number>(0)
       colorYard,
       colorYardHex,
       colorYardImage,
+      coatingYardHex,
+      coatingYardImage,
+      reliefYardImage,
       priceRetail,
       priceDealer,
     }
@@ -813,9 +831,9 @@ const fieldsFilled = ref<number>(0)
     penInstalled,
     penColor,
     penColorId,
+    additionalPenMarking,
     additionalPenId,
     additionalPenColor,
-    additionalPenMarking,
     typeLock,
     lockSetId,
     lockPenId,
@@ -859,6 +877,9 @@ const fieldsFilled = ref<number>(0)
     colorFacade,
     colorFacadeHex,
     colorFacadeImage,
+    coatingFacadeHex,
+    coatingFacadeImage,
+    reliefFacadeImage,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
     idYard,
@@ -870,6 +891,9 @@ const fieldsFilled = ref<number>(0)
     colorYard,
     colorYardHex,
     colorYardImage,
+    coatingYardHex,
+    coatingYardImage,
+    reliefYardImage,
     priceRetail,
     priceDealer,
     fieldsFilled,

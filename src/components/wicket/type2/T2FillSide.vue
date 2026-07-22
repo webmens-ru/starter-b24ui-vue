@@ -29,6 +29,9 @@ function clearFacadeSelection() {
   calc.colorFacade.value = ''
   calc.colorFacadeHex.value = ''
   calc.colorFacadeImage.value = ''
+  calc.coatingFacadeHex.value = ''
+  calc.coatingFacadeImage.value = ''
+  calc.reliefFacadeImage.value = ''
   calc.colorFacadeReverseHex.value = ''
   calc.colorFacadeReverseImage.value = ''
 }

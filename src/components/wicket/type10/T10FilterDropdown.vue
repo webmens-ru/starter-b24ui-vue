@@ -65,6 +65,13 @@ const filteredOptions = computed(() =>
   ),
 )
 
+const selectedCount = computed(() => props.modelValue.length)
+
+function resetFilter() {
+  search.value = ''
+  emit('update:modelValue', [])
+}
+
 function onCheck(id: string, checked: boolean) {
   const next = [...props.modelValue]
   if (checked) {
@@ -88,7 +95,9 @@ function isChecked(id: string): boolean {
       class="w-full flex items-start justify-between gap-1 px-3 py-2.5 border border-gray-300 rounded bg-white text-base hover:bg-gray-50 transition-colors"
       @click="toggle"
     >
-      <span class="text-left leading-tight whitespace-normal">{{ label }}</span>
+      <span class="text-left leading-tight whitespace-normal">
+        {{ label }}<span v-if="selectedCount > 0"> · {{ selectedCount }}</span>
+      </span>
       <span
         class="inline-block shrink-0 mt-1 w-0 h-0 border-l-4 border-r-4 border-l-transparent border-r-transparent border-t-4 border-t-gray-700 transition-transform"
         :class="{ 'rotate-180': isOpen }"
@@ -107,6 +116,15 @@ function isChecked(id: string): boolean {
           :placeholder="searchPlaceholder ?? `Поиск ${label.toLowerCase()}`"
           class="w-full px-2 py-1 text-xs border-b border-gray-200 outline-none"
         />
+        <button
+          v-if="selectedCount > 0"
+          type="button"
+          data-testid="filter-reset"
+          class="w-full px-2 py-1.5 text-left text-xs text-blue-600 border-b border-gray-200 hover:bg-blue-50"
+          @click="resetFilter"
+        >
+          Сбросить фильтр
+        </button>
         <ul class="list-none p-0 m-0">
           <li
             v-for="option in filteredOptions"

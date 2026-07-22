@@ -21,6 +21,8 @@ const calc = {
   colorFacade: ref('RAL 7016'),
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
+  coatingFacadeHex: ref(''),
+  coatingFacadeImage: ref(''),
   colorFacadeReverseHex: ref('#D7D5C6'),
   colorFacadeReverseImage: ref(''),
   fillSide: ref('Одна сторона'),
@@ -278,11 +280,8 @@ describe('Type2Drawing', () => {
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('[data-testid="filling-c8"]')).toBeTruthy()
-    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
-    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes()).toMatchObject({
-      fill: '#704214',
-      opacity: '0.1',
-    })
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#704214')
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
   })
 
   it('накладывает плиточную текстуру только на область заполнения', async () => {

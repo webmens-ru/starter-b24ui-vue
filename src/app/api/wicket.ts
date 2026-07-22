@@ -337,7 +337,7 @@ export async function getPensByLock(lockSetId: number): Promise<{
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
 export async function getAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; canUseFrameColor: boolean; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
   const { data } = await api.get('/api/dict/additional-pen/get-list')

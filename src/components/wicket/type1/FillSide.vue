@@ -31,6 +31,9 @@ function clearFacadeSelection() {
   calc.idFacade.value = ''
   calc.colorFacadeHex.value = ''
   calc.colorFacadeImage.value = ''
+  calc.coatingFacadeHex.value = ''
+  calc.coatingFacadeImage.value = ''
+  calc.reliefFacadeImage.value = ''
   calc.colorFacadeReverseHex.value = ''
   calc.colorFacadeReverseImage.value = ''
   calc.materialSupplierFacade.value = ''
@@ -51,6 +54,9 @@ function clearYardSelection() {
   calc.colorYard.value = ''
   calc.colorYardHex.value = ''
   calc.colorYardImage.value = ''
+  calc.coatingYardHex.value = ''
+  calc.coatingYardImage.value = ''
+  calc.reliefYardImage.value = ''
 }
 
 function onFillSideChange() {

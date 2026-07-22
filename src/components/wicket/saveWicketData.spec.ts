@@ -12,6 +12,7 @@ import FillSide from './type1/FillSide.vue'
 import IsTherelock from './IsTherelock.vue'
 import LockType from './LockType.vue'
 import Pen from './Pen.vue'
+import ShieldType from './ShieldType.vue'
 
 const testRouter = createRouter({
   history: createMemoryHistory(),
@@ -27,6 +28,8 @@ vi.mock('../../app/api/wicket', () => ({
   getPolozhenieJumper: vi.fn().mockResolvedValue({ availablePolozheniyeJumper: [] }),
   getAssortmentJumper: vi.fn().mockResolvedValue({ assortmentJumper: [] }),
   getColorShield: vi.fn().mockResolvedValue({ colorShield: [] }),
+  getNetWidths: vi.fn().mockResolvedValue({ netWidths: [] }),
+  getNetsByWidth: vi.fn().mockResolvedValue({ items: [] }),
   getFilterOptions: vi.fn().mockResolvedValue({}),
   getSidingTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getProfnastilTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
@@ -56,7 +59,7 @@ vi.mock('../../app/api/wicket', () => ({
   deleteCalculation: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { saveWicketData } = await import('../../app/api/wicket')
+const { saveWicketData, getColorShield, getNetWidths } = await import('../../app/api/wicket')
 
 describe('saveWicketData — данные передаются на бэк', () => {
   let calc: ReturnType<typeof useCalculation>
@@ -211,5 +214,56 @@ describe('saveWicketData — данные передаются на бэк', () 
       penColorId: 6,
       additionalPenColor: 'Сохранённый цвет',
     })
+  })
+
+  it('ShieldType сохраняет выбранный цвет при смене типа щита', async () => {
+    calc.modelId.value = '2'
+    calc.colorShieldId.value = '7'
+
+    vi.mocked(getColorShield).mockResolvedValueOnce({
+      colorShield: [
+        { id: 1, name: 'Первый цвет', hex: '#111111' },
+        { id: 7, name: 'Сохранённый цвет', hex: '#777777' },
+      ],
+    })
+
+    let finishNetWidths!: (value: { netWidths: [] }) => void
+    vi.mocked(getNetWidths).mockImplementationOnce(() => new Promise(resolve => {
+      finishNetWidths = resolve
+    }))
+
+    const wrapper = mount(ShieldType, {
+      global: {
+        plugins: [testRouter],
+        stubs: {
+          B24Button: true,
+          B24Modal: true,
+          B24RadioGroup: true,
+          B24SelectMenu: {
+            props: ['modelValue'],
+            template: '<div data-testid="select" :data-value="String(modelValue ?? \'\')" />',
+          },
+        },
+      },
+    })
+
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(wrapper.text()).toContain('Сохранённый цвет')
+
+    finishNetWidths({ netWidths: [] })
+    await new Promise(r => setTimeout(r, 0))
+    vi.mocked(saveWicketData).mockClear()
+
+    await wrapper.find('input[value="Тип_2"]').setValue(true)
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]).toMatchObject({
+      shieldType: 'Тип_2',
+      colorShieldId: '7',
+      colorShieldName: 'Сохранённый цвет',
+    })
+
+    wrapper.unmount()
   })
 })

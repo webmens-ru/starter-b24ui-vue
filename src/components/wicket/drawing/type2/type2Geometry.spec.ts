@@ -104,9 +104,9 @@ describe('computeType2Geometry', () => {
     expect(computeType2Geometry({
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#123',
-    }).fill.color).toBe('#f6f6f6')
+    }).fill.color).toBe('')
 
-    expect(computeType2Geometry({ colorFacade: 'RAL 7016' }).fill.color).toBe('#f6f6f6')
+    expect(computeType2Geometry({ colorFacade: 'RAL 7016' }).fill.color).toBe('')
   })
 
   it.each([

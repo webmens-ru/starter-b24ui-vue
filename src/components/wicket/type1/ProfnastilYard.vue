@@ -87,6 +87,9 @@ function restoreFromCalc(): ProfnastilRow | null {
     color:         calc.colorYard.value,
     colorHex:      calc.colorYardHex.value,
     colorImage:    calc.colorYardImage.value,
+    coatingHex:    calc.coatingYardHex.value,
+    coatingImage:  calc.coatingYardImage.value,
+    reliefImage:   calc.reliefYardImage.value,
   }
 }
 
@@ -100,6 +103,9 @@ async function save(row: ProfnastilRow) {
   calc.colorYard.value             = row.color
   calc.colorYardHex.value          = row.colorHex ?? ''
   calc.colorYardImage.value        = row.colorImage ?? ''
+  calc.coatingYardHex.value        = row.coatingHex ?? ''
+  calc.coatingYardImage.value      = row.coatingImage ?? ''
+  calc.reliefYardImage.value       = row.reliefImage ?? ''
 
   calc.updateOrCreateBlock('Заполнение (двор)', [
     { name: 'Производитель материала', value: row.company },
@@ -151,6 +157,9 @@ function deselectRow() {
   calc.idYard.value = ''
   calc.colorYardHex.value = ''
   calc.colorYardImage.value = ''
+  calc.coatingYardHex.value = ''
+  calc.coatingYardImage.value = ''
+  calc.reliefYardImage.value = ''
 }
 
 function isSelected(row: ProfnastilRow) {

@@ -7,9 +7,12 @@ import ImageViewer from './ImageViewer.vue'
 interface PenItem {
   id: number
   marking: string
+  canUseFrameColor: boolean
   colors: { id: number; name: string }[]
   imageUrls?: string[]
 }
+
+type ColorChoice = number | 'frame' | null
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -24,9 +27,10 @@ const isTherePenName = ref<string>('Не будет')
 const penProvided = ref<string>('Предоставляет изготовитель')
 const penInstalled = ref<string>('Устанавливает изготовитель')
 const selectedPenId = ref<number | null>(null)
-const selectedColor = ref<number | null>(null)
+const selectedColor = ref<ColorChoice>(null)
+const colorError = ref('')
 let isRestoringSelection = false
-const selectedColorModel = computed<number | undefined>({
+const selectedColorModel = computed<number | 'frame' | undefined>({
   get: () => selectedColor.value ?? undefined,
   set: value => { selectedColor.value = value ?? null },
 })
@@ -39,8 +43,11 @@ const showPenSelection = computed(() => penProvided.value === 'Предоста�
 /** Цвета для выпадающего списка — из выбранной ручки */
 const colorSelectItems = computed(() => {
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors ?? []
-  return colors.map(c => ({ id: c.id, label: c.name }))
+  if (!pen) return []
+  return [
+    ...(pen.canUseFrameColor ? [{ id: 'frame' as const, label: 'Цвет каркаса' }] : []),
+    ...pen.colors.map(c => ({ id: c.id, label: c.name })),
+  ]
 })
 
 const providedOptions = [
@@ -62,10 +69,14 @@ function syncCalcFields() {
     if (showPenSelection.value) {
       calc.additionalPenId.value = selectedPenId.value
       const pen = penItems.value.find(p => p.id === selectedPenId.value)
-      const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
-      calc.penColorId.value = selectedColor.value ?? null
-      calc.additionalPenColor.value = colorObj?.name ?? ''
-      calc.penColor.value = colorObj?.name ?? ''
+      const isFrameColor = selectedColor.value === 'frame'
+      const colorObj = typeof selectedColor.value === 'number'
+        ? pen?.colors.find(c => c.id === selectedColor.value)
+        : undefined
+      const colorName = isFrameColor ? 'Цвет каркаса' : (colorObj?.name ?? '')
+      calc.penColorId.value = colorObj?.id ?? null
+      calc.additionalPenColor.value = colorName
+      calc.penColor.value = colorName
       calc.additionalPenMarking.value = pen?.marking ?? ''
     } else {
       calc.additionalPenId.value = null
@@ -127,20 +138,21 @@ watch(selectedPenId, (id) => {
   const pen = penItems.value.find(p => p.id === id)
   calc.additionalPenMarking.value = pen?.marking ?? ''
   const colors = pen?.colors ?? []
-  if (!colors.some(c => c.id === selectedColor.value)) {
-    selectedColor.value = colors[0]?.id ?? null
+  const currentColorIsAvailable = selectedColor.value === 'frame'
+    ? Boolean(pen?.canUseFrameColor)
+    : colors.some(c => c.id === selectedColor.value)
+  if (!currentColorIsAvailable) {
+    selectedColor.value = pen?.canUseFrameColor ? 'frame' : (colors[0]?.id ?? null)
   }
-  calc.additionalPenColor.value = colors.find(c => c.id === selectedColor.value)?.name ?? ''
+  colorError.value = ''
   syncCalcFields()
   buildBlock()
   save()
 })
 
-watch(selectedColor, (colorId) => {
+watch(selectedColor, () => {
   if (isRestoringSelection) return
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colorObj = pen?.colors?.find(c => c.id === colorId)
-  calc.additionalPenColor.value = colorObj?.name ?? ''
+  colorError.value = ''
   syncCalcFields()
   buildBlock()
   save()
@@ -174,9 +186,22 @@ function applySavedSelection() {
   const colors = pen?.colors ?? []
   if (savedColorId != null && colors.some(c => c.id === savedColorId)) {
     selectedColor.value = savedColorId
+  } else if (savedColorId == null && pen?.canUseFrameColor) {
+    selectedColor.value = 'frame'
   } else if (colors.length) {
     selectedColor.value = colors[0].id
+  } else {
+    selectedColor.value = null
   }
+}
+
+function continueToNext() {
+  if (showDetails.value && showPenSelection.value && selectedPenId.value != null && selectedColor.value == null) {
+    colorError.value = 'Для выбранной ручки не настроен доступный цвет'
+    return
+  }
+  colorError.value = ''
+  emit('next')
 }
 
 async function save() {
@@ -240,7 +265,7 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Дополнительная ручка (скоба)</span>
-      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" @click="continueToNext" />
     </div>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
@@ -328,6 +353,7 @@ onMounted(async () => {
                 class="w-full"
               />
             </div>
+            <p v-if="colorError" class="text-sm text-red-600">{{ colorError }}</p>
           </div>
         </template>
 

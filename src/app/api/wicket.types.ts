@@ -38,6 +38,9 @@ export interface SidingRow {
   color: string
   colorHex?: string | null
   colorImage?: string | null
+  coatingHex?: string | null
+  coatingImage?: string | null
+  reliefImage?: string | null
   priceM2?: string | number
   deliveryTime?: string
   inStock?: string
@@ -72,8 +75,11 @@ export interface ProfnastilRow {
   color: string
   colorHex?: string | null
   colorImage?: string | null
+  coatingHex?: string | null
+  coatingImage?: string | null
   colorReverseHex?: string | null
   colorReverseImage?: string | null
+  reliefImage?: string | null
   /** camelCase, как в API и в БД dir_filling_profnastil */
   priceM2?: string | number
   weightM2?: string | number

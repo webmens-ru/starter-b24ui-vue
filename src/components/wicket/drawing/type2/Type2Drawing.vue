@@ -89,6 +89,13 @@ const displayedFillImage = computed(() => {
     ? geometry.value.fill.reverseImage
     : geometry.value.fill.image
 })
+const displayedCoatingColor = computed(() => realisticColors.value && !(viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
+  ? (calc.coatingFacadeHex?.value ?? '')
+  : '')
+const displayedCoatingImage = computed(() => realisticColors.value && !(viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
+  ? (calc.coatingFacadeImage?.value ?? '')
+  : '')
+const displayedReliefImage = computed(() => calc.reliefFacadeImage?.value ?? '')
 const netImageWidthToHeight = ref(1)
 const netTileHeight = computed(() => Math.max(1, geometry.value.netArea.width * netImageWidthToHeight.value))
 const netTileWidth = computed(() => Math.max(1, geometry.value.netArea.height * netImageWidthToHeight.value))
@@ -335,6 +342,9 @@ const bottomRailPath = computed(() => buildBottomRailPath({
           :direction="geometry.fill.direction"
           :color="displayedFillColor"
           :image="displayedFillImage"
+          :coating-color="displayedCoatingColor"
+          :coating-image="displayedCoatingImage"
+          :relief-image="displayedReliefImage"
           :appearance-mode="realisticColors ? 'coating' : 'solid'"
           :id-prefix="`type2-${instanceId}-yard`"
         />
@@ -507,6 +517,9 @@ const bottomRailPath = computed(() => buildBottomRailPath({
           :direction="geometry.fill.direction"
           :color="displayedFillColor"
           :image="displayedFillImage"
+          :coating-color="displayedCoatingColor"
+          :coating-image="displayedCoatingImage"
+          :relief-image="displayedReliefImage"
           :appearance-mode="realisticColors ? 'coating' : 'solid'"
           :id-prefix="`type2-${instanceId}-street`"
         />

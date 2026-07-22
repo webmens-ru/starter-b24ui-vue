@@ -10,6 +10,8 @@ const api = axios.create({
 
 // Токен берётся при каждом запросе — на случай если он обновится после инициализации
 api.interceptors.request.use(config => {
+  config.baseURL = window._HOSTNAME_ || config.baseURL
+
   const token = window._ACCESS_TOKEN_
   if (token) config.headers['Authorization'] = `Bearer ${token}`
 

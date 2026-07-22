@@ -8,6 +8,8 @@ describe('resolveFillingType', () => {
     ['Профлист', 'Профнастил МП-10', 'mp10'],
     ['Профлист', 'Профнастил МП-20', 'mp20'],
     ['Сайдинг', 'Сайдинг «Бревно»', 'logSiding'],
+    ['Сайдинг', 'Корабельная доска', 'shipLap'],
+    ['Сайдинг', 'Сайдинг «Корабельная доска»', 'shipLap'],
   ] as const)('%s / %s → %s', (group, name, expected) => {
     expect(resolveFillingType(group, name)).toBe(expected)
   })

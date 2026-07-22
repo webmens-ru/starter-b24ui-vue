@@ -347,11 +347,7 @@ async function onShieldTypeChange() {
 }
 
 function onColorChange() {
-  save().then(() => {
-    const sid = String(colorShieldId.value ?? '')
-    const name = colorOptions.value.find(i => String(i.id) === sid)?.name ?? ''
-    openModal(`Внесены изменения: Цвет рамы '${name}'`, 'Изменения сохранены')
-  })
+  save()
 }
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
@@ -582,6 +578,7 @@ onMounted(async () => {
     widthSidePart.value = String(savedSide)
   }
   if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
+  if (calc.colorShieldId.value)    colorShieldId.value    = String(calc.colorShieldId.value)
 
   await loadColorShield()
   await loadNetWidths()
@@ -597,10 +594,6 @@ onMounted(async () => {
   }
   if (calc.assortmentHeightUpperNetId.value && showHeightTop.value) {
     assortmentHeightUpperNetId.value = Number(calc.assortmentHeightUpperNetId.value)
-  }
-
-  if (calc.colorShieldId.value) {
-    colorShieldId.value = String(calc.colorShieldId.value)
   }
 
   await save()

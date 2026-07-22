@@ -30,7 +30,7 @@ if (import.meta.env.DEV) {
     window._ACCESS_TOKEN_ = qs.get('token')!
   }
 
-  window._HOSTNAME_ = ''
+  window._HOSTNAME_ = 'https://test-lk.doorhan-krd.ru'
 
   window._PARAMS_ = {
     placement: 'DEFAULT',

@@ -14,6 +14,9 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
       direction: 'vertical',
       color: '#704214',
       image: '/uploads/colors/wood.webp',
+      coatingColor: '',
+      coatingImage: '',
+      reliefImage: '',
       appearanceMode: 'coating',
       idPrefix: 'fill-a',
       ...props,
@@ -22,26 +25,60 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
 }
 
 describe('FillingDrawing', () => {
-  it('renders the C8 profile with clipped texture and shadows', () => {
+  it('renders the C8 profile with clipped texture and no built-in relief', () => {
     const wrapper = mountDrawing()
 
     expect(wrapper.get('[data-testid="filling-drawing"]')).toBeTruthy()
     expect(wrapper.get('[data-testid="filling-c8"]')).toBeTruthy()
-    expect(wrapper.findAll('[data-testid="filling-profile-shadow"]')[0].attributes('width')).toBe('5')
+    expect(wrapper.find('[data-testid="filling-profile-shadow"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-relief-texture"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="filling-texture"]').attributes('fill')).toContain('fill-a-texture')
     expect(wrapper.get('[data-testid="filling-c8"]').attributes('clip-path')).toContain('fill-a-clip')
   })
 
-  it('draws a neutral base and a 10% HEX coating before profile relief', () => {
+  it('draws material HEX as the base when coating is empty', () => {
     const wrapper = mountDrawing({ color: '#704214', image: '' })
 
-    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
-    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes()).toMatchObject({
-      fill: '#704214',
-      opacity: '0.1',
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#704214')
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
+  })
+
+  it('draws coating HEX over material color before external relief', () => {
+    const wrapper = mountDrawing({
+      color: '#704214',
+      image: '',
+      coatingColor: '#ffffff',
+      reliefImage: '/uploads/dict/filling-relief/profnastil-c8.svg',
     })
+
+    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes()).toMatchObject({ fill: '#ffffff', opacity: '0.1' })
     expect(wrapper.html().indexOf('data-testid="filling-color-coating"'))
-      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-profile-shadow"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-relief-texture"'))
+  })
+
+  it('draws external relief image over coating layers and keeps it clipped', () => {
+    const wrapper = mountDrawing({
+      color: '#704214',
+      image: '',
+      coatingColor: '#ffffff',
+      reliefImage: '/uploads/dict/profnastil-profile-type/2/relief.svg',
+    })
+
+    const relief = wrapper.get('[data-testid="filling-relief-texture"]')
+    expect(relief.attributes('fill')).toContain('fill-a-relief-texture')
+    expect(wrapper.html().indexOf('data-testid="filling-color-coating"'))
+      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-relief-texture"'))
+    expect(wrapper.get('[data-testid="filling-c8"]').attributes('clip-path')).toContain('fill-a-clip')
+  })
+
+  it('uses the full C8 light-and-dark relief cycle as the external relief tile width', () => {
+    const wrapper = mountDrawing({
+      reliefImage: '/uploads/dict/filling-relief/profnastil-c8.svg',
+    })
+
+    const reliefPattern = wrapper.get('#fill-a-relief-texture')
+    expect(reliefPattern.attributes('width')).toBe('115')
+    expect(reliefPattern.get('image').attributes('width')).toBe('115')
   })
 
   it('draws an opaque texture without a base or HEX layer', () => {
@@ -75,66 +112,34 @@ describe('FillingDrawing', () => {
       image: '',
     })
 
-    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#f6f6f6')
-    expect(wrapper.get('[data-testid="filling-color-coating"]').attributes('opacity')).toBe('0.1')
-    expect(wrapper.html().indexOf('data-testid="filling-color-coating"'))
-      .toBeLessThan(wrapper.html().indexOf('data-testid="filling-log-waves"'))
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#704214')
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
   })
 
-  it.each([
-    { name: 'С-8', firstShadow: 5, shadowStep: 57.5 },
-    { name: 'С-20', firstShadow: 17.5, shadowStep: 52.5 },
-    { name: 'МП-10', firstShadow: 15, shadowStep: 50 },
-    { name: 'МП-20', firstShadow: 17.5, shadowStep: 52.5 },
-  ])('preserves $name vertical profile dimensions', ({ name, firstShadow, shadowStep }) => {
-    const wrapper = mountDrawing({ materialName: name })
-    const shadows = wrapper.findAll('[data-testid="filling-profile-shadow"]')
-
-    expect(Number(shadows[0].attributes('width'))).toBe(firstShadow)
-    expect(Number(shadows[1].attributes('x')) - Number(shadows[0].attributes('x'))).toBe(shadowStep)
-  })
-
-  it.each([
-    { name: 'С-8', firstShadow: 5, shadowStep: 57.5 },
-    { name: 'С-20', firstShadow: 17.5, shadowStep: 52.5 },
-    { name: 'МП-10', firstShadow: 15, shadowStep: 50 },
-    { name: 'МП-20', firstShadow: 17.5, shadowStep: 52.5 },
-  ])('uses $name profile dimensions along the horizontal axis', ({ name, firstShadow, shadowStep }) => {
-    const wrapper = mountDrawing({ materialName: name, direction: 'horizontal' })
-    const shadows = wrapper.findAll('[data-testid="filling-profile-shadow"]')
-
-    expect(Number(shadows[0].attributes('height'))).toBe(firstShadow)
-    expect(Number(shadows[1].attributes('y')) - Number(shadows[0].attributes('y'))).toBe(shadowStep)
-  })
-
-  it('clips natural-size log siding waves instead of squeezing the last wave', () => {
+  it('draws log siding without relief when backend did not provide relief image', () => {
     const wrapper = mountDrawing({
       materialGroup: 'Сайдинг',
       materialName: 'Сайдинг «Бревно»',
       area: { ...area, width: 200 },
     })
-    const waves = wrapper.findAll('[data-testid="filling-log-wave"]')
-    const wavesGroup = wrapper.get('[data-testid="filling-log-waves"]')
 
-    expect(waves.every((wave) => wave.attributes('width') === '175')).toBe(true)
-    expect(Number(waves[1].attributes('x')) - Number(waves[0].attributes('x'))).toBe(175)
-    expect(wavesGroup.attributes('clip-path')).toContain('fill-a-clip')
+    expect(wrapper.get('[data-testid="filling-log-siding"]')).toBeTruthy()
+    expect(wrapper.find('[data-testid="filling-log-wave"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-relief-texture"]').exists()).toBe(false)
   })
 
-  it('keeps texture, gradient and clip IDs distinct between instances', () => {
+  it('keeps texture and clip IDs distinct between instances', () => {
     const Wrapper = defineComponent({
       setup: () => () => h('svg', [
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/a.webp', appearanceMode: 'coating', idPrefix: 'a' }),
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/b.webp', appearanceMode: 'coating', idPrefix: 'b' }),
+        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/a.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'a' }),
+        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/b.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'b' }),
       ]),
     })
     const wrapper = mount(Wrapper)
     const textureIds = wrapper.findAll('pattern').map((pattern) => pattern.attributes('id'))
-    const gradientIds = wrapper.findAll('linearGradient').map((gradient) => gradient.attributes('id'))
     const clipIds = wrapper.findAll('clipPath').map((clip) => clip.attributes('id'))
 
     expect(textureIds).toEqual(['a-texture', 'b-texture'])
-    expect(gradientIds).toEqual(['a-log-gradient', 'b-log-gradient'])
     expect(clipIds).toEqual(['a-clip', 'b-clip'])
   })
 
