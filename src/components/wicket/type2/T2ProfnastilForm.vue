@@ -42,6 +42,17 @@ const colorName = computed({
 })
 const colorMode = computed(() => getProfnastilColorMode(coating.value))
 const colorRequired = computed(() => colorMode.value !== 'none')
+const manufacturerSelectItems = computed(() => [
+  { id: '', label: 'Не выбран' },
+  ...options.value.manufacturers.map(item => ({ id: item.id, label: item.name })),
+])
+const profileSelectItems = computed(() =>
+  options.value.profiles.map(item => ({ id: item.name, label: item.name })),
+)
+const coatingSelectItems = computed(() =>
+  options.value.coatings.map(item => ({ id: item.name, label: item.name })),
+)
+const selectedManufacturerId = computed<string | number>(() => manufacturerId.value ?? '')
 const colorSelectItems = computed(() =>
   options.value.colors.map(item => ({ id: item.id, label: item.name })),
 )
@@ -86,6 +97,21 @@ async function onProfileChange() {
   else calc.idYard.value = ''
   await load(profile.value)
   await save()
+}
+
+async function onManufacturerChange(value: string | number | undefined) {
+  manufacturerId.value = value === '' || value === undefined ? null : value
+  await save()
+}
+
+async function onProfileSelectChange(value: string | number | undefined) {
+  profile.value = String(value ?? '')
+  await onProfileChange()
+}
+
+async function onCoatingSelectChange(value: string | number | undefined) {
+  coating.value = String(value ?? '')
+  await onCoatingChange()
 }
 
 async function onCoatingChange() {
@@ -180,27 +206,42 @@ onMounted(async () => {
   <div class="profnastil-form">
     <label class="form-field">
       <span class="font-semibold">Производитель</span>
-      <select v-model="manufacturerId" class="form-control" :disabled="loading" @change="save">
-        <option :value="null">Не выбран</option>
-        <option v-for="item in options.manufacturers" :key="item.id" :value="item.id">{{ item.name }}</option>
-      </select>
+      <B24SelectMenu
+        :model-value="selectedManufacturerId"
+        value-key="id"
+        :items="manufacturerSelectItems"
+        placeholder="Не выбран"
+        class="w-full"
+        :disabled="loading"
+        @update:model-value="onManufacturerChange"
+      />
     </label>
 
     <label class="form-field">
       <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
-      <select v-model="profile" class="form-control" :disabled="loading" @change="onProfileChange">
-        <option value="">Выберите тип профиля</option>
-        <option v-for="item in options.profiles" :key="item.id" :value="item.name">{{ item.name }}</option>
-      </select>
+      <B24SelectMenu
+        :model-value="profile || undefined"
+        value-key="id"
+        :items="profileSelectItems"
+        placeholder="Выберите тип профиля"
+        class="w-full"
+        :disabled="loading"
+        @update:model-value="onProfileSelectChange"
+      />
       <span v-if="submitted && !profile" class="text-sm text-red-600">Выберите тип профиля</span>
     </label>
 
     <label class="form-field">
         <span class="font-semibold">Тип покрытия <span class="text-red-600">*</span></span>
-        <select v-model="coating" class="form-control" :disabled="loading || !profile" @change="onCoatingChange">
-          <option value="">Выберите тип покрытия</option>
-          <option v-for="item in options.coatings" :key="item.id" :value="item.name">{{ item.name }}</option>
-        </select>
+        <B24SelectMenu
+          :model-value="coating || undefined"
+          value-key="id"
+          :items="coatingSelectItems"
+          placeholder="Выберите тип покрытия"
+          class="w-full"
+          :disabled="loading || !profile"
+          @update:model-value="onCoatingSelectChange"
+        />
         <span v-if="submitted && !coating" class="text-sm text-red-600">Выберите тип покрытия</span>
     </label>
 
@@ -252,17 +293,5 @@ onMounted(async () => {
   min-width: 0;
   flex-direction: column;
   gap: 6px;
-}
-.form-control {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  padding: 8px 12px;
-}
-.form-control:disabled {
-  background: #f1f5f9;
-  color: #94a3b8;
 }
 </style>

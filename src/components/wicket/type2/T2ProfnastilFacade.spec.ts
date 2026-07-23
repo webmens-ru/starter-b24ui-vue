@@ -28,6 +28,16 @@ describe('Type 2 profnastil pages', () => {
     expect(form.indexOf('>Производитель<')).toBeLessThan(form.indexOf('>Тип профиля '))
   })
 
+  it('uses Bitrix searchable dropdowns for all dictionary fields', () => {
+    expect(form).not.toContain('<select')
+    expect(form).toContain(':items="manufacturerSelectItems"')
+    expect(form).toContain(':items="profileSelectItems"')
+    expect(form).toContain(':items="coatingSelectItems"')
+    expect(form).toContain('@update:model-value="onManufacturerChange"')
+    expect(form).toContain('@update:model-value="onProfileSelectChange"')
+    expect(form).toContain('@update:model-value="onCoatingSelectChange"')
+  })
+
   it('uses the searchable dropdown for dictionary colors', () => {
     expect(form).toContain('<B24SelectMenu')
     expect(form).toContain(':items="colorSelectItems"')
