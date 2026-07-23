@@ -4,9 +4,8 @@ import { useRoute } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
 import { loadWicketData, createOrder, createWicketMainMenu, getAddonList } from '../../app/api/wicket'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
-import { WICKET_MENU_ITEMS, type WicketMenuItem } from './wicketMenuConfig'
-import { WICKET_SECTIONS, computeSectionValidation } from './wicketSections'
 import type { WicketSharedNavState } from './wicketNavTypes'
+import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
 
 declare const window: Window & {
   _PARAMS_?: { placementOptions?: { id?: string | number; modelId?: string } }
@@ -18,12 +17,12 @@ import CalculateTable from '../../components/CalculateTable.vue'
 
 const props = defineProps<{
   stepComponents: Record<string, Component>
-  getNextPage: (from: string, state: WicketSharedNavState) => string | null
-  getPrevPage: (from: string, state: WicketSharedNavState) => string | null
+  route: WicketRouteDefinition
 }>()
 
 const calc: WicketCalculationApi = useCalculation()
 provide(WICKET_CALCULATION_KEY, calc)
+provide(WICKET_ROUTE_KEY, props.route)
 
 const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi, reset } = calc
 
@@ -135,13 +134,11 @@ const sectionState = computed(() => ({
 }))
 
 const sectionValidations = computed(() =>
-  computeSectionValidation(WICKET_SECTIONS, sectionState.value),
+  props.route.validations(sectionState.value),
 )
 
 const menuItems = computed(() =>
-  WICKET_SECTIONS
-    .filter(s => s.visible(sectionState.value))
-    .map(s => s.menu),
+  props.route.menu(sectionState.value),
 )
 
 const incompletePages = computed(() =>
@@ -161,15 +158,20 @@ function getNavState(): WicketSharedNavState {
     isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
     availableSections: calc.availableSections.value,
+    idFacade: calc.idFacade.value,
+    idYard: calc.idYard.value,
+    lockSetId: calc.lockSetId.value,
+    widthProyema: calc.widthProyema.value,
+    heightProyema: calc.heightProyema.value,
   }
 }
 
 function getNextPage(from: string): string | null {
-  return props.getNextPage(from, getNavState())
+  return props.route.next(from, getNavState())
 }
 
 function getPrevPage(from: string): string | null {
-  return props.getPrevPage(from, getNavState())
+  return props.route.prev(from, getNavState())
 }
 
 function switchTo(page: string) {

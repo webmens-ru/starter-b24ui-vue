@@ -16,8 +16,12 @@ describe('wicketStepProgress', () => {
   })
 
   it('visitedPagesUpTo не открывает шаги дальше active', () => {
-    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page1', 'page2'])
+    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page1', 'page7', 'page2'])
     expect(visitedPagesUpTo('page12', ['page1', 'page11'])).toContain('page12')
     expect(visitedPagesUpTo('page2', ['page1'])).not.toContain('page5')
+  })
+
+  it('располагает проём перед заполнением', () => {
+    expect(mergeVisitedPages(['page2'], ['page7'])).toEqual(['page7', 'page2'])
   })
 })

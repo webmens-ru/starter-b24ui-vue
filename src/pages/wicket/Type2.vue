@@ -19,7 +19,7 @@ import DoorCloserStep from '../../components/wicket/steps/DoorCloserStep.vue'
 import BumperStep from '../../components/wicket/steps/BumperStep.vue'
 import SkudStep from '../../components/wicket/steps/SkudStep.vue'
 import LockComponentsStep from '../../components/wicket/steps/LockComponentsStep.vue'
-import { getNextPage, getPrevPage } from './type2Navigation'
+import { type2Route } from './type2Route'
 
 const stepComponents: Record<string, Component> = {
   page1: ManufacturingOption,
@@ -45,7 +45,6 @@ const stepComponents: Record<string, Component> = {
 <template>
   <WicketWizardPage
     :step-components="stepComponents"
-    :get-next-page="getNextPage"
-    :get-prev-page="getPrevPage"
+    :route="type2Route"
   />
 </template>

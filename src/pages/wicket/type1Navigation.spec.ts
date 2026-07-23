@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getNextPage, getPrevPage, type Type1NavState } from './type1Navigation'
+import { getNextPage, getPrevPage, type Type1NavState } from './type1Route'
 
 function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
   return {
@@ -73,8 +73,8 @@ describe('type1Navigation', () => {
     })
 
     describe('линейная последовательность', () => {
-      it('page1 → page2', () => {
-        expect(getNextPage('page1', state())).toBe('page2')
+      it('page1 → page7', () => {
+        expect(getNextPage('page1', state())).toBe('page7')
       })
       it('page5 → page3', () => {
         expect(getNextPage('page5', state())).toBe('page3')
@@ -152,8 +152,8 @@ describe('type1Navigation', () => {
     })
 
     describe('линейная последовательность', () => {
-      it('page2 → page1', () => {
-        expect(getPrevPage('page2', state())).toBe('page1')
+      it('page2 → page7', () => {
+        expect(getPrevPage('page2', state())).toBe('page7')
       })
       it('page1 → null', () => {
         expect(getPrevPage('page1', state())).toBeNull()

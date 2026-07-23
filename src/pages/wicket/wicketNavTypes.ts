@@ -1,6 +1,5 @@
 /**
- * Общее состояние для ветвления навигации (type1 / type2 — одинаковая форма полей).
- * См. type1Navigation / type2Navigation.
+ * Общее состояние для ветвления маршрутов всех типов калиток.
  */
 export interface WicketSharedNavState {
   modelId: string
@@ -10,4 +9,9 @@ export interface WicketSharedNavState {
   isThereLock: number
   providesLock: string
   availableSections: string[]
+  idFacade?: string | number | null
+  idYard?: string | number | null
+  lockSetId?: number | null
+  widthProyema?: string | number
+  heightProyema?: string | number
 }

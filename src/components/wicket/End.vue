@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { finalCalculate, deleteCalculation, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
-import { WICKET_SECTIONS, computeSectionValidation } from '../../pages/wicket/wicketSections'
+import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
 
 const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
 const calc = useCalculation()
+const wicketRoute = inject(WICKET_ROUTE_KEY)
 
 const orderViewHref = computed(() => {
   const orderId = Number(calc.number.value)
@@ -91,6 +92,9 @@ async function persistWizardProgress() {
 
 // ─── Расчёт цены ─────────────────────────────────────────────────────────────
 const sectionState = computed(() => ({
+  modelId: String(calc.modelId.value ?? ''),
+  materialFacadeGlob: calc.materialFacadeGlob.value,
+  materialYardGlob: calc.materialYardGlob.value,
   isThereLock: calc.isThereLock.value,
   providesLock: calc.providesLock.value,
   lockSetId: calc.lockSetId.value,
@@ -103,7 +107,7 @@ const sectionState = computed(() => ({
 }))
 
 const sectionErrors = computed(() => {
-  const validations = computeSectionValidation(WICKET_SECTIONS, sectionState.value)
+  const validations = wicketRoute?.validations(sectionState.value) ?? new Map()
   const errors: string[] = []
   validations.forEach((v) => { if (!v.valid) errors.push(...v.errors) })
   return errors
