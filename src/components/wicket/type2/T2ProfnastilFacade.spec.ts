@@ -42,19 +42,15 @@ describe('T2ProfnastilFacade appearance state', () => {
     calc.modelId.value = '2'
   })
 
-  it('copies optional appearance when a row is selected and clears it on deselection', async () => {
+  it('copies coating and relief appearance without profnastil color', async () => {
     rows.push({
       id: 7,
       material: 'С20',
       thickness: '0.5',
       typeOfCoating: 'Printech',
-      color: 'Дуб',
-      colorHex: '#704214',
-      colorImage: '/uploads/colors/wood.jpg',
       coatingHex: '#ffffff',
       coatingImage: '',
-      colorReverseHex: '#D7D5C6',
-      colorReverseImage: '/uploads/colors/reverse.jpg',
+      reliefImage: '/uploads/profnastil/c20.png',
     })
     const wrapper = mountComponent()
     await flushPromises()
@@ -63,12 +59,11 @@ describe('T2ProfnastilFacade appearance state', () => {
     await checkbox.setValue(true)
 
     const calc = useCalculation()
-    expect(calc.colorFacadeHex.value).toBe('#704214')
-    expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+    expect(calc.colorFacadeHex.value).toBe('')
+    expect(calc.colorFacadeImage.value).toBe('')
     expect(calc.coatingFacadeHex.value).toBe('#ffffff')
     expect(calc.coatingFacadeImage.value).toBe('')
-    expect(calc.colorFacadeReverseHex.value).toBe('#D7D5C6')
-    expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
+    expect(calc.reliefFacadeImage.value).toBe('/uploads/profnastil/c20.png')
 
     await checkbox.setValue(false)
     expect(calc.colorFacadeHex.value).toBe('')
@@ -85,7 +80,6 @@ describe('T2ProfnastilFacade appearance state', () => {
       material: 'С20',
       thickness: '0.5',
       typeOfCoating: 'Полиэстер',
-      color: 'RAL 8017',
     })
     const wrapper = mountComponent()
     await flushPromises()
@@ -97,7 +91,7 @@ describe('T2ProfnastilFacade appearance state', () => {
     expect(calc.colorFacadeImage.value).toBe('')
   })
 
-  it('restores the live appearance kept in calculation state', async () => {
+  it('restores the selection and clears legacy profnastil color appearance', async () => {
     const calc = useCalculation()
     calc.idFacade.value = 9
     calc.materialFacade.value = 'С20'
@@ -112,8 +106,9 @@ describe('T2ProfnastilFacade appearance state', () => {
     await flushPromises()
 
     expect(wrapper.get('tbody tr').classes()).toContain('bg-blue-100')
-    expect(calc.colorFacadeHex.value).toBe('#704214')
-    expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
+    expect(calc.colorFacade.value).toBe('')
+    expect(calc.colorFacadeHex.value).toBe('')
+    expect(calc.colorFacadeImage.value).toBe('')
     expect(calc.coatingFacadeHex.value).toBe('#ffffff')
   })
 
@@ -123,7 +118,6 @@ describe('T2ProfnastilFacade appearance state', () => {
       material: 'С20',
       thickness: '0.5',
       typeOfCoating: 'Полиэстер',
-      color: 'RAL 8017',
     })
     const wrapper = mountComponent()
     await flushPromises()

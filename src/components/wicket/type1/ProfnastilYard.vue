@@ -27,7 +27,6 @@ const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(cal
 const filters = reactive({
   materials: [] as string[],
   thickness: [] as string[],
-  colors:    [] as string[],
 })
 
 const rows         = ref<ProfnastilRow[]>([])
@@ -82,9 +81,6 @@ function restoreFromCalc(): ProfnastilRow | null {
     material:      calc.materialYard.value,
     thickness:     calc.thicknessYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
-    color:         calc.colorYard.value,
-    colorHex:      calc.colorYardHex.value,
-    colorImage:    calc.colorYardImage.value,
     coatingHex:    calc.coatingYardHex.value,
     coatingImage:  calc.coatingYardImage.value,
     reliefImage:   calc.reliefYardImage.value,
@@ -97,9 +93,9 @@ async function save(row: ProfnastilRow) {
   calc.formYard.value              = ''
   calc.thicknessYard.value         = String(row.thickness)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.colorYard.value             = row.color
-  calc.colorYardHex.value          = row.colorHex ?? ''
-  calc.colorYardImage.value        = row.colorImage ?? ''
+  calc.colorYard.value             = ''
+  calc.colorYardHex.value          = ''
+  calc.colorYardImage.value        = ''
   calc.coatingYardHex.value        = row.coatingHex ?? ''
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
@@ -108,7 +104,6 @@ async function save(row: ProfnastilRow) {
     { name: 'Материал',                value: row.material },
     { name: 'Толщина листа',           value: String(row.thickness) },
     { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: row.color },
   ])
 
   try {
@@ -119,7 +114,6 @@ async function save(row: ProfnastilRow) {
       materialYard:           row.material,
       thicknessYard:         String(row.thickness),
       typeOfCoatingYard:   row.typeOfCoating,
-      colorYard:             row.color,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -150,6 +144,7 @@ async function selectRow(row: ProfnastilRow) {
 function deselectRow() {
   selectedRow.value = null
   calc.idYard.value = ''
+  calc.colorYard.value = ''
   calc.colorYardHex.value = ''
   calc.colorYardImage.value = ''
   calc.coatingYardHex.value = ''
@@ -208,12 +203,6 @@ onMounted(async () => {
         data-key="thickness"
         v-model="filters.thickness"
       />
-      <FilterDropdown
-        label="Цвет"
-        :url="profnastilFilterDataUrl"
-        data-key="color"
-        v-model="filters.colors"
-      />
     </div>
 
     <div class="overflow-x-auto">
@@ -224,12 +213,11 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Толщина листа</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Цвет</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="5" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -242,7 +230,6 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
           </tr>
 
           <tr
@@ -261,11 +248,10 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="5" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

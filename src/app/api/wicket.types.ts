@@ -61,22 +61,15 @@ export interface SidingTableResponse {
 export interface ProfnastilFilters {
   materials:  string[]
   thickness:  string[]
-  colors:     string[]
 }
 
 export interface ProfnastilRow {
   id: string | number
-  colorId?: string | number | null
   material: string
   thickness: string | number
   typeOfCoating: string
-  color: string
-  colorHex?: string | null
-  colorImage?: string | null
   coatingHex?: string | null
   coatingImage?: string | null
-  colorReverseHex?: string | null
-  colorReverseImage?: string | null
   reliefImage?: string | null
   /** camelCase, как в API и в БД dir_filling_profnastil */
   priceM2?: string | number
