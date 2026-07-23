@@ -1,5 +1,7 @@
 <script lang="ts">
 let instanceCounter = 0
+const SCHEMATIC_FRAME_COLOR = '#d1d5db'
+const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
 
 <script setup lang="ts">
@@ -10,6 +12,8 @@ import { buildType3Geometry } from './type3Geometry'
 
 const calc = useCalculation()
 const instanceId = instanceCounter++
+const showFill = ref(true)
+const colorMode = ref<'realistic' | 'schematic'>('realistic')
 const viewSide = ref<'street' | 'yard'>('street')
 const facadePatternId = `type3-facade-${instanceId}`
 const yardPatternId = `type3-yard-${instanceId}`
@@ -40,11 +44,21 @@ const geometry = computed(() => buildType3Geometry({
 const viewedFill = computed(() => viewSide.value === 'yard' && geometry.value.yard.visible
   ? geometry.value.yard
   : geometry.value.facade)
-const viewedPickets = computed(() => viewSide.value === 'yard' && geometry.value.yard.visible
-  ? geometry.value.yardPickets
-  : geometry.value.facadePickets)
+const viewedPickets = computed(() => {
+  if (!showFill.value) return []
+  if (viewSide.value === 'yard') {
+    return geometry.value.yard.visible ? geometry.value.yardPickets : []
+  }
+  return geometry.value.facadePickets
+})
+const realisticColors = computed(() => colorMode.value === 'realistic')
+const displayedFrameColor = computed(() => realisticColors.value
+  ? geometry.value.frameColor
+  : SCHEMATIC_FRAME_COLOR)
 const activePatternId = computed(() => viewSide.value === 'yard' ? yardPatternId : facadePatternId)
-const picketFill = computed(() => viewedFill.value.image
+const picketFill = computed(() => !realisticColors.value
+  ? SCHEMATIC_FILL_COLOR
+  : viewedFill.value.image
   ? `url(#${activePatternId.value})`
   : viewedFill.value.color)
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
@@ -61,7 +75,7 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
       aria-label="Чертёж калитки типа 3"
       role="img"
     >
-      <defs v-if="viewedFill.image">
+      <defs v-if="realisticColors && viewedFill.image">
         <pattern :id="activePatternId" patternUnits="objectBoundingBox" width="1" height="1">
           <image :href="viewedFill.image" width="1" height="1" preserveAspectRatio="xMidYMid slice" />
         </pattern>
@@ -72,14 +86,14 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
         <rect v-bind="geometry.posts.left" />
         <rect v-bind="geometry.posts.right" />
       </g>
-      <g :fill="geometry.frameColor" stroke="#20242a" stroke-width="1">
+      <g :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
         <rect v-for="(part, index) in geometry.frame" :key="`frame-${index}`" v-bind="part" />
         <rect v-if="geometry.rails.lower.visible" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
         <rect v-if="geometry.extraRail.visible" v-bind="geometry.extraRail" />
       </g>
-      <g :fill="picketFill" stroke="#30343a" stroke-width="0.7">
+      <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
         <rect
           v-for="(picket, index) in viewedPickets"
           :key="`picket-${index}`"
@@ -89,9 +103,66 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
       </g>
     </svg>
 
-    <div v-if="geometry.yard.visible" class="flex justify-center gap-2">
-      <button type="button" :aria-pressed="viewSide === 'street'" @click="viewSide = 'street'">Улица</button>
-      <button type="button" :aria-pressed="viewSide === 'yard'" @click="viewSide = 'yard'">Двор</button>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-(--ui-color-text-secondary)">
+      <label class="flex cursor-pointer items-center gap-2">
+        <input
+          v-model="showFill"
+          data-testid="type3-drawing-fill-toggle"
+          type="checkbox"
+          class="size-4"
+        >
+        <span>Показывать заполнение</span>
+      </label>
+
+      <fieldset class="flex flex-wrap items-center gap-3">
+        <legend class="sr-only">Цвета чертежа</legend>
+        <span>Цвета:</span>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="colorMode"
+            data-testid="type3-drawing-color-realistic"
+            type="radio"
+            value="realistic"
+            class="size-4"
+          >
+          <span>Реалистичные</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="colorMode"
+            data-testid="type3-drawing-color-schematic"
+            type="radio"
+            value="schematic"
+            class="size-4"
+          >
+          <span>Схематичные</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="flex flex-wrap items-center gap-3">
+        <legend class="sr-only">Сторона просмотра чертежа</legend>
+        <span>Вид:</span>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="viewSide"
+            data-testid="type3-drawing-view-street"
+            type="radio"
+            value="street"
+            class="size-4"
+          >
+          <span>С улицы</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input
+            v-model="viewSide"
+            data-testid="type3-drawing-view-yard"
+            type="radio"
+            value="yard"
+            class="size-4"
+          >
+          <span>Со двора</span>
+        </label>
+      </fieldset>
     </div>
   </div>
 </template>
