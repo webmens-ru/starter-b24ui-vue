@@ -373,7 +373,7 @@ function goBack() {
       <aside
         class="flex flex-col border-l border-gray-200 bg-white overflow-y-auto"
         :class="isMobile
-          ? ['fixed inset-y-0 right-0 z-50 w-80 shadow-xl transition-transform duration-200', showSummary ? 'translate-x-0' : 'translate-x-full']
+          ? ['fixed top-[50px] bottom-0 right-0 z-50 w-80 shadow-xl transition-transform duration-200', showSummary ? 'translate-x-0' : 'translate-x-full']
           : ['shrink-0 w-[430px]', showSummary ? '' : 'hidden']
         "
       >
