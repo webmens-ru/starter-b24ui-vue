@@ -81,6 +81,33 @@ export interface ProfnastilTableResponse {
   pagination?: SidingPagination
 }
 
+export interface ProfnastilFormOption {
+  id: string | number
+  name: string
+}
+
+export interface ProfnastilCoatingOption extends ProfnastilFormOption {
+  id: string
+  profnastilId: number
+  thickness: string | number
+  coatingHex: string | null
+  coatingImage: string | null
+  reliefImage: string | null
+}
+
+export interface ProfnastilColorOption extends ProfnastilFormOption {
+  id: number
+  hex: string | null
+  image: string | null
+}
+
+export interface ProfnastilFormOptions {
+  profiles: ProfnastilFormOption[]
+  coatings: ProfnastilCoatingOption[]
+  manufacturers: ProfnastilFormOption[]
+  colors: ProfnastilColorOption[]
+}
+
 export interface ZhalyuziFilters {
   companies:  string[]
   materials:  string[]

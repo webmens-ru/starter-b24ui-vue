@@ -12,6 +12,23 @@ describe('useCalculation', () => {
   })
 
   describe('loadFromApi — данные не теряются при загрузке', () => {
+    it('восстанавливает ссылки формы профнастила Type 2', () => {
+      const calc = useCalculation()
+
+      calc.loadFromApi({
+        modelId: '2',
+        manufacturerFacadeId: 3,
+        manufacturerYardId: 4,
+        colorFacadeId: 7,
+        colorYardId: 8,
+      })
+
+      expect(calc.manufacturerFacadeId.value).toBe(3)
+      expect(calc.manufacturerYardId.value).toBe(4)
+      expect(calc.colorFacadeId.value).toBe(7)
+      expect(calc.colorYardId.value).toBe(8)
+    })
+
     const fullApiData: Record<string, unknown> = {
       orderId: 42,
       modelId: '1',

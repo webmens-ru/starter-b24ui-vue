@@ -111,6 +111,8 @@ const netWidthProviderSide  = ref<string>('executor')
 
 // Поля шага "Заполнение (фасад)"
 const idFacade                = ref<string | number>('')
+const manufacturerFacadeId    = ref<string | number | null>(null)
+const colorFacadeId           = ref<string | number | null>(null)
 const materialSupplierFacade = ref<string>('')
 const materialFacade          = ref<string>('')
 const formFacade              = ref<string>('')
@@ -130,6 +132,8 @@ const numberOfSticks           = ref<number | null>(null)
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
+const manufacturerYardId    = ref<string | number | null>(null)
+const colorYardId           = ref<string | number | null>(null)
 const materialSupplierYard = ref<string>('')
 const materialYard          = ref<string>('')
 const formYard              = ref<string>('')
@@ -249,6 +253,8 @@ const fieldsFilled = ref<number>(0)
     netWidthProviderLower.value = 'executor'
     netWidthProviderSide.value = 'executor'
     idFacade.value = ''
+    manufacturerFacadeId.value = null
+    colorFacadeId.value = null
     materialSupplierFacade.value = ''
     materialFacade.value = ''
     formFacade.value = ''
@@ -266,6 +272,8 @@ const fieldsFilled = ref<number>(0)
     numberOfSticks.value = null
     colorFacadeReverseImage.value = ''
     idYard.value = ''
+    manufacturerYardId.value = null
+    colorYardId.value = null
     materialSupplierYard.value = ''
     materialYard.value = ''
     formYard.value = ''
@@ -476,6 +484,8 @@ const fieldsFilled = ref<number>(0)
       netWidthProviderSide,
       assortmentGrilleNetId: assortmentSideGrilleNetId,
       idFacade,
+      manufacturerFacadeId,
+      colorFacadeId,
       materialSupplierFacade,
       materialFacade,
       formFacade,
@@ -493,6 +503,8 @@ const fieldsFilled = ref<number>(0)
       gapName,
       numberOfSticks,
       idYard,
+      manufacturerYardId,
+      colorYardId,
       materialSupplierYard,
       materialYard,
       formYard,
@@ -878,6 +890,8 @@ const fieldsFilled = ref<number>(0)
     netWidthProviderLower,
     netWidthProviderSide,
     idFacade,
+    manufacturerFacadeId,
+    colorFacadeId,
     materialSupplierFacade,
     materialFacade,
     formFacade,
@@ -895,6 +909,8 @@ const fieldsFilled = ref<number>(0)
     gapName,
     numberOfSticks,
     idYard,
+    manufacturerYardId,
+    colorYardId,
     materialSupplierYard,
     materialYard,
     formYard,

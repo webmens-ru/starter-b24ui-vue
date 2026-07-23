@@ -34,6 +34,7 @@ import type {
   ProfnastilFilters,
   ProfnastilRow,
   ProfnastilTableResponse,
+  ProfnastilFormOptions,
   ZhalyuziFilters,
   ZhalyuziRow,
   ZhalyuziTableResponse,
@@ -66,6 +67,7 @@ export type {
   ProfnastilFilters,
   ProfnastilRow,
   ProfnastilTableResponse,
+  ProfnastilFormOptions,
   ZhalyuziFilters,
   ZhalyuziRow,
   ZhalyuziTableResponse,
@@ -159,6 +161,33 @@ export async function getProfnastilTable(
     pageCount:  1,
   }
   return { table, pagination }
+}
+
+export async function getType2ProfnastilFormOptions(
+  profile?: string,
+): Promise<ProfnastilFormOptions> {
+  if (isMock) {
+    return {
+      profiles: [{ id: 'С-8', name: 'С-8' }],
+      coatings: profile
+        ? [{
+            id: 'Глянец',
+            name: 'Глянец',
+            profnastilId: 1,
+            thickness: '0.45',
+            coatingHex: null,
+            coatingImage: null,
+            reliefImage: null,
+          }]
+        : [],
+      manufacturers: [],
+      colors: [],
+    }
+  }
+  const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
+    profile: profile || null,
+  })
+  return data.data
 }
 
 export async function getZhalyuziTable(

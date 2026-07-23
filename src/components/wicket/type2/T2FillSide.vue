@@ -21,6 +21,8 @@ const materialOptions = [
 
 function clearFacadeSelection() {
   calc.idFacade.value = ''
+  calc.manufacturerFacadeId.value = null
+  calc.colorFacadeId.value = null
   calc.materialFacade.value = ''
   calc.formFacade.value = ''
   calc.thicknessFacade.value = ''
@@ -37,6 +39,8 @@ function clearFacadeSelection() {
 
 function clearYardSelection() {
   calc.idYard.value = ''
+  calc.manufacturerYardId.value = null
+  calc.colorYardId.value = null
   calc.materialYard.value = ''
   calc.formYard.value = ''
   calc.thicknessYard.value = ''
