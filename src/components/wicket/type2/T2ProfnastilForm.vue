@@ -42,6 +42,9 @@ const colorName = computed({
 })
 const colorMode = computed(() => getProfnastilColorMode(coating.value))
 const colorRequired = computed(() => colorMode.value !== 'none')
+const colorSelectItems = computed(() =>
+  options.value.colors.map(item => ({ id: item.id, label: item.name })),
+)
 const valid = computed(() =>
   profile.value.trim() !== ''
   && coating.value.trim() !== ''
@@ -175,12 +178,16 @@ onMounted(async () => {
     </label>
 
     <label v-if="colorMode === 'list'" class="form-field">
-        <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
-        <select v-model="colorId" class="form-control" @change="onColorChange">
-          <option :value="null">Выберите цвет</option>
-          <option v-for="item in options.colors" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-        <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>
+      <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
+      <B24SelectMenu
+        v-model="colorId"
+        value-key="id"
+        :items="colorSelectItems"
+        placeholder="Выберите цвет"
+        class="w-full"
+        @update:model-value="onColorChange"
+      />
+      <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>
     </label>
 
     <label v-else-if="colorMode === 'combobox'" class="form-field">

@@ -27,4 +27,12 @@ describe('Type 2 profnastil pages', () => {
   it('places manufacturer before profile', () => {
     expect(form.indexOf('>Производитель<')).toBeLessThan(form.indexOf('>Тип профиля '))
   })
+
+  it('uses the searchable dropdown for dictionary colors', () => {
+    expect(form).toContain('<B24SelectMenu')
+    expect(form).toContain(':items="colorSelectItems"')
+    expect(form).toContain('value-key="id"')
+    expect(form).toContain('@update:model-value="onColorChange"')
+    expect(form).not.toContain('<select v-model="colorId"')
+  })
 })
