@@ -29,8 +29,16 @@ export function useCalculation() {
 
   function getFullSavePayload(): Record<string, unknown> {
     const addons = form.addons
+    const supplierPayload = String(wizard.modelId) === '2'
+      ? {}
+      : {
+          materialSupplierFacade: form.materialSupplierFacade,
+          materialSupplierYard: form.materialSupplierYard,
+        }
+
     return {
       ...getBaseSavePayload(),
+      ...supplierPayload,
       providesMaterial: form.providesMaterial,
       providesPaint: form.providesPaint,
       doesPaintingFrame: form.doesPaintingFrame,
@@ -74,7 +82,6 @@ export function useCalculation() {
       penColorId: form.penColorId,
       additionalPenId: form.additionalPenId,
       idFacade: form.idFacade || null,
-      materialSupplierFacade: form.materialSupplierFacade,
       materialFacade: form.materialFacade,
       formFacade: form.formFacade,
       thicknessFacade: form.thicknessFacade,
@@ -84,7 +91,6 @@ export function useCalculation() {
       gapName: form.gapName,
       numberOfSticks: form.numberOfSticks,
       idYard: form.idYard || null,
-      materialSupplierYard: form.materialSupplierYard,
       materialYard: form.materialYard,
       formYard: form.formYard,
       thicknessYard: form.thicknessYard,

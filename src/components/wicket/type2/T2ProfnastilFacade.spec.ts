@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ProfnastilRow } from '../../../app/api/wicket'
+import { saveWicketData, type ProfnastilRow } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import T2FillSide from './T2FillSide.vue'
 import T2ProfnastilFacade from './T2ProfnastilFacade.vue'
@@ -45,7 +45,6 @@ describe('T2ProfnastilFacade appearance state', () => {
   it('copies optional appearance when a row is selected and clears it on deselection', async () => {
     rows.push({
       id: 7,
-      company: 'DoorHan',
       material: 'С20',
       thickness: '0.5',
       typeOfCoating: 'Printech',
@@ -83,7 +82,6 @@ describe('T2ProfnastilFacade appearance state', () => {
   it('accepts an old API row without appearance fields', async () => {
     rows.push({
       id: 8,
-      company: 'DoorHan',
       material: 'С20',
       thickness: '0.5',
       typeOfCoating: 'Полиэстер',
@@ -102,7 +100,6 @@ describe('T2ProfnastilFacade appearance state', () => {
   it('restores the live appearance kept in calculation state', async () => {
     const calc = useCalculation()
     calc.idFacade.value = 9
-    calc.materialSupplierFacade.value = 'DoorHan'
     calc.materialFacade.value = 'С20'
     calc.thicknessFacade.value = '0.5'
     calc.typeOfCoatingFacade.value = 'Printech'
@@ -118,6 +115,24 @@ describe('T2ProfnastilFacade appearance state', () => {
     expect(calc.colorFacadeHex.value).toBe('#704214')
     expect(calc.colorFacadeImage.value).toBe('/uploads/colors/wood.jpg')
     expect(calc.coatingFacadeHex.value).toBe('#ffffff')
+  })
+
+  it('does not render or save profnastil manufacturer', async () => {
+    rows.push({
+      id: 10,
+      material: 'С20',
+      thickness: '0.5',
+      typeOfCoating: 'Полиэстер',
+      color: 'RAL 8017',
+    })
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Производитель материала')
+
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    expect(payload).not.toHaveProperty('materialSupplierFacade')
   })
 })
 

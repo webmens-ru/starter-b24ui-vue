@@ -346,6 +346,8 @@ describe('useCalculation', () => {
       })
       expect(payload.lockComponentIds).toBe('[2,4]')
       expect(payload.skudIds).toBe('[10,11]')
+      expect(payload).not.toHaveProperty('materialSupplierFacade')
+      expect(payload).not.toHaveProperty('materialSupplierYard')
     })
 
     it('не сохраняет вычисляемый внешний вид заполнения в payload заказа', () => {

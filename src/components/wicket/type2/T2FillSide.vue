@@ -21,7 +21,6 @@ const materialOptions = [
 
 function clearFacadeSelection() {
   calc.idFacade.value = ''
-  calc.materialSupplierFacade.value = ''
   calc.materialFacade.value = ''
   calc.formFacade.value = ''
   calc.thicknessFacade.value = ''
@@ -38,7 +37,6 @@ function clearFacadeSelection() {
 
 function clearYardSelection() {
   calc.idYard.value = ''
-  calc.materialSupplierYard.value = ''
   calc.materialYard.value = ''
   calc.formYard.value = ''
   calc.thicknessYard.value = ''
@@ -86,7 +84,6 @@ async function save() {
     fillSide:                calc.fillSide.value,
     materialFacadeGlob:     calc.materialFacadeGlob.value,
     materialYardGlob:       calc.materialYardGlob.value,
-    materialSupplierFacade: null,
     formFacade:              null,
     thicknessFacade:         null,
     typeOfCoatingFacade:   null,
@@ -94,7 +91,6 @@ async function save() {
     priceFacade:             null,
     deliveryTimeFacade:     null,
     inStockFacade:          null,
-    materialSupplierYard:   null,
     formYard:                null,
     thicknessYard:           null,
     typeOfCoatingYard:     null,

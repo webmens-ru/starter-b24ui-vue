@@ -25,7 +25,6 @@ function openModal(msg: string, title = 'Внимание') {
 const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(calc.modelId.value))
 
 const filters = reactive({
-  companies: [] as string[],
   materials: [] as string[],
   thickness: [] as string[],
   colors:    [] as string[],
@@ -80,7 +79,6 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idFacade.value) return null
   return {
     id:            calc.idFacade.value,
-    company:       calc.materialSupplierFacade.value,
     material:      calc.materialFacade.value,
     thickness:     calc.thicknessFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
@@ -105,7 +103,6 @@ async function save(row: ProfnastilRow) {
     })
   }
   calc.idFacade.value                = row.id
-  calc.materialSupplierFacade.value = row.company
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = ''
   calc.thicknessFacade.value         = String(row.thickness)
@@ -120,7 +117,6 @@ async function save(row: ProfnastilRow) {
   calc.colorFacadeReverseImage.value = row.colorReverseImage ?? ''
 
   calc.updateOrCreateBlock('Заполнение (фасад)', [
-    { name: 'Производитель материала', value: row.company },
     { name: 'Материал',                value: row.material },
     { name: 'Толщина листа',           value: String(row.thickness) },
     { name: 'Тип покрытия',            value: row.typeOfCoating },
@@ -132,7 +128,6 @@ async function save(row: ProfnastilRow) {
       ...calc.getBaseSavePayload(),
       idFacade:                row.id,
       materialFacadeGlob:     calc.materialFacadeGlob.value,
-      materialSupplierFacade: row.company,
       materialFacade:          row.material,
       thicknessFacade:         String(row.thickness),
       typeOfCoatingFacade:   row.typeOfCoating,
@@ -216,12 +211,6 @@ onMounted(async () => {
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <T2FilterDropdown
-        label="Производитель материала"
-        :url="profnastilFilterDataUrl"
-        data-key="company"
-        v-model="filters.companies"
-      />
-      <T2FilterDropdown
         label="Материал"
         :url="profnastilFilterDataUrl"
         data-key="material"
@@ -246,7 +235,6 @@ onMounted(async () => {
         <thead class="sticky top-0 z-[9] bg-gray-100">
           <tr>
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Производитель материала</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Толщина листа</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
@@ -255,7 +243,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -265,7 +253,6 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1 text-center">
               <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
@@ -285,7 +272,6 @@ onMounted(async () => {
                 @change="isSelected(row) ? deselectRow() : selectRow(row)"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
@@ -293,7 +279,7 @@ onMounted(async () => {
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>
