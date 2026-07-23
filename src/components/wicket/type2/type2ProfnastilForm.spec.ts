@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getProfnastilColorMode } from './type2ProfnastilForm'
+import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
 describe('getProfnastilColorMode', () => {
   it.each(['Глянец', 'Глянец двухсторонний', 'Матовый', 'Матовый двусторонний'])(
@@ -14,5 +14,15 @@ describe('getProfnastilColorMode', () => {
 
   it('does not request color for another coating', () => {
     expect(getProfnastilColorMode('Оцинковка')).toBe('none')
+  })
+})
+
+describe('getPrintechSelectItems', () => {
+  it('keeps a custom Printech name available for InputMenu display', () => {
+    expect(getPrintechSelectItems(['Дуб', 'Орех'], 'Камень тёмный')).toEqual([
+      'Дуб',
+      'Орех',
+      'Камень тёмный',
+    ])
   })
 })

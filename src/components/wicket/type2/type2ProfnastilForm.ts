@@ -14,3 +14,9 @@ export function getProfnastilColorMode(coating: string): ProfnastilColorMode {
   if (printechCoatings.has(normalized)) return 'combobox'
   return 'none'
 }
+
+export function getPrintechSelectItems(items: string[], currentValue: string): string[] {
+  const customValue = currentValue.trim()
+  if (customValue === '' || items.includes(customValue)) return items
+  return [...items, customValue]
+}

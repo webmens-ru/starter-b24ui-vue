@@ -6,7 +6,7 @@ import {
   type ProfnastilFormOptions,
 } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getProfnastilColorMode } from './type2ProfnastilForm'
+import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
 const props = defineProps<{ side: 'facade' | 'yard' }>()
 const calc = useCalculation()
@@ -57,7 +57,10 @@ const colorSelectItems = computed(() =>
   options.value.colors.map(item => ({ id: item.id, label: item.name })),
 )
 const printechSelectItems = computed(() =>
-  options.value.colors.map(item => item.name),
+  getPrintechSelectItems(
+    options.value.colors.map(item => item.name),
+    colorName.value,
+  ),
 )
 const dictionaryColorId = computed<number | undefined>(() => {
   const value = Number(colorId.value)
