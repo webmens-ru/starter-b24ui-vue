@@ -32,7 +32,16 @@ describe('Type 2 profnastil pages', () => {
     expect(form).toContain('<B24SelectMenu')
     expect(form).toContain(':items="colorSelectItems"')
     expect(form).toContain('value-key="id"')
-    expect(form).toContain('@update:model-value="onColorChange"')
+    expect(form).toContain('@update:model-value="onDictionaryColorChange"')
     expect(form).not.toContain('<select v-model="colorId"')
+  })
+
+  it('opens the Printech suggestions below the field and allows a custom value', () => {
+    expect(form).toContain('<B24InputMenu')
+    expect(form).toContain('create-item="always"')
+    expect(form).toContain("side: 'bottom'")
+    expect(form).toContain('avoidCollisions: false')
+    expect(form).toContain('@create="onPrintechColorChange"')
+    expect(form).not.toContain('<datalist')
   })
 })

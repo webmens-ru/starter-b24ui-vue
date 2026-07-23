@@ -45,6 +45,13 @@ const colorRequired = computed(() => colorMode.value !== 'none')
 const colorSelectItems = computed(() =>
   options.value.colors.map(item => ({ id: item.id, label: item.name })),
 )
+const printechSelectItems = computed(() =>
+  options.value.colors.map(item => item.name),
+)
+const dictionaryColorId = computed<number | undefined>(() => {
+  const value = Number(colorId.value)
+  return Number.isFinite(value) && value > 0 ? value : undefined
+})
 const valid = computed(() =>
   profile.value.trim() !== ''
   && coating.value.trim() !== ''
@@ -122,6 +129,26 @@ async function onColorChange() {
   await save()
 }
 
+async function onPrintechColorChange(value: number | string | null) {
+  const manualValue = String(value ?? '').trim()
+  const selected = options.value.colors.find(item =>
+    String(item.id) === String(value) || item.name === manualValue,
+  )
+  if (selected) {
+    colorId.value = selected.id
+    colorName.value = selected.name
+  } else {
+    colorId.value = null
+    colorName.value = manualValue
+  }
+  await onColorChange()
+}
+
+async function onDictionaryColorChange(value: number | undefined) {
+  colorId.value = value ?? null
+  await onColorChange()
+}
+
 async function save() {
   const suffix = isFacade.value ? 'Facade' : 'Yard'
   await saveWicketData({
@@ -180,29 +207,29 @@ onMounted(async () => {
     <label v-if="colorMode === 'list'" class="form-field">
       <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
       <B24SelectMenu
-        v-model="colorId"
+        :model-value="dictionaryColorId"
         value-key="id"
         :items="colorSelectItems"
         placeholder="Выберите цвет"
         class="w-full"
-        @update:model-value="onColorChange"
+        @update:model-value="onDictionaryColorChange"
       />
       <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>
     </label>
 
     <label v-else-if="colorMode === 'combobox'" class="form-field">
-        <span class="font-semibold">Цвет / название Printech <span class="text-red-600">*</span></span>
-        <input
-          v-model="colorName"
-          class="form-control"
-          list="type2-profnastil-colors"
-          placeholder="Выберите или введите название"
-          @change="onColorChange"
-        >
-        <datalist id="type2-profnastil-colors">
-          <option v-for="item in options.colors" :key="item.id" :value="item.name" />
-        </datalist>
-        <span v-if="submitted && !colorName.trim()" class="text-sm text-red-600">Укажите цвет или название Printech</span>
+      <span class="font-semibold">Цвет / название Printech <span class="text-red-600">*</span></span>
+      <B24InputMenu
+        :model-value="colorName"
+        :items="printechSelectItems"
+        create-item="always"
+        placeholder="Выберите или введите название"
+        class="w-full"
+        :content="{ side: 'bottom', align: 'start', sideOffset: 4, avoidCollisions: false }"
+        @update:model-value="onPrintechColorChange"
+        @create="onPrintechColorChange"
+      />
+      <span v-if="submitted && !colorName.trim()" class="text-sm text-red-600">Укажите цвет или название Printech</span>
     </label>
   </div>
 </template>
