@@ -147,44 +147,43 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-    <div class="grid gap-5">
-      <label class="grid gap-1.5">
-        <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
-        <select v-model="profile" class="form-control" :disabled="loading" @change="onProfileChange">
-          <option value="">Выберите тип профиля</option>
-          <option v-for="item in options.profiles" :key="item.id" :value="item.name">{{ item.name }}</option>
-        </select>
-        <span v-if="submitted && !profile" class="text-sm text-red-600">Выберите тип профиля</span>
-      </label>
+  <div class="profnastil-form">
+    <label class="form-field">
+      <span class="font-semibold">Производитель</span>
+      <select v-model="manufacturerId" class="form-control" :disabled="loading" @change="save">
+        <option :value="null">Не выбран</option>
+        <option v-for="item in options.manufacturers" :key="item.id" :value="item.id">{{ item.name }}</option>
+      </select>
+    </label>
 
-      <label class="grid gap-1.5">
-        <span class="font-semibold">Производитель</span>
-        <select v-model="manufacturerId" class="form-control" :disabled="loading" @change="save">
-          <option :value="null">Не выбран</option>
-          <option v-for="item in options.manufacturers" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-      </label>
+    <label class="form-field">
+      <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
+      <select v-model="profile" class="form-control" :disabled="loading" @change="onProfileChange">
+        <option value="">Выберите тип профиля</option>
+        <option v-for="item in options.profiles" :key="item.id" :value="item.name">{{ item.name }}</option>
+      </select>
+      <span v-if="submitted && !profile" class="text-sm text-red-600">Выберите тип профиля</span>
+    </label>
 
-      <label class="grid gap-1.5">
+    <label class="form-field">
         <span class="font-semibold">Тип покрытия <span class="text-red-600">*</span></span>
         <select v-model="coating" class="form-control" :disabled="loading || !profile" @change="onCoatingChange">
           <option value="">Выберите тип покрытия</option>
           <option v-for="item in options.coatings" :key="item.id" :value="item.name">{{ item.name }}</option>
         </select>
         <span v-if="submitted && !coating" class="text-sm text-red-600">Выберите тип покрытия</span>
-      </label>
+    </label>
 
-      <label v-if="colorMode === 'list'" class="grid gap-1.5">
+    <label v-if="colorMode === 'list'" class="form-field">
         <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
         <select v-model="colorId" class="form-control" @change="onColorChange">
           <option :value="null">Выберите цвет</option>
           <option v-for="item in options.colors" :key="item.id" :value="item.id">{{ item.name }}</option>
         </select>
         <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>
-      </label>
+    </label>
 
-      <label v-else-if="colorMode === 'combobox'" class="grid gap-1.5">
+    <label v-else-if="colorMode === 'combobox'" class="form-field">
         <span class="font-semibold">Цвет / название Printech <span class="text-red-600">*</span></span>
         <input
           v-model="colorName"
@@ -197,12 +196,29 @@ onMounted(async () => {
           <option v-for="item in options.colors" :key="item.id" :value="item.name" />
         </datalist>
         <span v-if="submitted && !colorName.trim()" class="text-sm text-red-600">Укажите цвет или название Printech</span>
-      </label>
-    </div>
+    </label>
   </div>
 </template>
 
 <style scoped>
+.profnastil-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  padding: 8px 4px;
+}
+@media (min-width: 768px) {
+  .profnastil-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.form-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
 .form-control {
   width: 100%;
   min-height: 42px;
