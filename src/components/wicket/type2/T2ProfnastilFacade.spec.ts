@@ -131,7 +131,8 @@ describe('T2ProfnastilFacade appearance state', () => {
     expect(wrapper.text()).not.toContain('Производитель материала')
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
-    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    const calls = vi.mocked(saveWicketData).mock.calls
+    const payload = calls[calls.length - 1]?.[0]
     expect(payload).not.toHaveProperty('materialSupplierFacade')
   })
 })

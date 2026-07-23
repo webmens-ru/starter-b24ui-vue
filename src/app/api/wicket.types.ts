@@ -59,7 +59,6 @@ export interface SidingTableResponse {
 }
 
 export interface ProfnastilFilters {
-  companies:  string[]
   materials:  string[]
   thickness:  string[]
   colors:     string[]
@@ -68,7 +67,6 @@ export interface ProfnastilFilters {
 export interface ProfnastilRow {
   id: string | number
   colorId?: string | number | null
-  company: string
   material: string
   thickness: string | number
   typeOfCoating: string
