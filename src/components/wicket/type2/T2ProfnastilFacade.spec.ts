@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import api from '../../../app/api/wicket.ts?raw'
 import facade from './T2ProfnastilFacade.vue?raw'
 import form from './T2ProfnastilForm.vue?raw'
 import yard from './T2ProfnastilYard.vue?raw'
@@ -53,5 +54,13 @@ describe('Type 2 profnastil pages', () => {
     expect(form).toContain('avoidCollisions: false')
     expect(form).toContain('@create="onPrintechColorChange"')
     expect(form).not.toContain('<datalist')
+  })
+
+  it('reloads colors for the selected coating', () => {
+    expect(api).toContain('coating?: string')
+    expect(api).toContain('coating: coating || null')
+    expect(form).toContain('await load(profile.value, coating.value)')
+    expect(form).toContain('await load(profile.value, nextCoating)')
+    expect(form).toContain('getPrintechSelectItems')
   })
 })

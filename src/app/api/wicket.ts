@@ -165,6 +165,7 @@ export async function getProfnastilTable(
 
 export async function getType2ProfnastilFormOptions(
   profile?: string,
+  coating?: string,
 ): Promise<ProfnastilFormOptions> {
   if (isMock) {
     return {
@@ -181,11 +182,14 @@ export async function getType2ProfnastilFormOptions(
           }]
         : [],
       manufacturers: [],
-      colors: [],
+      colors: coating
+        ? [{ id: 1, name: 'RAL 7016', hex: '#383E42', image: null }]
+        : [],
     }
   }
   const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
     profile: profile || null,
+    coating: coating || null,
   })
   return data.data
 }

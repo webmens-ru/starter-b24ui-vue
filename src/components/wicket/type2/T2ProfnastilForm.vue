@@ -72,10 +72,10 @@ const valid = computed(() =>
   && (!colorRequired.value || colorName.value.trim() !== ''),
 )
 
-async function load(profileValue?: string) {
+async function load(profileValue?: string, coatingValue?: string) {
   loading.value = true
   try {
-    options.value = await getType2ProfnastilFormOptions(profileValue)
+    options.value = await getType2ProfnastilFormOptions(profileValue, coatingValue)
   } finally {
     loading.value = false
   }
@@ -98,7 +98,7 @@ async function onProfileChange() {
   clearColor()
   if (isFacade.value) calc.idFacade.value = ''
   else calc.idYard.value = ''
-  await load(profile.value)
+  await load(profile.value, undefined)
   await save()
 }
 
@@ -113,7 +113,9 @@ async function onProfileSelectChange(value: string | number | undefined) {
 }
 
 async function onCoatingSelectChange(value: string | number | undefined) {
-  coating.value = String(value ?? '')
+  const nextCoating = String(value ?? '')
+  coating.value = nextCoating
+  await load(profile.value, nextCoating)
   await onCoatingChange()
 }
 
@@ -201,7 +203,7 @@ async function validate(): Promise<boolean> {
 defineExpose({ validate })
 
 onMounted(async () => {
-  await load(profile.value || undefined)
+  await load(profile.value, coating.value)
 })
 </script>
 
