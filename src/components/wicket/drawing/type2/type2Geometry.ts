@@ -75,7 +75,7 @@ export interface Type2DrawingGeometry {
 
 const RAIL_SIZE = 50
 const INNER_FRAME_SIZE = 20
-const SUBTYPE_RAIL_SIZE = 60
+const SUBTYPE_RAIL_SIZE = 50
 const CENTER_RAIL_SIZE = 40
 const HINGE_WIDTH = 16
 const HINGE_HEIGHT = 75

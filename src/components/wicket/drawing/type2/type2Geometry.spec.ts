@@ -47,7 +47,7 @@ describe('computeType2Geometry', () => {
     expect(geometry.gate).toEqual({ x: 10, y: 0, width: 1236, height: 2225 })
     expect(geometry.hingeSide).toBe('right')
     expect(geometry.subtype).toBe('type4')
-    expect(geometry.rails.verticalSubtype.width).toBe(60)
+    expect(geometry.rails.verticalSubtype.width).toBe(50)
     expect(geometry.netArea.visible).toBe(true)
     expect(geometry.netArea.width).toBeGreaterThan(0)
     expect(geometry.netImage).toBe('/uploads/nets/side.webp')
@@ -121,6 +121,12 @@ describe('computeType2Geometry', () => {
     expect(geometry.rails.lowerSubtype.visible).toBe(subtype === 'type2' || subtype === 'type3')
     expect(geometry.rails.upperSubtype.visible).toBe(subtype === 'type3')
     expect(geometry.rails.verticalSubtype.visible).toBe(subtype === 'type4')
+    if (subtype === 'type2' || subtype === 'type3') {
+      expect(geometry.rails.lowerSubtype.height).toBe(50)
+    }
+    if (subtype === 'type3') {
+      expect(geometry.rails.upperSubtype.height).toBe(50)
+    }
   })
 
   it.each(['Тип_2', 'Тип_3'])('выделяет нижнюю область сетки для %s', (shieldType) => {
