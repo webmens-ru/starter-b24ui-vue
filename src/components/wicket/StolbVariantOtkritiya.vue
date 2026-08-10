@@ -54,7 +54,7 @@ const peremichkaOptions      = ref<SelectItem[]>([])
 const peremichkaPolozheniyeId = ref<string>('')
 const showSortament          = ref(false)
 const sortamentOptions       = ref<SelectItem[]>([])
-const peremichkaSortamentId   = ref<string>('')
+const assortmentJumperId      = ref<string>('')
 
 // Формат для B24SelectMenu: { id, label }
 const stolbSelectItems       = computed(() => stolbOptions.value.map(o => ({ id: String(o.id), label: o.name })))
@@ -93,9 +93,9 @@ async function loadSortamentOptions() {
     const res = await getAssortmentJumper(calc.modelId.value)
     sortamentOptions.value = res.assortmentJumper
     // Дефолтный выбор id=11 при первом открытии
-    if (!peremichkaSortamentId.value) {
+    if (!assortmentJumperId.value) {
       const defaultItem = sortamentOptions.value.find(i => i.id === 11)
-      peremichkaSortamentId.value = String(defaultItem?.id ?? sortamentOptions.value[0]?.id ?? '')
+      assortmentJumperId.value = String(defaultItem?.id ?? sortamentOptions.value[0]?.id ?? '')
     }
   } catch (e) {
     console.warn('getAssortmentJumper:', e)
@@ -115,12 +115,12 @@ async function onOpeningOptionChange() {
   if (openingOptionId.value === null) return
   showPeremichka.value = true
   showSortament.value  = false
-  peremichkaSortamentId.value = ''
+  assortmentJumperId.value = ''
   peremichkaOptions.value    = []
   sortamentOptions.value     = []
   calc.peremichkaPolozheniyeId.value   = ''
   calc.peremichkaPolozheniyeName.value = ''
-  calc.peremichkaSortamentId.value     = null
+  calc.assortmentJumperId.value         = null
   calc.peremichkaSortamentName.value   = null
   peremichkaPolozheniyeId.value = ''
   await loadPolozhenieOptions(openingOptionId.value)
@@ -130,7 +130,7 @@ async function onOpeningOptionChange() {
 async function onPolozhenieChange() {
   showSortament.value = peremichkaPolozheniyeId.value !== '1'
   sortamentOptions.value = []
-  peremichkaSortamentId.value = ''
+  assortmentJumperId.value = ''
   if (showSortament.value) {
     await loadSortamentOptions()
   }
@@ -165,11 +165,11 @@ function syncCalcFields() {
   calc.peremichkaPolozheniyeName.value = polItem?.name ?? ''
 
   if (calc.peremichkaPolozheniyeName.value && calc.peremichkaPolozheniyeName.value !== 'Без перемычки') {
-    calc.peremichkaSortamentId.value = peremichkaSortamentId.value || null
-    const sortItem = sortamentOptions.value.find(i => String(i.id) === peremichkaSortamentId.value)
+    calc.assortmentJumperId.value = assortmentJumperId.value || null
+    const sortItem = sortamentOptions.value.find(i => String(i.id) === assortmentJumperId.value)
     calc.peremichkaSortamentName.value = sortItem?.name ?? null
   } else {
-    calc.peremichkaSortamentId.value   = null
+    calc.assortmentJumperId.value       = null
     calc.peremichkaSortamentName.value = null
   }
 }
@@ -210,7 +210,7 @@ async function save() {
       peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
       peremichkaPolozheniyeId:   calc.peremichkaPolozheniyeId.value,
       peremichkaSortamentName:   calc.peremichkaSortamentName.value,
-      peremichkaSortamentId:     calc.peremichkaSortamentId.value,
+      assortmentJumperId:        calc.assortmentJumperId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -272,8 +272,8 @@ onMounted(async () => {
     if (peremichkaPolozheniyeId.value && peremichkaPolozheniyeId.value !== '1') {
       showSortament.value = true
       await loadSortamentOptions()
-      if (calc.peremichkaSortamentId.value) {
-        peremichkaSortamentId.value = String(calc.peremichkaSortamentId.value)
+      if (calc.assortmentJumperId.value) {
+        assortmentJumperId.value = String(calc.assortmentJumperId.value)
       }
     }
   }
@@ -391,7 +391,7 @@ onMounted(async () => {
           <span class="text-sm font-semibold whitespace-nowrap">Труба:</span>
           <div class="select-full-width">
             <B24SelectMenu
-              v-model="peremichkaSortamentId"
+              v-model="assortmentJumperId"
               value-key="id"
               :items="sortamentSelectItems"
               placeholder="Выберите трубу"

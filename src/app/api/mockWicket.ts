@@ -614,7 +614,7 @@ export async function mockLoadWicketData(
     openingOptionName: 'Наружу / Правая',
     peremichkaPolozheniyeId: '1',
     peremichkaPolozheniyeName: 'Без перемычки',
-    peremichkaSortamentId: null,
+    assortmentJumperId: null,
     peremichkaSortamentName: null,
     calculationName: 'Тест редактирования',
     clientName: 'Иван',

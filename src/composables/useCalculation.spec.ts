@@ -49,7 +49,7 @@ describe('useCalculation', () => {
       openingOptionName: 'Внутрь / Левая',
       peremichkaPolozheniyeId: '2',
       peremichkaPolozheniyeName: 'Перемычка над створкой',
-      peremichkaSortamentId: 11,
+      assortmentJumperId: 11,
       peremichkaSortamentName: '40/40/2',
       calculationName: 'Тест расчёта',
       clientName: 'Иван',
@@ -124,7 +124,7 @@ describe('useCalculation', () => {
       expect(calc.materialYardGlob.value).toBe('Сайдинг')
       expect(calc.hasStolby.value).toBe(1)
       expect(calc.openingOptionId.value).toBe(2)
-      expect(calc.peremichkaSortamentId.value).toBe(11)
+      expect(calc.assortmentJumperId.value).toBe(11)
       expect(calc.clientName.value).toBe('Иван')
       expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
       expect(calc.isTherePen.value).toBe(1)
@@ -143,6 +143,15 @@ describe('useCalculation', () => {
       expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
       expect(calc.idYard.value).toBe(12)
       expect(calc.priceRetail.value).toBe('18500')
+    })
+
+    it('отправляет канонический ID сортамента перемычки', () => {
+      calc.assortmentJumperId.value = 11
+
+      const payload = calc.getFullSavePayload()
+
+      expect(payload.assortmentJumperId).toBe(11)
+      expect(payload).not.toHaveProperty('peremichkaSortamentId')
     })
 
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {

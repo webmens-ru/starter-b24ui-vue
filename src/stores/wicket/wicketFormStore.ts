@@ -30,7 +30,7 @@ const openingOptionId           = ref<number | null>(null)
 const openingOptionPathPhoto   = ref<string>('')
 const peremichkaPolozheniyeId   = ref<string>('')
 const peremichkaPolozheniyeName = ref<string>('')
-const peremichkaSortamentId     = ref<string | number | null>(null)
+const assortmentJumperId        = ref<string | number | null>(null)
 const peremichkaSortamentName   = ref<string | null>(null)
 
 // Поля шага "Клиент"
@@ -195,7 +195,7 @@ const fieldsFilled = ref<number>(0)
     openingOptionPathPhoto.value = ''
     peremichkaPolozheniyeId.value = ''
     peremichkaPolozheniyeName.value = ''
-    peremichkaSortamentId.value = null
+    assortmentJumperId.value = null
     peremichkaSortamentName.value = null
     calculationName.value = ''
     clientName.value = ''
@@ -428,7 +428,7 @@ const fieldsFilled = ref<number>(0)
       openingOptionPathPhoto,
       peremichkaPolozheniyeId,
       peremichkaPolozheniyeName,
-      peremichkaSortamentId,
+      assortmentJumperId,
       peremichkaSortamentName,
       calculationName,
       clientName,
@@ -835,7 +835,7 @@ const fieldsFilled = ref<number>(0)
     openingOptionPathPhoto,
     peremichkaPolozheniyeId,
     peremichkaPolozheniyeName,
-    peremichkaSortamentId,
+    assortmentJumperId,
     peremichkaSortamentName,
     calculationName,
     clientName,

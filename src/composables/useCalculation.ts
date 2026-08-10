@@ -50,7 +50,7 @@ export function useCalculation() {
       stolbId: form.stolbId || null,
       openingOptionId: form.openingOptionId,
       peremichkaPolozheniyeId: form.peremichkaPolozheniyeId || null,
-      peremichkaSortamentId: form.peremichkaSortamentId || null,
+      assortmentJumperId: form.assortmentJumperId || null,
       shieldType: form.shieldType,
       colorShieldId: form.colorShieldId || null,
       heightTopPart: form.heightTopPart,
