@@ -186,6 +186,42 @@ describe('useCalculation', () => {
       })
     })
 
+    it.each([
+      ['Type1 (60 мм)', '1'],
+      ['Type2 (50 мм)', '2'],
+    ])('сохраняет и повторно загружает девять полей подтипа рамы для %s', (_label, modelId) => {
+      const subtypePayload = {
+        modelId,
+        heightTopPart: '150',
+        heightLowerPart: '200',
+        widthSidePart: '75',
+        assortmentHeightUpperNetId: 11,
+        assortmentHeightLowerNetId: 12,
+        assortmentSideGrilleNetId: 13,
+        netWidthProviderTop: 'executor',
+        netWidthProviderLower: 'customer',
+        netWidthProviderSide: 'executor',
+      }
+
+      calc.loadFromApi(subtypePayload)
+      const savedPayload = calc.getFullSavePayload()
+
+      expect(savedPayload).toMatchObject(subtypePayload)
+
+      calc.reset()
+      calc.loadFromApi(savedPayload)
+
+      expect(calc.heightTopPart.value).toBe('150')
+      expect(calc.heightLowerPart.value).toBe('200')
+      expect(calc.widthSidePart.value).toBe('75')
+      expect(calc.assortmentHeightUpperNetId.value).toBe(11)
+      expect(calc.assortmentHeightLowerNetId.value).toBe(12)
+      expect(calc.assortmentSideGrilleNetId.value).toBe(13)
+      expect(calc.netWidthProviderTop.value).toBe('executor')
+      expect(calc.netWidthProviderLower.value).toBe('customer')
+      expect(calc.netWidthProviderSide.value).toBe('executor')
+    })
+
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {
       calc.loadFromApi({
         hasStolby: '1',
