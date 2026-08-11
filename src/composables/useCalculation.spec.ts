@@ -278,57 +278,95 @@ describe('useCalculation', () => {
     })
 
     it('восстанавливает полный канонический блок фурнитуры из get-data', () => {
-      calc.loadFromApi({
+      const furnitureKeys = [
+        'isThereLock',
+        'providesLock',
+        'lockInstaller',
+        'lockSetId',
+        'lockComponentIds',
+        'lockComponentsInstalled',
+        'lockPenId',
+        'lockPenColorId',
+        'isTherePen',
+        'additionalPenId',
+        'penProvided',
+        'penInstalled',
+        'penColorId',
+        'isThereDoorCloser',
+        'doorCloserId',
+        'doorCloserProvided',
+        'doorCloserInstalled',
+        'isThereBumper',
+        'bumperId',
+        'bumperProvided',
+        'bumperInstalled',
+        'isThereSkud',
+        'skudId',
+        'skudIds',
+        'skudProvided',
+        'skudInstalled',
+      ] as const
+      const furniturePayload = {
+        isThereLock: 0,
+        providesLock: 'Предоставляет заказчик',
+        lockInstaller: 'Выполняет заказчик',
         lockSetId: 101,
         lockComponentIds: '[102,103]',
         lockComponentsInstalled: 'Устанавливает заказчик',
         lockPenId: 104,
         lockPenColorId: 105,
+        isTherePen: 1,
         additionalPenId: 106,
-        penProvided: 'Предоставляет заказчик',
+        penProvided: 'Предоставляет изготовитель',
         penInstalled: 'Устанавливает заказчик',
+        penColorId: 107,
         isThereDoorCloser: 1,
         doorCloserId: 108,
         doorCloserProvided: 'Предоставляет заказчик',
         doorCloserInstalled: 'Устанавливает заказчик',
-        isThereBumper: 1,
+        isThereBumper: 0,
         bumperId: 109,
-        bumperProvided: 'Предоставляет заказчик',
-        bumperInstalled: 'Устанавливает заказчик',
+        bumperProvided: 'Предоставляет изготовитель',
+        bumperInstalled: 'Устанавливает изготовитель',
         isThereSkud: 1,
         skudId: 110,
         skudIds: '[110,111]',
         skudProvided: 'Предоставляет заказчик',
         skudInstalled: 'Устанавливает заказчик',
-      })
+      }
 
-      expect(calc.lockSetId.value).toBe(101)
-      expect(calc.lockComponentIds.value).toEqual([102, 103])
-      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает заказчик')
-      expect(calc.lockPenId.value).toBe(104)
-      expect(calc.lockPenColorId.value).toBe(105)
-      expect(calc.additionalPenId.value).toBe(106)
-      expect(calc.penProvided.value).toBe('Предоставляет заказчик')
-      expect(calc.penInstalled.value).toBe('Устанавливает заказчик')
-      expect(calc.addons.value.doorCloser).toMatchObject({
-        isThere: 1,
-        itemId: 108,
-        provided: 'Предоставляет заказчик',
-        installed: 'Устанавливает заказчик',
-      })
-      expect(calc.addons.value.bumper).toMatchObject({
-        isThere: 1,
-        itemId: 109,
-        provided: 'Предоставляет заказчик',
-        installed: 'Устанавливает заказчик',
-      })
-      expect(calc.addons.value.skud).toMatchObject({
-        isThere: 1,
-        itemId: 110,
-        itemIds: [110, 111],
-        provided: 'Предоставляет заказчик',
-        installed: 'Устанавливает заказчик',
-      })
+      const alternatePayload = {
+        ...furniturePayload,
+        isThereLock: 1,
+        providesLock: 'Предоставляет изготовитель',
+        lockInstaller: 'Выполняет изготовитель',
+        isTherePen: 0,
+        penProvided: 'Предоставляет заказчик',
+        penInstalled: 'Устанавливает изготовитель',
+        isThereDoorCloser: 0,
+        doorCloserProvided: 'Предоставляет изготовитель',
+        doorCloserInstalled: 'Устанавливает изготовитель',
+        isThereBumper: 1,
+        bumperProvided: 'Предоставляет заказчик',
+        bumperInstalled: 'Устанавливает заказчик',
+      }
+
+      const expectExactRoundTrip = (payload: typeof furniturePayload) => {
+        expect(furnitureKeys).toHaveLength(26)
+        expect(Object.keys(payload).sort()).toEqual([...furnitureKeys].sort())
+
+        calc.loadFromApi(payload)
+
+        const savedPayload = calc.getFullSavePayload()
+        const furnitureRoundTrip = Object.fromEntries(
+          furnitureKeys.map(key => [key, savedPayload[key]]),
+        )
+
+        expect(furnitureRoundTrip).toEqual(payload)
+      }
+
+      expectExactRoundTrip(furniturePayload)
+      expectExactRoundTrip(alternatePayload)
     })
 
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
