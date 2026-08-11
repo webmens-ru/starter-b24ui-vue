@@ -25,7 +25,7 @@ const selectedIds = ref<number[]>([...calc.addons.value[props.config.key].itemId
 
 const showDetails = computed(() => isMulti.value || isThereName.value === 'Будет')
 const showSelection = computed(() => isMulti.value || provided.value === 'Предоставляет изготовитель')
-const showProvided = computed(() => !isMulti.value)
+const showProvided = true
 const showIsThere = computed(() => !isMulti.value)
 
 const lightboxImages = ref<string[]>([])
@@ -81,7 +81,7 @@ function sync() {
   const st = calc.addons.value[props.config.key]
   st.isThere = isThereName.value === 'Будет' ? 1 : 0
   if (showDetails.value) {
-    st.provided = isMulti.value ? 'Предоставляет изготовитель' : provided.value
+    st.provided = provided.value
     st.installed = installed.value
     if (isMulti.value) {
       st.itemIds = [...selectedIds.value]
@@ -106,7 +106,7 @@ function buildBlock() {
   const st = calc.addons.value[props.config.key]
   const params: { name: string; value: string }[] = [{ name: props.config.title, value: isThereName.value }]
   if (showDetails.value) {
-    if (showProvided.value) {
+    if (showProvided) {
       params.push({ name: 'Предоставляет', value: st.provided })
     }
     params.push({ name: 'Устанавливает', value: st.installed })

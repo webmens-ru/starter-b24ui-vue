@@ -277,6 +277,60 @@ describe('useCalculation', () => {
       expect(calc.lockComponentsInstalled.value).toBe('Устанавливает заказчик')
     })
 
+    it('восстанавливает полный канонический блок фурнитуры из get-data', () => {
+      calc.loadFromApi({
+        lockSetId: 101,
+        lockComponentIds: '[102,103]',
+        lockComponentsInstalled: 'Устанавливает заказчик',
+        lockPenId: 104,
+        lockPenColorId: 105,
+        additionalPenId: 106,
+        penProvided: 'Предоставляет заказчик',
+        penInstalled: 'Устанавливает заказчик',
+        isThereDoorCloser: 1,
+        doorCloserId: 108,
+        doorCloserProvided: 'Предоставляет заказчик',
+        doorCloserInstalled: 'Устанавливает заказчик',
+        isThereBumper: 1,
+        bumperId: 109,
+        bumperProvided: 'Предоставляет заказчик',
+        bumperInstalled: 'Устанавливает заказчик',
+        isThereSkud: 1,
+        skudId: 110,
+        skudIds: '[110,111]',
+        skudProvided: 'Предоставляет заказчик',
+        skudInstalled: 'Устанавливает заказчик',
+      })
+
+      expect(calc.lockSetId.value).toBe(101)
+      expect(calc.lockComponentIds.value).toEqual([102, 103])
+      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает заказчик')
+      expect(calc.lockPenId.value).toBe(104)
+      expect(calc.lockPenColorId.value).toBe(105)
+      expect(calc.additionalPenId.value).toBe(106)
+      expect(calc.penProvided.value).toBe('Предоставляет заказчик')
+      expect(calc.penInstalled.value).toBe('Устанавливает заказчик')
+      expect(calc.addons.value.doorCloser).toMatchObject({
+        isThere: 1,
+        itemId: 108,
+        provided: 'Предоставляет заказчик',
+        installed: 'Устанавливает заказчик',
+      })
+      expect(calc.addons.value.bumper).toMatchObject({
+        isThere: 1,
+        itemId: 109,
+        provided: 'Предоставляет заказчик',
+        installed: 'Устанавливает заказчик',
+      })
+      expect(calc.addons.value.skud).toMatchObject({
+        isThere: 1,
+        itemId: 110,
+        itemIds: [110, 111],
+        provided: 'Предоставляет заказчик',
+        installed: 'Устанавливает заказчик',
+      })
+    })
+
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
       calc.loadFromApi({
         fillSide: 'Одна сторона',

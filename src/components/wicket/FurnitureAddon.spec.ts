@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import FurnitureAddon from './FurnitureAddon.vue'
 import { useWicketFormStore } from '../../stores/wicket/wicketFormStore'
@@ -30,6 +30,13 @@ const config = {
   title: 'Доводчик',
   page: 'page_door_closer',
   saveKeys: { isThere: 'isThereDoorCloser', id: 'doorCloserId', provided: 'doorCloserProvided', installed: 'doorCloserInstalled' },
+}
+
+const skudConfig = {
+  key: 'skud' as const,
+  title: 'СКУД',
+  page: 'page_skud',
+  saveKeys: { isThere: 'isThereSkud', id: 'skudId', provided: 'skudProvided', installed: 'skudInstalled', ids: 'skudIds' },
 }
 
 describe('FurnitureAddon', () => {
@@ -72,5 +79,38 @@ describe('FurnitureAddon', () => {
       // fallback: component renders without crashing and shows title
       expect(wrapper.text()).toContain('Доводчик')
     }
+  })
+
+  it('при повторной загрузке СКУД сохраняет выбранного поставщика в первом payload', async () => {
+    const form = useWicketFormStore()
+    form.addonItems.skud = [
+      { id: 10, marking: 'SKUD-10' },
+      { id: 11, marking: 'SKUD-11' },
+    ]
+    form.addons.skud = {
+      isThere: 1,
+      provided: 'Предоставляет заказчик',
+      installed: 'Устанавливает заказчик',
+      itemId: 10,
+      marking: 'SKUD-10, SKUD-11',
+      itemIds: [10, 11],
+    }
+
+    const wrapper = mount(FurnitureAddon, {
+      props: { config: skudConfig },
+      global: { stubs: { B24Button: true, ImageViewer: true } },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').exists()).toBe(true)
+    expect(api.saveWicketData).toHaveBeenCalled()
+    const payload = (api.saveWicketData as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as Record<string, unknown>
+    expect(payload).toMatchObject({
+      isThereSkud: 1,
+      skudId: 10,
+      skudIds: '[10,11]',
+      skudProvided: 'Предоставляет заказчик',
+      skudInstalled: 'Устанавливает заказчик',
+    })
   })
 })
