@@ -27,6 +27,12 @@ export const WICKET_API_ARRAY_KEYS = new Set([
   'lockComponentIds',
 ])
 
+const WICKET_NET_PROVIDER_KEYS = new Set([
+  'netWidthProviderTop',
+  'netWidthProviderLower',
+  'netWidthProviderSide',
+])
+
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
   providesMaterial: 'Предоставляет изготовитель',
   providesPaint: 'Предоставляет изготовитель',
@@ -103,6 +109,8 @@ export function applyWicketApiFieldMappings(
         const n = Number(val)
         v = isNaN(n) ? val : n
       }
+    } else if (WICKET_NET_PROVIDER_KEYS.has(key) && (val === null || val === '')) {
+      v = ''
     } else if (key === 'materialYardGlob' && val === null) {
       v = null
     } else if (key in WICKET_API_FIELD_DEFAULTS && (val === null || val === '')) {

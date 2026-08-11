@@ -222,6 +222,39 @@ describe('useCalculation', () => {
       expect(calc.netWidthProviderSide.value).toBe('executor')
     })
 
+    it.each([
+      ['null', null],
+      ['пустую строку', ''],
+    ])('сохраняет %s как пустого поставщика сетки через загрузку и повторное сохранение', (_label, emptyProvider) => {
+      calc.loadFromApi({
+        modelId: '2',
+        shieldType: 'Тип_3',
+        heightTopPart: '150',
+        assortmentHeightUpperNetId: '',
+        netWidthProviderTop: emptyProvider,
+        netWidthProviderLower: emptyProvider,
+        netWidthProviderSide: emptyProvider,
+      })
+
+      const savedPayload = calc.getFullSavePayload()
+      expect(savedPayload).toMatchObject({
+        heightTopPart: '150',
+        assortmentHeightUpperNetId: null,
+        netWidthProviderTop: '',
+        netWidthProviderLower: '',
+        netWidthProviderSide: '',
+      })
+
+      calc.reset()
+      calc.loadFromApi(savedPayload)
+
+      expect(calc.heightTopPart.value).toBe('150')
+      expect(calc.assortmentHeightUpperNetId.value).toBeNull()
+      expect(calc.netWidthProviderTop.value).toBe('')
+      expect(calc.netWidthProviderLower.value).toBe('')
+      expect(calc.netWidthProviderSide.value).toBe('')
+    })
+
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {
       calc.loadFromApi({
         hasStolby: '1',
