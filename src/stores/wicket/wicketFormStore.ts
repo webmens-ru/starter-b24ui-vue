@@ -482,7 +482,6 @@ const fieldsFilled = ref<number>(0)
       netWidthProviderTop,
       netWidthProviderLower,
       netWidthProviderSide,
-      assortmentGrilleNetId: assortmentSideGrilleNetId,
       idFacade,
       manufacturerFacadeId,
       colorFacadeId,

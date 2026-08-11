@@ -82,9 +82,13 @@ describe('useCalculation', () => {
       heightTopPart: '150',
       heightLowerPart: '200',
       widthSidePart: '0',
+      assortmentSideGrilleNetId: 13,
       grilleLocation: 'Возле петель',
       assortmentHeightUpperNetId: 11,
       assortmentHeightLowerNetId: 12,
+      netWidthProviderTop: 'executor',
+      netWidthProviderLower: 'customer',
+      netWidthProviderSide: 'executor',
       upperGrilleNetImage: 'https://backend.test/uploads/upper.png',
       lowerGrilleNetImage: 'https://backend.test/uploads/lower.png',
       idFacade: 5,
@@ -134,6 +138,10 @@ describe('useCalculation', () => {
       expect(calc.heightTopPart.value).toBe('150')
       expect(calc.assortmentHeightUpperNetId.value).toBe(11)
       expect(calc.assortmentHeightLowerNetId.value).toBe(12)
+      expect(calc.assortmentSideGrilleNetId.value).toBe(13)
+      expect(calc.netWidthProviderTop.value).toBe('executor')
+      expect(calc.netWidthProviderLower.value).toBe('customer')
+      expect(calc.netWidthProviderSide.value).toBe('executor')
       expect(calc.upperGrilleNetImage.value).toBe('https://backend.test/uploads/upper.png')
       expect(calc.lowerGrilleNetImage.value).toBe('https://backend.test/uploads/lower.png')
       expect(calc.idFacade.value).toBe(5)
@@ -152,6 +160,30 @@ describe('useCalculation', () => {
 
       expect(payload.assortmentJumperId).toBe(11)
       expect(payload).not.toHaveProperty('peremichkaSortamentId')
+    })
+
+    it('отправляет все девять канонических полей подтипа рамы', () => {
+      calc.heightTopPart.value = '150'
+      calc.heightLowerPart.value = '200'
+      calc.widthSidePart.value = '75'
+      calc.assortmentHeightUpperNetId.value = 11
+      calc.assortmentHeightLowerNetId.value = 12
+      calc.assortmentSideGrilleNetId.value = 13
+      calc.netWidthProviderTop.value = 'executor'
+      calc.netWidthProviderLower.value = 'customer'
+      calc.netWidthProviderSide.value = 'executor'
+
+      expect(calc.getFullSavePayload()).toMatchObject({
+        heightTopPart: '150',
+        heightLowerPart: '200',
+        widthSidePart: '75',
+        assortmentHeightUpperNetId: 11,
+        assortmentHeightLowerNetId: 12,
+        assortmentSideGrilleNetId: 13,
+        netWidthProviderTop: 'executor',
+        netWidthProviderLower: 'customer',
+        netWidthProviderSide: 'executor',
+      })
     })
 
     it('корректно обрабатывает numeric-поля (строгие числа)', () => {
