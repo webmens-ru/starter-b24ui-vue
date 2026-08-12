@@ -152,15 +152,14 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const extraRailVisible = extraRailName !== '' && !/без/i.test(extraRailName)
   const extraRailPlacement: 'above' | 'behind' = /за/i.test(extraRailName) ? 'behind' : 'above'
   const extraRailSize = type2VisibleProfileSize(source.peremichkaSortamentName, 60)
-  const topOffset = extraRailVisible && extraRailPlacement === 'above' ? extraRailSize : 0
 
   const gateZoneX = hasPosts ? postWidth : 0
   const gateZoneWidth = Math.max(0, openingWidth - (hasPosts ? 2 * postWidth : 0))
   const gateWidth = Math.max(0, gateZoneWidth - GAP_HINGE_SIDE - GAP_LOCK_SIDE)
   const gateX = gateZoneX + (hingeSide === 'left' ? GAP_HINGE_SIDE : GAP_LOCK_SIDE)
   const gateHeight = Math.max(0, openingHeight - clearance)
-  const gate = safeRect(gateX, topOffset, gateWidth, gateHeight)
-  const gateZone = safeRect(gateZoneX, topOffset, gateZoneWidth, gateHeight)
+  const gate = safeRect(gateX, 0, gateWidth, gateHeight)
+  const gateZone = safeRect(gateZoneX, 0, gateZoneWidth, gateHeight)
 
   const gateInner = safeRect(
     gate.x + RAIL_SIZE,
@@ -280,14 +279,14 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const material: 'none' | 'c8' = /проф|с\s*[-–]?\s*8|c\s*[-–]?\s*8/i.test(fillText) ? 'c8' : 'none'
 
   return {
-    drawing: { width: openingWidth, height: openingHeight + topOffset },
-    opening: safeRect(0, 0, openingWidth, openingHeight + topOffset),
+    drawing: { width: openingWidth, height: openingHeight },
+    opening: safeRect(0, 0, openingWidth, openingHeight),
     gateZone,
     gate,
     posts: {
       visible: hasPosts,
-      left: safeRect(0, topOffset, postWidth, openingHeight),
-      right: safeRect(openingWidth - postWidth, topOffset, postWidth, openingHeight),
+      left: safeRect(0, 0, postWidth, openingHeight),
+      right: safeRect(openingWidth - postWidth, 0, postWidth, openingHeight),
     },
     subtype: gateSubtype,
     hingeSide,
@@ -301,7 +300,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     innerFrame,
     rails: { lowerSubtype, upperSubtype, verticalSubtype, centerFill },
     extraRail: {
-      ...safeRect(0, extraRailPlacement === 'above' ? 0 : topOffset, openingWidth, extraRailSize),
+      ...safeRect(0, 0, openingWidth, extraRailSize),
       visible: extraRailVisible,
       placement: extraRailPlacement,
     },

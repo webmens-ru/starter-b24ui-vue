@@ -87,7 +87,12 @@ describe('computeType2Geometry', () => {
     })
 
     expect(geometry.extraRail.height).toBe(expectedHeight)
-    expect(geometry.drawing.height).toBe(2000 + expectedHeight)
+    expect(geometry.drawing).toEqual({ width: 1000, height: 2000 })
+    expect(geometry.opening).toEqual({ x: 0, y: 0, width: 1000, height: 2000 })
+    expect(geometry.gate).toEqual({ x: 54, y: 0, width: 886, height: 1950 })
+    expect(geometry.posts.left).toEqual({ x: 0, y: 0, width: 50, height: 2000 })
+    expect(geometry.posts.right).toEqual({ x: 950, y: 0, width: 50, height: 2000 })
+    expect(geometry.extraRail).toMatchObject({ x: 0, y: 0, width: 1000, visible: true, placement: 'above' })
   })
 
   it('uses only a valid explicit HEX and falls back safely', () => {

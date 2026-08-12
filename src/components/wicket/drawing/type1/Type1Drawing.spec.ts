@@ -52,6 +52,28 @@ describe('Type1Drawing', () => {
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
   })
 
+  it('рисует две части позиции 6 и вертикальное усиление', () => {
+    const previousWidth = c.widthProyema.value
+    const previousOrientation = c.raspolozheniyePolotna.value
+
+    try {
+      c.widthProyema.value = '754'
+      c.raspolozheniyePolotna.value = 'Горизонтально'
+      const wrapper = mount(Type1Drawing)
+
+      expect(wrapper.findAll('[data-testid="type1-lock-pipe"]')).toHaveLength(2)
+      expect(wrapper.get('[data-testid="type1-filling-reinforcement"]').attributes()).toMatchObject({
+        x: '354',
+        y: '80',
+        width: '40',
+        height: '1790',
+      })
+    } finally {
+      c.widthProyema.value = previousWidth
+      c.raspolozheniyePolotna.value = previousOrientation
+    }
+  })
+
   it.each(['Тип_2', 'Тип_4'])('рисует фон нижней сетки %s перед PNG с той же геометрией', (subtype) => {
     c.shieldType.value = subtype
     c.lowerGrilleNetImage.value = '/uploads/nets/lower.webp'
