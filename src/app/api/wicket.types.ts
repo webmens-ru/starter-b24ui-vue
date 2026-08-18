@@ -6,8 +6,9 @@ export interface SelectItem {
 /** Элемент списка цветов щита (dir_paints). isStandard: 1 — стандартная, 0 — не стандартная. */
 export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
-  /** Категория краски (dir_paints.paintCategory), хранится по-русски */
-  paintCategory?: 'Эмаль' | 'Молотковая' | 'Маслянная' | string | null
+  paintTypeId: number
+  paintTypeName: string
+  consumptionRate: number
   /** HEX-цвет для визуализации (из dir_color.hex через dir_paints.color) */
   hex?: string | null
 }
