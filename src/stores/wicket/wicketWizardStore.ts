@@ -1,12 +1,20 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 /**
  * Сессия мастера калитки: заказ, модель, шаги.
  * Отделено от полей формы — другие изделия могут иметь свой wizard-store.
  */
 export const useWicketWizardStore = defineStore('wicket-wizard', () => {
-  const number = ref<string | number>('')
+  const orderId = ref<number | null>(null)
+  const orderItemId = ref<number | null>(null)
+  /** @deprecated Use orderId. Kept until all legacy consumers migrate. */
+  const number = computed<string | number>({
+    get: () => orderId.value ?? '',
+    set: (value) => {
+      orderId.value = value === '' ? null : Number(value)
+    },
+  })
   const modelId = ref<string | number>('')
   const productType = ref<string>('')
   const model = ref<string>('')
@@ -26,7 +34,8 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
   }
 
   function resetSession() {
-    number.value = ''
+    orderId.value = null
+    orderItemId.value = null
     modelId.value = ''
     productType.value = ''
     model.value = ''
@@ -36,6 +45,8 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
 
   return {
     number,
+    orderId,
+    orderItemId,
     modelId,
     productType,
     model,

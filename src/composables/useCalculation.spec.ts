@@ -9,6 +9,9 @@ describe('useCalculation', () => {
     setActivePinia(createPinia())
     calc = useCalculation()
     calc.reset()
+    calc.orderId.value = 42
+    calc.orderItemId.value = 7
+    calc.modelId.value = '1'
   })
 
   describe('loadFromApi — данные не теряются при загрузке', () => {
@@ -31,6 +34,7 @@ describe('useCalculation', () => {
 
     const fullApiData: Record<string, unknown> = {
       orderId: 42,
+      orderItemId: 7,
       modelId: '1',
       productType: 'wicket',
       model: 'Калитка Тип 1',
@@ -521,8 +525,9 @@ describe('useCalculation', () => {
   })
 
   describe('getBaseSavePayload', () => {
-    it('возвращает orderId, modelId, reachedStep, visitedPages', () => {
+    it('возвращает orderId, orderItemId, modelId, reachedStep, visitedPages', () => {
       calc.number.value = 42
+      calc.orderItemId.value = 7
       calc.modelId.value = '1'
       calc.setActivePage('page5')
 
@@ -530,11 +535,22 @@ describe('useCalculation', () => {
 
       expect(payload).toEqual({
         orderId: 42,
+        orderItemId: 7,
         modelId: '1',
         reachedStep: 'page5',
         visitedPages: JSON.stringify(calc.visitedPages.value),
       })
       expect(JSON.parse(payload.visitedPages)).toContain('page5')
+    })
+
+    it('отклоняет сохранение без контекста текущей позиции', () => {
+      calc.orderId.value = null
+      calc.orderItemId.value = null
+
+      expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный orderId текущей позиции.')
+
+      calc.orderId.value = 42
+      expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный orderItemId текущей позиции.')
     })
 
     it('getFullSavePayload досылает данные второго типа вместе с прогрессом', () => {

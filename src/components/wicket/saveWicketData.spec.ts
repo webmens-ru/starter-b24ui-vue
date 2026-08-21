@@ -70,6 +70,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.reset()
     calc.modelId.value = '1'
     calc.number.value = 42
+    calc.orderItemId.value = 7
     vi.mocked(saveWicketData).mockClear()
   })
 
@@ -93,6 +94,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(payload).toMatchObject({
       orderId: 42,
+      orderItemId: 7,
       modelId: '1',
       reachedStep: 'page1',
     })
@@ -182,7 +184,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketData).toHaveBeenCalled()
-    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    const saveCalls = vi.mocked(saveWicketData).mock.calls
+    const payload = saveCalls[saveCalls.length - 1]?.[0]
     expect(payload).toMatchObject({
       lockSetId: 7,
       lockPenId: 3,
@@ -207,7 +210,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketData).toHaveBeenCalled()
-    const payload = vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]
+    const saveCalls = vi.mocked(saveWicketData).mock.calls
+    const payload = saveCalls[saveCalls.length - 1]?.[0]
     expect(payload).toMatchObject({
       isTherePen: 1,
       additionalPenId: 9,
@@ -222,8 +226,8 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     vi.mocked(getColorShield).mockResolvedValueOnce({
       colorShield: [
-        { id: 1, name: 'Первый цвет', hex: '#111111' },
-        { id: 7, name: 'Сохранённый цвет', hex: '#777777' },
+        { id: 1, name: 'Первый цвет', hex: '#111111', paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
+        { id: 7, name: 'Сохранённый цвет', hex: '#777777', paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
       ],
     })
 
@@ -258,7 +262,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     await wrapper.find('input[value="Тип_2"]').setValue(true)
     await new Promise(r => setTimeout(r, 0))
 
-    expect(vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]).toMatchObject({
+    const saveCalls = vi.mocked(saveWicketData).mock.calls
+    expect(saveCalls[saveCalls.length - 1]?.[0]).toMatchObject({
       shieldType: 'Тип_2',
       colorShieldId: '7',
       colorShieldName: 'Сохранённый цвет',

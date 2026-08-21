@@ -5,6 +5,7 @@
 
 /** Поля, которые должны быть строго числами (сравнение с value radio). */
 export const WICKET_API_NUMERIC_KEYS = new Set([
+  'orderItemId',
   'hasStolby',
   'openingOptionId',
   'isTherePen',
@@ -87,8 +88,8 @@ export function applyWicketApiFieldMappings(
   function set(key: string, val: unknown) {
     if (val === undefined) return
     let v: unknown
-    if (key === 'orderId') {
-      v = val != null ? (typeof val === 'number' ? val : Number(val) || val) : ''
+    if (key === 'orderId' || key === 'orderItemId') {
+      v = val != null && val !== '' ? Number(val) : null
     } else if (WICKET_API_ARRAY_KEYS.has(key)) {
       if (Array.isArray(val)) {
         v = val.map(Number).filter(Number.isFinite)

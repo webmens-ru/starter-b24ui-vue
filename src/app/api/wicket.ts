@@ -91,7 +91,7 @@ export type {
 const isMock = import.meta.env.VITE_MOCK === 'true'
 
 /** Создаёт новый заказ и возвращает orderId. Вызывать один раз при открытии новой формы. */
-export async function createOrder(payload: CompanyScopedPayload): Promise<{
+export async function createOrder(payload: CompanyScopedPayload = {}): Promise<{
   orderId: number
   companyId: number | null
   managerId: number
@@ -104,6 +104,8 @@ export async function createOrder(payload: CompanyScopedPayload): Promise<{
 /** Создаёт запись расчёта в БД при первом открытии новой формы. */
 export async function createWicketMainMenu(payload: {
   orderId: number
+  /** New order-item flow always provides this; omitted only while legacy flow is retained. */
+  orderItemId?: number
   modelId: string | number
   model: string
   productType?: string
@@ -111,6 +113,7 @@ export async function createWicketMainMenu(payload: {
   if (isMock) return
   await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
     orderId: payload.orderId,
+    orderItemId: payload.orderItemId,
     modelId: String(payload.modelId),
     model: payload.model,
     productType: payload.productType ?? 'Калитка',
@@ -121,9 +124,11 @@ export async function createWicketMainMenu(payload: {
 export async function loadWicketData(
   modelId: string | number,
   orderId: number,
+  orderItemId?: number,
 ): Promise<Record<string, unknown>> {
   if (isMock) return mockLoadWicketData(orderId)
   const params: Record<string, string | number> = { orderId }
+  if (orderItemId !== undefined) params.orderItemId = orderItemId
   if (String(modelId) !== '1') params.modelId = modelId
   const { data } = await api.get(`/api/wicket/type${modelId}/get-data`, { params })
   return data.data
@@ -295,8 +300,7 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 
 export async function saveWicketData(payload: Record<string, unknown>): Promise<void> {
   if (isMock) return mockSaveWicketData(payload)
-  const body = { ...payload, orderId: payload.orderId ?? payload.orderId }
-  await api.post(`/api/wicket/type${payload.modelId}/data`, body)
+  await api.post(`/api/wicket/type${payload.modelId}/data`, payload)
 }
 
 export async function getAssortmentStolb(
@@ -421,16 +425,20 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
 export async function fetchSavedOrderPrice(
   orderId: number,
   modelId: string | number,
+  orderItemId?: number,
 ): Promise<OrderSavedPriceResponse> {
   if (isMock) return mockFetchSavedOrderPrice()
+  const params: Record<string, string | number> = { orderId, modelId: String(modelId) }
+  if (orderItemId !== undefined) params.orderItemId = orderItemId
   const { data } = await api.get('/api/order/saved-price', {
-    params: { orderId, modelId: String(modelId) },
+    params,
   })
   return data.data
 }
 
 export async function finalCalculate(payload: {
   orderId: number
+  orderItemId?: number
   companyId?: number | null
   modelId: string | number
   productType?: string
@@ -439,6 +447,7 @@ export async function finalCalculate(payload: {
   if (isMock) return mockFinalCalculate()
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
+    orderItemId: payload.orderItemId,
     companyId: payload.companyId,
     modelId: String(payload.modelId),
   })
@@ -447,6 +456,7 @@ export async function finalCalculate(payload: {
 
 export async function deleteCalculation(payload: {
   orderId: number
+  orderItemId?: number
   modelId: string | number
 }): Promise<void> {
   if (isMock) return mockDeleteCalculation()
@@ -455,6 +465,7 @@ export async function deleteCalculation(payload: {
 
 export async function recalculate(payload: {
   orderId: number
+  orderItemId?: number
   companyId?: number | null
   modelId: string | number
   productType?: string
@@ -463,6 +474,7 @@ export async function recalculate(payload: {
   if (isMock) return mockRecalculate(payload)
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
+    orderItemId: payload.orderItemId,
     companyId: payload.companyId,
     modelId: String(payload.modelId),
   })

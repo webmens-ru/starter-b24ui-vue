@@ -1,3 +1,10 @@
+import type { OrderItemContext } from './orderItems.types'
+
+export type { OrderItemContext } from './orderItems.types'
+
+/** Context is required by new wizard code; legacy callers remain accepted during the migration. */
+export type WicketSavePayload = OrderItemContext & Record<string, unknown>
+
 export interface SelectItem {
   id: string | number
   name: string
@@ -269,7 +276,7 @@ export interface OrderSavedPriceResponse {
 }
 
 export interface CompanyScopedPayload {
-  companyId: number
+  companyId?: number
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */

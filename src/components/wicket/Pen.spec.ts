@@ -37,6 +37,9 @@ describe('Pen frame color capability', () => {
     vi.clearAllMocks()
     const calc = useCalculation()
     calc.reset()
+    calc.orderId.value = 42
+    calc.orderItemId.value = 7
+    calc.modelId.value = '1'
     calc.isTherePenName.value = 'Будет'
     calc.penProvided.value = 'Предоставляет изготовитель'
     calc.penInstalled.value = 'Устанавливает изготовитель'
@@ -64,7 +67,8 @@ describe('Pen frame color capability', () => {
     ])
     expect(calc.penColorId.value).toBeNull()
     expect(calc.additionalPenColor.value).toBe('Цвет каркаса')
-    expect(vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]).toMatchObject({ penColorId: null })
+    const saveCalls = vi.mocked(saveWicketData).mock.calls
+    expect(saveCalls[saveCalls.length - 1]?.[0]).toMatchObject({ penColorId: null })
   })
 
   it('does not offer frame color when the pen forbids it', async () => {

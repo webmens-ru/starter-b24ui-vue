@@ -12,16 +12,35 @@ export function useCalculation() {
   const wizard = useWicketWizardStore()
   const form = useWicketFormStore()
 
+  function isPositiveInteger(value: number | null): value is number {
+    return value !== null && Number.isInteger(value) && value > 0
+  }
+
   function getBaseSavePayload(): {
     orderId: number
+    orderItemId: number
     /** API Yii ожидает строку (см. BaseModelController::validateBasePayload). */
     modelId: string
     reachedStep: string
     visitedPages: string
   } {
+    const orderId = wizard.orderId
+    const orderItemId = wizard.orderItemId
+    const modelId = String(wizard.modelId ?? '').trim()
+    if (!isPositiveInteger(orderId)) {
+      throw new Error('Не указан корректный orderId текущей позиции.')
+    }
+    if (!isPositiveInteger(orderItemId)) {
+      throw new Error('Не указан корректный orderItemId текущей позиции.')
+    }
+    if (modelId === '') {
+      throw new Error('Не указан modelId текущей позиции.')
+    }
+
     return {
-      orderId: Number(wizard.number),
-      modelId: String(wizard.modelId ?? ''),
+      orderId,
+      orderItemId,
+      modelId,
       reachedStep: wizard.activePage,
       visitedPages: JSON.stringify(wizard.visitedPages),
     }

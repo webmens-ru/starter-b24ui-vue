@@ -408,7 +408,8 @@ const fieldsFilled = ref<number>(0)
     const wizard = useWicketWizardStore()
     const w = storeToRefs(wizard)
     const refMap: Record<string, { value: unknown }> = {
-      orderId: w.number,
+      orderId: w.orderId,
+      orderItemId: w.orderItemId,
       modelId: w.modelId,
       productType: w.productType,
       model: w.model,

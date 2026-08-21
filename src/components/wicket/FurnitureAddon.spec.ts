@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import FurnitureAddon from './FurnitureAddon.vue'
 import { useWicketFormStore } from '../../stores/wicket/wicketFormStore'
+import { useCalculation } from '../../composables/useCalculation'
 import * as api from '../../app/api/wicket'
 
 vi.mock('../../app/api/wicket', () => ({
@@ -43,6 +44,10 @@ describe('FurnitureAddon', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    const calc = useCalculation()
+    calc.orderId.value = 42
+    calc.orderItemId.value = 7
+    calc.modelId.value = '1'
   })
 
   it('по умолчанию «Не будет» — без сетки моделей, save вызван с ключом isThereDoorCloser=0', async () => {

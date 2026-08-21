@@ -26,6 +26,7 @@ describe('LockComponentsStep', () => {
     const calc = useCalculation()
     calc.modelId.value = '2'
     calc.number.value = 42
+    calc.orderItemId.value = 7
     calc.lockComponentIds.value = [2]
     calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
 
@@ -50,6 +51,7 @@ describe('LockComponentsStep', () => {
     const calc = useCalculation()
     calc.modelId.value = '2'
     calc.number.value = 42
+    calc.orderItemId.value = 7
 
     const wrapper = mount(LockComponentsStep, {
       global: { stubs: { B24Button: true } },
