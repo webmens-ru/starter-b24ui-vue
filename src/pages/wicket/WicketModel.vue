@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { createWicketMainMenu } from '../../app/api/wicket'
+import { createLegacyWicketMainMenu } from '../../app/api/wicket'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -111,7 +111,7 @@ async function onModelSelect(item: (typeof models)[0]) {
     calc.model.value = item.model
     calc.updateOrCreateBlock('Модель', [{ name: 'Модель', value: item.model }])
 
-    await createWicketMainMenu({
+    await createLegacyWicketMainMenu({
       orderId: Number(calc.number.value),
       modelId: item.id,
       model: item.model,

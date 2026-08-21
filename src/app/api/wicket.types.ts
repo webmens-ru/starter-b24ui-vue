@@ -2,8 +2,23 @@ import type { OrderItemContext } from './orderItems.types'
 
 export type { OrderItemContext } from './orderItems.types'
 
-/** Context is required by new wizard code; legacy callers remain accepted during the migration. */
-export type WicketSavePayload = OrderItemContext & Record<string, unknown>
+export interface WicketSavePayload extends OrderItemContext {
+  [key: string]: unknown
+}
+
+export interface WicketMainMenuPayload extends OrderItemContext {
+  model: string
+  productType?: string
+}
+
+export interface WicketCalculationPayload {
+  orderId: number
+  orderItemId: number
+  modelId: string | number
+  companyId?: number | null
+  productType?: string
+  model?: string
+}
 
 export interface SelectItem {
   id: string | number

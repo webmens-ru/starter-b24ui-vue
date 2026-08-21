@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
+import type { WicketSavePayload } from '../../app/api/wicket.types'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -83,7 +84,7 @@ async function save() {
   buildBlock()
 
   try {
-    const payload: Record<string, unknown> = {
+    const payload: WicketSavePayload = {
       ...calc.getBaseSavePayload(),
       isThereLock:   calc.isThereLock.value,
       isThereLockName: calc.isThereLockName.value,
@@ -109,6 +110,7 @@ async function save() {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
+        orderItemId: calc.getCurrentItemContext().orderItemId,
         productType:       calc.productType.value,
         model:              calc.model.value,
         modelId:           calc.modelId.value,

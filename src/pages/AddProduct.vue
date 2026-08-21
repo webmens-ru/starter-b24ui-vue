@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
-import { createOrder, createWicketMainMenu } from '../app/api/wicket'
+import { createOrder, createLegacyWicketMainMenu } from '../app/api/wicket'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -54,7 +54,7 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
     ])
 
     if ('modelId' in item && 'model' in item) {
-      await createWicketMainMenu({
+      await createLegacyWicketMainMenu({
         orderId: res.orderId,
         modelId: (item as { modelId: string }).modelId,
         model: (item as { model: string }).model,

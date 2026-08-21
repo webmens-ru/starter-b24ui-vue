@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
+import type { WicketSavePayload } from '../../app/api/wicket.types'
 import ImageViewer from './ImageViewer.vue'
 
 interface AddonConfig {
@@ -129,7 +130,7 @@ async function save() {
   const st = calc.addons.value[props.config.key]
   const k = props.config.saveKeys
   try {
-    const payload: Record<string, unknown> = {
+    const payload: WicketSavePayload = {
       ...calc.getBaseSavePayload(),
       [k.isThere]: st.isThere,
       [k.provided]: st.provided || null,
@@ -146,6 +147,7 @@ async function save() {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
+        orderItemId: calc.getCurrentItemContext().orderItemId,
         productType: calc.productType.value,
         model: calc.model.value,
         modelId: calc.modelId.value,

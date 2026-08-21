@@ -1,6 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
+import type { OrderItemContext, WicketSavePayload } from '../app/api/wicket.types'
 
 export type { CalcBlock } from '../stores/wicket/types'
 
@@ -46,7 +47,12 @@ export function useCalculation() {
     }
   }
 
-  function getFullSavePayload(): Record<string, unknown> {
+  function getCurrentItemContext(): OrderItemContext {
+    const { orderId, orderItemId, modelId } = getBaseSavePayload()
+    return { orderId, orderItemId, modelId }
+  }
+
+  function getFullSavePayload(): WicketSavePayload {
     const addons = form.addons
     const supplierPayload = String(wizard.modelId) === '2'
       ? {}
@@ -158,6 +164,7 @@ export function useCalculation() {
     setActivePage: wizard.setActivePage,
     isPageAccessible: wizard.isPageAccessible,
     getBaseSavePayload,
+    getCurrentItemContext,
     getFullSavePayload,
     loadFromApi: form.loadFromApi,
     reset,

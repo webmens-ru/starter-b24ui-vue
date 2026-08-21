@@ -65,6 +65,30 @@ describe('order item API', () => {
     })
   })
 
+  it('rejects wicket saves without an item context before sending a request', async () => {
+    const { saveWicketData } = await import('./wicket')
+
+    await expect(saveWicketData({ orderId: 42, modelId: '1' } as never))
+      .rejects.toThrow('Не указан корректный orderItemId текущей позиции.')
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('sends item context for terminal price and delete operations', async () => {
+    api.get.mockResolvedValueOnce({ data: { data: { hasSavedPrice: false, isActual: false } } })
+    api.post.mockResolvedValue({ data: { data: { priceDealer: '800.00', priceRetail: '1000.00' } } })
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+
+    const { deleteCalculation, fetchSavedOrderPrice, finalCalculate } = await import('./wicket')
+
+    await fetchSavedOrderPrice(context)
+    await finalCalculate(context)
+    await deleteCalculation(context)
+
+    expect(api.get).toHaveBeenCalledWith('/api/order/saved-price', { params: context })
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/order/calculate', context)
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/delete', context)
+  })
+
   it('creates an item with the exact creation payload', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: null, priceDealer: null } } } })
 

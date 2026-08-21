@@ -553,6 +553,14 @@ describe('useCalculation', () => {
       expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный orderItemId текущей позиции.')
     })
 
+    it('возвращает проверенный контекст текущей позиции для API-операций', () => {
+      expect(calc.getCurrentItemContext()).toEqual({
+        orderId: 42,
+        orderItemId: 7,
+        modelId: '1',
+      })
+    })
+
     it('getFullSavePayload досылает данные второго типа вместе с прогрессом', () => {
       calc.number.value = 42
       calc.modelId.value = '2'

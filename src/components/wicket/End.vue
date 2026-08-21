@@ -62,12 +62,17 @@ function applyActualSavedPrices(retail: string, dealer: string, lastCalculatedAt
 }
 
 async function loadSavedPriceIfActual() {
-  const orderId = Number(calc.number.value)
-  if (!orderId) return
+  let context: ReturnType<typeof calc.getCurrentItemContext>
+  try {
+    context = calc.getCurrentItemContext()
+  } catch (e) {
+    console.warn('fetchSavedOrderPrice:', e)
+    return
+  }
 
   loadingSavedPrice.value = true
   try {
-    const status = await fetchSavedOrderPrice(orderId, calc.modelId.value)
+    const status = await fetchSavedOrderPrice(context)
     if (status.isActual && status.priceRetail && status.priceDealer) {
       applyActualSavedPrices(status.priceRetail, status.priceDealer, status.lastCalculatedAt)
     } else {
@@ -122,11 +127,11 @@ async function handleCalculate() {
   }
   calculating.value = true
   try {
+    const context = calc.getCurrentItemContext()
     const result = await finalCalculate({
-      orderId: Number(calc.number.value),
+      ...context,
       productType:       calc.productType.value,
       model:              calc.model.value,
-      modelId:           calc.modelId.value,
     })
     applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
     await persistWizardProgress()
@@ -144,10 +149,7 @@ const deleting = ref(false)
 async function confirmDelete() {
   deleting.value = true
   try {
-    await deleteCalculation({
-      orderId: Number(calc.number.value),
-      modelId:           calc.modelId.value,
-    })
+    await deleteCalculation(calc.getCurrentItemContext())
     window.location.href = '/orders'
   } catch (e) {
     console.error('deleteCalculation:', e)

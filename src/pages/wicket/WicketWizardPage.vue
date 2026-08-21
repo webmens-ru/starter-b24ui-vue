@@ -2,7 +2,7 @@
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadWicketData, createOrder, createWicketMainMenu, getAddonList } from '../../app/api/wicket'
+import { loadLegacyWicketData, createOrder, createLegacyWicketMainMenu, getAddonList } from '../../app/api/wicket'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
@@ -55,12 +55,12 @@ async function initCalculation() {
     await loadAddonAvailability()
     if (placementId) {
       const orderId = Number(placementId)
-      const apiData = await loadWicketData(calc.modelId.value, orderId)
+      const apiData = await loadLegacyWicketData(calc.modelId.value, orderId)
       loadFromApi(apiData)
       calc.number.value = orderId
       switchTo(calc.activePage.value)
     } else if (existingOrderId) {
-      const apiData = await loadWicketData(calc.modelId.value, existingOrderId)
+      const apiData = await loadLegacyWicketData(calc.modelId.value, existingOrderId)
       loadFromApi(apiData)
       switchTo(calc.activePage.value)
     } else {
@@ -69,7 +69,7 @@ async function initCalculation() {
       calc.modelId.value = resolvedModelId()
       const res = await createOrder()
       calc.number.value = res.orderId
-      await createWicketMainMenu({
+      await createLegacyWicketMainMenu({
         orderId: res.orderId,
         modelId: calc.modelId.value,
         model: `Калитка Тип ${calc.modelId.value}`,

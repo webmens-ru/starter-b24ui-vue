@@ -53,6 +53,10 @@ import type {
   RecalculateResponse,
   OrderSavedPriceResponse,
   CompanyScopedPayload,
+  OrderItemContext,
+  WicketCalculationPayload,
+  WicketMainMenuPayload,
+  WicketSavePayload,
 } from './wicket.types'
 
 export type {
@@ -86,9 +90,38 @@ export type {
   RecalculateResponse,
   OrderSavedPriceResponse,
   CompanyScopedPayload,
+  OrderItemContext,
+  WicketCalculationPayload,
+  WicketMainMenuPayload,
+  WicketSavePayload,
 }
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
+
+function assertOrderItemContext(context: Partial<OrderItemContext>): asserts context is OrderItemContext {
+  const { orderId, orderItemId, modelId } = context
+  if (typeof orderId !== 'number' || !Number.isInteger(orderId) || orderId <= 0) {
+    throw new Error('Не указан корректный orderId текущей позиции.')
+  }
+  if (typeof orderItemId !== 'number' || !Number.isInteger(orderItemId) || orderItemId <= 0) {
+    throw new Error('Не указан корректный orderItemId текущей позиции.')
+  }
+  if (typeof modelId !== 'string' || modelId.trim() === '') {
+    throw new Error('Не указан modelId текущей позиции.')
+  }
+}
+
+function assertWicketCalculationPayload(payload: WicketCalculationPayload): void {
+  if (!Number.isInteger(payload.orderId) || payload.orderId <= 0) {
+    throw new Error('Не указан корректный orderId текущей позиции.')
+  }
+  if (!Number.isInteger(payload.orderItemId) || payload.orderItemId <= 0) {
+    throw new Error('Не указан корректный orderItemId текущей позиции.')
+  }
+  if (String(payload.modelId).trim() === '') {
+    throw new Error('Не указан modelId текущей позиции.')
+  }
+}
 
 /** Создаёт новый заказ и возвращает orderId. Вызывать один раз при открытии новой формы. */
 export async function createOrder(payload: CompanyScopedPayload = {}): Promise<{
@@ -102,14 +135,8 @@ export async function createOrder(payload: CompanyScopedPayload = {}): Promise<{
 }
 
 /** Создаёт запись расчёта в БД при первом открытии новой формы. */
-export async function createWicketMainMenu(payload: {
-  orderId: number
-  /** New order-item flow always provides this; omitted only while legacy flow is retained. */
-  orderItemId?: number
-  modelId: string | number
-  model: string
-  productType?: string
-}): Promise<void> {
+export async function createWicketMainMenu(payload: WicketMainMenuPayload): Promise<void> {
+  assertOrderItemContext(payload)
   if (isMock) return
   await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
     orderId: payload.orderId,
@@ -120,15 +147,36 @@ export async function createWicketMainMenu(payload: {
   })
 }
 
+/** До Task 9: создание конфигурации без позиции заказа для старого entry-point. */
+export async function createLegacyWicketMainMenu(payload: {
+  orderId: number
+  modelId: string | number
+  model: string
+  productType?: string
+}): Promise<void> {
+  if (isMock) return
+  await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
+    ...payload,
+    modelId: String(payload.modelId),
+    productType: payload.productType ?? 'Калитка',
+  })
+}
+
 /** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
-export async function loadWicketData(
+export async function loadWicketData(context: OrderItemContext): Promise<Record<string, unknown>> {
+  assertOrderItemContext(context)
+  if (isMock) return mockLoadWicketData(context.orderId)
+  const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
+  return data.data
+}
+
+/** До Task 9: загрузка legacy-конфигурации без позиции заказа. */
+export async function loadLegacyWicketData(
   modelId: string | number,
   orderId: number,
-  orderItemId?: number,
 ): Promise<Record<string, unknown>> {
   if (isMock) return mockLoadWicketData(orderId)
   const params: Record<string, string | number> = { orderId }
-  if (orderItemId !== undefined) params.orderItemId = orderItemId
   if (String(modelId) !== '1') params.modelId = modelId
   const { data } = await api.get(`/api/wicket/type${modelId}/get-data`, { params })
   return data.data
@@ -298,7 +346,8 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
   return data
 }
 
-export async function saveWicketData(payload: Record<string, unknown>): Promise<void> {
+export async function saveWicketData(payload: WicketSavePayload): Promise<void> {
+  assertOrderItemContext(payload)
   if (isMock) return mockSaveWicketData(payload)
   await api.post(`/api/wicket/type${payload.modelId}/data`, payload)
 }
@@ -422,28 +471,17 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
 }
 
 /** Проверка сохранённых цен заказа на актуальность (шаг «Рассчитать»). */
-export async function fetchSavedOrderPrice(
-  orderId: number,
-  modelId: string | number,
-  orderItemId?: number,
-): Promise<OrderSavedPriceResponse> {
+export async function fetchSavedOrderPrice(context: OrderItemContext): Promise<OrderSavedPriceResponse> {
+  assertOrderItemContext(context)
   if (isMock) return mockFetchSavedOrderPrice()
-  const params: Record<string, string | number> = { orderId, modelId: String(modelId) }
-  if (orderItemId !== undefined) params.orderItemId = orderItemId
   const { data } = await api.get('/api/order/saved-price', {
-    params,
+    params: context,
   })
   return data.data
 }
 
-export async function finalCalculate(payload: {
-  orderId: number
-  orderItemId?: number
-  companyId?: number | null
-  modelId: string | number
-  productType?: string
-  model?: string
-}): Promise<{ priceDealer: string; priceRetail: string }> {
+export async function finalCalculate(payload: WicketCalculationPayload): Promise<{ priceDealer: string; priceRetail: string }> {
+  assertWicketCalculationPayload(payload)
   if (isMock) return mockFinalCalculate()
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
@@ -454,23 +492,14 @@ export async function finalCalculate(payload: {
   return data.data
 }
 
-export async function deleteCalculation(payload: {
-  orderId: number
-  orderItemId?: number
-  modelId: string | number
-}): Promise<void> {
+export async function deleteCalculation(payload: OrderItemContext): Promise<void> {
+  assertOrderItemContext(payload)
   if (isMock) return mockDeleteCalculation()
   await api.post(`/api/wicket/type${payload.modelId}/delete`, payload)
 }
 
-export async function recalculate(payload: {
-  orderId: number
-  orderItemId?: number
-  companyId?: number | null
-  modelId: string | number
-  productType?: string
-  model?: string
-}): Promise<RecalculateResponse> {
+export async function recalculate(payload: WicketCalculationPayload): Promise<RecalculateResponse> {
+  assertWicketCalculationPayload(payload)
   if (isMock) return mockRecalculate(payload)
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
