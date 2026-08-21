@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { createLegacyWicketMainMenu } from '../../app/api/wicket'
+import { createOrderItem } from '../../app/api/orderItems'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
 const router = useRouter()
+const route = useRoute()
 const calc = useCalculation()
 
 const loading = ref<string | null>(null)
@@ -64,6 +65,12 @@ const models = [
   },
 ]
 
+const currentOrderId = computed(() => {
+  const raw = Array.isArray(route.query.orderId) ? route.query.orderId[0] : route.query.orderId
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : null
+})
+
 function getImageSrc(path: string): string {
   const base = window._HOSTNAME_ || ''
   return base ? `${base}${path}` : path
@@ -102,22 +109,36 @@ function onImageError(e: Event) {
 }
 
 async function onModelSelect(item: (typeof models)[0]) {
-  if (loading.value || !calc.number.value || item.soon) return
+  if (loading.value || item.soon) return
+  if (!currentOrderId.value) {
+    errorMessage.value = 'Не указан заказ для новой позиции'
+    return
+  }
   loading.value = item.id
   errorMessage.value = null
 
   try {
-    calc.modelId.value = item.id
-    calc.model.value = item.model
-    calc.updateOrCreateBlock('Модель', [{ name: 'Модель', value: item.model }])
-
-    await createLegacyWicketMainMenu({
-      orderId: Number(calc.number.value),
+    const response = await createOrderItem({
+      orderId: currentOrderId.value,
+      productType: 'wicket',
       modelId: item.id,
       model: item.model,
     })
 
-    await router.push(item.route)
+    calc.orderId.value = currentOrderId.value
+    calc.orderItemId.value = response.item.id
+    calc.modelId.value = item.id
+    calc.model.value = item.model
+    calc.productType.value = 'Калитка'
+    calc.updateOrCreateBlock('Модель', [{ name: 'Модель', value: item.model }])
+
+    await router.push({
+      path: item.route,
+      query: {
+        orderId: String(currentOrderId.value),
+        orderItemId: String(response.item.id),
+      },
+    })
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при выполнении запроса'
   } finally {
@@ -134,7 +155,7 @@ async function onModelSelect(item: (typeof models)[0]) {
           <B24Button
             label="Назад"
             color="air-secondary"
-            @click="router.push('/add-product')"
+            @click="router.push({ path: '/add-product', query: { orderId: String(currentOrderId ?? '') } })"
           />
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
             Выберите заполнение калитки
@@ -145,6 +166,7 @@ async function onModelSelect(item: (typeof models)[0]) {
         <div class="flex-1 overflow-y-auto px-4 pt-4 pb-4">
           <div
             v-if="errorMessage"
+            role="alert"
             class="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200"
           >
             {{ errorMessage }}

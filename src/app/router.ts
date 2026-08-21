@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, createMemoryHistory, type RouteRecordRa
 import Main from "../pages/Main.vue"
 import Form from "../pages/Form.vue"
 import AddProduct from "../pages/AddProduct.vue"
+import OrderItemsPage from "../pages/order/OrderItemsPage.vue"
 import WicketModel from "../pages/wicket/WicketModel.vue"
 import WicketType1 from "../pages/wicket/Type1.vue"
 import WicketType2 from "../pages/wicket/Type2.vue"
@@ -20,6 +21,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Main },
   { path: '/form', component: Form },
   { path: '/add-product', component: AddProduct },
+  { path: '/order/:orderId/items', name: 'order-items', component: OrderItemsPage },
   { path: '/wicket/model', component: WicketModel },
   { path: '/wicket/type1', component: WicketType1 },
   { path: '/wicket/type2', component: WicketType2 },

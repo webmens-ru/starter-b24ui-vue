@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
-import { createOrder, createLegacyWicketMainMenu } from '../app/api/wicket'
+import { createOrder } from '../app/api/wicket'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
 const router = useRouter()
+const route = useRoute()
 const calc = useCalculation()
 
 const loading = ref<string | null>(null)
@@ -28,8 +29,15 @@ const productTypes = [
     modelId: '1',
     model: 'Ворота распашные',
     image: '/web/k3.jpg',
+    soon: true,
   },
 ]
+
+const currentOrderId = computed(() => {
+  const raw = Array.isArray(route.query.orderId) ? route.query.orderId[0] : route.query.orderId
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : null
+})
 
 function getImageSrc(path: string): string {
   const base = window._HOSTNAME_ || ''
@@ -37,31 +45,29 @@ function getImageSrc(path: string): string {
 }
 
 async function onProductTypeSelect(item: (typeof productTypes)[0]) {
-  if (loading.value) return
+  if (loading.value || item.soon) return
+  if (!currentOrderId.value) {
+    errorMessage.value = 'Не указан заказ для добавления изделия'
+    return
+  }
   loading.value = item.id
   errorMessage.value = null
 
   try {
-    const res = await createOrder()
-    calc.number.value = res.orderId
+    calc.orderId.value = currentOrderId.value
     calc.productType.value = item.productType
 
     calc.updateOrCreateBlock('Номер расчета', [
-      { name: 'Номер расчета', value: String(res.orderId) },
+      { name: 'Номер расчета', value: String(currentOrderId.value) },
     ])
     calc.updateOrCreateBlock('Тип изделия', [
       { name: 'Тип изделия', value: item.productType },
     ])
 
-    if ('modelId' in item && 'model' in item) {
-      await createLegacyWicketMainMenu({
-        orderId: res.orderId,
-        modelId: (item as { modelId: string }).modelId,
-        model: (item as { model: string }).model,
-      })
-    }
-
-    await router.push(item.route)
+    await router.push({
+      path: item.route,
+      query: { orderId: String(currentOrderId.value) },
+    })
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании расчёта'
   } finally {
@@ -69,8 +75,24 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   calc.reset()
+  if (currentOrderId.value) {
+    calc.orderId.value = currentOrderId.value
+    return
+  }
+
+  loading.value = 'order'
+  errorMessage.value = null
+  try {
+    const order = await createOrder()
+    calc.orderId.value = order.orderId
+    await router.push({ name: 'order-items', params: { orderId: order.orderId } })
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'
+  } finally {
+    loading.value = null
+  }
 })
 </script>
 
@@ -82,7 +104,9 @@ onMounted(() => {
           <B24Button
             label="Назад"
             color="air-secondary"
-            @click="router.push('/')"
+            @click="currentOrderId
+              ? router.push({ name: 'order-items', params: { orderId: currentOrderId } })
+              : router.push('/')"
           />
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
             Выберите тип изделия
@@ -93,6 +117,7 @@ onMounted(() => {
         <div class="flex-1 overflow-y-auto p-4">
           <div
             v-if="errorMessage"
+            role="alert"
             class="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200"
           >
             {{ errorMessage }}
@@ -107,10 +132,11 @@ onMounted(() => {
               <button
                 type="button"
                 class="text-left bg-transparent border-none text-base font-medium text-air-primary hover:underline focus:outline-none focus:ring-2 focus:ring-air-primary/50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!!loading"
+                :disabled="!!loading || item.soon"
                 @click="onProductTypeSelect(item)"
               >
                 {{ item.label }}
+                <span v-if="item.soon" class="ml-1 text-xs text-amber-700">Скоро</span>
               </button>
               <div
                 class="mt-2 w-full max-w-[200px] rounded border border-gray-200 overflow-hidden transition-shadow group-hover:shadow-md group-hover:border-gray-300"

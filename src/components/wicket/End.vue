@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, inject, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { finalCalculate, deleteCalculation, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
+import { finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
+import { deleteOrderItem, listOrderItems } from '../../app/api/orderItems'
 import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
 
 const emit = defineEmits<{
@@ -10,14 +12,18 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 const wicketRoute = inject(WICKET_ROUTE_KEY)
+const router = useRouter()
 
-const orderViewHref = computed(() => {
+const canOpenOrderItems = computed(() => {
   const orderId = Number(calc.number.value)
-  return orderId > 0 ? `/orders/view?id=${orderId}` : ''
+  return Number.isInteger(orderId) && orderId > 0
 })
 
-function goToOrderView() {
-  if (orderViewHref.value) window.location.href = orderViewHref.value
+async function goToOrderItems(): Promise<void> {
+  const orderId = Number(calc.number.value)
+  if (canOpenOrderItems.value) {
+    await router.push({ name: 'order-items', params: { orderId } })
+  }
 }
 
 // ─── Модальное окно подтверждения удаления ────────────────────────────────────
@@ -135,6 +141,7 @@ async function handleCalculate() {
     })
     applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
     await persistWizardProgress()
+    await goToOrderItems()
   } catch (e) {
     console.error('finalCalculate:', e)
     openErrModal('Произошла ошибка при выполнении расчёта.')
@@ -149,10 +156,21 @@ const deleting = ref(false)
 async function confirmDelete() {
   deleting.value = true
   try {
-    await deleteCalculation(calc.getCurrentItemContext())
-    window.location.href = '/orders'
+    const context = calc.getCurrentItemContext()
+    const composition = await listOrderItems(context.orderId)
+    const item = composition.items.find(candidate => candidate.id === context.orderItemId)
+    if (!item) throw new Error('Позиция заказа не найдена')
+    if (!item.allowedActions.includes('order_item.delete')) {
+      throw new Error('Удаление позиции сейчас недоступно')
+    }
+    await deleteOrderItem({
+      orderId: context.orderId,
+      orderItemId: context.orderItemId,
+      lockVersion: item.lockVersion,
+    })
+    await goToOrderItems()
   } catch (e) {
-    console.error('deleteCalculation:', e)
+    console.error('deleteOrderItem:', e)
     showDeleteModal.value = false
     openErrModal('Произошла ошибка при удалении расчёта.')
   } finally {
@@ -209,8 +227,8 @@ onMounted(async () => {
       <B24Button
         label="К заказу"
         color="air-secondary"
-        :disabled="!orderViewHref"
-        @click="goToOrderView"
+        :disabled="!canOpenOrderItems"
+        @click="goToOrderItems"
       />
     </div>
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadLegacyWicketData, createOrder, createLegacyWicketMainMenu, getAddonList } from '../../app/api/wicket'
+import { loadWicketData, getAddonList } from '../../app/api/wicket'
+import { listOrderItems, type OrderItemContext } from '../../app/api/orderItems'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
@@ -27,12 +28,13 @@ provide(WICKET_ROUTE_KEY, props.route)
 const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi, reset } = calc
 
 const route = useRoute()
-/** modelId из _PARAMS_, из пути /wicket/typeN или '1' по умолчанию */
+const router = useRouter()
+/** modelId из пути /wicket/typeN, затем из _PARAMS_ или '1' по умолчанию. */
 const resolvedModelId = (): string => {
-  const fromParams = window._PARAMS_?.placementOptions?.modelId
-  if (fromParams) return String(fromParams)
   const m = route.path.match(/\/wicket\/type(\d+)$/)
-  return m ? m[1] : '1'
+  if (m) return m[1]
+  const fromParams = window._PARAMS_?.placementOptions?.modelId
+  return fromParams ? String(fromParams) : '1'
 }
 calc.modelId.value = resolvedModelId()
 
@@ -47,35 +49,63 @@ function onResize() {
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => { windowWidth.value = window.innerWidth }, 100)
 }
+function positiveInteger(value: unknown): number | null {
+  const normalized = Array.isArray(value) ? value[0] : value
+  const number = Number(normalized)
+  return Number.isInteger(number) && number > 0 ? number : null
+}
+
+async function resolveItemContext(): Promise<OrderItemContext> {
+  const routeOrderId = positiveInteger(route.query.orderId)
+  const routeOrderItemId = positiveInteger(route.query.orderItemId)
+
+  if (routeOrderId && routeOrderItemId) {
+    return { orderId: routeOrderId, orderItemId: routeOrderItemId, modelId: resolvedModelId() }
+  }
+
+  const legacyOrderId = routeOrderId
+    ?? positiveInteger(window._PARAMS_?.placementOptions?.id)
+  if (!legacyOrderId) throw new Error('Не указан заказ и позиция для открытия конфигуратора.')
+
+  const list = await listOrderItems(legacyOrderId)
+  if (list.items.length !== 1) {
+    throw new Error('Не удалось однозначно определить позицию старого заказа.')
+  }
+  const item = list.items[0]!
+  if (item.productType !== 'wicket') {
+    throw new Error('Позиция старого заказа не является калиткой.')
+  }
+  return { orderId: legacyOrderId, orderItemId: item.id, modelId: item.modelId }
+}
+
+async function canonicalizeItemUrl(context: OrderItemContext): Promise<void> {
+  if (
+    String(route.query.orderId ?? '') === String(context.orderId)
+    && String(route.query.orderItemId ?? '') === String(context.orderItemId)
+    && route.path === `/wicket/type${context.modelId}`
+  ) return
+
+  await router.replace({
+    path: `/wicket/type${context.modelId}`,
+    query: { orderId: String(context.orderId), orderItemId: String(context.orderItemId) },
+  })
+}
+
 async function initCalculation() {
-  const placementId = window._PARAMS_?.placementOptions?.id
-  const existingOrderId = calc.number.value ? Number(calc.number.value) : null
-  calc.modelId.value = resolvedModelId()
+  reset()
   try {
+    const context = await resolveItemContext()
+    calc.orderId.value = context.orderId
+    calc.orderItemId.value = context.orderItemId
+    calc.modelId.value = context.modelId
+    await canonicalizeItemUrl(context)
     await loadAddonAvailability()
-    if (placementId) {
-      const orderId = Number(placementId)
-      const apiData = await loadLegacyWicketData(calc.modelId.value, orderId)
-      loadFromApi(apiData)
-      calc.number.value = orderId
-      switchTo(calc.activePage.value)
-    } else if (existingOrderId) {
-      const apiData = await loadLegacyWicketData(calc.modelId.value, existingOrderId)
-      loadFromApi(apiData)
-      switchTo(calc.activePage.value)
-    } else {
-      /** Новый заказ: сброс singleton (иначе остаются activePage/visitedPages с прошлого расчёта / другого типа). */
-      reset()
-      calc.modelId.value = resolvedModelId()
-      const res = await createOrder()
-      calc.number.value = res.orderId
-      await createLegacyWicketMainMenu({
-        orderId: res.orderId,
-        modelId: calc.modelId.value,
-        model: `Калитка Тип ${calc.modelId.value}`,
-      })
-      switchTo('page1')
-    }
+    const apiData = await loadWicketData(context)
+    loadFromApi(apiData)
+    calc.orderId.value = context.orderId
+    calc.orderItemId.value = context.orderItemId
+    calc.modelId.value = context.modelId
+    switchTo(calc.activePage.value)
   } catch (e: unknown) {
     loadError.value = e instanceof Error ? e.message : 'Ошибка загрузки расчёта'
     showLoadErrorModal.value = true
@@ -230,6 +260,8 @@ function goBack() {
     <!-- Loading overlay -->
     <div
       v-if="loadPending"
+      role="status"
+      aria-live="polite"
       class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-100/90"
     >
       <span class="text-gray-600">Загрузка расчёта…</span>
