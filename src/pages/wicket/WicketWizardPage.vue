@@ -43,6 +43,15 @@ const loadError = ref<string | null>(null)
 const showLoadErrorModal = ref(false)
 const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
+const currentComponent = shallowRef<Component | null>(null)
+const routeContextKey = computed(() => [
+  route.path,
+  String(route.query.orderId ?? ''),
+  String(route.query.orderItemId ?? ''),
+  resolvedModelId(),
+].join('|'))
+let mounted = false
+let initGeneration = 0
 
 let resizeTimer: ReturnType<typeof setTimeout>
 function onResize() {
@@ -91,34 +100,58 @@ async function canonicalizeItemUrl(context: OrderItemContext): Promise<void> {
   })
 }
 
-async function initCalculation() {
+function isCurrentInitialization(generation: number): boolean {
+  return mounted && generation === initGeneration
+}
+
+async function initCalculation(): Promise<void> {
+  const generation = ++initGeneration
+  loadPending.value = true
+  loadError.value = null
+  showLoadErrorModal.value = false
+  currentComponent.value = null
   reset()
   try {
     const context = await resolveItemContext()
-    calc.orderId.value = context.orderId
-    calc.orderItemId.value = context.orderItemId
-    calc.modelId.value = context.modelId
+    if (!isCurrentInitialization(generation)) return
     await canonicalizeItemUrl(context)
-    await loadAddonAvailability()
-    const apiData = await loadWicketData(context)
+    if (!isCurrentInitialization(generation)) return
+    const [availability, apiData] = await Promise.all([
+      fetchAddonAvailability(Number(context.modelId)),
+      loadWicketData(context),
+    ])
+    if (!isCurrentInitialization(generation)) return
+    calc.addonItems.value = availability.items
+    calc.availableSections.value = availability.sections
     loadFromApi(apiData)
     calc.orderId.value = context.orderId
     calc.orderItemId.value = context.orderItemId
     calc.modelId.value = context.modelId
     switchTo(calc.activePage.value)
   } catch (e: unknown) {
+    if (!isCurrentInitialization(generation)) return
     loadError.value = e instanceof Error ? e.message : 'Ошибка загрузки расчёта'
     showLoadErrorModal.value = true
   } finally {
-    loadPending.value = false
+    if (isCurrentInitialization(generation)) loadPending.value = false
   }
 }
 
 onMounted(() => {
+  mounted = true
   window.addEventListener('resize', onResize)
-  initCalculation()
+  void initCalculation()
 })
-onUnmounted(() => { window.removeEventListener('resize', onResize); clearTimeout(resizeTimer) })
+onUnmounted(() => {
+  mounted = false
+  initGeneration += 1
+  window.removeEventListener('resize', onResize)
+  clearTimeout(resizeTimer)
+})
+
+watch(routeContextKey, () => {
+  if (mounted) void initCalculation()
+})
 
 const showWarningModal = ref(false)
 const showSummary = ref(windowWidth.value >= 1024)
@@ -130,22 +163,29 @@ watch(isMobile, (mobile) => {
   showSummary.value = !mobile
 })
 
-async function loadAddonAvailability() {
-  const modelId = Number(calc.modelId.value)
+type AddonKey = 'doorCloser' | 'bumper' | 'skud'
+type AddonItem = Awaited<ReturnType<typeof getAddonList>>['items'][number]
+
+async function fetchAddonAvailability(modelId: number): Promise<{
+  items: Record<AddonKey, AddonItem[]>
+  sections: string[]
+}> {
   const map: Array<['doorCloser' | 'bumper' | 'skud', 'door-closer' | 'bumper' | 'skud', string]> = [
     ['doorCloser', 'door-closer', 'page_door_closer'],
     ['bumper', 'bumper', 'page_bumper'],
     ['skud', 'skud', 'page_skud'],
   ]
-  const avail: string[] = []
+  const items: Record<AddonKey, AddonItem[]> = { doorCloser: [], bumper: [], skud: [] }
+  const sections: string[] = []
   await Promise.all(map.map(async ([key, section, page]) => {
     try {
       const res = await getAddonList(section, modelId)
-      calc.addonItems.value[key] = res.items
-      if (res.items.length) avail.push(page)
+      items[key] = res.items
+      if (res.items.length) sections.push(page)
     } catch (e) { console.warn('getAddonList', section, e) }
   }))
-  calc.availableSections.value = avail
+
+  return { items, sections }
 }
 
 const sectionState = computed(() => ({
@@ -176,8 +216,6 @@ const incompletePages = computed(() =>
     .filter(([, v]) => !v.valid)
     .map(([page]) => page),
 )
-
-const currentComponent = shallowRef<Component | null>(null)
 
 function getNavState(): WicketSharedNavState {
   return {

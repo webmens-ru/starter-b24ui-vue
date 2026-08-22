@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
 import { createOrderItem } from '../../app/api/orderItems'
@@ -15,6 +15,8 @@ const errorMessage = ref<string | null>(null)
 const modalOpen = ref(false)
 const modalImages = ref<string[]>([])
 const modalIndex = ref(0)
+let mounted = true
+let requestGeneration = 0
 
 const models = [
   {
@@ -71,6 +73,10 @@ const currentOrderId = computed(() => {
   return Number.isInteger(value) && value > 0 ? value : null
 })
 
+function isCurrentRequest(generation: number, orderId: number): boolean {
+  return mounted && generation === requestGeneration && currentOrderId.value === orderId
+}
+
 function getImageSrc(path: string): string {
   const base = window._HOSTNAME_ || ''
   return base ? `${base}${path}` : path
@@ -114,18 +120,21 @@ async function onModelSelect(item: (typeof models)[0]) {
     errorMessage.value = 'Не указан заказ для новой позиции'
     return
   }
+  const selectedOrderId = currentOrderId.value
+  const generation = ++requestGeneration
   loading.value = item.id
   errorMessage.value = null
 
   try {
     const response = await createOrderItem({
-      orderId: currentOrderId.value,
+      orderId: selectedOrderId,
       productType: 'wicket',
       modelId: item.id,
       model: item.model,
     })
+    if (!isCurrentRequest(generation, selectedOrderId)) return
 
-    calc.orderId.value = currentOrderId.value
+    calc.orderId.value = selectedOrderId
     calc.orderItemId.value = response.item.id
     calc.modelId.value = item.id
     calc.model.value = item.model
@@ -135,16 +144,30 @@ async function onModelSelect(item: (typeof models)[0]) {
     await router.push({
       path: item.route,
       query: {
-        orderId: String(currentOrderId.value),
+        orderId: String(selectedOrderId),
         orderItemId: String(response.item.id),
       },
     })
   } catch (e) {
+    if (!isCurrentRequest(generation, selectedOrderId)) return
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при выполнении запроса'
   } finally {
-    loading.value = null
+    if (isCurrentRequest(generation, selectedOrderId)) loading.value = null
   }
 }
+
+watch(currentOrderId, (nextOrderId) => {
+  requestGeneration += 1
+  loading.value = null
+  errorMessage.value = null
+  calc.reset()
+  if (nextOrderId) calc.orderId.value = nextOrderId
+})
+
+onUnmounted(() => {
+  mounted = false
+  requestGeneration += 1
+})
 </script>
 
 <template>

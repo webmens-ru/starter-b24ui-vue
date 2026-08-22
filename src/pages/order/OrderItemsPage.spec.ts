@@ -61,6 +61,7 @@ function makeItem(id: number, overrides: Partial<OrderItemSummary> = {}): OrderI
       'order_item.copy',
       'order_item.delete',
       'order_item.transition',
+      'order_item.reorder',
     ],
     ...overrides,
   }
@@ -281,6 +282,22 @@ describe('OrderItemsPage', () => {
     await wrapper.get('[aria-label="Удалить позицию 8"]').trigger('click')
     await flushPromises()
     expect(mocks.deleteOrderItem).toHaveBeenCalledWith({ orderId: 42, orderItemId: 8, lockVersion: 1 })
+  })
+
+  it('hides every reorder control when any active item lacks server reorder permission', async () => {
+    mocks.listOrderItems.mockResolvedValueOnce({
+      items: [first, makeItem(8, {
+        status: { id: 6, code: 'cancelled', name: 'Отменено', color: '#dc3545' },
+        allowedActions: ['order_item.copy'],
+      })],
+      orderTotals: initial.orderTotals,
+    })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('[aria-label="Переместить позицию 7 вниз"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Переместить позицию 8 вверх"]').exists()).toBe(false)
+    expect(mocks.reorderOrderItems).not.toHaveBeenCalled()
   })
 
   it('has stable empty and load-error states', async () => {

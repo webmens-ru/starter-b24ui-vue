@@ -1,11 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 
 import AddProduct from './AddProduct.vue'
+import { useCalculation } from '../composables/useCalculation'
 
 const mocks = vi.hoisted(() => ({
-  route: { query: {} as Record<string, string> },
+  route: { query: {} as Record<string, string> } as { query: Record<string, string> },
   push: vi.fn(),
   createOrder: vi.fn(),
   createOrderItem: vi.fn(),
@@ -37,7 +39,7 @@ describe('AddProduct order flow', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    mocks.route.query = {}
+    mocks.route = reactive({ query: {} })
     mocks.createOrder.mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 })
     mocks.createOrderItem.mockResolvedValue({
       item: { id: 7, orderId: 42 },
@@ -59,6 +61,41 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось создать заказ')
+  })
+
+  it('ignores a create-order response that arrives after unmount', async () => {
+    let resolveOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
+      resolveOrder = resolve
+    }))
+    const wrapper = mountPage()
+    await Promise.resolve()
+    wrapper.unmount()
+    const calc = useCalculation()
+    calc.orderId.value = 99
+
+    resolveOrder({ orderId: 42, companyId: null, managerId: 1 })
+    await flushPromises()
+
+    expect(calc.orderId.value).toBe(99)
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it('ignores a create-order response after navigation supplies another order', async () => {
+    let resolveOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
+      resolveOrder = resolve
+    }))
+    mountPage()
+    await Promise.resolve()
+
+    mocks.route.query.orderId = '43'
+    await flushPromises()
+    resolveOrder({ orderId: 42, companyId: null, managerId: 1 })
+    await flushPromises()
+
+    expect(useCalculation().orderId.value).toBe(43)
+    expect(mocks.push).not.toHaveBeenCalled()
   })
 
   it('keeps an existing order while choosing a wicket product', async () => {

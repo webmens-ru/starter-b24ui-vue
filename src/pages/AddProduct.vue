@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
 import { createOrder } from '../app/api/wicket'
@@ -12,6 +12,8 @@ const calc = useCalculation()
 
 const loading = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
+let mounted = false
+let lifecycleGeneration = 0
 
 const productTypes = [
   {
@@ -42,6 +44,10 @@ const currentOrderId = computed(() => {
 function getImageSrc(path: string): string {
   const base = window._HOSTNAME_ || ''
   return base ? `${base}${path}` : path
+}
+
+function isCurrentLifecycle(generation: number): boolean {
+  return mounted && generation === lifecycleGeneration
 }
 
 async function onProductTypeSelect(item: (typeof productTypes)[0]) {
@@ -76,6 +82,8 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
 }
 
 onMounted(async () => {
+  mounted = true
+  const generation = ++lifecycleGeneration
   calc.reset()
   if (currentOrderId.value) {
     calc.orderId.value = currentOrderId.value
@@ -86,13 +94,29 @@ onMounted(async () => {
   errorMessage.value = null
   try {
     const order = await createOrder()
+    if (!isCurrentLifecycle(generation)) return
     calc.orderId.value = order.orderId
     await router.push({ name: 'order-items', params: { orderId: order.orderId } })
   } catch (e) {
+    if (!isCurrentLifecycle(generation)) return
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'
   } finally {
-    loading.value = null
+    if (isCurrentLifecycle(generation)) loading.value = null
   }
+})
+
+watch(currentOrderId, (nextOrderId) => {
+  if (!mounted) return
+  lifecycleGeneration += 1
+  loading.value = null
+  errorMessage.value = null
+  calc.reset()
+  if (nextOrderId) calc.orderId.value = nextOrderId
+})
+
+onUnmounted(() => {
+  mounted = false
+  lifecycleGeneration += 1
 })
 </script>
 

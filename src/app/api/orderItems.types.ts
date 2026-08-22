@@ -7,6 +7,7 @@ export type OrderItemAllowedAction =
   | 'order_item.delete'
   | 'order_item.copy'
   | 'order_item.transition'
+  | 'order_item.reorder'
 
 export interface OrderItemStatus {
   id: number

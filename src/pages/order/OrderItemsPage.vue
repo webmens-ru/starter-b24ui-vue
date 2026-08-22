@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
@@ -32,6 +32,11 @@ let routeGeneration = 0
 
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
 const orderId = computed(() => Number(orderIdParam.value))
+const canReorder = computed(() => {
+  const items = result.value?.items ?? []
+  return items.length > 1
+    && items.every(item => item.allowedActions.includes('order_item.reorder'))
+})
 
 function validOrderId(): boolean {
   return Number.isInteger(orderId.value) && orderId.value > 0
@@ -182,7 +187,7 @@ async function transitionItem(item: OrderItemSummary, toStatus: string): Promise
 }
 
 async function moveItem(index: number, direction: -1 | 1): Promise<void> {
-  if (!result.value || staleView.value) return
+  if (!result.value || staleView.value || !canReorder.value) return
   const generation = routeGeneration
   const mutationOrderId = orderId.value
   const targetIndex = index + direction
@@ -214,6 +219,11 @@ function addProduct(): void {
 
 onMounted(() => {
   void loadItems()
+})
+
+onUnmounted(() => {
+  routeGeneration += 1
+  latestLoadId += 1
 })
 
 watch(orderIdParam, () => {
@@ -308,7 +318,7 @@ watch(orderIdParam, () => {
                     @delete="deleteItem"
                     @transition="transitionItem"
                   />
-                  <div class="flex gap-2 sm:flex-col">
+                  <div v-if="canReorder" class="flex gap-2 sm:flex-col">
                     <button
                       type="button"
                       class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"

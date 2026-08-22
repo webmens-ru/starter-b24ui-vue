@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, shallowMount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent } from 'vue'
+import { defineComponent, reactive } from 'vue'
 
 import type { OrderItemSummary } from '../../app/api/orderItems'
 import { useCalculation } from '../../composables/useCalculation'
@@ -10,7 +10,10 @@ import page from './WicketWizardPage.vue?raw'
 import type { WicketRouteDefinition } from './wicketRoute'
 
 const mocks = vi.hoisted(() => ({
-  route: { path: '/wicket/type1', query: {} as Record<string, string> },
+  route: { path: '/wicket/type1', query: {} as Record<string, string> } as {
+    path: string
+    query: Record<string, string>
+  },
   replace: vi.fn(),
   loadWicketData: vi.fn(),
   getAddonList: vi.fn(),
@@ -90,8 +93,7 @@ describe('WicketWizardPage mobile summary', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    mocks.route.path = '/wicket/type1'
-    mocks.route.query = {}
+    mocks.route = reactive({ path: '/wicket/type1', query: {} })
     mocks.loadWicketData.mockResolvedValue({
       orderId: 42,
       orderItemId: 7,
@@ -193,5 +195,151 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.orderId.value).toBeNull()
     expect(calc.orderItemId.value).toBeNull()
     expect(calc.widthProyema.value).toBe('')
+  })
+
+  it('reinitializes on item-context change and ignores the previous load response', async () => {
+    let resolveOld!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', orderItemId: '7' }
+    mocks.loadWicketData.mockImplementation((context: { orderId: number }) => {
+      if (context.orderId === 42) {
+        return new Promise(resolve => {
+          resolveOld = resolve
+        })
+      }
+      return Promise.resolve({
+        orderId: 43,
+        orderItemId: 8,
+        modelId: '1',
+        activePage: 'page1',
+        visitedPages: ['page1'],
+        widthProyema: '430',
+      })
+    })
+    mountPage()
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(1))
+
+    mocks.route.query.orderId = '43'
+    mocks.route.query.orderItemId = '8'
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(2))
+    await flushPromises()
+
+    resolveOld({
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '1',
+      activePage: 'page1',
+      visitedPages: ['page1'],
+      widthProyema: '420',
+    })
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.orderId.value).toBe(43)
+    expect(calc.orderItemId.value).toBe(8)
+    expect(calc.widthProyema.value).toBe('430')
+  })
+
+  it('reinitializes when the model route changes and ignores the previous model load', async () => {
+    let resolveOld!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', orderItemId: '7' }
+    mocks.loadWicketData.mockImplementation((context: { modelId: string }) => {
+      if (context.modelId === '1') {
+        return new Promise(resolve => {
+          resolveOld = resolve
+        })
+      }
+      return Promise.resolve({
+        orderId: 42,
+        orderItemId: 7,
+        modelId: '2',
+        activePage: 'page1',
+        visitedPages: ['page1'],
+        widthProyema: '520',
+      })
+    })
+    mountPage()
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(1))
+
+    mocks.route.path = '/wicket/type2'
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledWith({
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '2',
+    }))
+    await flushPromises()
+
+    resolveOld({
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '1',
+      activePage: 'page1',
+      visitedPages: ['page1'],
+      widthProyema: '420',
+    })
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.modelId.value).toBe('2')
+    expect(calc.widthProyema.value).toBe('520')
+  })
+
+  it('ignores a stale legacy list response after explicit item navigation', async () => {
+    let resolveLegacy!: (value: { items: OrderItemSummary[], orderTotals: { priceRetail: null, priceDealer: null } }) => void
+    mocks.route.query = { orderId: '42' }
+    mocks.listOrderItems.mockImplementationOnce(() => new Promise(resolve => {
+      resolveLegacy = resolve
+    }))
+    mountPage()
+    await vi.waitFor(() => expect(mocks.listOrderItems).toHaveBeenCalledWith(42))
+
+    mocks.route.query.orderId = '43'
+    mocks.route.query.orderItemId = '8'
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledWith({
+      orderId: 43,
+      orderItemId: 8,
+      modelId: '1',
+    }))
+
+    resolveLegacy({
+      items: [makeItem()],
+      orderTotals: { priceRetail: null, priceDealer: null },
+    })
+    await flushPromises()
+
+    expect(mocks.replace).not.toHaveBeenCalledWith({
+      path: '/wicket/type1',
+      query: { orderId: '42', orderItemId: '7' },
+    })
+    expect(useCalculation().orderId.value).toBe(43)
+    expect(useCalculation().orderItemId.value).toBe(8)
+  })
+
+  it('does not apply a load response after unmount', async () => {
+    let resolveLoad!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', orderItemId: '7' }
+    mocks.loadWicketData.mockImplementationOnce(() => new Promise(resolve => {
+      resolveLoad = resolve
+    }))
+    const wrapper = mountPage()
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
+    const calc = useCalculation()
+    calc.orderId.value = 99
+    calc.orderItemId.value = 15
+    calc.widthProyema.value = '999'
+
+    resolveLoad({
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '1',
+      activePage: 'page1',
+      visitedPages: ['page1'],
+      widthProyema: '420',
+    })
+    await flushPromises()
+
+    expect(calc.orderId.value).toBe(99)
+    expect(calc.orderItemId.value).toBe(15)
+    expect(calc.widthProyema.value).toBe('999')
   })
 })
