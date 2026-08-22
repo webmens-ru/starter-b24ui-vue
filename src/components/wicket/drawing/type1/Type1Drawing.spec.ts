@@ -48,7 +48,7 @@ describe('Type1Drawing', () => {
   it('рисует отдельный адаптивный SVG и заполнение улицы перед рамой', () => {
     const w = mount(Type1Drawing)
     expect(w.get('[data-testid="type1-drawing-svg"]').classes()).toContain('max-h-[650px]')
-    expect(w.get('[data-testid="type1-frame"]').exists()).toBe(true)
+    expect(w.find('[data-testid="type1-frame"]').exists()).toBe(true)
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
   })
 

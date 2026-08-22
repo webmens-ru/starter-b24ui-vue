@@ -36,6 +36,9 @@ if (import.meta.env.DEV) {
     placement: 'DEFAULT',
     placementOptions: {
       type: 'openApplication',
+      title: '',
+      entity: '',
+      viewMode: 'view' as TPlacementOptions['viewMode'],
       path: orderId ? `/wicket/type${modelId}` : '/add-product',
       updateOnCloseSlider: true,
       ...(orderId ? { id: orderId, modelId } : {}),
