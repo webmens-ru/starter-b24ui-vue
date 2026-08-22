@@ -18,20 +18,46 @@ const emit = defineEmits<{
   (event: 'edit', item: OrderItemSummary): void
   (event: 'copy', item: OrderItemSummary): void
   (event: 'updateQuantity', item: OrderItemSummary, quantity: number): void
+  (event: 'updateAdjustment', item: OrderItemSummary, adjustment: {
+    adjustmentType: 'none' | 'discount' | 'markup'
+    adjustmentValue: number
+    adjustmentUnit: 'percent' | 'fixed'
+  }): void
+  (event: 'updateDeadline', item: OrderItemSummary, plannedCompletionAt: string | null): void
+  (event: 'recalculate', item: OrderItemSummary): void
   (event: 'delete', item: OrderItemSummary): void
   (event: 'transition', item: OrderItemSummary, toStatus: string): void
 }>()
 
 const quantity = ref(props.item.quantity)
+const adjustmentType = ref(props.item.adjustmentType ?? 'none')
+const adjustmentValue = ref(props.item.adjustmentValue ?? 0)
+const adjustmentUnit = ref(props.item.adjustmentUnit ?? 'percent')
+const plannedCompletionAt = ref(props.item.plannedCompletionAt?.slice(0, 10) ?? '')
 const targetStatus = ref('')
 
 watch(() => props.item.quantity, value => {
   quantity.value = value
 })
 
+watch(() => [
+  props.item.adjustmentType,
+  props.item.adjustmentValue,
+  props.item.adjustmentUnit,
+  props.item.plannedCompletionAt,
+] as const, ([type, value, unit, deadline]) => {
+  adjustmentType.value = type ?? 'none'
+  adjustmentValue.value = value ?? 0
+  adjustmentUnit.value = unit ?? 'percent'
+  plannedCompletionAt.value = deadline?.slice(0, 10) ?? ''
+})
+
 const statusName = computed(() => props.item.status.name || props.item.status.code || 'Без статуса')
 
 const adjustmentLabel = computed(() => {
+  if (props.item.adjustmentType === null || props.item.adjustmentValue === null || props.item.adjustmentUnit === null) {
+    return 'Недоступно'
+  }
   if (props.item.adjustmentType === 'none') return 'Без корректировки'
   const type = props.item.adjustmentType === 'discount' ? 'Скидка' : 'Наценка'
   const value = props.item.adjustmentUnit === 'percent'
@@ -54,6 +80,10 @@ function isAllowed(action: OrderItemAllowedAction): boolean {
   return !props.disabled && props.item.allowedActions.includes(action)
 }
 
+function hasAction(action: OrderItemAllowedAction): boolean {
+  return props.item.allowedActions.includes(action)
+}
+
 function emitQuantity(): void {
   const next = Number(quantity.value)
   if (!Number.isInteger(next) || next <= 0) {
@@ -68,6 +98,35 @@ function emitTransition(): void {
   if (next !== '' && isAllowed('order_item.transition')) {
     emit('transition', props.item, next)
   }
+}
+
+
+function emitAdjustment(): void {
+  const value = Number(adjustmentValue.value)
+  if (!Number.isFinite(value) || value < 0) {
+    adjustmentValue.value = props.item.adjustmentValue ?? 0
+    return
+  }
+  emit('updateAdjustment', props.item, {
+    adjustmentType: adjustmentType.value,
+    adjustmentValue: adjustmentType.value === 'none' ? 0 : value,
+    adjustmentUnit: adjustmentUnit.value,
+  })
+}
+
+function emitDeadline(): void {
+  emit('updateDeadline', props.item, plannedCompletionAt.value || null)
+}
+
+function transitionLabel(code: string): string {
+  return ({
+    draft: 'Вернуть в черновик',
+    approval: 'На согласование',
+    approved: 'Согласовать',
+    production: 'В производство',
+    ready: 'Готово',
+    cancelled: 'Отменить',
+  } as Record<string, string>)[code] ?? code
 }
 </script>
 
@@ -173,6 +232,81 @@ function emitTransition(): void {
       </div>
     </dl>
 
+    <div
+      v-if="hasAction('order_item.change_terms') || hasAction('order_item.change_deadline')"
+      class="mt-4 grid gap-3 border-t border-gray-100 pt-3 lg:grid-cols-2"
+    >
+      <div v-if="hasAction('order_item.change_terms')" class="flex flex-wrap items-end gap-2">
+        <label class="text-sm text-gray-600">
+          Тип
+          <select
+            v-model="adjustmentType"
+            :aria-label="`Тип корректировки позиции ${item.id}`"
+            :disabled="disabled"
+            class="block rounded border border-gray-300 px-2 py-1.5"
+          >
+            <option value="none">Без корректировки</option>
+            <option value="discount">Скидка</option>
+            <option value="markup">Наценка</option>
+          </select>
+        </label>
+        <label class="text-sm text-gray-600">
+          Значение
+          <input
+            v-model.number="adjustmentValue"
+            type="number"
+            min="0"
+            step="0.01"
+            :aria-label="`Значение корректировки позиции ${item.id}`"
+            :disabled="disabled || adjustmentType === 'none'"
+            class="block w-28 rounded border border-gray-300 px-2 py-1.5"
+          >
+        </label>
+        <label class="text-sm text-gray-600">
+          Единица
+          <select
+            v-model="adjustmentUnit"
+            :aria-label="`Единица корректировки позиции ${item.id}`"
+            :disabled="disabled || adjustmentType === 'none'"
+            class="block rounded border border-gray-300 px-2 py-1.5"
+          >
+            <option value="percent">%</option>
+            <option value="fixed">₽</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          class="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+          :aria-label="`Сохранить корректировку позиции ${item.id}`"
+          :disabled="disabled"
+          @click="emitAdjustment"
+        >
+          Сохранить
+        </button>
+      </div>
+      <div v-if="hasAction('order_item.change_deadline')" class="flex items-end gap-2">
+        <label class="text-sm text-gray-600">
+          Плановый срок
+          <input
+            v-model="plannedCompletionAt"
+            type="date"
+            :aria-label="`Плановый срок позиции ${item.id}`"
+            :disabled="disabled"
+            class="block rounded border border-gray-300 px-2 py-1.5"
+          >
+        </label>
+        <button
+          type="button"
+          class="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+          :aria-label="`Сохранить срок позиции ${item.id}`"
+          :disabled="disabled"
+          @click="emitDeadline"
+        >
+          Сохранить
+        </button>
+      </div>
+    </div>
+
     <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
       <button
         type="button"
@@ -182,6 +316,16 @@ function emitTransition(): void {
         @click="emit('edit', item)"
       >
         Редактировать
+      </button>
+      <button
+        v-if="hasAction('order_item.calculate')"
+        type="button"
+        class="rounded border border-blue-300 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-40"
+        :aria-label="`Пересчитать позицию ${item.id}`"
+        :disabled="disabled"
+        @click="emit('recalculate', item)"
+      >
+        Пересчитать
       </button>
       <button
         type="button"
@@ -204,15 +348,18 @@ function emitTransition(): void {
 
       <div class="flex min-w-[240px] flex-1 items-center gap-2 sm:ml-auto sm:max-w-md">
         <label :for="`target-status-${item.id}`" class="sr-only">Новый статус</label>
-        <input
+        <select
           :id="`target-status-${item.id}`"
           v-model="targetStatus"
-          type="text"
           class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
-          placeholder="Код нового статуса"
           :aria-label="`Новый статус позиции ${item.id}`"
-          :disabled="!isAllowed('order_item.transition')"
+          :disabled="!isAllowed('order_item.transition') || item.availableTransitions.length === 0"
         >
+          <option value="">Выберите статус</option>
+          <option v-for="code in item.availableTransitions" :key="code" :value="code">
+            {{ transitionLabel(code) }}
+          </option>
+        </select>
         <button
           type="button"
           class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"

@@ -4,15 +4,18 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
+  calculateOrderItem,
   copyOrderItem,
   deleteOrderItem,
   listOrderItems,
   reorderOrderItems,
   transitionOrderItem,
+  transitionOrder,
   updateOrderItem,
   type OrderItemListResponse,
   type OrderItemMutationResponse,
   type OrderItemSummary,
+  type UpdateOrderItemPayload,
 } from '../../app/api/orderItems'
 import OrderItemCard from '../../components/order/OrderItemCard.vue'
 import OrderTotals from '../../components/order/OrderTotals.vue'
@@ -25,6 +28,7 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const noticeMessage = ref<string | null>(null)
 const busyItemIds = ref<Set<number>>(new Set())
+const orderTransitionBusy = ref(false)
 const loadFailed = ref(false)
 const staleView = ref(false)
 let latestLoadId = 0
@@ -137,6 +141,35 @@ async function runLockedMutation(
   }
 }
 
+async function runReloadingItemAction(
+  item: OrderItemSummary,
+  operation: () => Promise<unknown>,
+): Promise<void> {
+  const generation = routeGeneration
+  const mutationOrderId = orderId.value
+  setBusy(item.id, true)
+  errorMessage.value = null
+  noticeMessage.value = null
+  try {
+    await operation()
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    const refreshResult = await loadItems()
+    if (refreshResult === 'failed' && isCurrentRoute(generation, mutationOrderId)) {
+      errorMessage.value = 'Действие выполнено, но состав заказа не удалось обновить'
+    }
+  } catch (error) {
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    if (isConflict(error)) {
+      noticeMessage.value = 'Позиция уже была изменена другим пользователем'
+      await loadItems({ preserveNotice: true })
+    } else {
+      errorMessage.value = mutationMessage(error)
+    }
+  } finally {
+    if (isCurrentRoute(generation, mutationOrderId)) setBusy(item.id, false)
+  }
+}
+
 function editItem(item: OrderItemSummary): void {
   const path = item.productType === 'wicket'
     ? `/wicket/type${item.modelId}`
@@ -157,6 +190,7 @@ async function copyItem(item: OrderItemSummary): Promise<void> {
   await runLockedMutation(item, () => copyOrderItem({
     orderId: orderId.value,
     orderItemId: item.id,
+    lockVersion: item.lockVersion,
   }), { reload: true })
 }
 
@@ -166,6 +200,39 @@ async function updateQuantity(item: OrderItemSummary, quantity: number): Promise
     orderItemId: item.id,
     lockVersion: item.lockVersion,
     quantity,
+  }))
+}
+
+async function updateAdjustment(
+  item: OrderItemSummary,
+  adjustment: Pick<
+    UpdateOrderItemPayload,
+    'adjustmentType' | 'adjustmentValue' | 'adjustmentUnit'
+  >,
+): Promise<void> {
+  await runLockedMutation(item, () => updateOrderItem({
+    orderId: orderId.value,
+    orderItemId: item.id,
+    lockVersion: item.lockVersion,
+    ...adjustment,
+  }))
+}
+
+async function updateDeadline(item: OrderItemSummary, plannedCompletionAt: string | null): Promise<void> {
+  await runLockedMutation(item, () => updateOrderItem({
+    orderId: orderId.value,
+    orderItemId: item.id,
+    lockVersion: item.lockVersion,
+    plannedCompletionAt,
+  }))
+}
+
+async function recalculateItem(item: OrderItemSummary): Promise<void> {
+  await runReloadingItemAction(item, () => calculateOrderItem({
+    orderId: orderId.value,
+    orderItemId: item.id,
+    modelId: item.modelId,
+    lockVersion: item.lockVersion,
   }))
 }
 
@@ -205,7 +272,13 @@ async function moveItem(index: number, direction: -1 | 1): Promise<void> {
       orderId: mutationOrderId,
       itemIds: reordered.map(item => item.id),
     })
-    if (isCurrentRoute(generation, mutationOrderId)) result.value = response
+    if (isCurrentRoute(generation, mutationOrderId) && result.value) {
+      result.value = {
+        ...result.value,
+        items: response.items,
+        orderTotals: response.orderTotals,
+      }
+    }
   } catch (error) {
     if (isCurrentRoute(generation, mutationOrderId)) errorMessage.value = mutationMessage(error)
   } finally {
@@ -215,6 +288,38 @@ async function moveItem(index: number, direction: -1 | 1): Promise<void> {
 
 function addProduct(): void {
   void router.push({ path: '/add-product', query: { orderId: orderIdParam.value } })
+}
+
+async function transitionOrderStatus(toStatus: string): Promise<void> {
+  if (!result.value?.orderWorkflow.availableTransitions.includes(toStatus)) return
+  const generation = routeGeneration
+  const mutationOrderId = orderId.value
+  orderTransitionBusy.value = true
+  errorMessage.value = null
+  noticeMessage.value = null
+  try {
+    await transitionOrder({ orderId: mutationOrderId, toStatus })
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    const refreshResult = await loadItems()
+    if (refreshResult === 'failed' && isCurrentRoute(generation, mutationOrderId)) {
+      errorMessage.value = 'Статус изменён, но состав заказа не удалось обновить'
+    }
+  } catch (error) {
+    if (isCurrentRoute(generation, mutationOrderId)) errorMessage.value = mutationMessage(error)
+  } finally {
+    if (isCurrentRoute(generation, mutationOrderId)) orderTransitionBusy.value = false
+  }
+}
+
+function orderTransitionLabel(code: string): string {
+  return ({
+    submitted_to_order: 'Оформить заказ',
+    order_acceptance: 'Принять заказ',
+    production: 'Передать в производство',
+    ready: 'Заказ готов',
+    shipped: 'Заказ отгружен',
+    cancelled: 'Отменить заказ',
+  } as Record<string, string>)[code] ?? code
 }
 
 onMounted(() => {
@@ -234,6 +339,7 @@ watch(orderIdParam, () => {
   loadFailed.value = false
   staleView.value = false
   busyItemIds.value = new Set()
+  orderTransitionBusy.value = false
   void loadItems()
 })
 </script>
@@ -248,6 +354,7 @@ watch(orderIdParam, () => {
             <p class="text-sm text-gray-500">Состав заказа</p>
           </div>
           <button
+            v-if="result?.orderWorkflow.canCreateItem"
             type="button"
             class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             :aria-label="`Добавить изделие в заказ ${orderIdParam}`"
@@ -315,6 +422,9 @@ watch(orderIdParam, () => {
                     @edit="editItem"
                     @copy="copyItem"
                     @update-quantity="updateQuantity"
+                    @update-adjustment="updateAdjustment"
+                    @update-deadline="updateDeadline"
+                    @recalculate="recalculateItem"
                     @delete="deleteItem"
                     @transition="transitionItem"
                   />
@@ -342,6 +452,23 @@ watch(orderIdParam, () => {
               </div>
 
               <OrderTotals :totals="result.orderTotals" />
+
+              <div
+                v-if="result.orderWorkflow.availableTransitions.length > 0"
+                class="flex flex-wrap justify-end gap-2"
+              >
+                <button
+                  v-for="target in result.orderWorkflow.availableTransitions"
+                  :key="target"
+                  type="button"
+                  class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+                  :aria-label="`Перевести заказ в статус ${target}`"
+                  :disabled="staleView || orderTransitionBusy"
+                  @click="transitionOrderStatus(target)"
+                >
+                  {{ orderTransitionLabel(target) }}
+                </button>
+              </div>
             </template>
           </div>
         </main>

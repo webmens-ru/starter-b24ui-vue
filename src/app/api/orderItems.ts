@@ -1,21 +1,29 @@
 import api from '.'
 import type {
   CopyOrderItemPayload,
+  CalculateOrderItemPayload,
   CreateOrderItemPayload,
   DeleteOrderItemPayload,
   OrderItemListResponse,
+  OrderItemCalculationResponse,
+  OrderItemCollectionMutationResponse,
   OrderItemMutationResponse,
   ReorderOrderItemsPayload,
   TransitionOrderItemPayload,
+  TransitionOrderPayload,
+  TransitionOrderResponse,
   UpdateOrderItemPayload,
 } from './orderItems.types'
 
 export type {
   CopyOrderItemPayload,
+  CalculateOrderItemPayload,
   CreateOrderItemPayload,
   DeleteOrderItemPayload,
   OrderItemAllowedAction,
   OrderItemContext,
+  OrderItemCalculationResponse,
+  OrderItemCollectionMutationResponse,
   OrderItemListResponse,
   OrderItemMutationResponse,
   OrderItemStatus,
@@ -23,6 +31,8 @@ export type {
   OrderTotals,
   ReorderOrderItemsPayload,
   TransitionOrderItemPayload,
+  TransitionOrderPayload,
+  TransitionOrderResponse,
   UpdateOrderItemPayload,
 } from './orderItems.types'
 
@@ -46,7 +56,7 @@ export async function copyOrderItem(payload: CopyOrderItemPayload): Promise<Orde
   return data.data
 }
 
-export async function reorderOrderItems(payload: ReorderOrderItemsPayload): Promise<OrderItemListResponse> {
+export async function reorderOrderItems(payload: ReorderOrderItemsPayload): Promise<OrderItemCollectionMutationResponse> {
   const { data } = await api.post('/api/order-item/reorder', payload)
   return data.data
 }
@@ -58,5 +68,15 @@ export async function deleteOrderItem(payload: DeleteOrderItemPayload): Promise<
 
 export async function transitionOrderItem(payload: TransitionOrderItemPayload): Promise<OrderItemMutationResponse> {
   const { data } = await api.post('/api/order-item/transition', payload)
+  return data.data
+}
+
+export async function calculateOrderItem(payload: CalculateOrderItemPayload): Promise<OrderItemCalculationResponse> {
+  const { data } = await api.post('/api/order/calculate', payload)
+  return data.data
+}
+
+export async function transitionOrder(payload: TransitionOrderPayload): Promise<TransitionOrderResponse> {
+  const { data } = await api.post('/api/order/transition', payload)
   return data.data
 }

@@ -69,6 +69,7 @@ function makeItem(overrides: Partial<OrderItemSummary> = {}): OrderItemSummary {
     calculationError: null,
     lockVersion: 1,
     allowedActions: [],
+    availableTransitions: [],
     ...overrides,
   }
 }

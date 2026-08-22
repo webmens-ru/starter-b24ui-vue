@@ -36,15 +36,16 @@ export interface OrderItemSummary {
   finalDealerUnitPrice: number | null
   retailTotalPrice: number | null
   dealerTotalPrice: number | null
-  adjustmentType: 'none' | 'discount' | 'markup'
-  adjustmentValue: number
-  adjustmentUnit: 'percent' | 'fixed'
+  adjustmentType: 'none' | 'discount' | 'markup' | null
+  adjustmentValue: number | null
+  adjustmentUnit: 'percent' | 'fixed' | null
   plannedCompletionAt: string | null
   lastCalculatedAt: number | null
   isActual: boolean
   calculationError: string | null
   lockVersion: number
   allowedActions: OrderItemAllowedAction[]
+  availableTransitions: string[]
 }
 
 export interface OrderTotals {
@@ -53,6 +54,16 @@ export interface OrderTotals {
 }
 
 export interface OrderItemListResponse {
+  items: OrderItemSummary[]
+  orderTotals: OrderTotals
+  orderWorkflow: {
+    statusCode: string
+    availableTransitions: string[]
+    canCreateItem: boolean
+  }
+}
+
+export interface OrderItemCollectionMutationResponse {
   items: OrderItemSummary[]
   orderTotals: OrderTotals
 }
@@ -74,15 +85,16 @@ export interface UpdateOrderItemPayload {
   orderItemId: number
   lockVersion: number
   quantity?: number
-  adjustmentType?: OrderItemSummary['adjustmentType']
+  adjustmentType?: Exclude<OrderItemSummary['adjustmentType'], null>
   adjustmentValue?: number
-  adjustmentUnit?: OrderItemSummary['adjustmentUnit']
+  adjustmentUnit?: Exclude<OrderItemSummary['adjustmentUnit'], null>
   plannedCompletionAt?: string | null
 }
 
 export interface CopyOrderItemPayload {
   orderId: number
   orderItemId: number
+  lockVersion: number
 }
 
 export interface ReorderOrderItemsPayload {
@@ -101,4 +113,29 @@ export interface TransitionOrderItemPayload {
   orderItemId: number
   toStatus: string
   lockVersion: number
+}
+
+export interface CalculateOrderItemPayload {
+  orderId: number
+  orderItemId: number
+  modelId: string
+  lockVersion: number
+}
+
+export interface OrderItemCalculationResponse {
+  priceRetail: string
+  priceDealer: string
+  lockVersion: number
+}
+
+export interface TransitionOrderPayload {
+  orderId: number
+  toStatus: string
+  comment?: string
+}
+
+export interface TransitionOrderResponse {
+  statusId?: number
+  statusCode: string
+  statusName?: string | null
 }

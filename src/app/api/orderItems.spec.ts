@@ -30,6 +30,7 @@ const item = {
   calculationError: null,
   lockVersion: 1,
   allowedActions: ['order_item.edit_configuration'] as const,
+  availableTransitions: [] as string[],
 }
 
 describe('order item API', () => {
@@ -124,9 +125,13 @@ describe('order item API', () => {
 
     const { copyOrderItem } = await import('./orderItems')
 
-    await copyOrderItem({ orderId: 42, orderItemId: 7 })
+    await copyOrderItem({ orderId: 42, orderItemId: 7, lockVersion: 3 })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/copy', { orderId: 42, orderItemId: 7 })
+    expect(api.post).toHaveBeenCalledWith('/api/order-item/copy', {
+      orderId: 42,
+      orderItemId: 7,
+      lockVersion: 3,
+    })
   })
 
   it('reorders every active item in its order context', async () => {
@@ -165,6 +170,28 @@ describe('order item API', () => {
       orderItemId: 7,
       toStatus: 'production',
       lockVersion: 3,
+    })
+  })
+
+  it('calculates an item and transitions its order with exact item context', async () => {
+    api.post
+      .mockResolvedValueOnce({ data: { data: { priceRetail: '1000.00', priceDealer: '800.00', lockVersion: 4 } } })
+      .mockResolvedValueOnce({ data: { data: { statusCode: 'submitted_to_order' } } })
+
+    const { calculateOrderItem, transitionOrder } = await import('./orderItems')
+
+    await calculateOrderItem({ orderId: 42, orderItemId: 7, modelId: '1', lockVersion: 3 })
+    await transitionOrder({ orderId: 42, toStatus: 'submitted_to_order' })
+
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/order/calculate', {
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '1',
+      lockVersion: 3,
+    })
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/order/transition', {
+      orderId: 42,
+      toStatus: 'submitted_to_order',
     })
   })
 })

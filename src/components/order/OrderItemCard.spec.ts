@@ -28,6 +28,7 @@ function makeItem(overrides: Partial<OrderItemSummary> = {}): OrderItemSummary {
     calculationError: null,
     lockVersion: 4,
     allowedActions: ['order_item.copy', 'order_item.change_quantity'],
+    availableTransitions: [],
     ...overrides,
   }
 }
@@ -82,5 +83,37 @@ describe('OrderItemCard', () => {
 
     expect(wrapper.emitted('copy')?.[0]).toEqual([item])
     expect(wrapper.emitted('updateQuantity')?.[0]).toEqual([item, 3])
+  })
+
+  it('edits commercial terms and deadline and recalculates only from server capabilities', async () => {
+    const item = makeItem({
+      allowedActions: [
+        'order_item.change_terms',
+        'order_item.change_deadline',
+        'order_item.calculate',
+        'order_item.transition',
+      ],
+      availableTransitions: ['approval', 'cancelled'],
+    })
+    const wrapper = mount(OrderItemCard, { props: { item } })
+
+    await wrapper.get('[aria-label="Тип корректировки позиции 7"]').setValue('markup')
+    await wrapper.get('[aria-label="Значение корректировки позиции 7"]').setValue('15')
+    await wrapper.get('[aria-label="Единица корректировки позиции 7"]').setValue('fixed')
+    await wrapper.get('[aria-label="Сохранить корректировку позиции 7"]').trigger('click')
+    await wrapper.get('[aria-label="Плановый срок позиции 7"]').setValue('2026-09-15')
+    await wrapper.get('[aria-label="Сохранить срок позиции 7"]').trigger('click')
+    await wrapper.get('[aria-label="Пересчитать позицию 7"]').trigger('click')
+    await wrapper.get('[aria-label="Новый статус позиции 7"]').setValue('cancelled')
+    await wrapper.get('[aria-label="Сменить статус позиции 7"]').trigger('click')
+
+    expect(wrapper.emitted('updateAdjustment')?.[0]).toEqual([
+      item,
+      { adjustmentType: 'markup', adjustmentValue: 15, adjustmentUnit: 'fixed' },
+    ])
+    expect(wrapper.emitted('updateDeadline')?.[0]).toEqual([item, '2026-09-15'])
+    expect(wrapper.emitted('recalculate')?.[0]).toEqual([item])
+    expect(wrapper.emitted('transition')?.[0]).toEqual([item, 'cancelled'])
+    expect(wrapper.find('[aria-label="Новый статус позиции 7"] option[value="production"]').exists()).toBe(false)
   })
 })

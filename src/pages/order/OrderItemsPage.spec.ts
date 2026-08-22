@@ -2,7 +2,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
-import type { OrderItemListResponse, OrderItemSummary } from '../../app/api/orderItems'
+import type {
+  OrderItemCollectionMutationResponse,
+  OrderItemListResponse,
+  OrderItemSummary,
+} from '../../app/api/orderItems'
 import OrderItemsPage from './OrderItemsPage.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -13,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   updateOrderItem: vi.fn(),
   deleteOrderItem: vi.fn(),
   transitionOrderItem: vi.fn(),
+  calculateOrderItem: vi.fn(),
+  transitionOrder: vi.fn(),
   reorderOrderItems: vi.fn(),
 }))
 
@@ -27,6 +33,8 @@ vi.mock('../../app/api/orderItems', () => ({
   updateOrderItem: mocks.updateOrderItem,
   deleteOrderItem: mocks.deleteOrderItem,
   transitionOrderItem: mocks.transitionOrderItem,
+  calculateOrderItem: mocks.calculateOrderItem,
+  transitionOrder: mocks.transitionOrder,
   reorderOrderItems: mocks.reorderOrderItems,
 }))
 
@@ -63,6 +71,7 @@ function makeItem(id: number, overrides: Partial<OrderItemSummary> = {}): OrderI
       'order_item.transition',
       'order_item.reorder',
     ],
+    availableTransitions: ['approval', 'cancelled'],
     ...overrides,
   }
 }
@@ -72,6 +81,11 @@ const second = makeItem(8)
 const initial: OrderItemListResponse = {
   items: [first, second],
   orderTotals: { priceRetail: 1800, priceDealer: 1440 },
+  orderWorkflow: {
+    statusCode: 'dealer_calculation',
+    availableTransitions: ['submitted_to_order'],
+    canCreateItem: true,
+  },
 }
 
 function mountPage() {
@@ -94,6 +108,8 @@ describe('OrderItemsPage', () => {
     mocks.updateOrderItem.mockResolvedValue({ item: { ...first, quantity: 3, lockVersion: 5 }, orderTotals: initial.orderTotals })
     mocks.deleteOrderItem.mockResolvedValue({ item: first, orderTotals: initial.orderTotals })
     mocks.transitionOrderItem.mockResolvedValue({ item: first, orderTotals: initial.orderTotals })
+    mocks.calculateOrderItem.mockResolvedValue({ priceRetail: '900.00', priceDealer: '720.00', lockVersion: 5 })
+    mocks.transitionOrder.mockResolvedValue({ statusCode: 'submitted_to_order' })
     mocks.reorderOrderItems.mockResolvedValue({ items: [second, first], orderTotals: initial.orderTotals })
   })
 
@@ -116,14 +132,18 @@ describe('OrderItemsPage', () => {
   it('copies through the typed API, refreshes the source-of-truth list, and keeps the order context when adding', async () => {
     mocks.listOrderItems
       .mockResolvedValueOnce(initial)
-      .mockResolvedValueOnce({ items: [first, second, makeItem(9)], orderTotals: initial.orderTotals })
+      .mockResolvedValueOnce({
+        items: [first, second, makeItem(9)],
+        orderTotals: initial.orderTotals,
+        orderWorkflow: initial.orderWorkflow,
+      })
     const wrapper = mountPage()
     await flushPromises()
 
     await wrapper.get('[aria-label="Копировать позицию 7"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.copyOrderItem).toHaveBeenCalledWith({ orderId: 42, orderItemId: 7 })
+    expect(mocks.copyOrderItem).toHaveBeenCalledWith({ orderId: 42, orderItemId: 7, lockVersion: 4 })
     expect(mocks.listOrderItems).toHaveBeenCalledTimes(2)
     expect(wrapper.findAll('[data-order-item]')).toHaveLength(3)
 
@@ -135,7 +155,11 @@ describe('OrderItemsPage', () => {
     mocks.listOrderItems
       .mockResolvedValueOnce(initial)
       .mockRejectedValueOnce(new Error('Сеть недоступна'))
-      .mockResolvedValueOnce({ items: [first, second, makeItem(9)], orderTotals: initial.orderTotals })
+      .mockResolvedValueOnce({
+        items: [first, second, makeItem(9)],
+        orderTotals: initial.orderTotals,
+        orderWorkflow: initial.orderWorkflow,
+      })
     const wrapper = mountPage()
     await flushPromises()
 
@@ -168,6 +192,7 @@ describe('OrderItemsPage', () => {
     resolveSecond({
       items: [makeItem(43, { orderId: 43, modelId: '43' })],
       orderTotals: { priceRetail: null, priceDealer: null },
+      orderWorkflow: initial.orderWorkflow,
     })
     await flushPromises()
 
@@ -193,6 +218,7 @@ describe('OrderItemsPage', () => {
       .mockResolvedValueOnce({
         items: [makeItem(43, { orderId: 43 })],
         orderTotals: { priceRetail: 4300, priceDealer: 3400 },
+        orderWorkflow: initial.orderWorkflow,
       })
     const wrapper = mountPage()
     await flushPromises()
@@ -213,7 +239,7 @@ describe('OrderItemsPage', () => {
   })
 
   it('ignores a reorder response after navigation to another order', async () => {
-    let resolveReorder!: (value: OrderItemListResponse) => void
+    let resolveReorder!: (value: OrderItemCollectionMutationResponse) => void
     mocks.reorderOrderItems.mockImplementation(() => new Promise(resolve => {
       resolveReorder = resolve
     }))
@@ -222,6 +248,7 @@ describe('OrderItemsPage', () => {
       .mockResolvedValueOnce({
         items: [makeItem(43, { orderId: 43 })],
         orderTotals: { priceRetail: 4300, priceDealer: 3400 },
+        orderWorkflow: initial.orderWorkflow,
       })
     const wrapper = mountPage()
     await flushPromises()
@@ -243,6 +270,7 @@ describe('OrderItemsPage', () => {
     mocks.listOrderItems.mockResolvedValueOnce(initial).mockResolvedValueOnce({
       items: [{ ...first, quantity: 5, lockVersion: 5 }, second],
       orderTotals: initial.orderTotals,
+      orderWorkflow: initial.orderWorkflow,
     })
     const wrapper = mountPage()
     await flushPromises()
@@ -291,6 +319,7 @@ describe('OrderItemsPage', () => {
         allowedActions: ['order_item.copy'],
       })],
       orderTotals: initial.orderTotals,
+      orderWorkflow: initial.orderWorkflow,
     })
     const wrapper = mountPage()
     await flushPromises()
@@ -301,7 +330,11 @@ describe('OrderItemsPage', () => {
   })
 
   it('has stable empty and load-error states', async () => {
-    mocks.listOrderItems.mockResolvedValueOnce({ items: [], orderTotals: { priceRetail: null, priceDealer: null } })
+    mocks.listOrderItems.mockResolvedValueOnce({
+      items: [],
+      orderTotals: { priceRetail: null, priceDealer: null },
+      orderWorkflow: { ...initial.orderWorkflow, canCreateItem: true },
+    })
     const empty = mountPage()
     await flushPromises()
     expect(empty.text()).toContain('В заказе пока нет изделий')
@@ -311,5 +344,79 @@ describe('OrderItemsPage', () => {
     await flushPromises()
     expect(failed.text()).toContain('Не удалось загрузить состав заказа')
     expect(failed.find('[aria-label="Повторить загрузку состава заказа"]').exists()).toBe(true)
+  })
+
+  it('updates terms and deadline, recalculates, and checks out through server capabilities', async () => {
+    const commercialItem = makeItem(7, {
+      allowedActions: [
+        ...first.allowedActions,
+        'order_item.change_terms',
+        'order_item.change_deadline',
+        'order_item.calculate',
+      ],
+    })
+    const commercialResponse = { ...initial, items: [commercialItem, second] }
+    mocks.listOrderItems
+      .mockResolvedValueOnce(commercialResponse)
+      .mockResolvedValue(commercialResponse)
+    mocks.updateOrderItem.mockImplementation(payload => Promise.resolve({
+      item: { ...commercialItem, ...payload },
+      orderTotals: initial.orderTotals,
+    }))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.get('[aria-label="Тип корректировки позиции 7"]').setValue('markup')
+    await wrapper.get('[aria-label="Значение корректировки позиции 7"]').setValue('15')
+    await wrapper.get('[aria-label="Единица корректировки позиции 7"]').setValue('fixed')
+    await wrapper.get('[aria-label="Сохранить корректировку позиции 7"]').trigger('click')
+    await flushPromises()
+    expect(mocks.updateOrderItem).toHaveBeenCalledWith({
+      orderId: 42,
+      orderItemId: 7,
+      lockVersion: 4,
+      adjustmentType: 'markup',
+      adjustmentValue: 15,
+      adjustmentUnit: 'fixed',
+    })
+
+    await wrapper.get('[aria-label="Плановый срок позиции 7"]').setValue('2026-09-15')
+    await wrapper.get('[aria-label="Сохранить срок позиции 7"]').trigger('click')
+    await flushPromises()
+    expect(mocks.updateOrderItem).toHaveBeenCalledWith({
+      orderId: 42,
+      orderItemId: 7,
+      lockVersion: 4,
+      plannedCompletionAt: '2026-09-15',
+    })
+
+    await wrapper.get('[aria-label="Пересчитать позицию 7"]').trigger('click')
+    await flushPromises()
+    expect(mocks.calculateOrderItem).toHaveBeenCalledWith({
+      orderId: 42,
+      orderItemId: 7,
+      modelId: '7',
+      lockVersion: 4,
+    })
+
+    await wrapper.get('[aria-label="Перевести заказ в статус submitted_to_order"]').trigger('click')
+    await flushPromises()
+    expect(mocks.transitionOrder).toHaveBeenCalledWith({ orderId: 42, toStatus: 'submitted_to_order' })
+  })
+
+  it('hides add and checkout controls when the server does not grant them', async () => {
+    mocks.listOrderItems.mockResolvedValueOnce({
+      ...initial,
+      orderWorkflow: {
+        statusCode: 'submitted_to_order',
+        availableTransitions: [],
+        canCreateItem: false,
+      },
+    })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('[aria-label="Добавить изделие в заказ 42"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label^="Перевести заказ в статус"]').exists()).toBe(false)
   })
 })
