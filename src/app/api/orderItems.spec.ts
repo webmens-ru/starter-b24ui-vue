@@ -37,6 +37,7 @@ describe('order item API', () => {
   beforeEach(() => {
     api.get.mockReset()
     api.post.mockReset()
+    vi.resetModules()
   })
 
   it('requests an order item list in its order context', async () => {
@@ -51,18 +52,57 @@ describe('order item API', () => {
     expect(api.get).toHaveBeenCalledWith('/api/order-item/index', { params: { orderId: 42 } })
   })
 
-  it('sends order and item context when saving a wicket', async () => {
-    api.post.mockResolvedValueOnce({ data: { data: null } })
+  it('synchronizes the wicket lock version across load, save, and recalculation', async () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+      .mockResolvedValueOnce({ data: { data: { priceRetail: '1000.00', priceDealer: '800.00', lockVersion: 6 } } })
 
+    const { loadWicketData, recalculate, saveWicketData } = await import('./wicket')
+
+    await loadWicketData(context)
+    await saveWicketData({ ...context, widthProyema: 900 })
+    await recalculate(context)
+
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/wicket/type1/data', {
+      ...context,
+      widthProyema: 900,
+      lockVersion: 4,
+    })
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/order/calculate', {
+      ...context,
+      companyId: undefined,
+      lockVersion: 5,
+    })
+  })
+
+  it('rejects a wicket save for a never-loaded item before sending a request', async () => {
     const { saveWicketData } = await import('./wicket')
 
-    await saveWicketData({ orderId: 42, orderItemId: 7, modelId: '1', widthProyema: 900 })
+    await expect(saveWicketData({ orderId: 42, orderItemId: 8, modelId: '1', widthProyema: 900 }))
+      .rejects.toThrow('Версия позиции не загружена')
+    expect(api.post).not.toHaveBeenCalled()
+  })
 
-    expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/data', {
-      orderId: 42,
-      orderItemId: 7,
-      modelId: '1',
-      widthProyema: 900,
+  it('rejects malformed mutation versions without replacing the remembered version', async () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post
+      .mockResolvedValueOnce({ data: { data: { lockVersion: null } } })
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+
+    await loadWicketData(context)
+    await expect(saveWicketData({ ...context, widthProyema: 900 }))
+      .rejects.toThrow('Некорректная версия позиции')
+    await saveWicketData({ ...context, widthProyema: 1000 })
+
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/data', {
+      ...context,
+      widthProyema: 1000,
+      lockVersion: 4,
     })
   })
 
@@ -75,19 +115,24 @@ describe('order item API', () => {
   })
 
   it('sends item context for terminal price and delete operations', async () => {
-    api.get.mockResolvedValueOnce({ data: { data: { hasSavedPrice: false, isActual: false } } })
-    api.post.mockResolvedValue({ data: { data: { priceDealer: '800.00', priceRetail: '1000.00' } } })
     const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    api.get
+      .mockResolvedValueOnce({ data: { data: { hasSavedPrice: false, isActual: false } } })
+      .mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post
+      .mockResolvedValueOnce({ data: { data: { priceDealer: '800.00', priceRetail: '1000.00', lockVersion: 5 } } })
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 6 } } })
 
-    const { deleteCalculation, fetchSavedOrderPrice, finalCalculate } = await import('./wicket')
+    const { deleteCalculation, fetchSavedOrderPrice, finalCalculate, loadWicketData } = await import('./wicket')
 
     await fetchSavedOrderPrice(context)
+    await loadWicketData(context)
     await finalCalculate(context)
     await deleteCalculation(context)
 
     expect(api.get).toHaveBeenCalledWith('/api/order/saved-price', { params: context })
-    expect(api.post).toHaveBeenNthCalledWith(1, '/api/order/calculate', context)
-    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/delete', context)
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/order/calculate', { ...context, companyId: undefined, lockVersion: 4 })
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/delete', { ...context, lockVersion: 5 })
   })
 
   it('creates an item with the exact creation payload', async () => {

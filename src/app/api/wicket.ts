@@ -1,5 +1,10 @@
 import api from '.'
 import {
+  forgetWicketLockVersion,
+  rememberWicketLockVersion,
+  requireWicketLockVersion,
+} from './wicketLockVersion'
+import {
   mockFetchWicketPage,
   mockSaveWicketData,
   mockRecalculate,
@@ -167,6 +172,7 @@ export async function loadWicketData(context: OrderItemContext): Promise<Record<
   assertOrderItemContext(context)
   if (isMock) return mockLoadWicketData(context.orderId)
   const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
+  rememberWicketLockVersion(context, data.data.lockVersion)
   return data.data
 }
 
@@ -349,7 +355,9 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 export async function saveWicketData(payload: WicketSavePayload): Promise<void> {
   assertOrderItemContext(payload)
   if (isMock) return mockSaveWicketData(payload)
-  await api.post(`/api/wicket/type${payload.modelId}/data`, payload)
+  const lockVersion = requireWicketLockVersion(payload)
+  const { data } = await api.post(`/api/wicket/type${payload.modelId}/data`, { ...payload, lockVersion })
+  rememberWicketLockVersion(payload, data.data.lockVersion)
 }
 
 export async function getAssortmentStolb(
@@ -483,29 +491,48 @@ export async function fetchSavedOrderPrice(context: OrderItemContext): Promise<O
 export async function finalCalculate(payload: WicketCalculationPayload): Promise<{ priceDealer: string; priceRetail: string }> {
   assertWicketCalculationPayload(payload)
   if (isMock) return mockFinalCalculate()
+  const context = {
+    orderId: payload.orderId,
+    orderItemId: payload.orderItemId,
+    modelId: String(payload.modelId),
+  }
+  const lockVersion = requireWicketLockVersion(context)
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
     orderItemId: payload.orderItemId,
     companyId: payload.companyId,
     modelId: String(payload.modelId),
+    lockVersion,
   })
+  rememberWicketLockVersion(context, data.data.lockVersion)
   return data.data
 }
 
 export async function deleteCalculation(payload: OrderItemContext): Promise<void> {
   assertOrderItemContext(payload)
   if (isMock) return mockDeleteCalculation()
-  await api.post(`/api/wicket/type${payload.modelId}/delete`, payload)
+  const lockVersion = requireWicketLockVersion(payload)
+  const { data } = await api.post(`/api/wicket/type${payload.modelId}/delete`, { ...payload, lockVersion })
+  rememberWicketLockVersion(payload, data.data.lockVersion)
+  forgetWicketLockVersion(payload)
 }
 
 export async function recalculate(payload: WicketCalculationPayload): Promise<RecalculateResponse> {
   assertWicketCalculationPayload(payload)
   if (isMock) return mockRecalculate(payload)
+  const context = {
+    orderId: payload.orderId,
+    orderItemId: payload.orderItemId,
+    modelId: String(payload.modelId),
+  }
+  const lockVersion = requireWicketLockVersion(context)
   const { data } = await api.post('/api/order/calculate', {
     orderId: payload.orderId,
     orderItemId: payload.orderItemId,
     companyId: payload.companyId,
     modelId: String(payload.modelId),
+    lockVersion,
   })
+  rememberWicketLockVersion(context, data.data.lockVersion)
   return data.data
 }
