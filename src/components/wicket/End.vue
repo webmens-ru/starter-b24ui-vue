@@ -152,6 +152,12 @@ async function handleCalculate() {
 // ─── Удаление расчёта ─────────────────────────────────────────────────────────
 const deleting = ref(false)
 
+function isLockConflict(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return false
+  const response = error.response
+  return typeof response === 'object' && response !== null && 'status' in response && response.status === 409
+}
+
 async function confirmDelete() {
   deleting.value = true
   try {
@@ -161,6 +167,7 @@ async function confirmDelete() {
   } catch (e) {
     console.error('deleteCalculation:', e)
     showDeleteModal.value = false
+    if (isLockConflict(e)) return
     openErrModal('Произошла ошибка при удалении расчёта.')
   } finally {
     deleting.value = false

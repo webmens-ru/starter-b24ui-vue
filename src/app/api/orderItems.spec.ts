@@ -145,6 +145,7 @@ describe('order item API', () => {
     await expect(deleteCalculation(context)).rejects.toBe(conflict)
 
     expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/delete', { ...context, lockVersion: 4 })
+    expect(api.post).toHaveBeenCalledTimes(1)
     expect(visibleConflict).toHaveBeenCalledTimes(1)
     expect(visibleConflict).toHaveBeenCalledWith(context)
     unsubscribe()
