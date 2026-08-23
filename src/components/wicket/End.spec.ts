@@ -10,8 +10,7 @@ const mocks = vi.hoisted(() => ({
   finalCalculate: vi.fn(),
   saveWicketData: vi.fn(),
   fetchSavedOrderPrice: vi.fn(),
-  listOrderItems: vi.fn(),
-  deleteOrderItem: vi.fn(),
+  deleteCalculation: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
@@ -19,10 +18,7 @@ vi.mock('../../app/api/wicket', () => ({
   finalCalculate: mocks.finalCalculate,
   saveWicketData: mocks.saveWicketData,
   fetchSavedOrderPrice: mocks.fetchSavedOrderPrice,
-}))
-vi.mock('../../app/api/orderItems', () => ({
-  listOrderItems: mocks.listOrderItems,
-  deleteOrderItem: mocks.deleteOrderItem,
+  deleteCalculation: mocks.deleteCalculation,
 }))
 
 const ButtonStub = {
@@ -43,11 +39,7 @@ describe('End order composition navigation', () => {
     mocks.saveWicketData.mockResolvedValue(undefined)
     mocks.fetchSavedOrderPrice.mockResolvedValue({ hasSavedPrice: false, isActual: false })
     mocks.finalCalculate.mockResolvedValue({ priceRetail: '1000.00', priceDealer: '800.00' })
-    mocks.listOrderItems.mockResolvedValue({
-      items: [{ id: 7, lockVersion: 4, allowedActions: ['order_item.delete'] }],
-      orderTotals: { priceRetail: null, priceDealer: null },
-    })
-    mocks.deleteOrderItem.mockResolvedValue({ item: {}, orderTotals: {} })
+    mocks.deleteCalculation.mockResolvedValue(undefined)
   })
 
   it('returns to order items after a successful calculation save', async () => {
@@ -67,7 +59,7 @@ describe('End order composition navigation', () => {
     expect(mocks.push).toHaveBeenCalledWith({ name: 'order-items', params: { orderId: 42 } })
   })
 
-  it('deletes the current order item and returns to the order composition', async () => {
+  it('deletes through the serialized wicket calculation API and returns to the order composition', async () => {
     const wrapper = mount(End, {
       global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
     })
@@ -81,12 +73,29 @@ describe('End order composition navigation', () => {
     confirmButton!.click()
     await flushPromises()
 
-    expect(mocks.listOrderItems).toHaveBeenCalledWith(42)
-    expect(mocks.deleteOrderItem).toHaveBeenCalledWith({
+    expect(mocks.deleteCalculation).toHaveBeenCalledWith({
       orderId: 42,
       orderItemId: 7,
-      lockVersion: 4,
+      modelId: '1',
     })
     expect(mocks.push).toHaveBeenCalledWith({ name: 'order-items', params: { orderId: 42 } })
+  })
+
+  it('does not navigate away when conflict-aware deletion rejects with a 409', async () => {
+    mocks.deleteCalculation.mockRejectedValueOnce({ response: { status: 409 } })
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Не сохранять расчёт'))!.trigger('click')
+    await flushPromises()
+    const confirmButton = [...document.body.querySelectorAll('button')]
+      .find(button => button.textContent?.includes('Да, удалить'))
+    confirmButton!.click()
+    await flushPromises()
+
+    expect(mocks.deleteCalculation).toHaveBeenCalledWith({ orderId: 42, orderItemId: 7, modelId: '1' })
+    expect(mocks.push).not.toHaveBeenCalled()
   })
 })

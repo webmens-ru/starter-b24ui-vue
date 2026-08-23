@@ -2,8 +2,7 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
-import { deleteOrderItem, listOrderItems } from '../../app/api/orderItems'
+import { deleteCalculation, finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
 import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
 
 const emit = defineEmits<{
@@ -157,20 +156,10 @@ async function confirmDelete() {
   deleting.value = true
   try {
     const context = calc.getCurrentItemContext()
-    const composition = await listOrderItems(context.orderId)
-    const item = composition.items.find(candidate => candidate.id === context.orderItemId)
-    if (!item) throw new Error('Позиция заказа не найдена')
-    if (!item.allowedActions.includes('order_item.delete')) {
-      throw new Error('Удаление позиции сейчас недоступно')
-    }
-    await deleteOrderItem({
-      orderId: context.orderId,
-      orderItemId: context.orderItemId,
-      lockVersion: item.lockVersion,
-    })
+    await deleteCalculation(context)
     await goToOrderItems()
   } catch (e) {
-    console.error('deleteOrderItem:', e)
+    console.error('deleteCalculation:', e)
     showDeleteModal.value = false
     openErrModal('Произошла ошибка при удалении расчёта.')
   } finally {

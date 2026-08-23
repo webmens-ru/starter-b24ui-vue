@@ -131,6 +131,25 @@ describe('order item API', () => {
     unsubscribe()
   })
 
+  it('signals a 409 conflict when deleting through the serialized wicket API', async () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const conflict = { response: { status: 409 } }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post.mockRejectedValueOnce(conflict)
+
+    const { deleteCalculation, loadWicketData, onWicketLockConflict } = await import('./wicket')
+    const visibleConflict = vi.fn()
+    const unsubscribe = onWicketLockConflict(visibleConflict)
+
+    await loadWicketData(context)
+    await expect(deleteCalculation(context)).rejects.toBe(conflict)
+
+    expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/delete', { ...context, lockVersion: 4 })
+    expect(visibleConflict).toHaveBeenCalledTimes(1)
+    expect(visibleConflict).toHaveBeenCalledWith(context)
+    unsubscribe()
+  })
+
   it('rejects a wicket save for a never-loaded item before sending a request', async () => {
     const { saveWicketData } = await import('./wicket')
 
