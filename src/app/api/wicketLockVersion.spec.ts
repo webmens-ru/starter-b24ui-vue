@@ -19,4 +19,12 @@ describe('wicket lock version registry', () => {
     forgetWicketLockVersion(first)
     expect(() => requireWicketLockVersion(first)).toThrow('Версия позиции не загружена')
   })
+
+  it('does not let a delayed lower load overwrite a newer version', () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+
+    expect(rememberWicketLockVersion(context, 5)).toBe(5)
+    expect(rememberWicketLockVersion(context, 4)).toBe(5)
+    expect(requireWicketLockVersion(context)).toBe(5)
+  })
 })

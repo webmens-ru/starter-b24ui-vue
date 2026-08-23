@@ -2,7 +2,7 @@
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadWicketData, getAddonList } from '../../app/api/wicket'
+import { loadWicketData, getAddonList, onWicketLockConflict } from '../../app/api/wicket'
 import { listOrderItems, type OrderItemContext } from '../../app/api/orderItems'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
@@ -41,6 +41,7 @@ calc.modelId.value = resolvedModelId()
 const windowWidth = ref(window.innerWidth)
 const loadError = ref<string | null>(null)
 const showLoadErrorModal = ref(false)
+const showLockConflictModal = ref(false)
 const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
 const currentComponent = shallowRef<Component | null>(null)
@@ -52,6 +53,7 @@ const routeContextKey = computed(() => [
 ].join('|'))
 let mounted = false
 let initGeneration = 0
+let stopWicketLockConflict: (() => void) | undefined
 
 let resizeTimer: ReturnType<typeof setTimeout>
 function onResize() {
@@ -139,12 +141,20 @@ async function initCalculation(): Promise<void> {
 
 onMounted(() => {
   mounted = true
+  stopWicketLockConflict = onWicketLockConflict(context => {
+    if (
+      calc.orderId.value === context.orderId
+      && calc.orderItemId.value === context.orderItemId
+      && String(calc.modelId.value) === context.modelId
+    ) showLockConflictModal.value = true
+  })
   window.addEventListener('resize', onResize)
   void initCalculation()
 })
 onUnmounted(() => {
   mounted = false
   initGeneration += 1
+  stopWicketLockConflict?.()
   window.removeEventListener('resize', onResize)
   clearTimeout(resizeTimer)
 })
@@ -292,6 +302,16 @@ function goBack() {
     >
       <template #footer="{ close }">
         <B24Button color="air-primary" @click="loadError = null; showLoadErrorModal = false; close()">Понятно</B24Button>
+      </template>
+    </B24Modal>
+
+    <B24Modal
+      v-model:open="showLockConflictModal"
+      title="Требуется перезагрузка"
+      description="Данные позиции изменились в другой сессии. Перезагрузите расчёт, чтобы продолжить работу."
+    >
+      <template #footer>
+        <B24Button color="air-primary" @click="window.location.reload()">Перезагрузить</B24Button>
       </template>
     </B24Modal>
 

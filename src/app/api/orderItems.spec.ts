@@ -77,6 +77,60 @@ describe('order item API', () => {
     })
   })
 
+  it('serializes same-item mutations and uses the version advanced by the first response', async () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    let resolveSave!: (value: { data: { data: { lockVersion: number } } }) => void
+    const saveResponse = new Promise<{ data: { data: { lockVersion: number } } }>(resolve => {
+      resolveSave = resolve
+    })
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post
+      .mockReturnValueOnce(saveResponse)
+      .mockResolvedValueOnce({ data: { data: { priceRetail: '1000.00', priceDealer: '800.00', lockVersion: 6 } } })
+
+    const { loadWicketData, recalculate, saveWicketData } = await import('./wicket')
+
+    await loadWicketData(context)
+    const saving = saveWicketData({ ...context, widthProyema: 900 })
+    const calculating = recalculate(context)
+
+    await vi.waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
+    resolveSave({ data: { data: { lockVersion: 5 } } })
+    await saving
+    await calculating
+
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/order/calculate', {
+      ...context,
+      companyId: undefined,
+      lockVersion: 5,
+    })
+  })
+
+  it('signals a 409 conflict once and does not retry or start another mutation', async () => {
+    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const conflict = { response: { status: 409 } }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post.mockRejectedValueOnce(conflict)
+
+    const {
+      loadWicketData,
+      onWicketLockConflict,
+      recalculate,
+      saveWicketData,
+    } = await import('./wicket')
+    const visibleConflict = vi.fn()
+    const unsubscribe = onWicketLockConflict(visibleConflict)
+
+    await loadWicketData(context)
+    await expect(saveWicketData({ ...context, widthProyema: 900 })).rejects.toBe(conflict)
+    await expect(recalculate(context)).rejects.toThrow('Конфликт версии позиции')
+
+    expect(api.post).toHaveBeenCalledTimes(1)
+    expect(visibleConflict).toHaveBeenCalledTimes(1)
+    expect(visibleConflict).toHaveBeenCalledWith(context)
+    unsubscribe()
+  })
+
   it('rejects a wicket save for a never-loaded item before sending a request', async () => {
     const { saveWicketData } = await import('./wicket')
 

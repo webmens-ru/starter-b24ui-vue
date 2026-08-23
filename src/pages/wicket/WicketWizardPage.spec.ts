@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   listOrderItems: vi.fn(),
   createOrder: vi.fn(),
   createLegacyWicketMainMenu: vi.fn(),
+  onWicketLockConflict: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -32,6 +33,7 @@ vi.mock('../../app/api/wicket', () => ({
   getAddonList: mocks.getAddonList,
   createOrder: mocks.createOrder,
   createLegacyWicketMainMenu: mocks.createLegacyWicketMainMenu,
+  onWicketLockConflict: mocks.onWicketLockConflict,
 }))
 
 vi.mock('../../app/api/orderItems', () => ({ listOrderItems: mocks.listOrderItems }))
@@ -79,6 +81,7 @@ function mountPage() {
     props: { stepComponents: { page1: EmptyStep }, route: wicketRoute },
     global: {
       stubs: {
+        App: { template: '<div><slot /></div>' },
         B24App: { template: '<div><slot /></div>' },
         B24Modal: true,
         WicketMenu: true,
@@ -128,6 +131,24 @@ describe('WicketWizardPage mobile summary', () => {
     expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, orderItemId: 7, modelId: '1' })
     expect(mocks.createOrder).not.toHaveBeenCalled()
     expect(mocks.createLegacyWicketMainMenu).not.toHaveBeenCalled()
+  })
+
+  it('shows a reload-required modal for a lock conflict in the open item', async () => {
+    mocks.route.query = { orderId: '42', orderItemId: '7' }
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(mocks.onWicketLockConflict).toHaveBeenCalled()
+    const listener = mocks.onWicketLockConflict.mock.calls[0]?.[0] as (context: {
+      orderId: number
+      orderItemId: number
+      modelId: string
+    }) => void
+    listener({ orderId: 42, orderItemId: 7, modelId: '1' })
+    await flushPromises()
+
+    expect(wrapper.html()).toContain('Требуется перезагрузка')
+    expect(wrapper.html()).toContain('Данные позиции изменились')
   })
 
   it('clears fields from the previously opened item before loading the requested item', async () => {
