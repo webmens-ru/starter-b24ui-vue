@@ -365,7 +365,7 @@ watch(orderIdParam, () => {
         </header>
 
         <main class="flex-1 overflow-y-auto p-4">
-          <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+          <div class="mx-auto flex w-full max-w-[1152px] flex-col gap-4">
             <div
               v-if="noticeMessage"
               role="status"

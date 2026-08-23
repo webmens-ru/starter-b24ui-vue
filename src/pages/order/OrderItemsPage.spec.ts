@@ -94,6 +94,8 @@ function mountPage() {
       stubs: {
         B24App: SlotStub,
         B24SidebarLayout: SlotStub,
+        App: SlotStub,
+        SidebarLayout: SlotStub,
       },
     },
   })
@@ -127,6 +129,16 @@ describe('OrderItemsPage', () => {
     expect(text).toContain('1 800')
     expect(text).toContain('1 440')
     expect(wrapper.findAll('[data-order-item]')).toHaveLength(2)
+  })
+
+  it('uses a container width independent of the B24 spacing-6xl token', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const container = wrapper.get('main > div')
+    expect(container.classes()).toContain('w-full')
+    expect(container.classes()).toContain('max-w-[1152px]')
+    expect(container.classes()).not.toContain('max-w-6xl')
   })
 
   it('copies through the typed API, refreshes the source-of-truth list, and keeps the order context when adding', async () => {
