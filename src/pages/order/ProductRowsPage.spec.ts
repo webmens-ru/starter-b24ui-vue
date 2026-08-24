@@ -250,15 +250,17 @@ describe('ProductRowsPage', () => {
     expect(wrapper.find('[aria-label="Копировать товарную позицию 7"]').exists()).toBe(false)
   })
 
-  it('ignores a reorder response after navigation to another order', async () => {
+  it('enables the new order while an old reorder is pending and ignores its stale completion', async () => {
     let resolveReorder!: (value: ProductRowCollectionMutationResponse) => void
     mocks.reorderProductRows.mockImplementation(() => new Promise(resolve => {
       resolveReorder = resolve
     }))
+    const nextOrderFirst = makeProductRow(43, { orderId: 43, sortOrder: 10 })
+    const nextOrderSecond = makeProductRow(44, { orderId: 43, sortOrder: 20 })
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce({
-        productRows: [makeProductRow(43, { orderId: 43 })],
+        productRows: [nextOrderFirst, nextOrderSecond],
         orderTotals: { priceRetail: 4300, priceDealer: 3400 },
         orderWorkflow: initial.orderWorkflow,
       })
@@ -269,12 +271,16 @@ describe('ProductRowsPage', () => {
     mocks.route.params.orderId = '43'
     await flushPromises()
 
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 43 вниз"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 44 вверх"]').attributes('disabled')).toBeUndefined()
+
     resolveReorder({ productRows: [second, first], orderTotals: initial.orderTotals })
     await flushPromises()
 
-    expect(wrapper.findAll('[data-product-row]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-product-row]')).toHaveLength(2)
     expect(wrapper.get('[data-order-total="retail"]').text()).toMatch(/4\s*300/)
     expect(wrapper.find('[aria-label="Копировать товарную позицию 7"]').exists()).toBe(false)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 43 вниз"]').attributes('disabled')).toBeUndefined()
   })
 
   it('updates quantity with lockVersion and reloads with a conflict message on HTTP 409', async () => {

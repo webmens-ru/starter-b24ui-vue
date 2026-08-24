@@ -353,6 +353,7 @@ watch(orderIdParam, () => {
   loadFailed.value = false
   staleView.value = false
   busyProductRowIds.value = new Set()
+  reorderBusy.value = false
   orderTransitionBusy.value = false
   void loadProductRows()
 })
