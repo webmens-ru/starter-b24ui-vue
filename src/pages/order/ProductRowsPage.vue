@@ -369,7 +369,7 @@ watch(orderIdParam, () => {
             <p class="text-sm text-gray-500">Товарные позиции заказа</p>
           </div>
           <button
-            v-if="result?.orderWorkflow.canCreateItem"
+            v-if="result?.orderWorkflow.canCreateProductRow"
             type="button"
             class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"

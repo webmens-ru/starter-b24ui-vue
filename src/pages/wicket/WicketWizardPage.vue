@@ -3,7 +3,7 @@ import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
 import { loadWicketData, getAddonList, onWicketProductRowLockConflict } from '../../app/api/wicket'
-import { listProductRows, type ProductRowContext } from '../../app/api/productRows'
+import type { ProductRowContext } from '../../app/api/productRows'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
@@ -66,7 +66,7 @@ function positiveInteger(value: unknown): number | null {
   return Number.isInteger(number) && number > 0 ? number : null
 }
 
-async function resolveProductRowContext(): Promise<ProductRowContext> {
+async function resolveProductRowContext(): Promise<ProductRowContext | null> {
   const routeOrderId = positiveInteger(route.query.orderId)
   const routeProductRowId = positiveInteger(route.query.productRowId)
 
@@ -74,32 +74,8 @@ async function resolveProductRowContext(): Promise<ProductRowContext> {
     return { orderId: routeOrderId, productRowId: routeProductRowId, modelId: resolvedModelId() }
   }
 
-  const legacyOrderId = routeOrderId
-    ?? positiveInteger(window._PARAMS_?.placementOptions?.id)
-  if (!legacyOrderId) throw new Error('Не указан заказ и товарная позиция для открытия конфигуратора.')
-
-  const list = await listProductRows(legacyOrderId)
-  if (list.productRows.length !== 1) {
-    throw new Error('Не удалось однозначно определить товарную позицию старого заказа.')
-  }
-  const productRow = list.productRows[0]!
-  if (productRow.productType !== 'wicket') {
-    throw new Error('Товарная позиция старого заказа не является калиткой.')
-  }
-  return { orderId: legacyOrderId, productRowId: productRow.id, modelId: productRow.modelId }
-}
-
-async function canonicalizeProductRowUrl(context: ProductRowContext): Promise<void> {
-  if (
-    String(route.query.orderId ?? '') === String(context.orderId)
-    && String(route.query.productRowId ?? '') === String(context.productRowId)
-    && route.path === `/wicket/type${context.modelId}`
-  ) return
-
-  await router.replace({
-    path: `/wicket/type${context.modelId}`,
-    query: { orderId: String(context.orderId), productRowId: String(context.productRowId) },
-  })
+  await router.replace(routeOrderId ? `/order/${routeOrderId}/product-rows` : '/add-product')
+  return null
 }
 
 function isCurrentInitialization(generation: number): boolean {
@@ -116,8 +92,7 @@ async function initCalculation(): Promise<void> {
   try {
     const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
-    await canonicalizeProductRowUrl(context)
-    if (!isCurrentInitialization(generation)) return
+    if (!context) return
     const [availability, apiData] = await Promise.all([
       fetchAddonAvailability(Number(context.modelId)),
       loadWicketData(context),

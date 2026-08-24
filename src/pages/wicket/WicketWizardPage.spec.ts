@@ -3,7 +3,6 @@ import { flushPromises, shallowMount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, reactive } from 'vue'
 
-import type { ProductRowSummary } from '../../app/api/productRows'
 import { useCalculation } from '../../composables/useCalculation'
 import WicketWizardPage from './WicketWizardPage.vue'
 import page from './WicketWizardPage.vue?raw'
@@ -18,8 +17,6 @@ const mocks = vi.hoisted(() => ({
   loadWicketData: vi.fn(),
   getAddonList: vi.fn(),
   listProductRows: vi.fn(),
-  createOrder: vi.fn(),
-  createLegacyWicketMainMenu: vi.fn(),
   onWicketProductRowLockConflict: vi.fn(),
 }))
 
@@ -31,8 +28,6 @@ vi.mock('vue-router', () => ({
 vi.mock('../../app/api/wicket', () => ({
   loadWicketData: mocks.loadWicketData,
   getAddonList: mocks.getAddonList,
-  createOrder: mocks.createOrder,
-  createLegacyWicketMainMenu: mocks.createLegacyWicketMainMenu,
   onWicketProductRowLockConflict: mocks.onWicketProductRowLockConflict,
 }))
 
@@ -45,35 +40,6 @@ const wicketRoute: WicketRouteDefinition = {
   validations: () => new Map(),
   next: () => null,
   prev: () => null,
-}
-
-function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowSummary {
-  return {
-    id: 7,
-    orderId: 42,
-    productType: 'wicket',
-    modelId: '1',
-    quantity: 1,
-    sortOrder: 10,
-    status: { id: 1, code: 'draft', name: 'Черновик', color: null },
-    baseRetailUnitPrice: null,
-    baseDealerUnitPrice: null,
-    finalRetailUnitPrice: null,
-    finalDealerUnitPrice: null,
-    retailTotalPrice: null,
-    dealerTotalPrice: null,
-    adjustmentType: 'none',
-    adjustmentValue: 0,
-    adjustmentUnit: 'percent',
-    plannedCompletionAt: null,
-    lastCalculatedAt: null,
-    isActual: false,
-    calculationError: null,
-    lockVersion: 1,
-    allowedActions: [],
-    availableTransitions: [],
-    ...overrides,
-  }
 }
 
 function mountPage() {
@@ -106,10 +72,6 @@ describe('WicketWizardPage mobile summary', () => {
       visitedPages: ['page1'],
     })
     mocks.getAddonList.mockResolvedValue({ items: [] })
-    mocks.listProductRows.mockResolvedValue({
-      productRows: [makeProductRow()],
-      orderTotals: { priceRetail: null, priceDealer: null },
-    })
     Reflect.deleteProperty(window, '_PARAMS_')
   })
 
@@ -129,8 +91,6 @@ describe('WicketWizardPage mobile summary', () => {
     await flushPromises()
 
     expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
-    expect(mocks.createOrder).not.toHaveBeenCalled()
-    expect(mocks.createLegacyWicketMainMenu).not.toHaveBeenCalled()
   })
 
   it('shows a reload-required modal for a lock conflict in the open product row', async () => {
@@ -164,45 +124,18 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.productRowId.value).toBe(7)
   })
 
-  it('resolves a sole legacy order product row and canonicalizes the wizard URL', async () => {
-    window._PARAMS_ = {
-      placement: 'DEFAULT',
-      placementOptions: {
-        type: 'openApplication',
-        title: '',
-        entity: '',
-        viewMode: 'view' as TPlacementOptions['viewMode'],
-        id: '42',
-        modelId: '1',
-      },
-    }
-
-    mountPage()
-    await flushPromises()
-
-    expect(mocks.listProductRows).toHaveBeenCalledWith(42)
-    expect(mocks.replace).toHaveBeenCalledWith({
-      path: '/wicket/type1',
-      query: { orderId: '42', productRowId: '7' },
-    })
-    expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
-  })
-
-  it('does not let stale singleton context override an explicit legacy order id', async () => {
+  it('redirects an order without a product row to its product rows page without loading configuration', async () => {
     mocks.route.query = { orderId: '42' }
-    const calc = useCalculation()
-    calc.orderId.value = 99
-    calc.productRowId.value = 15
-    calc.modelId.value = '1'
 
     mountPage()
     await flushPromises()
 
-    expect(mocks.listProductRows).toHaveBeenCalledWith(42)
-    expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
+    expect(mocks.replace).toHaveBeenCalledWith('/order/42/product-rows')
+    expect(mocks.listProductRows).not.toHaveBeenCalled()
+    expect(mocks.loadWicketData).not.toHaveBeenCalled()
   })
 
-  it('does not use stale store identity for queryless direct wizard navigation', async () => {
+  it('redirects a wizard URL without an order to add-product without loading configuration', async () => {
     const calc = useCalculation()
     calc.orderId.value = 99
     calc.productRowId.value = 15
@@ -212,6 +145,7 @@ describe('WicketWizardPage mobile summary', () => {
     mountPage()
     await flushPromises()
 
+    expect(mocks.replace).toHaveBeenCalledWith('/add-product')
     expect(mocks.listProductRows).not.toHaveBeenCalled()
     expect(mocks.loadWicketData).not.toHaveBeenCalled()
     expect(calc.orderId.value).toBeNull()
@@ -305,35 +239,32 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.widthProyema.value).toBe('520')
   })
 
-  it('ignores a stale legacy list response after explicit product row navigation', async () => {
-    let resolveLegacy!: (value: { productRows: ProductRowSummary[], orderTotals: { priceRetail: null, priceDealer: null } }) => void
-    mocks.route.query = { orderId: '42' }
-    mocks.listProductRows.mockImplementationOnce(() => new Promise(resolve => {
-      resolveLegacy = resolve
+  it('does not apply a stale configuration response after redirecting away from an incomplete context', async () => {
+    let resolveLoad!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockImplementationOnce(() => new Promise(resolve => {
+      resolveLoad = resolve
     }))
     mountPage()
-    await vi.waitFor(() => expect(mocks.listProductRows).toHaveBeenCalledWith(42))
+    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(1))
 
-    mocks.route.query.orderId = '43'
-    mocks.route.query.productRowId = '8'
-    await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledWith({
-      orderId: 43,
-      productRowId: 8,
+    mocks.route.query.productRowId = ''
+    await vi.waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/order/42/product-rows'))
+
+    resolveLoad({
+      orderId: 42,
+      productRowId: 7,
       modelId: '1',
-    }))
-
-    resolveLegacy({
-      productRows: [makeProductRow()],
-      orderTotals: { priceRetail: null, priceDealer: null },
+      activePage: 'page1',
+      visitedPages: ['page1'],
+      widthProyema: '420',
     })
     await flushPromises()
 
-    expect(mocks.replace).not.toHaveBeenCalledWith({
-      path: '/wicket/type1',
-      query: { orderId: '42', productRowId: '7' },
-    })
-    expect(useCalculation().orderId.value).toBe(43)
-    expect(useCalculation().productRowId.value).toBe(8)
+    expect(mocks.listProductRows).not.toHaveBeenCalled()
+    expect(useCalculation().orderId.value).toBeNull()
+    expect(useCalculation().productRowId.value).toBeNull()
+    expect(useCalculation().widthProyema.value).toBe('')
   })
 
   it('does not apply a load response after unmount', async () => {

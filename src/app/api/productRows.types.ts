@@ -59,7 +59,7 @@ export interface ProductRowListResponse {
   orderWorkflow: {
     statusCode: string
     availableTransitions: string[]
-    canCreateItem: boolean
+    canCreateProductRow: boolean
   }
 }
 

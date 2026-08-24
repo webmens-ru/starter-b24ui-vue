@@ -84,7 +84,7 @@ const initial: ProductRowListResponse = {
   orderWorkflow: {
     statusCode: 'dealer_calculation',
     availableTransitions: ['submitted_to_order'],
-    canCreateItem: true,
+    canCreateProductRow: true,
   },
 }
 
@@ -382,7 +382,7 @@ describe('ProductRowsPage', () => {
     mocks.listProductRows.mockResolvedValueOnce({
       productRows: [],
       orderTotals: { priceRetail: null, priceDealer: null },
-      orderWorkflow: { ...initial.orderWorkflow, canCreateItem: true },
+      orderWorkflow: { ...initial.orderWorkflow, canCreateProductRow: true },
     })
     const empty = mountPage()
     await flushPromises()
@@ -459,7 +459,7 @@ describe('ProductRowsPage', () => {
       orderWorkflow: {
         statusCode: 'submitted_to_order',
         availableTransitions: [],
-        canCreateItem: false,
+        canCreateProductRow: false,
       },
     })
     const wrapper = mountPage()

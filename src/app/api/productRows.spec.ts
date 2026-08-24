@@ -40,6 +40,13 @@ describe('product row API', () => {
     vi.resetModules()
   })
 
+  it('does not export context-free legacy wicket operations', async () => {
+    const wicketApi = await import('./wicket')
+
+    expect(wicketApi).not.toHaveProperty('createLegacyWicketMainMenu')
+    expect(wicketApi).not.toHaveProperty('loadLegacyWicketData')
+  })
+
   it('requests an order item list in its order context', async () => {
     api.get.mockResolvedValueOnce({ data: { data: { productRows: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 

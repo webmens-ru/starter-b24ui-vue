@@ -154,39 +154,12 @@ export async function createWicketMainMenu(payload: WicketMainMenuPayload): Prom
   })
 }
 
-/** До Task 9: создание конфигурации без позиции заказа для старого entry-point. */
-export async function createLegacyWicketMainMenu(payload: {
-  orderId: number
-  modelId: string | number
-  model: string
-  productType?: string
-}): Promise<void> {
-  if (isMock) return
-  await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
-    ...payload,
-    modelId: String(payload.modelId),
-    productType: payload.productType ?? 'Калитка',
-  })
-}
-
 /** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
 export async function loadWicketData(context: ProductRowContext): Promise<Record<string, unknown>> {
   assertProductRowContext(context)
   if (isMock) return mockLoadWicketData(context.orderId)
   const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
   rememberWicketProductRowLockVersion(context, data.data.lockVersion)
-  return data.data
-}
-
-/** До Task 9: загрузка legacy-конфигурации без позиции заказа. */
-export async function loadLegacyWicketData(
-  modelId: string | number,
-  orderId: number,
-): Promise<Record<string, unknown>> {
-  if (isMock) return mockLoadWicketData(orderId)
-  const params: Record<string, string | number> = { orderId }
-  if (String(modelId) !== '1') params.modelId = modelId
-  const { data } = await api.get(`/api/wicket/type${modelId}/get-data`, { params })
   return data.data
 }
 
