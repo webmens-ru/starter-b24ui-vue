@@ -1,25 +1,25 @@
-import type { OrderItemContext } from './wicket.types'
+import type { ProductRowContext } from './wicket.types'
 
 const lockVersions = new Map<string, number>()
 const mutationTails = new Map<string, Promise<void>>()
 const conflictKeys = new Set<string>()
-const conflictListeners = new Set<(context: OrderItemContext) => void>()
+const conflictListeners = new Set<(context: ProductRowContext) => void>()
 
-export class WicketLockConflictError extends Error {
+export class WicketProductRowLockConflictError extends Error {
   public constructor() {
     super('Конфликт версии позиции. Перезагрузите расчёт.')
   }
 }
 
-function getKey(context: OrderItemContext): string {
+function getKey(context: ProductRowContext): string {
   if (!Number.isInteger(context.orderId) || context.orderId <= 0) {
     throw new Error('Некорректный orderId позиции')
   }
-  if (!Number.isInteger(context.orderItemId) || context.orderItemId <= 0) {
-    throw new Error('Некорректный orderItemId позиции')
+  if (!Number.isInteger(context.productRowId) || context.productRowId <= 0) {
+    throw new Error('Некорректный productRowId позиции')
   }
 
-  return `${context.orderId}:${context.orderItemId}`
+  return `${context.orderId}:${context.productRowId}`
 }
 
 function assertLockVersion(value: unknown): asserts value is number {
@@ -28,7 +28,7 @@ function assertLockVersion(value: unknown): asserts value is number {
   }
 }
 
-export function rememberWicketLockVersion(context: OrderItemContext, value: unknown): number {
+export function rememberWicketProductRowLockVersion(context: ProductRowContext, value: unknown): number {
   assertLockVersion(value)
   const key = getKey(context)
   const current = lockVersions.get(key)
@@ -41,7 +41,7 @@ export function rememberWicketLockVersion(context: OrderItemContext, value: unkn
   return value
 }
 
-export function requireWicketLockVersion(context: OrderItemContext): number {
+export function requireWicketProductRowLockVersion(context: ProductRowContext): number {
   const version = lockVersions.get(getKey(context))
   if (version === undefined) {
     throw new Error('Версия позиции не загружена')
@@ -50,13 +50,13 @@ export function requireWicketLockVersion(context: OrderItemContext): number {
   return version
 }
 
-export function forgetWicketLockVersion(context: OrderItemContext): void {
+export function forgetWicketProductRowLockVersion(context: ProductRowContext): void {
   const key = getKey(context)
   lockVersions.delete(key)
   conflictKeys.delete(key)
 }
 
-export function onWicketLockConflict(listener: (context: OrderItemContext) => void): () => void {
+export function onWicketProductRowLockConflict(listener: (context: ProductRowContext) => void): () => void {
   conflictListeners.add(listener)
   return () => conflictListeners.delete(listener)
 }
@@ -67,21 +67,21 @@ function isHttpConflict(error: unknown): boolean {
   return typeof response === 'object' && response !== null && 'status' in response && response.status === 409
 }
 
-function notifyConflict(context: OrderItemContext, key: string): void {
+function notifyConflict(context: ProductRowContext, key: string): void {
   if (conflictKeys.has(key)) return
   conflictKeys.add(key)
   conflictListeners.forEach(listener => listener(context))
 }
 
-export async function runWicketLockMutation<T>(
-  context: OrderItemContext,
+export async function runWicketProductRowLockMutation<T>(
+  context: ProductRowContext,
   mutation: (lockVersion: number) => Promise<T>,
 ): Promise<T> {
   const key = getKey(context)
   const previous = mutationTails.get(key) ?? Promise.resolve()
   const operation = previous.then(async () => {
-    if (conflictKeys.has(key)) throw new WicketLockConflictError()
-    return mutation(requireWicketLockVersion(context))
+    if (conflictKeys.has(key)) throw new WicketProductRowLockConflictError()
+    return mutation(requireWicketProductRowLockVersion(context))
   }).catch(error => {
     if (isHttpConflict(error)) notifyConflict(context, key)
     throw error

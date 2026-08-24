@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   route: { query: {} as Record<string, string> } as { query: Record<string, string> },
   push: vi.fn(),
   createOrder: vi.fn(),
-  createOrderItem: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -19,7 +18,6 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('../app/api/wicket', () => ({ createOrder: mocks.createOrder }))
-vi.mock('../app/api/orderItems', () => ({ createOrderItem: mocks.createOrderItem }))
 
 const SlotStub = { template: '<div><slot /></div>' }
 
@@ -41,10 +39,6 @@ describe('AddProduct order flow', () => {
     vi.clearAllMocks()
     mocks.route = reactive({ query: {} })
     mocks.createOrder.mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 })
-    mocks.createOrderItem.mockResolvedValue({
-      item: { id: 7, orderId: 42 },
-      orderTotals: { priceRetail: null, priceDealer: null },
-    })
   })
 
   it('creates an order once for the initial entry and opens its composition', async () => {
@@ -52,7 +46,7 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(mocks.createOrder).toHaveBeenCalledTimes(1)
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'order-items', params: { orderId: 42 } })
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
   })
 
   it('announces an initial order creation failure accessibly', async () => {
@@ -61,6 +55,16 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось создать заказ')
+  })
+
+  it('explains that a product row needs an order before product selection', async () => {
+    mocks.createOrder.mockRejectedValueOnce(new Error('Не удалось создать заказ'))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Калитки'))!.trigger('click')
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не указан заказ для добавления товарной позиции')
   })
 
   it('ignores a create-order response that arrives after unmount', async () => {
@@ -106,11 +110,10 @@ describe('AddProduct order flow', () => {
     await wrapper.findAll('button').find(button => button.text().includes('Калитки'))!.trigger('click')
 
     expect(mocks.createOrder).not.toHaveBeenCalled()
-    expect(mocks.createOrderItem).not.toHaveBeenCalled()
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/model', query: { orderId: '42' } })
   })
 
-  it('keeps a product disabled when the order-item backend does not support it yet', async () => {
+  it('keeps a product disabled when the product-row backend does not support it yet', async () => {
     mocks.route.query = { orderId: '42' }
     const wrapper = mountPage()
     await flushPromises()
@@ -118,6 +121,5 @@ describe('AddProduct order flow', () => {
     const swingButton = wrapper.findAll('button').find(button => button.text().includes('Ворота распашные'))!
     expect(swingButton.attributes('disabled')).toBeDefined()
     expect(swingButton.text()).toContain('Скоро')
-    expect(mocks.createOrderItem).not.toHaveBeenCalled()
   })
 })

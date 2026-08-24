@@ -7,7 +7,7 @@ import { computed, ref } from 'vue'
  */
 export const useWicketWizardStore = defineStore('wicket-wizard', () => {
   const orderId = ref<number | null>(null)
-  const orderItemId = ref<number | null>(null)
+  const productRowId = ref<number | null>(null)
   /** @deprecated Use orderId. Kept until all legacy consumers migrate. */
   const number = computed<string | number>({
     get: () => orderId.value ?? '',
@@ -35,7 +35,7 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
 
   function resetSession() {
     orderId.value = null
-    orderItemId.value = null
+    productRowId.value = null
     modelId.value = ''
     productType.value = ''
     model.value = ''
@@ -46,7 +46,7 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
   return {
     number,
     orderId,
-    orderItemId,
+    productRowId,
     modelId,
     productType,
     model,

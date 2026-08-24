@@ -4,30 +4,30 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
-  calculateOrderItem,
-  copyOrderItem,
-  deleteOrderItem,
-  listOrderItems,
-  reorderOrderItems,
-  transitionOrderItem,
+  calculateProductRow,
+  copyProductRow,
+  deleteProductRow,
+  listProductRows,
+  reorderProductRows,
+  transitionProductRow,
   transitionOrder,
-  updateOrderItem,
-  type OrderItemListResponse,
-  type OrderItemMutationResponse,
-  type OrderItemSummary,
-  type UpdateOrderItemPayload,
-} from '../../app/api/orderItems'
-import OrderItemCard from '../../components/order/OrderItemCard.vue'
+  updateProductRow,
+  type ProductRowListResponse,
+  type ProductRowMutationResponse,
+  type ProductRowSummary,
+  type UpdateProductRowPayload,
+} from '../../app/api/productRows'
+import ProductRowCard from '../../components/order/ProductRowCard.vue'
 import OrderTotals from '../../components/order/OrderTotals.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const result = ref<OrderItemListResponse | null>(null)
+const result = ref<ProductRowListResponse | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const noticeMessage = ref<string | null>(null)
-const busyItemIds = ref<Set<number>>(new Set())
+const busyProductRowIds = ref<Set<number>>(new Set())
 const orderTransitionBusy = ref(false)
 const loadFailed = ref(false)
 const staleView = ref(false)
@@ -37,20 +37,20 @@ let routeGeneration = 0
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
 const orderId = computed(() => Number(orderIdParam.value))
 const canReorder = computed(() => {
-  const items = result.value?.items ?? []
-  return items.length > 1
-    && items.every(item => item.allowedActions.includes('order_item.reorder'))
+  const productRows = result.value?.productRows ?? []
+  return productRows.length > 1
+    && productRows.every(productRow => productRow.allowedActions.includes('product_row.reorder'))
 })
 
 function validOrderId(): boolean {
   return Number.isInteger(orderId.value) && orderId.value > 0
 }
 
-function setBusy(itemId: number, busy: boolean): void {
-  const next = new Set(busyItemIds.value)
-  if (busy) next.add(itemId)
-  else next.delete(itemId)
-  busyItemIds.value = next
+function setBusy(productRowId: number, busy: boolean): void {
+  const next = new Set(busyProductRowIds.value)
+  if (busy) next.add(productRowId)
+  else next.delete(productRowId)
+  busyProductRowIds.value = next
 }
 
 function isConflict(error: unknown): boolean {
@@ -63,12 +63,12 @@ function mutationMessage(error: unknown): string {
       ?? error.response?.data?.error?.message
     if (typeof serverMessage === 'string' && serverMessage.trim() !== '') return serverMessage
   }
-  return error instanceof Error ? error.message : 'Не удалось выполнить действие с позицией'
+  return error instanceof Error ? error.message : 'Не удалось выполнить действие с товарной позицией'
 }
 
 type LoadResult = 'loaded' | 'failed' | 'stale'
 
-async function loadItems(options: { preserveNotice?: boolean } = {}): Promise<LoadResult> {
+async function loadProductRows(options: { preserveNotice?: boolean } = {}): Promise<LoadResult> {
   const loadId = ++latestLoadId
   const requestedOrderId = orderId.value
   if (!validOrderId()) {
@@ -82,7 +82,7 @@ async function loadItems(options: { preserveNotice?: boolean } = {}): Promise<Lo
   loadFailed.value = false
   if (!options.preserveNotice) noticeMessage.value = null
   try {
-    const response = await listOrderItems(requestedOrderId)
+    const response = await listProductRows(requestedOrderId)
     if (loadId !== latestLoadId || orderId.value !== requestedOrderId) return 'stale'
     result.value = response
     staleView.value = false
@@ -98,10 +98,10 @@ async function loadItems(options: { preserveNotice?: boolean } = {}): Promise<Lo
   }
 }
 
-function applyMutation(response: OrderItemMutationResponse): void {
+function applyMutation(response: ProductRowMutationResponse): void {
   if (!result.value) return
-  const index = result.value.items.findIndex(item => item.id === response.item.id)
-  if (index >= 0) result.value.items.splice(index, 1, response.item)
+  const index = result.value.productRows.findIndex(productRow => productRow.id === response.productRow.id)
+  if (index >= 0) result.value.productRows.splice(index, 1, response.productRow)
   result.value.orderTotals = response.orderTotals
 }
 
@@ -109,21 +109,21 @@ function isCurrentRoute(generation: number, mutationOrderId: number): boolean {
   return generation === routeGeneration && orderId.value === mutationOrderId
 }
 
-async function runLockedMutation(
-  item: OrderItemSummary,
-  operation: () => Promise<OrderItemMutationResponse>,
+async function runLockedProductRowMutation(
+  productRow: ProductRowSummary,
+  operation: () => Promise<ProductRowMutationResponse>,
   options: { reload?: boolean } = {},
 ): Promise<void> {
   const generation = routeGeneration
   const mutationOrderId = orderId.value
-  setBusy(item.id, true)
+  setBusy(productRow.id, true)
   errorMessage.value = null
   noticeMessage.value = null
   try {
     const response = await operation()
     if (!isCurrentRoute(generation, mutationOrderId)) return
     if (options.reload) {
-      const refreshResult = await loadItems()
+      const refreshResult = await loadProductRows()
       if (refreshResult === 'failed' && isCurrentRoute(generation, mutationOrderId)) {
         errorMessage.value = 'Действие выполнено, но состав заказа не удалось обновить'
       }
@@ -131,50 +131,50 @@ async function runLockedMutation(
   } catch (error) {
     if (!isCurrentRoute(generation, mutationOrderId)) return
     if (isConflict(error)) {
-      noticeMessage.value = 'Позиция уже была изменена другим пользователем'
-      await loadItems({ preserveNotice: true })
+      noticeMessage.value = 'Товарная позиция уже была изменена другим пользователем'
+      await loadProductRows({ preserveNotice: true })
     } else {
       errorMessage.value = mutationMessage(error)
     }
   } finally {
-    if (isCurrentRoute(generation, mutationOrderId)) setBusy(item.id, false)
+    if (isCurrentRoute(generation, mutationOrderId)) setBusy(productRow.id, false)
   }
 }
 
-async function runReloadingItemAction(
-  item: OrderItemSummary,
+async function runReloadingProductRowAction(
+  productRow: ProductRowSummary,
   operation: () => Promise<unknown>,
 ): Promise<void> {
   const generation = routeGeneration
   const mutationOrderId = orderId.value
-  setBusy(item.id, true)
+  setBusy(productRow.id, true)
   errorMessage.value = null
   noticeMessage.value = null
   try {
     await operation()
     if (!isCurrentRoute(generation, mutationOrderId)) return
-    const refreshResult = await loadItems()
+    const refreshResult = await loadProductRows()
     if (refreshResult === 'failed' && isCurrentRoute(generation, mutationOrderId)) {
       errorMessage.value = 'Действие выполнено, но состав заказа не удалось обновить'
     }
   } catch (error) {
     if (!isCurrentRoute(generation, mutationOrderId)) return
     if (isConflict(error)) {
-      noticeMessage.value = 'Позиция уже была изменена другим пользователем'
-      await loadItems({ preserveNotice: true })
+      noticeMessage.value = 'Товарная позиция уже была изменена другим пользователем'
+      await loadProductRows({ preserveNotice: true })
     } else {
       errorMessage.value = mutationMessage(error)
     }
   } finally {
-    if (isCurrentRoute(generation, mutationOrderId)) setBusy(item.id, false)
+    if (isCurrentRoute(generation, mutationOrderId)) setBusy(productRow.id, false)
   }
 }
 
-function editItem(item: OrderItemSummary): void {
-  const path = item.productType === 'wicket'
-    ? `/wicket/type${item.modelId}`
-    : item.productType === 'swing'
-      ? `/swing-gates/type${item.modelId}`
+function editProductRow(productRow: ProductRowSummary): void {
+  const path = productRow.productType === 'wicket'
+    ? `/wicket/type${productRow.modelId}`
+    : productRow.productType === 'swing'
+      ? `/swing-gates/type${productRow.modelId}`
       : null
   if (!path) {
     errorMessage.value = 'Для этого типа изделия конфигуратор пока недоступен'
@@ -182,85 +182,85 @@ function editItem(item: OrderItemSummary): void {
   }
   void router.push({
     path,
-    query: { orderId: String(orderId.value), orderItemId: String(item.id) },
+    query: { orderId: String(orderId.value), productRowId: String(productRow.id) },
   })
 }
 
-async function copyItem(item: OrderItemSummary): Promise<void> {
-  await runLockedMutation(item, () => copyOrderItem({
+async function copyProductRowAction(productRow: ProductRowSummary): Promise<void> {
+  await runLockedProductRowMutation(productRow, () => copyProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    lockVersion: productRow.lockVersion,
   }), { reload: true })
 }
 
-async function updateQuantity(item: OrderItemSummary, quantity: number): Promise<void> {
-  await runLockedMutation(item, () => updateOrderItem({
+async function updateQuantity(productRow: ProductRowSummary, quantity: number): Promise<void> {
+  await runLockedProductRowMutation(productRow, () => updateProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    lockVersion: productRow.lockVersion,
     quantity,
   }))
 }
 
 async function updateAdjustment(
-  item: OrderItemSummary,
+  productRow: ProductRowSummary,
   adjustment: Pick<
-    UpdateOrderItemPayload,
+    UpdateProductRowPayload,
     'adjustmentType' | 'adjustmentValue' | 'adjustmentUnit'
   >,
 ): Promise<void> {
-  await runLockedMutation(item, () => updateOrderItem({
+  await runLockedProductRowMutation(productRow, () => updateProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    lockVersion: productRow.lockVersion,
     ...adjustment,
   }))
 }
 
-async function updateDeadline(item: OrderItemSummary, plannedCompletionAt: string | null): Promise<void> {
-  await runLockedMutation(item, () => updateOrderItem({
+async function updateDeadline(productRow: ProductRowSummary, plannedCompletionAt: string | null): Promise<void> {
+  await runLockedProductRowMutation(productRow, () => updateProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    lockVersion: productRow.lockVersion,
     plannedCompletionAt,
   }))
 }
 
-async function recalculateItem(item: OrderItemSummary): Promise<void> {
-  await runReloadingItemAction(item, () => calculateOrderItem({
+async function recalculateProductRow(productRow: ProductRowSummary): Promise<void> {
+  await runReloadingProductRowAction(productRow, () => calculateProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    modelId: item.modelId,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    modelId: productRow.modelId,
+    lockVersion: productRow.lockVersion,
   }))
 }
 
-async function deleteItem(item: OrderItemSummary): Promise<void> {
-  await runLockedMutation(item, () => deleteOrderItem({
+async function deleteProductRowAction(productRow: ProductRowSummary): Promise<void> {
+  await runLockedProductRowMutation(productRow, () => deleteProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
-    lockVersion: item.lockVersion,
+    productRowId: productRow.id,
+    lockVersion: productRow.lockVersion,
   }), { reload: true })
 }
 
-async function transitionItem(item: OrderItemSummary, toStatus: string): Promise<void> {
-  await runLockedMutation(item, () => transitionOrderItem({
+async function transitionProductRowAction(productRow: ProductRowSummary, toStatus: string): Promise<void> {
+  await runLockedProductRowMutation(productRow, () => transitionProductRow({
     orderId: orderId.value,
-    orderItemId: item.id,
+    productRowId: productRow.id,
     toStatus,
-    lockVersion: item.lockVersion,
+    lockVersion: productRow.lockVersion,
   }))
 }
 
-async function moveItem(index: number, direction: -1 | 1): Promise<void> {
+async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
   if (!result.value || staleView.value || !canReorder.value) return
   const generation = routeGeneration
   const mutationOrderId = orderId.value
   const targetIndex = index + direction
-  if (targetIndex < 0 || targetIndex >= result.value.items.length) return
+  if (targetIndex < 0 || targetIndex >= result.value.productRows.length) return
 
-  const reordered = [...result.value.items]
+  const reordered = [...result.value.productRows]
   const [moved] = reordered.splice(index, 1)
   if (!moved) return
   reordered.splice(targetIndex, 0, moved)
@@ -268,14 +268,14 @@ async function moveItem(index: number, direction: -1 | 1): Promise<void> {
   noticeMessage.value = null
   setBusy(moved.id, true)
   try {
-    const response = await reorderOrderItems({
+    const response = await reorderProductRows({
       orderId: mutationOrderId,
-      itemIds: reordered.map(item => item.id),
+    productRowIds: reordered.map(productRow => productRow.id),
     })
     if (isCurrentRoute(generation, mutationOrderId) && result.value) {
       result.value = {
         ...result.value,
-        items: response.items,
+        productRows: response.productRows,
         orderTotals: response.orderTotals,
       }
     }
@@ -300,7 +300,7 @@ async function transitionOrderStatus(toStatus: string): Promise<void> {
   try {
     await transitionOrder({ orderId: mutationOrderId, toStatus })
     if (!isCurrentRoute(generation, mutationOrderId)) return
-    const refreshResult = await loadItems()
+    const refreshResult = await loadProductRows()
     if (refreshResult === 'failed' && isCurrentRoute(generation, mutationOrderId)) {
       errorMessage.value = 'Статус изменён, но состав заказа не удалось обновить'
     }
@@ -323,7 +323,7 @@ function orderTransitionLabel(code: string): string {
 }
 
 onMounted(() => {
-  void loadItems()
+  void loadProductRows()
 })
 
 onUnmounted(() => {
@@ -338,9 +338,9 @@ watch(orderIdParam, () => {
   noticeMessage.value = null
   loadFailed.value = false
   staleView.value = false
-  busyItemIds.value = new Set()
+  busyProductRowIds.value = new Set()
   orderTransitionBusy.value = false
-  void loadItems()
+  void loadProductRows()
 })
 </script>
 
@@ -351,16 +351,16 @@ watch(orderIdParam, () => {
         <header class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
           <div>
             <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">Заказ №{{ orderIdParam }}</h1>
-            <p class="text-sm text-gray-500">Состав заказа</p>
+            <p class="text-sm text-gray-500">Товарные позиции заказа</p>
           </div>
           <button
             v-if="result?.orderWorkflow.canCreateItem"
             type="button"
             class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            :aria-label="`Добавить изделие в заказ ${orderIdParam}`"
+            :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
             @click="addProduct"
           >
-            Добавить изделие
+            Добавить товарную позицию
           </button>
         </header>
 
@@ -386,7 +386,7 @@ watch(orderIdParam, () => {
                 class="mt-2 rounded border border-red-300 px-3 py-1.5 text-sm hover:bg-red-100"
                 aria-label="Повторить загрузку состава заказа"
                 :disabled="loading"
-                @click="loadItems()"
+                @click="loadProductRows()"
               >
                 Повторить
               </button>
@@ -402,48 +402,48 @@ watch(orderIdParam, () => {
 
             <template v-else-if="result">
               <div
-                v-if="result.items.length === 0"
+                v-if="result.productRows.length === 0"
                 class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center"
               >
-                <h2 class="text-lg font-semibold text-gray-800">В заказе пока нет изделий</h2>
-                <p class="mt-1 text-sm text-gray-500">Добавьте первое изделие, чтобы начать конфигурацию.</p>
+                <h2 class="text-lg font-semibold text-gray-800">В заказе пока нет товарных позиций</h2>
+                <p class="mt-1 text-sm text-gray-500">Добавьте первую товарную позицию, чтобы начать конфигурацию.</p>
               </div>
 
               <div v-else class="flex flex-col gap-4">
                 <article
-                  v-for="(item, index) in result.items"
-                  :key="item.id"
-                  data-order-item
+                  v-for="(productRow, index) in result.productRows"
+                  :key="productRow.id"
+                  data-product-row
                   class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
-                  <OrderItemCard
-                    :item="item"
-                    :disabled="staleView || busyItemIds.has(item.id)"
-                    @edit="editItem"
-                    @copy="copyItem"
+                  <ProductRowCard
+                    :product-row="productRow"
+                    :disabled="staleView || busyProductRowIds.has(productRow.id)"
+                    @edit="editProductRow"
+                    @copy="copyProductRowAction"
                     @update-quantity="updateQuantity"
                     @update-adjustment="updateAdjustment"
                     @update-deadline="updateDeadline"
-                    @recalculate="recalculateItem"
-                    @delete="deleteItem"
-                    @transition="transitionItem"
+                    @recalculate="recalculateProductRow"
+                    @delete="deleteProductRowAction"
+                    @transition="transitionProductRowAction"
                   />
                   <div v-if="canReorder" class="flex gap-2 sm:flex-col">
                     <button
                       type="button"
                       class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      :aria-label="`Переместить позицию ${item.id} вверх`"
-                      :disabled="staleView || index === 0 || busyItemIds.has(item.id)"
-                      @click="moveItem(index, -1)"
+                      :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
+                      :disabled="staleView || index === 0 || busyProductRowIds.has(productRow.id)"
+                      @click="moveProductRow(index, -1)"
                     >
                       ↑
                     </button>
                     <button
                       type="button"
                       class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      :aria-label="`Переместить позицию ${item.id} вниз`"
-                      :disabled="staleView || index === result.items.length - 1 || busyItemIds.has(item.id)"
-                      @click="moveItem(index, 1)"
+                      :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
+                      :disabled="staleView || index === result.productRows.length - 1 || busyProductRowIds.has(productRow.id)"
+                      @click="moveProductRow(index, 1)"
                     >
                       ↓
                     </button>

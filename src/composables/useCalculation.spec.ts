@@ -10,7 +10,7 @@ describe('useCalculation', () => {
     calc = useCalculation()
     calc.reset()
     calc.orderId.value = 42
-    calc.orderItemId.value = 7
+    calc.productRowId.value = 7
     calc.modelId.value = '1'
   })
 
@@ -34,7 +34,7 @@ describe('useCalculation', () => {
 
     const fullApiData: Record<string, unknown> = {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
       productType: 'wicket',
       model: 'Калитка Тип 1',
@@ -525,9 +525,9 @@ describe('useCalculation', () => {
   })
 
   describe('getBaseSavePayload', () => {
-    it('возвращает orderId, orderItemId, modelId, reachedStep, visitedPages', () => {
+    it('возвращает orderId, productRowId, modelId, reachedStep, visitedPages', () => {
       calc.number.value = 42
-      calc.orderItemId.value = 7
+      calc.productRowId.value = 7
       calc.modelId.value = '1'
       calc.setActivePage('page5')
 
@@ -535,7 +535,7 @@ describe('useCalculation', () => {
 
       expect(payload).toEqual({
         orderId: 42,
-        orderItemId: 7,
+        productRowId: 7,
         modelId: '1',
         reachedStep: 'page5',
         visitedPages: JSON.stringify(calc.visitedPages.value),
@@ -545,18 +545,18 @@ describe('useCalculation', () => {
 
     it('отклоняет сохранение без контекста текущей позиции', () => {
       calc.orderId.value = null
-      calc.orderItemId.value = null
+      calc.productRowId.value = null
 
       expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный orderId текущей позиции.')
 
       calc.orderId.value = 42
-      expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный orderItemId текущей позиции.')
+      expect(() => calc.getBaseSavePayload()).toThrow('Не указан корректный productRowId текущей позиции.')
     })
 
     it('возвращает проверенный контекст текущей позиции для API-операций', () => {
-      expect(calc.getCurrentItemContext()).toEqual({
+      expect(calc.getCurrentProductRowContext()).toEqual({
         orderId: 42,
-        orderItemId: 7,
+        productRowId: 7,
         modelId: '1',
       })
     })

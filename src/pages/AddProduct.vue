@@ -53,7 +53,7 @@ function isCurrentLifecycle(generation: number): boolean {
 async function onProductTypeSelect(item: (typeof productTypes)[0]) {
   if (loading.value || item.soon) return
   if (!currentOrderId.value) {
-    errorMessage.value = 'Не указан заказ для добавления изделия'
+    errorMessage.value = 'Не указан заказ для добавления товарной позиции'
     return
   }
   loading.value = item.id
@@ -96,7 +96,7 @@ onMounted(async () => {
     const order = await createOrder()
     if (!isCurrentLifecycle(generation)) return
     calc.orderId.value = order.orderId
-    await router.push({ name: 'order-items', params: { orderId: order.orderId } })
+    await router.push({ name: 'product-rows', params: { orderId: order.orderId } })
   } catch (e) {
     if (!isCurrentLifecycle(generation)) return
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'
@@ -129,7 +129,7 @@ onUnmounted(() => {
             label="Назад"
             color="air-secondary"
             @click="currentOrderId
-              ? router.push({ name: 'order-items', params: { orderId: currentOrderId } })
+              ? router.push({ name: 'product-rows', params: { orderId: currentOrderId } })
               : router.push('/')"
           />
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">

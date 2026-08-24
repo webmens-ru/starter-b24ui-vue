@@ -38,7 +38,7 @@ describe('Pen frame color capability', () => {
     const calc = useCalculation()
     calc.reset()
     calc.orderId.value = 42
-    calc.orderItemId.value = 7
+    calc.productRowId.value = 7
     calc.modelId.value = '1'
     calc.isTherePenName.value = 'Будет'
     calc.penProvided.value = 'Предоставляет изготовитель'

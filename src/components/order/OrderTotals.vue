@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { OrderTotals } from '../../app/api/orderItems'
+import type { OrderTotals } from '../../app/api/productRows'
 import { formatOrderPrice } from './orderPrice'
 
 defineProps<{

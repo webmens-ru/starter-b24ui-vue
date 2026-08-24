@@ -17,7 +17,7 @@ const router = {
   replace: vi.fn(),
 }
 
-const route = reactive({ path: '/wicket/type1', query: { orderId: '42', orderItemId: '7' } })
+const route = reactive({ path: '/wicket/type1', query: { orderId: '42', productRowId: '7' } })
 
 vi.mock('../../app/api', () => ({ default: api }))
 vi.mock('vue-router', () => ({
@@ -52,12 +52,12 @@ describe('End lock-conflict integration', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     route.path = '/wicket/type1'
-    route.query = { orderId: '42', orderItemId: '7' }
+    route.query = { orderId: '42', productRowId: '7' }
     api.get.mockImplementation((url: string) => {
       if (url === '/api/wicket/type1/get-data') {
         return Promise.resolve(response({
           orderId: 42,
-          orderItemId: 7,
+          productRowId: 7,
           modelId: '1',
           lockVersion: 4,
           activePage: 'page12',
@@ -107,7 +107,7 @@ describe('End lock-conflict integration', () => {
     expect(api.post).toHaveBeenCalledTimes(2)
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/delete', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
       lockVersion: 5,
     })

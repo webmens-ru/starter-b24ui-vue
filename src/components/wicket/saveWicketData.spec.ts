@@ -70,7 +70,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.reset()
     calc.modelId.value = '1'
     calc.number.value = 42
-    calc.orderItemId.value = 7
+    calc.productRowId.value = 7
     vi.mocked(saveWicketData).mockClear()
   })
 
@@ -94,7 +94,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(payload).toMatchObject({
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
       reachedStep: 'page1',
     })

@@ -29,7 +29,7 @@ const item = {
   isActual: false,
   calculationError: null,
   lockVersion: 1,
-  allowedActions: ['order_item.edit_configuration'] as const,
+  allowedActions: ['product_row.edit_configuration'] as const,
   availableTransitions: [] as string[],
 }
 
@@ -41,19 +41,19 @@ describe('order item API', () => {
   })
 
   it('requests an order item list in its order context', async () => {
-    api.get.mockResolvedValueOnce({ data: { data: { items: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
+    api.get.mockResolvedValueOnce({ data: { data: { productRows: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 
-    const { listOrderItems } = await import('./orderItems')
+    const { listProductRows } = await import('./productRows')
 
-    await expect(listOrderItems(42)).resolves.toEqual({
-      items: [item],
+    await expect(listProductRows(42)).resolves.toEqual({
+      productRows: [item],
       orderTotals: { priceRetail: 1000, priceDealer: 800 },
     })
-    expect(api.get).toHaveBeenCalledWith('/api/order-item/index', { params: { orderId: 42 } })
+    expect(api.get).toHaveBeenCalledWith('/api/product-row/index', { params: { orderId: 42 } })
   })
 
   it('synchronizes the wicket lock version across load, save, and recalculation', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
     api.post
       .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
@@ -78,7 +78,7 @@ describe('order item API', () => {
   })
 
   it('serializes same-item mutations and uses the version advanced by the first response', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     let resolveSave!: (value: { data: { data: { lockVersion: number } } }) => void
     const saveResponse = new Promise<{ data: { data: { lockVersion: number } } }>(resolve => {
       resolveSave = resolve
@@ -107,19 +107,19 @@ describe('order item API', () => {
   })
 
   it('signals a 409 conflict once and does not retry or start another mutation', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     const conflict = { response: { status: 409 } }
     api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
     api.post.mockRejectedValueOnce(conflict)
 
     const {
       loadWicketData,
-      onWicketLockConflict,
+      onWicketProductRowLockConflict,
       recalculate,
       saveWicketData,
     } = await import('./wicket')
     const visibleConflict = vi.fn()
-    const unsubscribe = onWicketLockConflict(visibleConflict)
+    const unsubscribe = onWicketProductRowLockConflict(visibleConflict)
 
     await loadWicketData(context)
     await expect(saveWicketData({ ...context, widthProyema: 900 })).rejects.toBe(conflict)
@@ -132,14 +132,14 @@ describe('order item API', () => {
   })
 
   it('signals a 409 conflict when deleting through the serialized wicket API', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     const conflict = { response: { status: 409 } }
     api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
     api.post.mockRejectedValueOnce(conflict)
 
-    const { deleteCalculation, loadWicketData, onWicketLockConflict } = await import('./wicket')
+    const { deleteCalculation, loadWicketData, onWicketProductRowLockConflict } = await import('./wicket')
     const visibleConflict = vi.fn()
-    const unsubscribe = onWicketLockConflict(visibleConflict)
+    const unsubscribe = onWicketProductRowLockConflict(visibleConflict)
 
     await loadWicketData(context)
     await expect(deleteCalculation(context)).rejects.toBe(conflict)
@@ -154,13 +154,13 @@ describe('order item API', () => {
   it('rejects a wicket save for a never-loaded item before sending a request', async () => {
     const { saveWicketData } = await import('./wicket')
 
-    await expect(saveWicketData({ orderId: 42, orderItemId: 8, modelId: '1', widthProyema: 900 }))
+    await expect(saveWicketData({ orderId: 42, productRowId: 8, modelId: '1', widthProyema: 900 }))
       .rejects.toThrow('Версия позиции не загружена')
     expect(api.post).not.toHaveBeenCalled()
   })
 
   it('rejects malformed mutation versions without replacing the remembered version', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
     api.post
       .mockResolvedValueOnce({ data: { data: { lockVersion: null } } })
@@ -184,12 +184,12 @@ describe('order item API', () => {
     const { saveWicketData } = await import('./wicket')
 
     await expect(saveWicketData({ orderId: 42, modelId: '1' } as never))
-      .rejects.toThrow('Не указан корректный orderItemId текущей позиции.')
+      .rejects.toThrow('Не указан корректный productRowId текущей позиции.')
     expect(api.post).not.toHaveBeenCalled()
   })
 
   it('sends item context for terminal price and delete operations', async () => {
-    const context = { orderId: 42, orderItemId: 7, modelId: '1' }
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
     api.get
       .mockResolvedValueOnce({ data: { data: { hasSavedPrice: false, isActual: false } } })
       .mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
@@ -212,11 +212,11 @@ describe('order item API', () => {
   it('creates an item with the exact creation payload', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: null, priceDealer: null } } } })
 
-    const { createOrderItem } = await import('./orderItems')
+    const { createProductRow } = await import('./productRows')
 
-    await createOrderItem({ orderId: 42, productType: 'wicket', modelId: '1', model: 'Калитка Тип 1' })
+    await createProductRow({ orderId: 42, productType: 'wicket', modelId: '1', model: 'Калитка Тип 1' })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/create', {
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/create', {
       orderId: 42,
       productType: 'wicket',
       modelId: '1',
@@ -227,13 +227,13 @@ describe('order item API', () => {
   it('updates an item with its optimistic lock version', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 
-    const { updateOrderItem } = await import('./orderItems')
+    const { updateProductRow } = await import('./productRows')
 
-    await updateOrderItem({ orderId: 42, orderItemId: 7, lockVersion: 3, quantity: 2 })
+    await updateProductRow({ orderId: 42, productRowId: 7, lockVersion: 3, quantity: 2 })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/update', {
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/update', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       lockVersion: 3,
       quantity: 2,
     })
@@ -242,37 +242,37 @@ describe('order item API', () => {
   it('copies an item in its order context', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 
-    const { copyOrderItem } = await import('./orderItems')
+    const { copyProductRow } = await import('./productRows')
 
-    await copyOrderItem({ orderId: 42, orderItemId: 7, lockVersion: 3 })
+    await copyProductRow({ orderId: 42, productRowId: 7, lockVersion: 3 })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/copy', {
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/copy', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       lockVersion: 3,
     })
   })
 
   it('reorders every active item in its order context', async () => {
-    api.post.mockResolvedValueOnce({ data: { data: { items: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
+    api.post.mockResolvedValueOnce({ data: { data: { productRows: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 
-    const { reorderOrderItems } = await import('./orderItems')
+    const { reorderProductRows } = await import('./productRows')
 
-    await reorderOrderItems({ orderId: 42, itemIds: [9, 7] })
+    await reorderProductRows({ orderId: 42, productRowIds: [9, 7] })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/reorder', { orderId: 42, itemIds: [9, 7] })
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/reorder', { orderId: 42, productRowIds: [9, 7] })
   })
 
   it('deletes an item with its optimistic lock version', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: 0, priceDealer: 0 } } } })
 
-    const { deleteOrderItem } = await import('./orderItems')
+    const { deleteProductRow } = await import('./productRows')
 
-    await deleteOrderItem({ orderId: 42, orderItemId: 7, lockVersion: 3 })
+    await deleteProductRow({ orderId: 42, productRowId: 7, lockVersion: 3 })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/delete', {
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/delete', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       lockVersion: 3,
     })
   })
@@ -280,13 +280,13 @@ describe('order item API', () => {
   it('transitions an item with its target status and lock version', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 
-    const { transitionOrderItem } = await import('./orderItems')
+    const { transitionProductRow } = await import('./productRows')
 
-    await transitionOrderItem({ orderId: 42, orderItemId: 7, toStatus: 'production', lockVersion: 3 })
+    await transitionProductRow({ orderId: 42, productRowId: 7, toStatus: 'production', lockVersion: 3 })
 
-    expect(api.post).toHaveBeenCalledWith('/api/order-item/transition', {
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/transition', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       toStatus: 'production',
       lockVersion: 3,
     })
@@ -297,14 +297,14 @@ describe('order item API', () => {
       .mockResolvedValueOnce({ data: { data: { priceRetail: '1000.00', priceDealer: '800.00', lockVersion: 4 } } })
       .mockResolvedValueOnce({ data: { data: { statusCode: 'submitted_to_order' } } })
 
-    const { calculateOrderItem, transitionOrder } = await import('./orderItems')
+    const { calculateProductRow, transitionOrder } = await import('./productRows')
 
-    await calculateOrderItem({ orderId: 42, orderItemId: 7, modelId: '1', lockVersion: 3 })
+    await calculateProductRow({ orderId: 42, productRowId: 7, modelId: '1', lockVersion: 3 })
     await transitionOrder({ orderId: 42, toStatus: 'submitted_to_order' })
 
     expect(api.post).toHaveBeenNthCalledWith(1, '/api/order/calculate', {
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
       lockVersion: 3,
     })

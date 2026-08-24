@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
-import type { OrderItemContext, WicketSavePayload } from '../app/api/wicket.types'
+import type { ProductRowContext, WicketSavePayload } from '../app/api/wicket.types'
 
 export type { CalcBlock } from '../stores/wicket/types'
 
@@ -19,20 +19,20 @@ export function useCalculation() {
 
   function getBaseSavePayload(): {
     orderId: number
-    orderItemId: number
+    productRowId: number
     /** API Yii ожидает строку (см. BaseModelController::validateBasePayload). */
     modelId: string
     reachedStep: string
     visitedPages: string
   } {
     const orderId = wizard.orderId
-    const orderItemId = wizard.orderItemId
+    const productRowId = wizard.productRowId
     const modelId = String(wizard.modelId ?? '').trim()
     if (!isPositiveInteger(orderId)) {
       throw new Error('Не указан корректный orderId текущей позиции.')
     }
-    if (!isPositiveInteger(orderItemId)) {
-      throw new Error('Не указан корректный orderItemId текущей позиции.')
+    if (!isPositiveInteger(productRowId)) {
+      throw new Error('Не указан корректный productRowId текущей позиции.')
     }
     if (modelId === '') {
       throw new Error('Не указан modelId текущей позиции.')
@@ -40,16 +40,16 @@ export function useCalculation() {
 
     return {
       orderId,
-      orderItemId,
+      productRowId,
       modelId,
       reachedStep: wizard.activePage,
       visitedPages: JSON.stringify(wizard.visitedPages),
     }
   }
 
-  function getCurrentItemContext(): OrderItemContext {
-    const { orderId, orderItemId, modelId } = getBaseSavePayload()
-    return { orderId, orderItemId, modelId }
+  function getCurrentProductRowContext(): ProductRowContext {
+    const { orderId, productRowId, modelId } = getBaseSavePayload()
+    return { orderId, productRowId, modelId }
   }
 
   function getFullSavePayload(): WicketSavePayload {
@@ -164,7 +164,7 @@ export function useCalculation() {
     setActivePage: wizard.setActivePage,
     isPageAccessible: wizard.isPageAccessible,
     getBaseSavePayload,
-    getCurrentItemContext,
+    getCurrentProductRowContext,
     getFullSavePayload,
     loadFromApi: form.loadFromApi,
     reset,

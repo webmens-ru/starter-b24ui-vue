@@ -2,49 +2,49 @@
 import { computed, ref, watch } from 'vue'
 
 import type {
-  OrderItemAllowedAction,
-  OrderItemSummary,
-} from '../../app/api/orderItems'
+  ProductRowAllowedAction,
+  ProductRowSummary,
+} from '../../app/api/productRows'
 import { formatOrderPrice } from './orderPrice'
 
 const props = withDefaults(defineProps<{
-  item: OrderItemSummary
+  productRow: ProductRowSummary
   disabled?: boolean
 }>(), {
   disabled: false,
 })
 
 const emit = defineEmits<{
-  (event: 'edit', item: OrderItemSummary): void
-  (event: 'copy', item: OrderItemSummary): void
-  (event: 'updateQuantity', item: OrderItemSummary, quantity: number): void
-  (event: 'updateAdjustment', item: OrderItemSummary, adjustment: {
+  (event: 'edit', productRow: ProductRowSummary): void
+  (event: 'copy', productRow: ProductRowSummary): void
+  (event: 'updateQuantity', productRow: ProductRowSummary, quantity: number): void
+  (event: 'updateAdjustment', productRow: ProductRowSummary, adjustment: {
     adjustmentType: 'none' | 'discount' | 'markup'
     adjustmentValue: number
     adjustmentUnit: 'percent' | 'fixed'
   }): void
-  (event: 'updateDeadline', item: OrderItemSummary, plannedCompletionAt: string | null): void
-  (event: 'recalculate', item: OrderItemSummary): void
-  (event: 'delete', item: OrderItemSummary): void
-  (event: 'transition', item: OrderItemSummary, toStatus: string): void
+  (event: 'updateDeadline', productRow: ProductRowSummary, plannedCompletionAt: string | null): void
+  (event: 'recalculate', productRow: ProductRowSummary): void
+  (event: 'delete', productRow: ProductRowSummary): void
+  (event: 'transition', productRow: ProductRowSummary, toStatus: string): void
 }>()
 
-const quantity = ref(props.item.quantity)
-const adjustmentType = ref(props.item.adjustmentType ?? 'none')
-const adjustmentValue = ref(props.item.adjustmentValue ?? 0)
-const adjustmentUnit = ref(props.item.adjustmentUnit ?? 'percent')
-const plannedCompletionAt = ref(props.item.plannedCompletionAt?.slice(0, 10) ?? '')
+const quantity = ref(props.productRow.quantity)
+const adjustmentType = ref(props.productRow.adjustmentType ?? 'none')
+const adjustmentValue = ref(props.productRow.adjustmentValue ?? 0)
+const adjustmentUnit = ref(props.productRow.adjustmentUnit ?? 'percent')
+const plannedCompletionAt = ref(props.productRow.plannedCompletionAt?.slice(0, 10) ?? '')
 const targetStatus = ref('')
 
-watch(() => props.item.quantity, value => {
+watch(() => props.productRow.quantity, value => {
   quantity.value = value
 })
 
 watch(() => [
-  props.item.adjustmentType,
-  props.item.adjustmentValue,
-  props.item.adjustmentUnit,
-  props.item.plannedCompletionAt,
+  props.productRow.adjustmentType,
+  props.productRow.adjustmentValue,
+  props.productRow.adjustmentUnit,
+  props.productRow.plannedCompletionAt,
 ] as const, ([type, value, unit, deadline]) => {
   adjustmentType.value = type ?? 'none'
   adjustmentValue.value = value ?? 0
@@ -52,51 +52,51 @@ watch(() => [
   plannedCompletionAt.value = deadline?.slice(0, 10) ?? ''
 })
 
-const statusName = computed(() => props.item.status.name || props.item.status.code || 'Без статуса')
+const statusName = computed(() => props.productRow.status.name || props.productRow.status.code || 'Без статуса')
 
 const adjustmentLabel = computed(() => {
-  if (props.item.adjustmentType === null || props.item.adjustmentValue === null || props.item.adjustmentUnit === null) {
+  if (props.productRow.adjustmentType === null || props.productRow.adjustmentValue === null || props.productRow.adjustmentUnit === null) {
     return 'Недоступно'
   }
-  if (props.item.adjustmentType === 'none') return 'Без корректировки'
-  const type = props.item.adjustmentType === 'discount' ? 'Скидка' : 'Наценка'
-  const value = props.item.adjustmentUnit === 'percent'
-    ? `${props.item.adjustmentValue.toLocaleString('ru-RU')} %`
-    : (formatOrderPrice(props.item.adjustmentValue) ?? '')
+  if (props.productRow.adjustmentType === 'none') return 'Без корректировки'
+  const type = props.productRow.adjustmentType === 'discount' ? 'Скидка' : 'Наценка'
+  const value = props.productRow.adjustmentUnit === 'percent'
+    ? `${props.productRow.adjustmentValue.toLocaleString('ru-RU')} %`
+    : (formatOrderPrice(props.productRow.adjustmentValue) ?? '')
   return `${type}: ${value}`
 })
 
 const deadlineLabel = computed(() => {
-  if (!props.item.plannedCompletionAt) return 'Не задан'
-  const parts = props.item.plannedCompletionAt.slice(0, 10).split('-').map(Number)
+  if (!props.productRow.plannedCompletionAt) return 'Не задан'
+  const parts = props.productRow.plannedCompletionAt.slice(0, 10).split('-').map(Number)
   if (parts.length !== 3 || parts.some(value => !Number.isFinite(value))) {
-    return props.item.plannedCompletionAt
+    return props.productRow.plannedCompletionAt
   }
   const [year, month, day] = parts
   return new Intl.DateTimeFormat('ru-RU').format(new Date(year!, month! - 1, day!))
 })
 
-function isAllowed(action: OrderItemAllowedAction): boolean {
-  return !props.disabled && props.item.allowedActions.includes(action)
+function isAllowed(action: ProductRowAllowedAction): boolean {
+  return !props.disabled && props.productRow.allowedActions.includes(action)
 }
 
-function hasAction(action: OrderItemAllowedAction): boolean {
-  return props.item.allowedActions.includes(action)
+function hasAction(action: ProductRowAllowedAction): boolean {
+  return props.productRow.allowedActions.includes(action)
 }
 
 function emitQuantity(): void {
   const next = Number(quantity.value)
   if (!Number.isInteger(next) || next <= 0) {
-    quantity.value = props.item.quantity
+    quantity.value = props.productRow.quantity
     return
   }
-  if (next !== props.item.quantity) emit('updateQuantity', props.item, next)
+  if (next !== props.productRow.quantity) emit('updateQuantity', props.productRow, next)
 }
 
 function emitTransition(): void {
   const next = targetStatus.value.trim()
-  if (next !== '' && isAllowed('order_item.transition')) {
-    emit('transition', props.item, next)
+  if (next !== '' && isAllowed('product_row.transition')) {
+    emit('transition', props.productRow, next)
   }
 }
 
@@ -104,10 +104,10 @@ function emitTransition(): void {
 function emitAdjustment(): void {
   const value = Number(adjustmentValue.value)
   if (!Number.isFinite(value) || value < 0) {
-    adjustmentValue.value = props.item.adjustmentValue ?? 0
+    adjustmentValue.value = props.productRow.adjustmentValue ?? 0
     return
   }
-  emit('updateAdjustment', props.item, {
+  emit('updateAdjustment', props.productRow, {
     adjustmentType: adjustmentType.value,
     adjustmentValue: adjustmentType.value === 'none' ? 0 : value,
     adjustmentUnit: adjustmentUnit.value,
@@ -115,7 +115,7 @@ function emitAdjustment(): void {
 }
 
 function emitDeadline(): void {
-  emit('updateDeadline', props.item, plannedCompletionAt.value || null)
+  emit('updateDeadline', props.productRow, plannedCompletionAt.value || null)
 }
 
 function transitionLabel(code: string): string {
@@ -134,18 +134,19 @@ function transitionLabel(code: string): string {
   <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
+        <p class="text-sm font-medium text-gray-500">Товарная позиция №{{ productRow.id }}</p>
         <h2 class="text-lg font-semibold text-gray-800">
-          {{ item.productType }} · модель {{ item.modelId }}
+          {{ productRow.productType }} · модель {{ productRow.modelId }}
         </h2>
         <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
           <span
             class="inline-block size-2.5 rounded-full border border-black/10"
-            :style="item.status.color ? { backgroundColor: item.status.color } : undefined"
+            :style="productRow.status.color ? { backgroundColor: productRow.status.color } : undefined"
             aria-hidden="true"
           />
           <span>{{ statusName }}</span>
           <span aria-hidden="true">·</span>
-          <span>{{ item.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</span>
+          <span>{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</span>
         </div>
       </div>
 
@@ -157,18 +158,18 @@ function transitionLabel(code: string): string {
           min="1"
           step="1"
           class="w-20 rounded border border-gray-300 px-2 py-1.5 text-right disabled:bg-gray-100"
-          :aria-label="`Количество позиции ${item.id}`"
-          :disabled="!isAllowed('order_item.change_quantity')"
+          :aria-label="`Количество товарной позиции ${productRow.id}`"
+          :disabled="!isAllowed('product_row.change_quantity')"
           @change="emitQuantity"
         >
       </label>
     </div>
 
     <p
-      v-if="item.calculationError"
+      v-if="productRow.calculationError"
       class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
     >
-      {{ item.calculationError }}
+      {{ productRow.calculationError }}
     </p>
 
     <div class="mt-4 grid gap-4 lg:grid-cols-3">
@@ -177,12 +178,12 @@ function transitionLabel(code: string): string {
         <dl class="space-y-1 text-sm">
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Розничная</dt>
-            <dd v-if="formatOrderPrice(item.baseRetailUnitPrice)">{{ formatOrderPrice(item.baseRetailUnitPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.baseRetailUnitPrice)">{{ formatOrderPrice(productRow.baseRetailUnitPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Дилерская</dt>
-            <dd v-if="formatOrderPrice(item.baseDealerUnitPrice)">{{ formatOrderPrice(item.baseDealerUnitPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.baseDealerUnitPrice)">{{ formatOrderPrice(productRow.baseDealerUnitPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
         </dl>
@@ -193,28 +194,28 @@ function transitionLabel(code: string): string {
         <dl class="space-y-1 text-sm">
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Розничная</dt>
-            <dd v-if="formatOrderPrice(item.finalRetailUnitPrice)">{{ formatOrderPrice(item.finalRetailUnitPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.finalRetailUnitPrice)">{{ formatOrderPrice(productRow.finalRetailUnitPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Дилерская</dt>
-            <dd v-if="formatOrderPrice(item.finalDealerUnitPrice)">{{ formatOrderPrice(item.finalDealerUnitPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
         </dl>
       </section>
 
       <section>
-        <h3 class="mb-2 text-sm font-semibold text-gray-700">Сумма позиции</h3>
+        <h3 class="mb-2 text-sm font-semibold text-gray-700">Сумма товарной позиции</h3>
         <dl class="space-y-1 text-sm">
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Розничная</dt>
-            <dd v-if="formatOrderPrice(item.retailTotalPrice)" class="font-semibold">{{ formatOrderPrice(item.retailTotalPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.retailTotalPrice)" class="font-semibold">{{ formatOrderPrice(productRow.retailTotalPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
           <div class="flex justify-between gap-3">
             <dt class="text-gray-500">Дилерская</dt>
-            <dd v-if="formatOrderPrice(item.dealerTotalPrice)" class="font-semibold">{{ formatOrderPrice(item.dealerTotalPrice) }}</dd>
+            <dd v-if="formatOrderPrice(productRow.dealerTotalPrice)" class="font-semibold">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</dd>
             <dd v-else data-price-redacted>Недоступно</dd>
           </div>
         </dl>
@@ -233,15 +234,15 @@ function transitionLabel(code: string): string {
     </dl>
 
     <div
-      v-if="hasAction('order_item.change_terms') || hasAction('order_item.change_deadline')"
+      v-if="hasAction('product_row.change_terms') || hasAction('product_row.change_deadline')"
       class="mt-4 grid gap-3 border-t border-gray-100 pt-3 lg:grid-cols-2"
     >
-      <div v-if="hasAction('order_item.change_terms')" class="flex flex-wrap items-end gap-2">
+      <div v-if="hasAction('product_row.change_terms')" class="flex flex-wrap items-end gap-2">
         <label class="text-sm text-gray-600">
           Тип
           <select
             v-model="adjustmentType"
-            :aria-label="`Тип корректировки позиции ${item.id}`"
+            :aria-label="`Тип корректировки товарной позиции ${productRow.id}`"
             :disabled="disabled"
             class="block rounded border border-gray-300 px-2 py-1.5"
           >
@@ -257,7 +258,7 @@ function transitionLabel(code: string): string {
             type="number"
             min="0"
             step="0.01"
-            :aria-label="`Значение корректировки позиции ${item.id}`"
+            :aria-label="`Значение корректировки товарной позиции ${productRow.id}`"
             :disabled="disabled || adjustmentType === 'none'"
             class="block w-28 rounded border border-gray-300 px-2 py-1.5"
           >
@@ -266,7 +267,7 @@ function transitionLabel(code: string): string {
           Единица
           <select
             v-model="adjustmentUnit"
-            :aria-label="`Единица корректировки позиции ${item.id}`"
+            :aria-label="`Единица корректировки товарной позиции ${productRow.id}`"
             :disabled="disabled || adjustmentType === 'none'"
             class="block rounded border border-gray-300 px-2 py-1.5"
           >
@@ -277,20 +278,20 @@ function transitionLabel(code: string): string {
         <button
           type="button"
           class="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
-          :aria-label="`Сохранить корректировку позиции ${item.id}`"
+          :aria-label="`Сохранить корректировку товарной позиции ${productRow.id}`"
           :disabled="disabled"
           @click="emitAdjustment"
         >
           Сохранить
         </button>
       </div>
-      <div v-if="hasAction('order_item.change_deadline')" class="flex items-end gap-2">
+      <div v-if="hasAction('product_row.change_deadline')" class="flex items-end gap-2">
         <label class="text-sm text-gray-600">
           Плановый срок
           <input
             v-model="plannedCompletionAt"
             type="date"
-            :aria-label="`Плановый срок позиции ${item.id}`"
+            :aria-label="`Плановый срок товарной позиции ${productRow.id}`"
             :disabled="disabled"
             class="block rounded border border-gray-300 px-2 py-1.5"
           >
@@ -298,7 +299,7 @@ function transitionLabel(code: string): string {
         <button
           type="button"
           class="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
-          :aria-label="`Сохранить срок позиции ${item.id}`"
+          :aria-label="`Сохранить срок товарной позиции ${productRow.id}`"
           :disabled="disabled"
           @click="emitDeadline"
         >
@@ -311,60 +312,60 @@ function transitionLabel(code: string): string {
       <button
         type="button"
         class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Редактировать позицию ${item.id}`"
-        :disabled="!isAllowed('order_item.edit_configuration')"
-        @click="emit('edit', item)"
+        :aria-label="`Редактировать товарную позицию ${productRow.id}`"
+        :disabled="!isAllowed('product_row.edit_configuration')"
+        @click="emit('edit', productRow)"
       >
         Редактировать
       </button>
       <button
-        v-if="hasAction('order_item.calculate')"
+        v-if="hasAction('product_row.calculate')"
         type="button"
         class="rounded border border-blue-300 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-40"
-        :aria-label="`Пересчитать позицию ${item.id}`"
+        :aria-label="`Пересчитать товарную позицию ${productRow.id}`"
         :disabled="disabled"
-        @click="emit('recalculate', item)"
+        @click="emit('recalculate', productRow)"
       >
         Пересчитать
       </button>
       <button
         type="button"
         class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Копировать позицию ${item.id}`"
-        :disabled="!isAllowed('order_item.copy')"
-        @click="emit('copy', item)"
+        :aria-label="`Копировать товарную позицию ${productRow.id}`"
+        :disabled="!isAllowed('product_row.copy')"
+        @click="emit('copy', productRow)"
       >
         Копировать
       </button>
       <button
         type="button"
         class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Удалить позицию ${item.id}`"
-        :disabled="!isAllowed('order_item.delete')"
-        @click="emit('delete', item)"
+        :aria-label="`Удалить товарную позицию ${productRow.id}`"
+        :disabled="!isAllowed('product_row.delete')"
+        @click="emit('delete', productRow)"
       >
         Удалить
       </button>
 
       <div class="flex min-w-[240px] flex-1 items-center gap-2 sm:ml-auto sm:max-w-md">
-        <label :for="`target-status-${item.id}`" class="sr-only">Новый статус</label>
+        <label :for="`target-status-${productRow.id}`" class="sr-only">Новый статус</label>
         <select
-          :id="`target-status-${item.id}`"
+          :id="`target-status-${productRow.id}`"
           v-model="targetStatus"
           class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
-          :aria-label="`Новый статус позиции ${item.id}`"
-          :disabled="!isAllowed('order_item.transition') || item.availableTransitions.length === 0"
+          :aria-label="`Новый статус товарной позиции ${productRow.id}`"
+          :disabled="!isAllowed('product_row.transition') || productRow.availableTransitions.length === 0"
         >
           <option value="">Выберите статус</option>
-          <option v-for="code in item.availableTransitions" :key="code" :value="code">
+          <option v-for="code in productRow.availableTransitions" :key="code" :value="code">
             {{ transitionLabel(code) }}
           </option>
         </select>
         <button
           type="button"
           class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-          :aria-label="`Сменить статус позиции ${item.id}`"
-          :disabled="!isAllowed('order_item.transition') || targetStatus.trim() === ''"
+          :aria-label="`Сменить статус товарной позиции ${productRow.id}`"
+          :disabled="!isAllowed('product_row.transition') || targetStatus.trim() === ''"
           @click="emitTransition"
         >
           Сменить статус

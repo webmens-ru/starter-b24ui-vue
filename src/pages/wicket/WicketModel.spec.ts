@@ -9,7 +9,7 @@ import { useCalculation } from '../../composables/useCalculation'
 const mocks = vi.hoisted(() => ({
   route: { query: { orderId: '42' } as Record<string, string> } as { query: Record<string, string> },
   push: vi.fn(),
-  createOrderItem: vi.fn(),
+  createProductRow: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -17,7 +17,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: mocks.push }),
 }))
 
-vi.mock('../../app/api/orderItems', () => ({ createOrderItem: mocks.createOrderItem }))
+vi.mock('../../app/api/productRows', () => ({ createProductRow: mocks.createProductRow }))
 
 const SlotStub = { template: '<div><slot /></div>' }
 
@@ -26,8 +26,8 @@ describe('WicketModel', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mocks.route = reactive({ query: { orderId: '42' } })
-    mocks.createOrderItem.mockResolvedValue({
-      item: { id: 7, orderId: 42 },
+    mocks.createProductRow.mockResolvedValue({
+      productRow: { id: 7, orderId: 42 },
       orderTotals: { priceRetail: null, priceDealer: null },
     })
   })
@@ -57,14 +57,14 @@ describe('WicketModel', () => {
     expect(type3Button?.text()).not.toContain('Скоро')
   })
 
-  it('atomically creates a wicket item and opens the wizard with both ids', async () => {
+  it('creates a wicket product row and opens the wizard with both ids', async () => {
     const wrapper = mountPage()
     const type3Button = wrapper.findAll('button').find(button => button.text().includes('штакетник'))!
 
     await type3Button.trigger('click')
     await flushPromises()
 
-    expect(mocks.createOrderItem).toHaveBeenCalledWith({
+    expect(mocks.createProductRow).toHaveBeenCalledWith({
       orderId: 42,
       productType: 'wicket',
       modelId: '3',
@@ -72,7 +72,7 @@ describe('WicketModel', () => {
     })
     expect(mocks.push).toHaveBeenCalledWith({
       path: '/wicket/type3',
-      query: { orderId: '42', orderItemId: '7' },
+      query: { orderId: '42', productRowId: '7' },
     })
   })
 
@@ -84,13 +84,13 @@ describe('WicketModel', () => {
     await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
     await flushPromises()
 
-    expect(mocks.createOrderItem).not.toHaveBeenCalled()
+    expect(mocks.createProductRow).not.toHaveBeenCalled()
     expect(wrapper.get('[role="alert"]').text()).toContain('Не указан заказ')
   })
 
-  it('ignores a create-item response that arrives after unmount', async () => {
-    let resolveItem!: (value: { item: { id: number, orderId: number }, orderTotals: { priceRetail: null, priceDealer: null } }) => void
-    mocks.createOrderItem.mockImplementationOnce(() => new Promise(resolve => {
+  it('ignores a create-product-row response that arrives after unmount', async () => {
+    let resolveItem!: (value: { productRow: { id: number, orderId: number }, orderTotals: { priceRetail: null, priceDealer: null } }) => void
+    mocks.createProductRow.mockImplementationOnce(() => new Promise(resolve => {
       resolveItem = resolve
     }))
     const wrapper = mountPage()
@@ -98,22 +98,22 @@ describe('WicketModel', () => {
     wrapper.unmount()
     const calc = useCalculation()
     calc.orderId.value = 99
-    calc.orderItemId.value = 15
+    calc.productRowId.value = 15
 
     resolveItem({
-      item: { id: 7, orderId: 42 },
+      productRow: { id: 7, orderId: 42 },
       orderTotals: { priceRetail: null, priceDealer: null },
     })
     await flushPromises()
 
     expect(calc.orderId.value).toBe(99)
-    expect(calc.orderItemId.value).toBe(15)
+    expect(calc.productRowId.value).toBe(15)
     expect(mocks.push).not.toHaveBeenCalled()
   })
 
-  it('ignores a create-item response after the order query changes', async () => {
-    let resolveItem!: (value: { item: { id: number, orderId: number }, orderTotals: { priceRetail: null, priceDealer: null } }) => void
-    mocks.createOrderItem.mockImplementationOnce(() => new Promise(resolve => {
+  it('ignores a create-product-row response after the order query changes', async () => {
+    let resolveItem!: (value: { productRow: { id: number, orderId: number }, orderTotals: { priceRetail: null, priceDealer: null } }) => void
+    mocks.createProductRow.mockImplementationOnce(() => new Promise(resolve => {
       resolveItem = resolve
     }))
     const wrapper = mountPage()
@@ -122,12 +122,12 @@ describe('WicketModel', () => {
     await flushPromises()
 
     resolveItem({
-      item: { id: 7, orderId: 42 },
+      productRow: { id: 7, orderId: 42 },
       orderTotals: { priceRetail: null, priceDealer: null },
     })
     await flushPromises()
 
-    expect(useCalculation().orderItemId.value).toBeNull()
+    expect(useCalculation().productRowId.value).toBeNull()
     expect(mocks.push).not.toHaveBeenCalled()
   })
 })

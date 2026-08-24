@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
 import { deleteCalculation, finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
@@ -12,16 +12,22 @@ const emit = defineEmits<{
 const calc = useCalculation()
 const wicketRoute = inject(WICKET_ROUTE_KEY)
 const router = useRouter()
+let mounted = true
+let actionGeneration = 0
 
-const canOpenOrderItems = computed(() => {
+function isCurrentAction(generation: number): boolean {
+  return mounted && generation === actionGeneration
+}
+
+const canOpenProductRows = computed(() => {
   const orderId = Number(calc.number.value)
   return Number.isInteger(orderId) && orderId > 0
 })
 
-async function goToOrderItems(): Promise<void> {
+async function goToProductRows(): Promise<void> {
   const orderId = Number(calc.number.value)
-  if (canOpenOrderItems.value) {
-    await router.push({ name: 'order-items', params: { orderId } })
+  if (canOpenProductRows.value) {
+    await router.push({ name: 'product-rows', params: { orderId } })
   }
 }
 
@@ -67,9 +73,9 @@ function applyActualSavedPrices(retail: string, dealer: string, lastCalculatedAt
 }
 
 async function loadSavedPriceIfActual() {
-  let context: ReturnType<typeof calc.getCurrentItemContext>
+  let context: ReturnType<typeof calc.getCurrentProductRowContext>
   try {
-    context = calc.getCurrentItemContext()
+    context = calc.getCurrentProductRowContext()
   } catch (e) {
     console.warn('fetchSavedOrderPrice:', e)
     return
@@ -130,22 +136,26 @@ async function handleCalculate() {
     openErrModal(sectionErrors.value.join('\n'))
     return
   }
+  const generation = ++actionGeneration
   calculating.value = true
   try {
-    const context = calc.getCurrentItemContext()
+    const context = calc.getCurrentProductRowContext()
     const result = await finalCalculate({
       ...context,
       productType:       calc.productType.value,
       model:              calc.model.value,
     })
+    if (!isCurrentAction(generation)) return
     applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
     await persistWizardProgress()
-    await goToOrderItems()
+    if (!isCurrentAction(generation)) return
+    await goToProductRows()
   } catch (e) {
+    if (!isCurrentAction(generation)) return
     console.error('finalCalculate:', e)
     openErrModal('Произошла ошибка при выполнении расчёта.')
   } finally {
-    calculating.value = false
+    if (isCurrentAction(generation)) calculating.value = false
   }
 }
 
@@ -159,18 +169,21 @@ function isLockConflict(error: unknown): boolean {
 }
 
 async function confirmDelete() {
+  const generation = ++actionGeneration
   deleting.value = true
   try {
-    const context = calc.getCurrentItemContext()
+    const context = calc.getCurrentProductRowContext()
     await deleteCalculation(context)
-    await goToOrderItems()
+    if (!isCurrentAction(generation)) return
+    await goToProductRows()
   } catch (e) {
+    if (!isCurrentAction(generation)) return
     console.error('deleteCalculation:', e)
     showDeleteModal.value = false
     if (isLockConflict(e)) return
     openErrModal('Произошла ошибка при удалении расчёта.')
   } finally {
-    deleting.value = false
+    if (isCurrentAction(generation)) deleting.value = false
   }
 }
 
@@ -182,6 +195,12 @@ onMounted(async () => {
   document.dispatchEvent(new Event('dataUpdated'))
   await loadSavedPriceIfActual()
 })
+
+onUnmounted(() => {
+  mounted = false
+  actionGeneration += 1
+})
+
 </script>
 
 <template>
@@ -223,8 +242,8 @@ onMounted(async () => {
       <B24Button
         label="К заказу"
         color="air-secondary"
-        :disabled="!canOpenOrderItems"
-        @click="goToOrderItems"
+        :disabled="!canOpenProductRows"
+        @click="goToProductRows"
       />
     </div>
 

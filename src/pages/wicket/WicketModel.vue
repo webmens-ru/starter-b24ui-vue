@@ -2,7 +2,7 @@
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { createOrderItem } from '../../app/api/orderItems'
+import { createProductRow } from '../../app/api/productRows'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -117,7 +117,7 @@ function onImageError(e: Event) {
 async function onModelSelect(item: (typeof models)[0]) {
   if (loading.value || item.soon) return
   if (!currentOrderId.value) {
-    errorMessage.value = 'Не указан заказ для новой позиции'
+    errorMessage.value = 'Не указан заказ для новой товарной позиции'
     return
   }
   const selectedOrderId = currentOrderId.value
@@ -126,7 +126,7 @@ async function onModelSelect(item: (typeof models)[0]) {
   errorMessage.value = null
 
   try {
-    const response = await createOrderItem({
+    const response = await createProductRow({
       orderId: selectedOrderId,
       productType: 'wicket',
       modelId: item.id,
@@ -135,7 +135,7 @@ async function onModelSelect(item: (typeof models)[0]) {
     if (!isCurrentRequest(generation, selectedOrderId)) return
 
     calc.orderId.value = selectedOrderId
-    calc.orderItemId.value = response.item.id
+    calc.productRowId.value = response.productRow.id
     calc.modelId.value = item.id
     calc.model.value = item.model
     calc.productType.value = 'Калитка'
@@ -145,7 +145,7 @@ async function onModelSelect(item: (typeof models)[0]) {
       path: item.route,
       query: {
         orderId: String(selectedOrderId),
-        orderItemId: String(response.item.id),
+        productRowId: String(response.productRow.id),
       },
     })
   } catch (e) {

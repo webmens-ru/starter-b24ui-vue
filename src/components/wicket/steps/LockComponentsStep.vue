@@ -108,7 +108,7 @@ async function save() {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
-        orderItemId: calc.getCurrentItemContext().orderItemId,
+        productRowId: calc.getCurrentProductRowContext().productRowId,
         productType: calc.productType.value,
         model: calc.model.value,
         modelId: calc.modelId.value,

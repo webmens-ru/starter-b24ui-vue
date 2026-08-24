@@ -28,13 +28,21 @@ const ButtonStub = {
 }
 const ModalStub = { template: '<div><slot /><slot name="footer" :close="() => undefined" /></div>' }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(currentResolve => {
+    resolve = currentResolve
+  })
+  return { promise, resolve }
+}
+
 describe('End order composition navigation', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     const calc = useCalculation()
     calc.orderId.value = 42
-    calc.orderItemId.value = 7
+    calc.productRowId.value = 7
     calc.modelId.value = '1'
     mocks.saveWicketData.mockResolvedValue(undefined)
     mocks.fetchSavedOrderPrice.mockResolvedValue({ hasSavedPrice: false, isActual: false })
@@ -42,7 +50,7 @@ describe('End order composition navigation', () => {
     mocks.deleteCalculation.mockResolvedValue(undefined)
   })
 
-  it('returns to order items after a successful calculation save', async () => {
+  it('returns to product rows after a successful calculation save', async () => {
     const wrapper = mount(End, {
       global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
     })
@@ -53,10 +61,10 @@ describe('End order composition navigation', () => {
 
     expect(mocks.finalCalculate).toHaveBeenCalledWith(expect.objectContaining({
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
     }))
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'order-items', params: { orderId: 42 } })
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
   })
 
   it('deletes through the serialized wicket calculation API and returns to the order composition', async () => {
@@ -67,18 +75,19 @@ describe('End order composition navigation', () => {
 
     await wrapper.findAll('button').find(button => button.text().includes('Не сохранять расчёт'))!.trigger('click')
     await flushPromises()
-    const confirmButton = [...document.body.querySelectorAll('button')]
-      .find(button => button.textContent?.includes('Да, удалить'))
+    const confirmButtons = [...document.body.querySelectorAll('button')]
+      .filter(button => button.textContent?.includes('Да, удалить'))
+    const confirmButton = confirmButtons[confirmButtons.length - 1]
     expect(confirmButton).toBeDefined()
     confirmButton!.click()
     await flushPromises()
 
     expect(mocks.deleteCalculation).toHaveBeenCalledWith({
       orderId: 42,
-      orderItemId: 7,
+      productRowId: 7,
       modelId: '1',
     })
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'order-items', params: { orderId: 42 } })
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
   })
 
   it('does not navigate away when conflict-aware deletion rejects with a 409', async () => {
@@ -90,12 +99,60 @@ describe('End order composition navigation', () => {
 
     await wrapper.findAll('button').find(button => button.text().includes('Не сохранять расчёт'))!.trigger('click')
     await flushPromises()
-    const confirmButton = [...document.body.querySelectorAll('button')]
-      .find(button => button.textContent?.includes('Да, удалить'))
+    const confirmButtons = [...document.body.querySelectorAll('button')]
+      .filter(button => button.textContent?.includes('Да, удалить'))
+    const confirmButton = confirmButtons[confirmButtons.length - 1]
     confirmButton!.click()
     await flushPromises()
 
-    expect(mocks.deleteCalculation).toHaveBeenCalledWith({ orderId: 42, orderItemId: 7, modelId: '1' })
+    expect(mocks.deleteCalculation).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it('ignores a calculation result that arrives after End unmounts', async () => {
+    const calculation = deferred<{ priceRetail: string, priceDealer: string }>()
+    mocks.finalCalculate.mockReturnValueOnce(calculation.promise)
+    const calc = useCalculation()
+    calc.priceRetail.value = '500.00'
+    calc.priceDealer.value = '400.00'
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+    const savesBeforeCalculation = mocks.saveWicketData.mock.calls.length
+
+    await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click')
+    await vi.waitFor(() => expect(mocks.finalCalculate).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
+    calculation.resolve({ priceRetail: '1000.00', priceDealer: '800.00' })
+    await flushPromises()
+
+    expect(calc.priceRetail.value).toBe('500.00')
+    expect(calc.priceDealer.value).toBe('400.00')
+    expect(mocks.saveWicketData).toHaveBeenCalledTimes(savesBeforeCalculation)
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it('ignores a delete completion that arrives after End unmounts', async () => {
+    const deletion = deferred<void>()
+    mocks.deleteCalculation.mockReturnValueOnce(deletion.promise)
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Не сохранять расчёт'))!.trigger('click')
+    await flushPromises()
+    const confirmButtons = [...document.body.querySelectorAll('button')]
+      .filter(button => button.textContent?.includes('Да, удалить'))
+    const confirmButton = confirmButtons[confirmButtons.length - 1]
+    expect(confirmButton).toBeDefined()
+    confirmButton!.click()
+    await vi.waitFor(() => expect(mocks.deleteCalculation).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
+    deletion.resolve()
+    await flushPromises()
+
     expect(mocks.push).not.toHaveBeenCalled()
   })
 })

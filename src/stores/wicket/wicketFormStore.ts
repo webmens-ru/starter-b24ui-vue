@@ -409,7 +409,7 @@ const fieldsFilled = ref<number>(0)
     const w = storeToRefs(wizard)
     const refMap: Record<string, { value: unknown }> = {
       orderId: w.orderId,
-      orderItemId: w.orderItemId,
+      productRowId: w.productRowId,
       modelId: w.modelId,
       productType: w.productType,
       model: w.model,

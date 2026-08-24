@@ -1,19 +1,19 @@
-import type { OrderItemContext } from './orderItems.types'
+import type { ProductRowContext } from './productRows.types'
 
-export type { OrderItemContext } from './orderItems.types'
+export type { ProductRowContext } from './productRows.types'
 
-export interface WicketSavePayload extends OrderItemContext {
+export interface WicketSavePayload extends ProductRowContext {
   [key: string]: unknown
 }
 
-export interface WicketMainMenuPayload extends OrderItemContext {
+export interface WicketMainMenuPayload extends ProductRowContext {
   model: string
   productType?: string
 }
 
 export interface WicketCalculationPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   modelId: string | number
   companyId?: number | null
   productType?: string

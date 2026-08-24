@@ -1,35 +1,35 @@
-export type OrderItemAllowedAction =
-  | 'order_item.edit_configuration'
-  | 'order_item.change_quantity'
-  | 'order_item.change_terms'
-  | 'order_item.change_deadline'
-  | 'order_item.calculate'
-  | 'order_item.delete'
-  | 'order_item.copy'
-  | 'order_item.transition'
-  | 'order_item.reorder'
+export type ProductRowAllowedAction =
+  | 'product_row.edit_configuration'
+  | 'product_row.change_quantity'
+  | 'product_row.change_terms'
+  | 'product_row.change_deadline'
+  | 'product_row.calculate'
+  | 'product_row.delete'
+  | 'product_row.copy'
+  | 'product_row.transition'
+  | 'product_row.reorder'
 
-export interface OrderItemStatus {
+export interface ProductRowStatus {
   id: number
   code: string | null
   name: string | null
   color: string | null
 }
 
-export interface OrderItemContext {
+export interface ProductRowContext {
   orderId: number
-  orderItemId: number
+  productRowId: number
   modelId: string
 }
 
-export interface OrderItemSummary {
+export interface ProductRowSummary {
   id: number
   orderId: number
   productType: string
   modelId: string
   quantity: number
   sortOrder: number
-  status: OrderItemStatus
+  status: ProductRowStatus
   baseRetailUnitPrice: number | null
   baseDealerUnitPrice: number | null
   finalRetailUnitPrice: number | null
@@ -44,7 +44,7 @@ export interface OrderItemSummary {
   isActual: boolean
   calculationError: string | null
   lockVersion: number
-  allowedActions: OrderItemAllowedAction[]
+  allowedActions: ProductRowAllowedAction[]
   availableTransitions: string[]
 }
 
@@ -53,8 +53,8 @@ export interface OrderTotals {
   priceDealer: number | null
 }
 
-export interface OrderItemListResponse {
-  items: OrderItemSummary[]
+export interface ProductRowListResponse {
+  productRows: ProductRowSummary[]
   orderTotals: OrderTotals
   orderWorkflow: {
     statusCode: string
@@ -63,66 +63,66 @@ export interface OrderItemListResponse {
   }
 }
 
-export interface OrderItemCollectionMutationResponse {
-  items: OrderItemSummary[]
+export interface ProductRowCollectionMutationResponse {
+  productRows: ProductRowSummary[]
   orderTotals: OrderTotals
 }
 
-export interface OrderItemMutationResponse {
-  item: OrderItemSummary
+export interface ProductRowMutationResponse {
+  productRow: ProductRowSummary
   orderTotals: OrderTotals
 }
 
-export interface CreateOrderItemPayload {
+export interface CreateProductRowPayload {
   orderId: number
   productType: string
   modelId: string
   model: string
 }
 
-export interface UpdateOrderItemPayload {
+export interface UpdateProductRowPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   lockVersion: number
   quantity?: number
-  adjustmentType?: Exclude<OrderItemSummary['adjustmentType'], null>
+  adjustmentType?: Exclude<ProductRowSummary['adjustmentType'], null>
   adjustmentValue?: number
-  adjustmentUnit?: Exclude<OrderItemSummary['adjustmentUnit'], null>
+  adjustmentUnit?: Exclude<ProductRowSummary['adjustmentUnit'], null>
   plannedCompletionAt?: string | null
 }
 
-export interface CopyOrderItemPayload {
+export interface CopyProductRowPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   lockVersion: number
 }
 
-export interface ReorderOrderItemsPayload {
+export interface ReorderProductRowsPayload {
   orderId: number
-  itemIds: number[]
+  productRowIds: number[]
 }
 
-export interface DeleteOrderItemPayload {
+export interface DeleteProductRowPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   lockVersion: number
 }
 
-export interface TransitionOrderItemPayload {
+export interface TransitionProductRowPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   toStatus: string
   lockVersion: number
 }
 
-export interface CalculateOrderItemPayload {
+export interface CalculateProductRowPayload {
   orderId: number
-  orderItemId: number
+  productRowId: number
   modelId: string
   lockVersion: number
 }
 
-export interface OrderItemCalculationResponse {
+export interface ProductRowCalculationResponse {
   priceRetail: string
   priceDealer: string
   lockVersion: number

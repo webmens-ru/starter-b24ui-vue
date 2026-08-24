@@ -2,8 +2,8 @@
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadWicketData, getAddonList, onWicketLockConflict } from '../../app/api/wicket'
-import { listOrderItems, type OrderItemContext } from '../../app/api/orderItems'
+import { loadWicketData, getAddonList, onWicketProductRowLockConflict } from '../../app/api/wicket'
+import { listProductRows, type ProductRowContext } from '../../app/api/productRows'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
@@ -48,7 +48,7 @@ const currentComponent = shallowRef<Component | null>(null)
 const routeContextKey = computed(() => [
   route.path,
   String(route.query.orderId ?? ''),
-  String(route.query.orderItemId ?? ''),
+  String(route.query.productRowId ?? ''),
   resolvedModelId(),
 ].join('|'))
 let mounted = false
@@ -66,39 +66,39 @@ function positiveInteger(value: unknown): number | null {
   return Number.isInteger(number) && number > 0 ? number : null
 }
 
-async function resolveItemContext(): Promise<OrderItemContext> {
+async function resolveProductRowContext(): Promise<ProductRowContext> {
   const routeOrderId = positiveInteger(route.query.orderId)
-  const routeOrderItemId = positiveInteger(route.query.orderItemId)
+  const routeProductRowId = positiveInteger(route.query.productRowId)
 
-  if (routeOrderId && routeOrderItemId) {
-    return { orderId: routeOrderId, orderItemId: routeOrderItemId, modelId: resolvedModelId() }
+  if (routeOrderId && routeProductRowId) {
+    return { orderId: routeOrderId, productRowId: routeProductRowId, modelId: resolvedModelId() }
   }
 
   const legacyOrderId = routeOrderId
     ?? positiveInteger(window._PARAMS_?.placementOptions?.id)
-  if (!legacyOrderId) throw new Error('Не указан заказ и позиция для открытия конфигуратора.')
+  if (!legacyOrderId) throw new Error('Не указан заказ и товарная позиция для открытия конфигуратора.')
 
-  const list = await listOrderItems(legacyOrderId)
-  if (list.items.length !== 1) {
-    throw new Error('Не удалось однозначно определить позицию старого заказа.')
+  const list = await listProductRows(legacyOrderId)
+  if (list.productRows.length !== 1) {
+    throw new Error('Не удалось однозначно определить товарную позицию старого заказа.')
   }
-  const item = list.items[0]!
-  if (item.productType !== 'wicket') {
-    throw new Error('Позиция старого заказа не является калиткой.')
+  const productRow = list.productRows[0]!
+  if (productRow.productType !== 'wicket') {
+    throw new Error('Товарная позиция старого заказа не является калиткой.')
   }
-  return { orderId: legacyOrderId, orderItemId: item.id, modelId: item.modelId }
+  return { orderId: legacyOrderId, productRowId: productRow.id, modelId: productRow.modelId }
 }
 
-async function canonicalizeItemUrl(context: OrderItemContext): Promise<void> {
+async function canonicalizeProductRowUrl(context: ProductRowContext): Promise<void> {
   if (
     String(route.query.orderId ?? '') === String(context.orderId)
-    && String(route.query.orderItemId ?? '') === String(context.orderItemId)
+    && String(route.query.productRowId ?? '') === String(context.productRowId)
     && route.path === `/wicket/type${context.modelId}`
   ) return
 
   await router.replace({
     path: `/wicket/type${context.modelId}`,
-    query: { orderId: String(context.orderId), orderItemId: String(context.orderItemId) },
+    query: { orderId: String(context.orderId), productRowId: String(context.productRowId) },
   })
 }
 
@@ -114,9 +114,9 @@ async function initCalculation(): Promise<void> {
   currentComponent.value = null
   reset()
   try {
-    const context = await resolveItemContext()
+    const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
-    await canonicalizeItemUrl(context)
+    await canonicalizeProductRowUrl(context)
     if (!isCurrentInitialization(generation)) return
     const [availability, apiData] = await Promise.all([
       fetchAddonAvailability(Number(context.modelId)),
@@ -127,7 +127,7 @@ async function initCalculation(): Promise<void> {
     calc.availableSections.value = availability.sections
     loadFromApi(apiData)
     calc.orderId.value = context.orderId
-    calc.orderItemId.value = context.orderItemId
+    calc.productRowId.value = context.productRowId
     calc.modelId.value = context.modelId
     switchTo(calc.activePage.value)
   } catch (e: unknown) {
@@ -141,10 +141,10 @@ async function initCalculation(): Promise<void> {
 
 onMounted(() => {
   mounted = true
-  stopWicketLockConflict = onWicketLockConflict(context => {
+  stopWicketLockConflict = onWicketProductRowLockConflict(context => {
     if (
       calc.orderId.value === context.orderId
-      && calc.orderItemId.value === context.orderItemId
+      && calc.productRowId.value === context.productRowId
       && String(calc.modelId.value) === context.modelId
     ) showLockConflictModal.value = true
   })
@@ -308,7 +308,7 @@ function goBack() {
     <B24Modal
       v-model:open="showLockConflictModal"
       title="Требуется перезагрузка"
-      description="Данные позиции изменились в другой сессии. Перезагрузите расчёт, чтобы продолжить работу."
+      description="Данные товарной позиции изменились в другой сессии. Перезагрузите расчёт, чтобы продолжить работу."
     >
       <template #footer>
         <B24Button color="air-primary" @click="window.location.reload()">Перезагрузить</B24Button>

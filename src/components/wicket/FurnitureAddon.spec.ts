@@ -46,7 +46,7 @@ describe('FurnitureAddon', () => {
     vi.clearAllMocks()
     const calc = useCalculation()
     calc.orderId.value = 42
-    calc.orderItemId.value = 7
+    calc.productRowId.value = 7
     calc.modelId.value = '1'
   })
 

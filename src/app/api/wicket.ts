@@ -1,9 +1,9 @@
 import api from '.'
 import {
-  forgetWicketLockVersion,
-  rememberWicketLockVersion,
-  runWicketLockMutation,
-} from './wicketLockVersion'
+  forgetWicketProductRowLockVersion,
+  rememberWicketProductRowLockVersion,
+  runWicketProductRowLockMutation,
+} from './wicketProductRowLockVersion'
 import {
   mockFetchWicketPage,
   mockSaveWicketData,
@@ -58,7 +58,7 @@ import type {
   RecalculateResponse,
   OrderSavedPriceResponse,
   CompanyScopedPayload,
-  OrderItemContext,
+  ProductRowContext,
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
@@ -95,23 +95,23 @@ export type {
   RecalculateResponse,
   OrderSavedPriceResponse,
   CompanyScopedPayload,
-  OrderItemContext,
+  ProductRowContext,
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
 }
 
-export { onWicketLockConflict } from './wicketLockVersion'
+export { onWicketProductRowLockConflict } from './wicketProductRowLockVersion'
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
 
-function assertOrderItemContext(context: Partial<OrderItemContext>): asserts context is OrderItemContext {
-  const { orderId, orderItemId, modelId } = context
+function assertProductRowContext(context: Partial<ProductRowContext>): asserts context is ProductRowContext {
+  const { orderId, productRowId, modelId } = context
   if (typeof orderId !== 'number' || !Number.isInteger(orderId) || orderId <= 0) {
     throw new Error('Не указан корректный orderId текущей позиции.')
   }
-  if (typeof orderItemId !== 'number' || !Number.isInteger(orderItemId) || orderItemId <= 0) {
-    throw new Error('Не указан корректный orderItemId текущей позиции.')
+  if (typeof productRowId !== 'number' || !Number.isInteger(productRowId) || productRowId <= 0) {
+    throw new Error('Не указан корректный productRowId текущей позиции.')
   }
   if (typeof modelId !== 'string' || modelId.trim() === '') {
     throw new Error('Не указан modelId текущей позиции.')
@@ -122,8 +122,8 @@ function assertWicketCalculationPayload(payload: WicketCalculationPayload): void
   if (!Number.isInteger(payload.orderId) || payload.orderId <= 0) {
     throw new Error('Не указан корректный orderId текущей позиции.')
   }
-  if (!Number.isInteger(payload.orderItemId) || payload.orderItemId <= 0) {
-    throw new Error('Не указан корректный orderItemId текущей позиции.')
+  if (!Number.isInteger(payload.productRowId) || payload.productRowId <= 0) {
+    throw new Error('Не указан корректный productRowId текущей позиции.')
   }
   if (String(payload.modelId).trim() === '') {
     throw new Error('Не указан modelId текущей позиции.')
@@ -143,11 +143,11 @@ export async function createOrder(payload: CompanyScopedPayload = {}): Promise<{
 
 /** Создаёт запись расчёта в БД при первом открытии новой формы. */
 export async function createWicketMainMenu(payload: WicketMainMenuPayload): Promise<void> {
-  assertOrderItemContext(payload)
+  assertProductRowContext(payload)
   if (isMock) return
   await api.post(`/api/wicket/type${payload.modelId}/main-menu`, {
     orderId: payload.orderId,
-    orderItemId: payload.orderItemId,
+    productRowId: payload.productRowId,
     modelId: String(payload.modelId),
     model: payload.model,
     productType: payload.productType ?? 'Калитка',
@@ -170,11 +170,11 @@ export async function createLegacyWicketMainMenu(payload: {
 }
 
 /** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
-export async function loadWicketData(context: OrderItemContext): Promise<Record<string, unknown>> {
-  assertOrderItemContext(context)
+export async function loadWicketData(context: ProductRowContext): Promise<Record<string, unknown>> {
+  assertProductRowContext(context)
   if (isMock) return mockLoadWicketData(context.orderId)
   const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
-  rememberWicketLockVersion(context, data.data.lockVersion)
+  rememberWicketProductRowLockVersion(context, data.data.lockVersion)
   return data.data
 }
 
@@ -355,16 +355,16 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 }
 
 export async function saveWicketData(payload: WicketSavePayload): Promise<void> {
-  assertOrderItemContext(payload)
+  assertProductRowContext(payload)
   if (isMock) return mockSaveWicketData(payload)
   const context = {
     orderId: payload.orderId,
-    orderItemId: payload.orderItemId,
+    productRowId: payload.productRowId,
     modelId: payload.modelId,
   }
-  await runWicketLockMutation(context, async lockVersion => {
+  await runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post(`/api/wicket/type${payload.modelId}/data`, { ...payload, lockVersion })
-    rememberWicketLockVersion(context, data.data.lockVersion)
+    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
   })
 }
 
@@ -487,8 +487,8 @@ export async function saveClientInfo(payload: Record<string, unknown>): Promise<
 }
 
 /** Проверка сохранённых цен заказа на актуальность (шаг «Рассчитать»). */
-export async function fetchSavedOrderPrice(context: OrderItemContext): Promise<OrderSavedPriceResponse> {
-  assertOrderItemContext(context)
+export async function fetchSavedOrderPrice(context: ProductRowContext): Promise<OrderSavedPriceResponse> {
+  assertProductRowContext(context)
   if (isMock) return mockFetchSavedOrderPrice()
   const { data } = await api.get('/api/order/saved-price', {
     params: context,
@@ -501,29 +501,29 @@ export async function finalCalculate(payload: WicketCalculationPayload): Promise
   if (isMock) return mockFinalCalculate()
   const context = {
     orderId: payload.orderId,
-    orderItemId: payload.orderItemId,
+    productRowId: payload.productRowId,
     modelId: String(payload.modelId),
   }
-  return runWicketLockMutation(context, async lockVersion => {
+  return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post('/api/order/calculate', {
       orderId: payload.orderId,
-      orderItemId: payload.orderItemId,
+      productRowId: payload.productRowId,
       companyId: payload.companyId,
       modelId: String(payload.modelId),
       lockVersion,
     })
-    rememberWicketLockVersion(context, data.data.lockVersion)
+    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
     return data.data
   })
 }
 
-export async function deleteCalculation(payload: OrderItemContext): Promise<void> {
-  assertOrderItemContext(payload)
+export async function deleteCalculation(payload: ProductRowContext): Promise<void> {
+  assertProductRowContext(payload)
   if (isMock) return mockDeleteCalculation()
-  await runWicketLockMutation(payload, async lockVersion => {
+  await runWicketProductRowLockMutation(payload, async lockVersion => {
     const { data } = await api.post(`/api/wicket/type${payload.modelId}/delete`, { ...payload, lockVersion })
-    rememberWicketLockVersion(payload, data.data.lockVersion)
-    forgetWicketLockVersion(payload)
+    rememberWicketProductRowLockVersion(payload, data.data.lockVersion)
+    forgetWicketProductRowLockVersion(payload)
   })
 }
 
@@ -532,18 +532,18 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
   if (isMock) return mockRecalculate(payload)
   const context = {
     orderId: payload.orderId,
-    orderItemId: payload.orderItemId,
+    productRowId: payload.productRowId,
     modelId: String(payload.modelId),
   }
-  return runWicketLockMutation(context, async lockVersion => {
+  return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post('/api/order/calculate', {
       orderId: payload.orderId,
-      orderItemId: payload.orderItemId,
+      productRowId: payload.productRowId,
       companyId: payload.companyId,
       modelId: String(payload.modelId),
       lockVersion,
     })
-    rememberWicketLockVersion(context, data.data.lockVersion)
+    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
     return data.data
   })
 }
