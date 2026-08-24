@@ -317,11 +317,42 @@ describe('ProductRowsPage', () => {
 
     await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
     await flushPromises()
-    expect(mocks.reorderProductRows).toHaveBeenCalledWith({ orderId: 42, productRowIds: [8, 7] })
+    expect(mocks.reorderProductRows).toHaveBeenCalledWith({
+      orderId: 42,
+      productRows: [
+        { productRowId: 8, lockVersion: 1 },
+        { productRowId: 7, lockVersion: 4 },
+      ],
+    })
 
     await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
     await flushPromises()
     expect(mocks.deleteProductRow).toHaveBeenCalledWith({ orderId: 42, productRowId: 8, lockVersion: 1 })
+  })
+
+  it('reloads after a reorder conflict and keeps every reorder control busy until it settles', async () => {
+    let rejectReorder!: (error: unknown) => void
+    mocks.reorderProductRows.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectReorder = reject
+    }))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
+    await wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').trigger('click')
+
+    expect(mocks.reorderProductRows).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').attributes('disabled')).toBeDefined()
+
+    rejectReorder({
+      isAxiosError: true,
+      response: { status: 409, data: { message: 'stale' } },
+    })
+    await flushPromises()
+
+    expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Товарная позиция уже была изменена другим пользователем')
   })
 
   it('hides every reorder control when any active product row lacks server reorder permission', async () => {

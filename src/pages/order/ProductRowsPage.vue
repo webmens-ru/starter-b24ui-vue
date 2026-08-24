@@ -28,6 +28,7 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const noticeMessage = ref<string | null>(null)
 const busyProductRowIds = ref<Set<number>>(new Set())
+const reorderBusy = ref(false)
 const orderTransitionBusy = ref(false)
 const loadFailed = ref(false)
 const staleView = ref(false)
@@ -254,7 +255,7 @@ async function transitionProductRowAction(productRow: ProductRowSummary, toStatu
 }
 
 async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
-  if (!result.value || staleView.value || !canReorder.value) return
+  if (!result.value || staleView.value || reorderBusy.value || !canReorder.value) return
   const generation = routeGeneration
   const mutationOrderId = orderId.value
   const targetIndex = index + direction
@@ -266,11 +267,15 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
   reordered.splice(targetIndex, 0, moved)
   errorMessage.value = null
   noticeMessage.value = null
+  reorderBusy.value = true
   setBusy(moved.id, true)
   try {
     const response = await reorderProductRows({
       orderId: mutationOrderId,
-    productRowIds: reordered.map(productRow => productRow.id),
+      productRows: reordered.map(productRow => ({
+        productRowId: productRow.id,
+        lockVersion: productRow.lockVersion,
+      })),
     })
     if (isCurrentRoute(generation, mutationOrderId) && result.value) {
       result.value = {
@@ -280,9 +285,18 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
       }
     }
   } catch (error) {
-    if (isCurrentRoute(generation, mutationOrderId)) errorMessage.value = mutationMessage(error)
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    if (isConflict(error)) {
+      noticeMessage.value = 'Товарная позиция уже была изменена другим пользователем'
+      await loadProductRows({ preserveNotice: true })
+    } else {
+      errorMessage.value = mutationMessage(error)
+    }
   } finally {
-    if (isCurrentRoute(generation, mutationOrderId)) setBusy(moved.id, false)
+    if (isCurrentRoute(generation, mutationOrderId)) {
+      reorderBusy.value = false
+      setBusy(moved.id, false)
+    }
   }
 }
 
@@ -418,7 +432,7 @@ watch(orderIdParam, () => {
                 >
                   <ProductRowCard
                     :product-row="productRow"
-                    :disabled="staleView || busyProductRowIds.has(productRow.id)"
+                    :disabled="staleView || reorderBusy || busyProductRowIds.has(productRow.id)"
                     @edit="editProductRow"
                     @copy="copyProductRowAction"
                     @update-quantity="updateQuantity"
@@ -433,7 +447,7 @@ watch(orderIdParam, () => {
                       type="button"
                       class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                       :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
-                      :disabled="staleView || index === 0 || busyProductRowIds.has(productRow.id)"
+                      :disabled="reorderBusy || staleView || index === 0 || busyProductRowIds.has(productRow.id)"
                       @click="moveProductRow(index, -1)"
                     >
                       ↑
@@ -442,7 +456,7 @@ watch(orderIdParam, () => {
                       type="button"
                       class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                       :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
-                      :disabled="staleView || index === result.productRows.length - 1 || busyProductRowIds.has(productRow.id)"
+                      :disabled="reorderBusy || staleView || index === result.productRows.length - 1 || busyProductRowIds.has(productRow.id)"
                       @click="moveProductRow(index, 1)"
                     >
                       ↓

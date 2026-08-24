@@ -33,7 +33,7 @@ const item = {
   availableTransitions: [] as string[],
 }
 
-describe('order item API', () => {
+describe('product row API', () => {
   beforeEach(() => {
     api.get.mockReset()
     api.post.mockReset()
@@ -258,9 +258,21 @@ describe('order item API', () => {
 
     const { reorderProductRows } = await import('./productRows')
 
-    await reorderProductRows({ orderId: 42, productRowIds: [9, 7] })
+    await reorderProductRows({
+      orderId: 42,
+      productRows: [
+        { productRowId: 9, lockVersion: 2 },
+        { productRowId: 7, lockVersion: 3 },
+      ],
+    })
 
-    expect(api.post).toHaveBeenCalledWith('/api/product-row/reorder', { orderId: 42, productRowIds: [9, 7] })
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/reorder', {
+      orderId: 42,
+      productRows: [
+        { productRowId: 9, lockVersion: 2 },
+        { productRowId: 7, lockVersion: 3 },
+      ],
+    })
   })
 
   it('deletes an item with its optimistic lock version', async () => {

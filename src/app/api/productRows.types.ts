@@ -99,7 +99,10 @@ export interface CopyProductRowPayload {
 
 export interface ReorderProductRowsPayload {
   orderId: number
-  productRowIds: number[]
+  productRows: Array<{
+    productRowId: number
+    lockVersion: number
+  }>
 }
 
 export interface DeleteProductRowPayload {
