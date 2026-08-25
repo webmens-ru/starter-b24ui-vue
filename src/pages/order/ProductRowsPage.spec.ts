@@ -203,6 +203,20 @@ describe('ProductRowsPage', () => {
     expect(wrapper.get('[data-order-total="dealer"]').text()).toMatch(/1\s*440/)
   })
 
+  it.each(['', ' ', '0', '-1', '1.5', '1e2', '0x2a', '042', '9007199254740992'])(
+    'rejects malformed or unsafe order id %j before API and configurator navigation',
+    async (invalidOrderId) => {
+      mocks.route.params.orderId = invalidOrderId
+      const wrapper = mountPage()
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Некорректный номер заказа')
+      expect(mocks.listProductRows).not.toHaveBeenCalled()
+      expect(wrapper.find('[aria-label^="Добавить товарную позицию"]').exists()).toBe(false)
+      expect(mocks.push).not.toHaveBeenCalled()
+    },
+  )
+
   it('loads two productRows and shows status, quantities, prices and dual order totals', async () => {
     const wrapper = mountPage()
     expect(wrapper.text()).toContain('Загрузка состава заказа')
@@ -825,9 +839,8 @@ describe('ProductRowsPage', () => {
       lockVersion: 4,
     })
 
-    await wrapper.get('[aria-label="Перевести заказ в статус submitted_to_order"]').trigger('click')
-    await flushPromises()
-    expect(mocks.transitionOrder).toHaveBeenCalledWith({ orderId: 42, toStatus: 'submitted_to_order' })
+    expect(wrapper.find('[aria-label^="Перевести заказ в статус"]').exists()).toBe(false)
+    expect(mocks.transitionOrder).not.toHaveBeenCalled()
 
     mocks.listProductRows.mockResolvedValueOnce({
       ...initial,

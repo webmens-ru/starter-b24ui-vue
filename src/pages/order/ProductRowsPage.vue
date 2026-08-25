@@ -36,7 +36,7 @@ let latestLoadId = 0
 let routeGeneration = 0
 
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
-const orderId = computed(() => Number(orderIdParam.value))
+const orderId = computed(() => parsePositiveDecimalOrderId(orderIdParam.value))
 const embeddedInOrderCard = computed(() => isOrderCardEmbedded(window._PARAMS_?.placementOptions?.params))
 const canReorder = computed(() => {
   const productRows = result.value?.productRows ?? []
@@ -46,6 +46,12 @@ const canReorder = computed(() => {
 
 function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
   return params?.orderCardEmbedded === true
+}
+
+function parsePositiveDecimalOrderId(value: string): number {
+  if (!/^[1-9]\d*$/.test(value)) return Number.NaN
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) ? parsed : Number.NaN
 }
 
 function validOrderId(): boolean {
@@ -306,10 +312,12 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
 }
 
 function addProduct(): void {
-  void router.push({ path: '/add-product', query: { orderId: orderIdParam.value } })
+  if (!validOrderId()) return
+  void router.push({ path: '/add-product', query: { orderId: String(orderId.value) } })
 }
 
 async function transitionOrderStatus(toStatus: string): Promise<void> {
+  if (embeddedInOrderCard.value) return
   if (!result.value?.orderWorkflow.availableTransitions.includes(toStatus)) return
   const generation = routeGeneration
   const mutationOrderId = orderId.value
@@ -494,7 +502,7 @@ watch(orderIdParam, () => {
               <OrderTotals :totals="result.orderTotals" />
 
               <div
-                v-if="result.orderWorkflow.availableTransitions.length > 0"
+                v-if="!embeddedInOrderCard && result.orderWorkflow.availableTransitions.length > 0"
                 class="flex flex-wrap justify-end gap-2"
               >
                 <button
