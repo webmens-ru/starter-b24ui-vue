@@ -68,10 +68,8 @@ const models = [
   },
 ]
 
-const currentOrderId = computed(() => {
-  const parsed = parsePositiveDecimalId(route.query.orderId)
-  return parsed.kind === 'valid' ? parsed.value : null
-})
+const orderIdState = computed(() => parsePositiveDecimalId(route.query.orderId))
+const currentOrderId = computed(() => orderIdState.value.kind === 'valid' ? orderIdState.value.value : null)
 
 function isCurrentRequest(generation: number, orderId: number): boolean {
   return mounted && generation === requestGeneration && currentOrderId.value === orderId
@@ -116,6 +114,10 @@ function onImageError(e: Event) {
 
 async function onModelSelect(item: (typeof models)[0]) {
   if (loading.value || item.soon) return
+  if (orderIdState.value.kind === 'invalid') {
+    errorMessage.value = 'Некорректный номер заказа'
+    return
+  }
   if (!currentOrderId.value) {
     errorMessage.value = 'Не указан заказ для новой товарной позиции'
     return

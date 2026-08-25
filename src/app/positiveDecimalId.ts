@@ -4,7 +4,7 @@ export type PositiveDecimalId =
   | { kind: 'valid', value: number }
 
 export function parsePositiveDecimalId(raw: unknown): PositiveDecimalId {
-  if (raw === undefined || raw === null) return { kind: 'absent' }
+  if (raw === undefined) return { kind: 'absent' }
   if (typeof raw !== 'string' || !/^[1-9]\d*$/.test(raw)) return { kind: 'invalid' }
   const value = Number(raw)
   return Number.isSafeInteger(value) ? { kind: 'valid', value } : { kind: 'invalid' }

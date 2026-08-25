@@ -10,15 +10,31 @@ import {
 } from './wicketProductRowLockVersion'
 
 describe('wicket lock version registry', () => {
-  it('remembers versions separately for each order item and forgets only the requested item', () => {
+  it('remembers versions separately, rejects unsafe boundaries, and forgets only the requested item', async () => {
     const first = { orderId: 42, productRowId: 7, modelId: '1' }
     const second = { orderId: 42, productRowId: 8, modelId: '1' }
+    const unchecked = { orderId: 42, productRowId: 19, modelId: '1' }
+    const unsafe = Number.MAX_SAFE_INTEGER + 1
+    const mutation = vi.fn()
 
     expect(rememberWicketProductRowLockVersion(first, 4)).toBe(4)
     expect(requireWicketProductRowLockVersion(first)).toBe(4)
     expect(() => requireWicketProductRowLockVersion(second)).toThrow('Версия позиции не загружена')
     expect(() => rememberWicketProductRowLockVersion(first, null)).toThrow('Некорректная версия позиции')
     expect(requireWicketProductRowLockVersion(first)).toBe(4)
+
+    expect(() => rememberWicketProductRowLockVersion({ ...unchecked, orderId: unsafe }, 4))
+      .toThrow('Некорректный orderId позиции')
+    expect(() => rememberWicketProductRowLockVersion({ ...unchecked, productRowId: unsafe }, 4))
+      .toThrow('Некорректный productRowId позиции')
+    expect(() => rememberWicketProductRowLockVersion(unchecked, unsafe))
+      .toThrow('Некорректная версия позиции')
+    expect(() => requireWicketProductRowLockVersion(unchecked), 'unsafe boundary must not write a registry entry')
+      .toThrow('Версия позиции не загружена')
+    await expect(runWicketProductRowLockMutation({ ...unchecked, orderId: unsafe }, mutation))
+      .rejects.toThrow('Некорректный orderId позиции')
+    expect(mutation, 'unsafe context must not call the mutation callback').not.toHaveBeenCalled()
+
     forgetWicketProductRowLockVersion(first)
     expect(() => requireWicketProductRowLockVersion(first)).toThrow('Версия позиции не загружена')
   })

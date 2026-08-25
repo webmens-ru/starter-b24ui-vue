@@ -46,10 +46,15 @@ const showLockConflictModal = ref(false)
 const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
 const currentComponent = shallowRef<Component | null>(null)
+function routeQueryValueKey(value: unknown): string {
+  if (value === undefined) return 'undefined'
+  if (value === null) return 'null'
+  return `${typeof value}:${String(value)}`
+}
 const routeContextKey = computed(() => [
   route.path,
-  String(route.query.orderId ?? ''),
-  String(route.query.productRowId ?? ''),
+  routeQueryValueKey(route.query.orderId),
+  routeQueryValueKey(route.query.productRowId),
   resolvedModelId(),
 ].join('|'))
 let mounted = false
@@ -69,6 +74,9 @@ async function resolveProductRowContext(): Promise<ProductRowContext | null> {
 
   if (routeOrderId && routeProductRowId) {
     return { orderId: routeOrderId, productRowId: routeProductRowId, modelId: resolvedModelId() }
+  }
+  if (parsedOrderId.kind === 'invalid' || parsedProductRowId.kind === 'invalid') {
+    throw new Error('Некорректный контекст товарной позиции')
   }
 
   await router.replace(routeOrderId ? `/order/${routeOrderId}/product-rows` : '/add-product')

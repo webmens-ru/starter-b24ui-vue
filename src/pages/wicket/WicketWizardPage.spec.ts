@@ -9,9 +9,9 @@ import page from './WicketWizardPage.vue?raw'
 import type { WicketRouteDefinition } from './wicketRoute'
 
 const mocks = vi.hoisted(() => ({
-  route: { path: '/wicket/type1', query: {} as Record<string, string> } as {
+  route: { path: '/wicket/type1', query: {} as Record<string, unknown> } as {
     path: string
-    query: Record<string, string>
+    query: Record<string, unknown>
   },
   replace: vi.fn(),
   loadWicketData: vi.fn(),
@@ -127,12 +127,20 @@ describe('WicketWizardPage mobile summary', () => {
   it('redirects an order without a product row to its product rows page without loading configuration', async () => {
     mocks.route.query = { orderId: '42' }
 
-    mountPage()
+    const wrapper = mountPage()
     await flushPromises()
 
     expect(mocks.replace).toHaveBeenCalledWith('/order/42/product-rows')
     expect(mocks.listProductRows).not.toHaveBeenCalled()
     expect(mocks.loadWicketData).not.toHaveBeenCalled()
+
+    mocks.route.query = { orderId: '42', productRowId: null }
+    await flushPromises()
+
+    expect(wrapper.html(), 'undefined-to-null productRowId transition').toContain('Некорректный контекст товарной позиции')
+    expect(mocks.replace, 'undefined-to-null productRowId transition').toHaveBeenCalledTimes(1)
+    expect(mocks.getAddonList, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
+    expect(mocks.loadWicketData, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
   })
 
   it('redirects a wizard URL without an order to add-product without loading configuration', async () => {
@@ -151,6 +159,26 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.orderId.value).toBeNull()
     expect(calc.productRowId.value).toBeNull()
     expect(calc.widthProyema.value).toBe('')
+
+    const malformedContexts: Array<{ label: string, query: Record<string, unknown> }> = [
+      { label: 'null orderId', query: { orderId: null, productRowId: '7' } },
+      { label: 'leading-zero orderId', query: { orderId: '01', productRowId: '7' } },
+      { label: 'array productRowId', query: { orderId: '42', productRowId: [] } },
+      { label: 'unsafe productRowId', query: { orderId: '42', productRowId: '9007199254740992' } },
+    ]
+    for (const testCase of malformedContexts) {
+      setActivePinia(createPinia())
+      vi.clearAllMocks()
+      mocks.route = reactive({ path: '/wicket/type1', query: testCase.query })
+      const malformedWrapper = mountPage()
+      await flushPromises()
+
+      expect(malformedWrapper.html(), testCase.label).toContain('Некорректный контекст товарной позиции')
+      expect(mocks.replace, testCase.label).not.toHaveBeenCalled()
+      expect(mocks.getAddonList, testCase.label).not.toHaveBeenCalled()
+      expect(mocks.loadWicketData, testCase.label).not.toHaveBeenCalled()
+      malformedWrapper.unmount()
+    }
   })
 
   it('reinitializes on product row context change and ignores the previous load response', async () => {
@@ -239,17 +267,18 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.widthProyema.value).toBe('520')
   })
 
-  it('does not apply a stale configuration response after redirecting away from an incomplete context', async () => {
+  it('does not apply a stale configuration response after the context becomes malformed', async () => {
     let resolveLoad!: (value: Record<string, unknown>) => void
     mocks.route.query = { orderId: '42', productRowId: '7' }
     mocks.loadWicketData.mockImplementationOnce(() => new Promise(resolve => {
       resolveLoad = resolve
     }))
-    mountPage()
+    const wrapper = mountPage()
     await vi.waitFor(() => expect(mocks.loadWicketData).toHaveBeenCalledTimes(1))
 
     mocks.route.query.productRowId = ''
-    await vi.waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/order/42/product-rows'))
+    await flushPromises()
+    expect(wrapper.html()).toContain('Некорректный контекст товарной позиции')
 
     resolveLoad({
       orderId: 42,
@@ -261,11 +290,13 @@ describe('WicketWizardPage mobile summary', () => {
     })
     await flushPromises()
 
+    expect(mocks.replace).not.toHaveBeenCalled()
     expect(mocks.listProductRows).not.toHaveBeenCalled()
     expect(useCalculation().orderId.value).toBeNull()
     expect(useCalculation().productRowId.value).toBeNull()
     expect(useCalculation().widthProyema.value).toBe('')
   })
+
 
   it('does not apply a load response after unmount', async () => {
     let resolveLoad!: (value: Record<string, unknown>) => void

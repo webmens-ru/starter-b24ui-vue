@@ -7,7 +7,7 @@ import AddProduct from './AddProduct.vue'
 import { useCalculation } from '../composables/useCalculation'
 
 const mocks = vi.hoisted(() => ({
-  route: { query: {} as Record<string, string> } as { query: Record<string, string> },
+  route: { query: {} as Record<string, unknown> } as { query: Record<string, unknown> },
   push: vi.fn(),
   createOrder: vi.fn(),
 }))
@@ -49,16 +49,26 @@ describe('AddProduct order flow', () => {
     expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
   })
 
-  it.each([' ', '01', '1e2', '0x2a', '9007199254740992'])(
-    'does not create or navigate for malformed order id %j',
-    async (orderId) => {
-      mocks.route.query = { orderId }
-      const wrapper = mountPage()
-      await flushPromises()
+  it.each([
+    { label: 'whitespace or null', orderIds: [' ', null] },
+    { label: 'leading-zero or empty', orderIds: ['01', ''] },
+    { label: 'exponent or array', orderIds: ['1e2', []] },
+    { label: 'hex or decimal array', orderIds: ['0x2a', ['42']] },
+    { label: 'unsafe', orderIds: ['9007199254740992'] },
+  ])(
+    'does not create or navigate for malformed order ids $label',
+    async ({ orderIds }) => {
+      for (const orderId of orderIds) {
+        mocks.route.query = { orderId }
+        const wrapper = mountPage()
+        await flushPromises()
 
-      expect(wrapper.get('[role="alert"]').text()).toContain('Некорректный номер заказа')
-      expect(mocks.createOrder).not.toHaveBeenCalled()
-      expect(mocks.push).not.toHaveBeenCalled()
+        expect(wrapper.get('[role="alert"]').text(), `malformed orderId ${JSON.stringify(orderId)}`)
+          .toContain('Некорректный номер заказа')
+        expect(mocks.createOrder, `malformed orderId ${JSON.stringify(orderId)}`).not.toHaveBeenCalled()
+        expect(mocks.push, `malformed orderId ${JSON.stringify(orderId)}`).not.toHaveBeenCalled()
+        wrapper.unmount()
+      }
     },
   )
 
@@ -78,12 +88,26 @@ describe('AddProduct order flow', () => {
     await wrapper.findAll('button').find(button => button.text().includes('Калитки'))!.trigger('click')
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Не указан заказ для добавления товарной позиции')
+    wrapper.unmount()
+
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mocks.route = reactive({ query: { orderId: null } })
+    const malformedWrapper = mountPage()
+    await flushPromises()
+
+    await malformedWrapper.findAll('button').find(button => button.text().includes('Калитки'))!.trigger('click')
+
+    expect(malformedWrapper.get('[role="alert"]').text(), 'malformed orderId product selection')
+      .toContain('Некорректный номер заказа')
+    expect(mocks.createOrder, 'malformed orderId product selection').not.toHaveBeenCalled()
+    expect(mocks.push, 'malformed orderId product selection').not.toHaveBeenCalled()
   })
 
   it('ignores a create-order response that arrives after unmount', async () => {
-    let resolveOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    let resolveMalformedOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
     mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
-      resolveOrder = resolve
+      resolveMalformedOrder = resolve
     }))
     const wrapper = mountPage()
     await Promise.resolve()
@@ -91,19 +115,19 @@ describe('AddProduct order flow', () => {
     const calc = useCalculation()
     calc.orderId.value = 99
 
-    resolveOrder({ orderId: 42, companyId: null, managerId: 1 })
+    resolveMalformedOrder({ orderId: 42, companyId: null, managerId: 1 })
     await flushPromises()
 
     expect(calc.orderId.value).toBe(99)
     expect(mocks.push).not.toHaveBeenCalled()
   })
 
-  it('ignores a create-order response after navigation supplies another order', async () => {
+  it('ignores create-order responses after the order query becomes valid or malformed', async () => {
     let resolveOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
     mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
       resolveOrder = resolve
     }))
-    mountPage()
+    const wrapper = mountPage()
     await Promise.resolve()
 
     mocks.route.query.orderId = '43'
@@ -113,6 +137,49 @@ describe('AddProduct order flow', () => {
 
     expect(useCalculation().orderId.value).toBe(43)
     expect(mocks.push).not.toHaveBeenCalled()
+    wrapper.unmount()
+
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mocks.route = reactive({ query: {} })
+    let resolveMalformedOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
+      resolveMalformedOrder = resolve
+    }))
+    const malformedWrapper = mountPage()
+    await Promise.resolve()
+
+    mocks.route.query.orderId = null
+    await flushPromises()
+    resolveMalformedOrder({ orderId: 42, companyId: null, managerId: 1 })
+    await flushPromises()
+
+    expect(malformedWrapper.get('[role="alert"]').text(), 'absent-to-null route race')
+      .toContain('Некорректный номер заказа')
+    expect(useCalculation().orderId.value, 'absent-to-null route race').toBeNull()
+    expect(mocks.push, 'absent-to-null route race').not.toHaveBeenCalled()
+    malformedWrapper.unmount()
+
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mocks.route = reactive({ query: {} })
+    let resolveUnrelatedQueryOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
+      resolveUnrelatedQueryOrder = resolve
+    }))
+    mountPage()
+    await Promise.resolve()
+
+    mocks.route.query = { placement: 'sidebar' }
+    await flushPromises()
+    resolveUnrelatedQueryOrder({ orderId: 42, companyId: null, managerId: 1 })
+    await flushPromises()
+
+    expect(useCalculation().orderId.value, 'unrelated query change').toBe(42)
+    expect(mocks.push, 'unrelated query change').toHaveBeenCalledWith({
+      name: 'product-rows',
+      params: { orderId: 42 },
+    })
   })
 
   it('keeps an existing order while choosing a wicket product', async () => {

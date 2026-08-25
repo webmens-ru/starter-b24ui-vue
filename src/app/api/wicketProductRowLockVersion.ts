@@ -1,4 +1,5 @@
 import type { ProductRowContext } from './wicket.types'
+import { isPositiveSafeInteger } from '../positiveDecimalId'
 
 const lockVersions = new Map<string, number>()
 const mutationTails = new Map<string, Promise<void>>()
@@ -12,10 +13,10 @@ export class WicketProductRowLockConflictError extends Error {
 }
 
 function getKey(context: ProductRowContext): string {
-  if (!Number.isInteger(context.orderId) || context.orderId <= 0) {
+  if (!isPositiveSafeInteger(context.orderId)) {
     throw new Error('Некорректный orderId позиции')
   }
-  if (!Number.isInteger(context.productRowId) || context.productRowId <= 0) {
+  if (!isPositiveSafeInteger(context.productRowId)) {
     throw new Error('Некорректный productRowId позиции')
   }
 
@@ -23,7 +24,7 @@ function getKey(context: ProductRowContext): string {
 }
 
 function assertLockVersion(value: unknown): asserts value is number {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+  if (!isPositiveSafeInteger(value)) {
     throw new Error('Некорректная версия позиции')
   }
 }

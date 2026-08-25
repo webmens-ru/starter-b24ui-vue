@@ -50,6 +50,10 @@ function isCurrentLifecycle(generation: number): boolean {
 
 async function onProductTypeSelect(item: (typeof productTypes)[0]) {
   if (loading.value || item.soon) return
+  if (orderIdState.value.kind === 'invalid') {
+    errorMessage.value = 'Некорректный номер заказа'
+    return
+  }
   if (!currentOrderId.value) {
     errorMessage.value = 'Не указан заказ для добавления товарной позиции'
     return
@@ -107,13 +111,18 @@ onMounted(async () => {
   }
 })
 
-watch(currentOrderId, (nextOrderId) => {
+watch(() => route.query.orderId, (nextRawOrderId) => {
   if (!mounted) return
+  const nextOrderIdState = parsePositiveDecimalId(nextRawOrderId)
   lifecycleGeneration += 1
   loading.value = null
   errorMessage.value = null
   calc.reset()
-  if (nextOrderId) calc.orderId.value = nextOrderId
+  if (nextOrderIdState.kind === 'invalid') {
+    errorMessage.value = 'Некорректный номер заказа'
+    return
+  }
+  if (nextOrderIdState.kind === 'valid') calc.orderId.value = nextOrderIdState.value
 })
 
 onUnmounted(() => {

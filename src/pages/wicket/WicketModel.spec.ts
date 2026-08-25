@@ -7,7 +7,7 @@ import WicketModel from './WicketModel.vue'
 import { useCalculation } from '../../composables/useCalculation'
 
 const mocks = vi.hoisted(() => ({
-  route: { query: { orderId: '42' } as Record<string, string> } as { query: Record<string, string> },
+  route: { query: { orderId: '42' } as Record<string, unknown> } as { query: Record<string, unknown> },
   push: vi.fn(),
   createProductRow: vi.fn(),
 }))
@@ -76,16 +76,34 @@ describe('WicketModel', () => {
     })
   })
 
-  it('does not use stale store order identity when orderId is missing from the URL', async () => {
-    mocks.route.query = {}
-    useCalculation().orderId.value = 99
-    const wrapper = mountPage()
+  it('does not use stale store identity or malformed direct order ids', async () => {
+    const cases: Array<{ label: string, query: Record<string, unknown>, message: string }> = [
+      { label: 'missing orderId', query: {}, message: 'Не указан заказ' },
+      { label: 'null orderId', query: { orderId: null }, message: 'Некорректный номер заказа' },
+      { label: 'empty orderId', query: { orderId: '' }, message: 'Некорректный номер заказа' },
+      { label: 'array orderId', query: { orderId: [] }, message: 'Некорректный номер заказа' },
+      { label: 'array decimal orderId', query: { orderId: ['42'] }, message: 'Некорректный номер заказа' },
+      { label: 'leading-zero orderId', query: { orderId: '01' }, message: 'Некорректный номер заказа' },
+      { label: 'exponent orderId', query: { orderId: '1e2' }, message: 'Некорректный номер заказа' },
+      { label: 'hex orderId', query: { orderId: '0x2a' }, message: 'Некорректный номер заказа' },
+      { label: 'unsafe orderId', query: { orderId: '9007199254740992' }, message: 'Некорректный номер заказа' },
+    ]
 
-    await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
-    await flushPromises()
+    for (const testCase of cases) {
+      setActivePinia(createPinia())
+      vi.clearAllMocks()
+      mocks.route = reactive({ query: testCase.query })
+      useCalculation().orderId.value = 99
+      const wrapper = mountPage()
 
-    expect(mocks.createProductRow).not.toHaveBeenCalled()
-    expect(wrapper.get('[role="alert"]').text()).toContain('Не указан заказ')
+      await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[role="alert"]').text(), testCase.label).toContain(testCase.message)
+      expect(mocks.createProductRow, testCase.label).not.toHaveBeenCalled()
+      expect(mocks.push, testCase.label).not.toHaveBeenCalled()
+      wrapper.unmount()
+    }
   })
 
   it('ignores a create-product-row response that arrives after unmount', async () => {
