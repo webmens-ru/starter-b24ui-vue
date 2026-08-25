@@ -1,9 +1,14 @@
 declare global {
+  type TPlacementParams = {
+    orderCardEmbedded?: boolean;
+    [index: string]: unknown;
+  };
+
   type TPlacementOptions = {
     handler?: string;
     type: string; //TODO: Конкретные значения
     title: string;
-    params?: unknown;
+    params?: TPlacementParams;
     // action: string;
     entity: string;
     path?: string;

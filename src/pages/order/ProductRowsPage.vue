@@ -37,11 +37,16 @@ let routeGeneration = 0
 
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
 const orderId = computed(() => Number(orderIdParam.value))
+const embeddedInOrderCard = computed(() => isOrderCardEmbedded(window._PARAMS_?.placementOptions?.params))
 const canReorder = computed(() => {
   const productRows = result.value?.productRows ?? []
   return productRows.length > 1
     && productRows.every(productRow => productRow.allowedActions.includes('product_row.reorder'))
 })
+
+function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
+  return params?.orderCardEmbedded === true
+}
 
 function validOrderId(): boolean {
   return Number.isInteger(orderId.value) && orderId.value > 0
@@ -360,10 +365,16 @@ watch(orderIdParam, () => {
 </script>
 
 <template>
-  <B24App>
-    <B24SidebarLayout :use-light-content="false" :b24ui="{ container: 'mt-0' }">
-      <div class="flex h-[calc(100vh-50px)] flex-col overflow-hidden bg-gray-50">
-        <header class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
+  <component :is="embeddedInOrderCard ? 'div' : 'B24App'">
+    <component
+      :is="embeddedInOrderCard ? 'div' : 'B24SidebarLayout'"
+      v-bind="embeddedInOrderCard ? {} : { useLightContent: false, b24ui: { container: 'mt-0' } }"
+    >
+      <div :class="embeddedInOrderCard ? undefined : 'flex h-[calc(100vh-50px)] flex-col overflow-hidden bg-gray-50'">
+        <header
+          v-if="!embeddedInOrderCard"
+          class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3"
+        >
           <div>
             <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">Заказ №{{ orderIdParam }}</h1>
             <p class="text-sm text-gray-500">Товарные позиции заказа</p>
@@ -379,8 +390,22 @@ watch(orderIdParam, () => {
           </button>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-4">
+        <main :class="embeddedInOrderCard ? 'p-4' : 'flex-1 overflow-y-auto p-4'">
           <div class="mx-auto flex w-full max-w-[1152px] flex-col gap-4">
+            <div
+              v-if="embeddedInOrderCard && result?.orderWorkflow.canCreateProductRow"
+              class="flex justify-end"
+            >
+              <button
+                type="button"
+                class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
+                @click="addProduct"
+              >
+                Добавить товарную позицию
+              </button>
+            </div>
+
             <div
               v-if="noticeMessage"
               role="status"
@@ -488,6 +513,6 @@ watch(orderIdParam, () => {
           </div>
         </main>
       </div>
-    </B24SidebarLayout>
-  </B24App>
+    </component>
+  </component>
 </template>
