@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { useCalculation } from '../../composables/useCalculation'
 import { loadWicketData, getAddonList, onWicketProductRowLockConflict } from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
@@ -60,15 +61,11 @@ function onResize() {
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => { windowWidth.value = window.innerWidth }, 100)
 }
-function positiveInteger(value: unknown): number | null {
-  const normalized = Array.isArray(value) ? value[0] : value
-  const number = Number(normalized)
-  return Number.isInteger(number) && number > 0 ? number : null
-}
-
 async function resolveProductRowContext(): Promise<ProductRowContext | null> {
-  const routeOrderId = positiveInteger(route.query.orderId)
-  const routeProductRowId = positiveInteger(route.query.productRowId)
+  const parsedOrderId = parsePositiveDecimalId(route.query.orderId)
+  const parsedProductRowId = parsePositiveDecimalId(route.query.productRowId)
+  const routeOrderId = parsedOrderId.kind === 'valid' ? parsedOrderId.value : null
+  const routeProductRowId = parsedProductRowId.kind === 'valid' ? parsedProductRowId.value : null
 
   if (routeOrderId && routeProductRowId) {
     return { orderId: routeOrderId, productRowId: routeProductRowId, modelId: resolvedModelId() }

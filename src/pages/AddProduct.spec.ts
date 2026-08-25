@@ -49,6 +49,19 @@ describe('AddProduct order flow', () => {
     expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
   })
 
+  it.each([' ', '01', '1e2', '0x2a', '9007199254740992'])(
+    'does not create or navigate for malformed order id %j',
+    async (orderId) => {
+      mocks.route.query = { orderId }
+      const wrapper = mountPage()
+      await flushPromises()
+
+      expect(wrapper.get('[role="alert"]').text()).toContain('Некорректный номер заказа')
+      expect(mocks.createOrder).not.toHaveBeenCalled()
+      expect(mocks.push).not.toHaveBeenCalled()
+    },
+  )
+
   it('announces an initial order creation failure accessibly', async () => {
     mocks.createOrder.mockRejectedValueOnce(new Error('Не удалось создать заказ'))
     const wrapper = mountPage()

@@ -1,4 +1,5 @@
 import api from '.'
+import { isPositiveSafeInteger } from '../positiveDecimalId'
 import {
   forgetWicketProductRowLockVersion,
   rememberWicketProductRowLockVersion,
@@ -107,10 +108,10 @@ const isMock = import.meta.env.VITE_MOCK === 'true'
 
 function assertProductRowContext(context: Partial<ProductRowContext>): asserts context is ProductRowContext {
   const { orderId, productRowId, modelId } = context
-  if (typeof orderId !== 'number' || !Number.isInteger(orderId) || orderId <= 0) {
+  if (!isPositiveSafeInteger(orderId)) {
     throw new Error('Не указан корректный orderId текущей позиции.')
   }
-  if (typeof productRowId !== 'number' || !Number.isInteger(productRowId) || productRowId <= 0) {
+  if (!isPositiveSafeInteger(productRowId)) {
     throw new Error('Не указан корректный productRowId текущей позиции.')
   }
   if (typeof modelId !== 'string' || modelId.trim() === '') {
@@ -119,10 +120,10 @@ function assertProductRowContext(context: Partial<ProductRowContext>): asserts c
 }
 
 function assertWicketCalculationPayload(payload: WicketCalculationPayload): void {
-  if (!Number.isInteger(payload.orderId) || payload.orderId <= 0) {
+  if (!isPositiveSafeInteger(payload.orderId)) {
     throw new Error('Не указан корректный orderId текущей позиции.')
   }
-  if (!Number.isInteger(payload.productRowId) || payload.productRowId <= 0) {
+  if (!isPositiveSafeInteger(payload.productRowId)) {
     throw new Error('Не указан корректный productRowId текущей позиции.')
   }
   if (String(payload.modelId).trim() === '') {

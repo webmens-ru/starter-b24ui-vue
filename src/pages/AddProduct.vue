@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
 import { createOrder } from '../app/api/wicket'
+import { parsePositiveDecimalId } from '../app/positiveDecimalId'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -35,11 +36,8 @@ const productTypes = [
   },
 ]
 
-const currentOrderId = computed(() => {
-  const raw = Array.isArray(route.query.orderId) ? route.query.orderId[0] : route.query.orderId
-  const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : null
-})
+const orderIdState = computed(() => parsePositiveDecimalId(route.query.orderId))
+const currentOrderId = computed(() => orderIdState.value.kind === 'valid' ? orderIdState.value.value : null)
 
 function getImageSrc(path: string): string {
   const base = window._HOSTNAME_ || ''
@@ -85,6 +83,10 @@ onMounted(async () => {
   mounted = true
   const generation = ++lifecycleGeneration
   calc.reset()
+  if (orderIdState.value.kind === 'invalid') {
+    errorMessage.value = 'Некорректный номер заказа'
+    return
+  }
   if (currentOrderId.value) {
     calc.orderId.value = currentOrderId.value
     return

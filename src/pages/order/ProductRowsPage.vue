@@ -19,6 +19,7 @@ import {
 } from '../../app/api/productRows'
 import ProductRowCard from '../../components/order/ProductRowCard.vue'
 import OrderTotals from '../../components/order/OrderTotals.vue'
+import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,7 +37,10 @@ let latestLoadId = 0
 let routeGeneration = 0
 
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
-const orderId = computed(() => parsePositiveDecimalOrderId(orderIdParam.value))
+const orderId = computed(() => {
+  const parsed = parsePositiveDecimalId(orderIdParam.value)
+  return parsed.kind === 'valid' ? parsed.value : Number.NaN
+})
 const embeddedInOrderCard = computed(() => isOrderCardEmbedded(window._PARAMS_?.placementOptions?.params))
 const canReorder = computed(() => {
   const productRows = result.value?.productRows ?? []
@@ -46,12 +50,6 @@ const canReorder = computed(() => {
 
 function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
   return params?.orderCardEmbedded === true
-}
-
-function parsePositiveDecimalOrderId(value: string): number {
-  if (!/^[1-9]\d*$/.test(value)) return Number.NaN
-  const parsed = Number(value)
-  return Number.isSafeInteger(parsed) ? parsed : Number.NaN
 }
 
 function validOrderId(): boolean {

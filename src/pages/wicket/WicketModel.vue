@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { useCalculation } from '../../composables/useCalculation'
 import { createProductRow } from '../../app/api/productRows'
 
@@ -68,9 +69,8 @@ const models = [
 ]
 
 const currentOrderId = computed(() => {
-  const raw = Array.isArray(route.query.orderId) ? route.query.orderId[0] : route.query.orderId
-  const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : null
+  const parsed = parsePositiveDecimalId(route.query.orderId)
+  return parsed.kind === 'valid' ? parsed.value : null
 })
 
 function isCurrentRequest(generation: number, orderId: number): boolean {
