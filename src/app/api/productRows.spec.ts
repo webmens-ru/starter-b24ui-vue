@@ -113,6 +113,32 @@ describe('product row API', () => {
     })
   })
 
+  it('uses the version advanced by a failed calculation for the next queued save', async () => {
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    const calculationFailure = {
+      response: {
+        status: 422,
+        data: { success: false, error: 'Не удалось рассчитать цену', lockVersion: 5 },
+      },
+    }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post
+      .mockRejectedValueOnce(calculationFailure)
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 6 } } })
+
+    const { loadWicketData, recalculate, saveWicketData } = await import('./wicket')
+
+    await loadWicketData(context)
+    await expect(recalculate(context)).rejects.toBe(calculationFailure)
+    await saveWicketData({ ...context, widthProyema: 900 })
+
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/data', {
+      ...context,
+      widthProyema: 900,
+      lockVersion: 5,
+    })
+  })
+
   it('signals a 409 conflict once and does not retry or start another mutation', async () => {
     const context = { orderId: 42, productRowId: 7, modelId: '1' }
     const conflict = { response: { status: 409 } }

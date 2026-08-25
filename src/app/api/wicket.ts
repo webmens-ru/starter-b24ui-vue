@@ -509,14 +509,33 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
     modelId: String(payload.modelId),
   }
   return runWicketProductRowLockMutation(context, async lockVersion => {
-    const { data } = await api.post('/api/order/calculate', {
-      orderId: payload.orderId,
-      productRowId: payload.productRowId,
-      companyId: payload.companyId,
-      modelId: String(payload.modelId),
-      lockVersion,
-    })
-    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
-    return data.data
+    try {
+      const { data } = await api.post('/api/order/calculate', {
+        orderId: payload.orderId,
+        productRowId: payload.productRowId,
+        companyId: payload.companyId,
+        modelId: String(payload.modelId),
+        lockVersion,
+      })
+      rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+      return data.data
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const response = error.response
+        if (
+          typeof response === 'object'
+          && response !== null
+          && 'status' in response
+          && response.status === 422
+          && 'data' in response
+        ) {
+          const data = response.data
+          if (typeof data === 'object' && data !== null && 'lockVersion' in data) {
+            rememberWicketProductRowLockVersion(context, data.lockVersion)
+          }
+        }
+      }
+      throw error
+    }
   })
 }
