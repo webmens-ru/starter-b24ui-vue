@@ -17,7 +17,7 @@ import {
   type ProductRowSummary,
   type UpdateProductRowPayload,
 } from '../../app/api/productRows'
-import ProductRowCard from '../../components/order/ProductRowCard.vue'
+import ProductRowTableRows from '../../components/order/ProductRowTableRows.vue'
 import OrderTotals from '../../components/order/OrderTotals.vue'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
@@ -455,16 +455,25 @@ watch(orderIdParam, () => {
                 <p class="mt-1 text-sm text-gray-500">Добавьте первую товарную позицию, чтобы начать конфигурацию.</p>
               </div>
 
-              <div v-else class="flex flex-col gap-4">
-                <article
+              <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <table aria-label="Товарные позиции заказа" class="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th>Товарная позиция</th>
+                      <th>Количество</th>
+                      <th>Цена за единицу</th>
+                      <th>Сумма</th>
+                      <th>Статус</th>
+                      <th><span class="sr-only">Действия</span></th>
+                    </tr>
+                  </thead>
+                  <ProductRowTableRows
                   v-for="(productRow, index) in result.productRows"
                   :key="productRow.id"
-                  data-product-row
-                  class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
-                >
-                  <ProductRowCard
                     :product-row="productRow"
                     :disabled="staleView || reorderBusy || busyProductRowIds.has(productRow.id)"
+                    :can-move-up="canReorder && index > 0"
+                    :can-move-down="canReorder && index < result.productRows.length - 1"
                     @edit="editProductRow"
                     @copy="copyProductRowAction"
                     @update-quantity="updateQuantity"
@@ -473,28 +482,9 @@ watch(orderIdParam, () => {
                     @recalculate="recalculateProductRow"
                     @delete="deleteProductRowAction"
                     @transition="transitionProductRowAction"
+                    @move="(_, direction) => moveProductRow(index, direction)"
                   />
-                  <div v-if="canReorder" class="flex gap-2 sm:flex-col">
-                    <button
-                      type="button"
-                      class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
-                      :disabled="reorderBusy || staleView || index === 0 || busyProductRowIds.has(productRow.id)"
-                      @click="moveProductRow(index, -1)"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      class="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
-                      :disabled="reorderBusy || staleView || index === result.productRows.length - 1 || busyProductRowIds.has(productRow.id)"
-                      @click="moveProductRow(index, 1)"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                </article>
+                </table>
               </div>
 
               <OrderTotals :totals="result.orderTotals" />

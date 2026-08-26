@@ -161,6 +161,13 @@ function mountPage(options: { embedded?: boolean } = {}) {
   })
 }
 
+async function openProductRowActions(
+  wrapper: ReturnType<typeof mountPage>,
+  productRowId: number,
+): Promise<void> {
+  await wrapper.get(`[aria-label="Действия товарной позиции ${productRowId}"]`).trigger('click')
+}
+
 describe('ProductRowsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -217,7 +224,7 @@ describe('ProductRowsPage', () => {
     },
   )
 
-  it('loads two productRows and shows status, quantities, prices and dual order totals', async () => {
+  it('shows product rows in a semantic table and keeps status, quantities, prices and dual order totals', async () => {
     const wrapper = mountPage()
     expect(wrapper.text()).toContain('Загрузка состава заказа')
 
@@ -230,7 +237,17 @@ describe('ProductRowsPage', () => {
     expect(text).toContain('Количество')
     expect(text).toContain('1 800')
     expect(text).toContain('1 440')
-    expect(wrapper.findAll('[data-product-row]')).toHaveLength(2)
+    expect(wrapper.get('table[aria-label="Товарные позиции заказа"]')).toBeTruthy()
+    expect(wrapper.findAll('tbody[data-product-row]')).toHaveLength(2)
+    expect(wrapper.get('thead').text()).toContain('Цена за единицу')
+    expect(wrapper.find('[data-product-row-card]').exists()).toBe(false)
+
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вверх"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').attributes('disabled')).toBeUndefined()
+    await openProductRowActions(wrapper, 8)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вниз"]').attributes('disabled')).toBeDefined()
   })
 
   it('uses a container width independent of the B24 spacing-6xl token', async () => {
@@ -254,6 +271,7 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
     await flushPromises()
 
@@ -277,19 +295,20 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Действие выполнено, но состав заказа не удалось обновить')
     expect(wrapper.get('[aria-label="Повторить загрузку состава заказа"]').attributes('disabled')).toBeUndefined()
-    expect(wrapper.get('[aria-label="Копировать товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     await wrapper.get('[aria-label="Повторить загрузку состава заказа"]').trigger('click')
     await flushPromises()
 
     expect(mocks.listProductRows).toHaveBeenCalledTimes(3)
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(3)
-    expect(wrapper.get('[aria-label="Копировать товарную позицию 7"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeUndefined()
   })
 
   it('reloads when the route reuses the page for another order and ignores an older response', async () => {
@@ -345,7 +364,7 @@ describe('ProductRowsPage', () => {
     secondLoad.resolve(order43)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Товарная позиция №43')
+    expect(wrapper.text()).toContain('№43 · wicket, модель 43')
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(1)
     expect(wrapper.find('[data-layout="b24-app"]').exists()).toBe(false)
     expect(wrapper.find('[data-layout="b24-sidebar"]').exists()).toBe(false)
@@ -353,7 +372,7 @@ describe('ProductRowsPage', () => {
     firstLoad.resolve(initial)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Товарная позиция №43')
+    expect(wrapper.text()).toContain('№43 · wicket, модель 43')
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(1)
     expect(wrapper.find('[aria-label="Копировать товарную позицию 7"]').exists()).toBe(false)
 
@@ -408,11 +427,14 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
     mocks.route.params.orderId = '43'
     await flushPromises()
 
+    await openProductRowActions(wrapper, 43)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 43 вниз"]').attributes('disabled')).toBeUndefined()
+    await openProductRowActions(wrapper, 44)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 44 вверх"]').attributes('disabled')).toBeUndefined()
 
     resolveReorder({ productRows: [second, first], orderTotals: initial.orderTotals })
@@ -452,8 +474,8 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    await wrapper.get('[aria-label="Новый статус товарной позиции 7"]').setValue('approval')
-    await wrapper.get('[aria-label="Сменить статус товарной позиции 7"]').trigger('click')
+    await openProductRowActions(wrapper, 7)
+    await wrapper.get('[aria-label="Перевести товарную позицию 7 в статус approval"]').trigger('click')
     await flushPromises()
     expect(mocks.transitionProductRow).toHaveBeenCalledWith({
       orderId: 42,
@@ -462,6 +484,7 @@ describe('ProductRowsPage', () => {
       lockVersion: 4,
     })
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
     await flushPromises()
     expect(mocks.reorderProductRows).toHaveBeenCalledWith({
@@ -472,6 +495,7 @@ describe('ProductRowsPage', () => {
       ],
     })
 
+    await openProductRowActions(wrapper, 8)
     await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
     await flushPromises()
     expect(mocks.deleteProductRow).toHaveBeenCalledWith({ orderId: 42, productRowId: 8, lockVersion: 1 })
@@ -485,12 +509,12 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
-    await wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').trigger('click')
 
     expect(mocks.reorderProductRows).toHaveBeenCalledTimes(1)
-    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 8"]').attributes('disabled')).toBeDefined()
 
     rejectReorder({
       isAxiosError: true,
@@ -502,7 +526,7 @@ describe('ProductRowsPage', () => {
     expect(wrapper.text()).toContain('Товарная позиция уже была изменена другим пользователем')
   })
 
-  it('hides every reorder control when any active product row lacks server reorder permission', async () => {
+  it('disables reorder in the menu when any active product row lacks server reorder permission', async () => {
     mocks.listProductRows.mockResolvedValueOnce({
       productRows: [first, makeProductRow(8, {
         status: { id: 6, code: 'cancelled', name: 'Отменено', color: '#dc3545' },
@@ -514,7 +538,9 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(wrapper.find('[aria-label="Переместить товарную позицию 7 вниз"]').exists()).toBe(false)
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').attributes('disabled')).toBeDefined()
+    await openProductRowActions(wrapper, 8)
     expect(wrapper.find('[aria-label="Переместить товарную позицию 8 вверх"]').exists()).toBe(false)
     expect(mocks.reorderProductRows).not.toHaveBeenCalled()
   })
@@ -549,6 +575,7 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
+    await wrapper.get('[aria-label="Подробнее о товарной позиции 7"]').trigger('click')
     await wrapper.get('[aria-label="Тип корректировки товарной позиции 7"]').setValue('markup')
     await wrapper.get('[aria-label="Значение корректировки товарной позиции 7"]').setValue('15')
     await wrapper.get('[aria-label="Единица корректировки товарной позиции 7"]').setValue('fixed')
@@ -573,6 +600,7 @@ describe('ProductRowsPage', () => {
       plannedCompletionAt: '2026-09-15',
     })
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
     await flushPromises()
     expect(mocks.calculateProductRow).toHaveBeenCalledWith({
@@ -616,12 +644,14 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage({ embedded: true })
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
-    expect(wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     mocks.route.params.orderId = '43'
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
     expect(mocks.calculateProductRow).toHaveBeenNthCalledWith(2, {
       orderId: 43,
@@ -629,20 +659,20 @@ describe('ProductRowsPage', () => {
       modelId: '7',
       lockVersion: 8,
     })
-    expect(wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     staleCalculate.resolve({ priceRetail: '900.00', priceDealer: '720.00', lockVersion: 5 })
     await flushPromises()
 
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
-    expect(wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-order-total="retail"]').text()).toMatch(/4\s*300/)
 
     currentCalculate.resolve({ priceRetail: '1175.00', priceDealer: '900.00', lockVersion: 9 })
     await flushPromises()
 
     expect(mocks.listProductRows).toHaveBeenCalledTimes(3)
-    expect(wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('[data-order-total="retail"]').text()).toMatch(/4\s*700/)
   })
 
@@ -671,21 +701,23 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage({ embedded: true })
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
-    expect(wrapper.get('[aria-label="Удалить товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     mocks.route.params.orderId = '43'
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
     expect(mocks.deleteProductRow).toHaveBeenNthCalledWith(2, { orderId: 43, productRowId: 7, lockVersion: 8 })
-    expect(wrapper.get('[aria-label="Удалить товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     staleDelete.resolve({ productRow: first, orderTotals: initial.orderTotals })
     await flushPromises()
 
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
-    expect(wrapper.get('[aria-label="Удалить товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(2)
 
     currentDelete.resolve({ productRow: order43Row, orderTotals: order43.orderTotals })
@@ -708,12 +740,13 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage({ embedded: true })
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
     await flushPromises()
 
     expect(mocks.copyProductRow).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, lockVersion: 4 })
     expect(wrapper.text()).toContain('Действие выполнено, но состав заказа не удалось обновить')
-    expect(wrapper.get('[aria-label="Копировать товарную позицию 7"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     await wrapper.get('[aria-label="Повторить загрузку состава заказа"]').trigger('click')
     await flushPromises()
@@ -741,6 +774,7 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage({ embedded: true })
     await flushPromises()
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
     expect(mocks.reorderProductRows).toHaveBeenCalledWith({
       orderId: 42,
@@ -753,7 +787,9 @@ describe('ProductRowsPage', () => {
     mocks.route.params.orderId = '43'
     await flushPromises()
 
+    await openProductRowActions(wrapper, 43)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 43 вниз"]').attributes('disabled')).toBeUndefined()
+    await openProductRowActions(wrapper, 44)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 44 вверх"]').attributes('disabled')).toBeUndefined()
 
     resolveReorder({ productRows: [second, first], orderTotals: initial.orderTotals })
@@ -785,6 +821,7 @@ describe('ProductRowsPage', () => {
     })
     expect(wrapper.text()).toContain('Товарная позиция уже была изменена другим пользователем')
 
+    await openProductRowActions(wrapper, 8)
     await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
     await flushPromises()
 
@@ -830,6 +867,7 @@ describe('ProductRowsPage', () => {
     expect(wrapper.text()).toMatch(/4\s*200/)
     expect(wrapper.find('[aria-label="Добавить товарную позицию в заказ 42"]').exists()).toBe(true)
 
+    await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
     await flushPromises()
     expect(mocks.calculateProductRow).toHaveBeenCalledWith({
