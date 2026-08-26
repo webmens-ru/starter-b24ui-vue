@@ -4,6 +4,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import b24UiPlugin from '@bitrix24/b24ui-nuxt/vue-plugin'
 import { router } from './app/router'
+import { navigateToPlacementPath } from './app/placementInitialNavigation'
 import App from './App.vue'
 
 declare const __APP_VERSION__: string
@@ -47,7 +48,7 @@ if (import.meta.env.DEV) {
 
   const devPath = window._PARAMS_?.placementOptions?.path
   if (devPath) {
-    const result = await router.replace({ path: devPath })
+    const result = await navigateToPlacementPath(router, devPath)
     console.log('[app] DEV navigate result:', result)
   }
 } else {
@@ -55,7 +56,7 @@ if (import.meta.env.DEV) {
   console.log('[app] prod navigate to:', path)
 
   if (path) {
-    const result = await router.replace({ path })
+    const result = await navigateToPlacementPath(router, path)
     console.log('[app] navigate result:', result)
   } else {
     console.warn('[app] path is empty, staying on /')
