@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import type { ProductRowAllowedAction, ProductRowSummary } from '../../app/api/productRows'
 
@@ -24,12 +24,21 @@ const emit = defineEmits<{
 const open = ref(false)
 const confirmingDelete = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
+const triggerButton = ref<HTMLButtonElement | null>(null)
+const deleteActionButton = ref<HTMLButtonElement | null>(null)
+const cancelDeleteButton = ref<HTMLButtonElement | null>(null)
 
 function isAllowed(action: ProductRowAllowedAction): boolean {
   return props.productRow.allowedActions.includes(action)
 }
 
 function close(): void {
+  open.value = false
+  confirmingDelete.value = false
+  void nextTick(() => triggerButton.value?.focus())
+}
+
+function closeWithoutRestoringFocus(): void {
   open.value = false
   confirmingDelete.value = false
 }
@@ -59,10 +68,12 @@ function select(event: 'edit' | 'recalculate' | 'copy'): void {
 function requestDelete(): void {
   if (props.disabled || !isAllowed('product_row.delete')) return
   confirmingDelete.value = true
+  void nextTick(() => cancelDeleteButton.value?.focus())
 }
 
 function cancelDelete(): void {
   confirmingDelete.value = false
+  void nextTick(() => deleteActionButton.value?.focus())
 }
 
 function confirmDelete(): void {
@@ -97,11 +108,11 @@ function transitionLabel(code: string): string {
 }
 
 function handleDocumentClick(event: MouseEvent): void {
-  if (open.value && !menuRoot.value?.contains(event.target as Node)) close()
+  if (open.value && !menuRoot.value?.contains(event.target as Node)) closeWithoutRestoringFocus()
 }
 
 function handleDocumentKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') close()
+  if (event.key === 'Escape' && open.value) close()
 }
 
 onMounted(() => {
@@ -116,8 +127,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="menuRoot" class="relative inline-flex" @keydown.esc="close">
+  <div ref="menuRoot" class="relative inline-flex" @keydown.esc.stop="close">
     <button
+      ref="triggerButton"
       type="button"
       class="rounded border border-gray-300 px-2.5 py-1.5 text-lg leading-none text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
       :aria-label="`Действия товарной позиции ${productRow.id}`"
@@ -219,6 +231,7 @@ onBeforeUnmount(() => {
           role="none"
         >
           <button
+            ref="deleteActionButton"
             type="button"
             role="menuitem"
             class="block w-full rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -238,6 +251,7 @@ onBeforeUnmount(() => {
         <p class="mt-1 text-xs text-gray-600">Это действие нельзя отменить.</p>
         <div class="mt-3 flex justify-end gap-2">
           <button
+            ref="cancelDeleteButton"
             type="button"
             class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
             :aria-label="`Отменить удаление товарной позиции ${productRow.id}`"

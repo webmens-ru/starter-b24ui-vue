@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it } from 'vitest'
 
 import type { ProductRowSummary } from '../../app/api/productRows'
@@ -44,6 +44,15 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
 async function openMenu(row = makeProductRow(), props: { disabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
   const wrapper = mount(ProductRowActionsMenu, {
     props: { productRow: row, canMoveUp: true, canMoveDown: true, ...props },
+  })
+  await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
+  return wrapper
+}
+
+async function openAttachedMenu(row = makeProductRow()) {
+  const wrapper = mount(ProductRowActionsMenu, {
+    attachTo: document.body,
+    props: { productRow: row, canMoveUp: true, canMoveDown: true },
   })
   await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
   return wrapper
@@ -110,6 +119,83 @@ describe('ProductRowActionsMenu', () => {
     await wrapper.get(`[aria-label="Подтвердить удаление товарной позиции ${row.id}"]`).trigger('click')
     expect(wrapper.emitted('delete')).toHaveLength(1)
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+  })
+
+  it('moves focus into the announced delete confirmation and restores the delete action on cancel', async () => {
+    const row = makeProductRow()
+    const wrapper = await openAttachedMenu(row)
+
+    try {
+      const deleteAction = wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`)
+      ;(deleteAction.element as HTMLButtonElement).focus()
+      expect(document.activeElement).toBe(deleteAction.element)
+
+      await deleteAction.trigger('click')
+      await nextTick()
+
+      const dialog = wrapper.get('[role="alertdialog"]')
+      const cancel = wrapper.get(`[aria-label="Отменить удаление товарной позиции ${row.id}"]`)
+      expect(dialog.attributes('aria-labelledby')).toBe(`delete-confirmation-title-${row.id}`)
+      expect(wrapper.get(`#delete-confirmation-title-${row.id}`).text()).toBe('Удалить товарную позицию?')
+      expect(document.activeElement).toBe(cancel.element)
+
+      await cancel.trigger('click')
+      await nextTick()
+
+      expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(
+        wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).element,
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('closes delete confirmation on Escape and restores the menu trigger focus', async () => {
+    const row = makeProductRow()
+    const wrapper = await openAttachedMenu(row)
+
+    try {
+      await wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).trigger('click')
+      await nextTick()
+      const cancel = wrapper.get(`[aria-label="Отменить удаление товарной позиции ${row.id}"]`)
+      expect(document.activeElement).toBe(cancel.element)
+
+      await cancel.trigger('keydown', { key: 'Escape' })
+      await nextTick()
+
+      expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+      expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(
+        wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).element,
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('emits delete once on confirmation and leaves focus on the menu trigger', async () => {
+    const row = makeProductRow()
+    const wrapper = await openAttachedMenu(row)
+
+    try {
+      await wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).trigger('click')
+      await nextTick()
+      const confirm = wrapper.get(`[aria-label="Подтвердить удаление товарной позиции ${row.id}"]`)
+      ;(confirm.element as HTMLButtonElement).focus()
+
+      await confirm.trigger('click')
+      await nextTick()
+
+      expect(wrapper.emitted('delete')).toHaveLength(1)
+      expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+      expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(
+        wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).element,
+      )
+    } finally {
+      wrapper.unmount()
+    }
   })
 
   it('emits transitions and permitted moves while disabling movement at boundaries', async () => {
