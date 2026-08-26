@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   route: { query: {} as Record<string, unknown> } as { query: Record<string, unknown> },
   push: vi.fn(),
   createOrder: vi.fn(),
+  navigateToProductRows: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -18,6 +19,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('../app/api/wicket', () => ({ createOrder: mocks.createOrder }))
+vi.mock('../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
 
 const SlotStub = { template: '<div><slot /></div>' }
 
@@ -41,12 +43,24 @@ describe('AddProduct order flow', () => {
     mocks.createOrder.mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 })
   })
 
-  it('creates an order once for the initial entry and opens its composition', async () => {
+  it('creates an order once for the initial entry and returns through the server URL', async () => {
     mountPage()
     await flushPromises()
 
     expect(mocks.createOrder).toHaveBeenCalledTimes(1)
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.push).not.toHaveBeenCalledWith(expect.objectContaining({ name: 'product-rows' }))
+  })
+
+  it('uses the server-owned return navigation when cancelled', async () => {
+    mocks.route.query = { orderId: '42' }
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.push).not.toHaveBeenCalledWith(expect.objectContaining({ name: 'product-rows' }))
   })
 
   it.each([
@@ -176,10 +190,7 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(useCalculation().orderId.value, 'unrelated query change').toBe(42)
-    expect(mocks.push, 'unrelated query change').toHaveBeenCalledWith({
-      name: 'product-rows',
-      params: { orderId: 42 },
-    })
+    expect(mocks.navigateToProductRows, 'unrelated query change').toHaveBeenCalledTimes(1)
   })
 
   it('keeps an existing order while choosing a wicket product', async () => {
@@ -191,6 +202,23 @@ describe('AddProduct order flow', () => {
 
     expect(mocks.createOrder).not.toHaveBeenCalled()
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/model', query: { orderId: '42' } })
+  })
+
+  it('ignores a late create-order response after cancellation', async () => {
+    let resolveOrder!: (value: { orderId: number, companyId: null, managerId: number }) => void
+    mocks.createOrder.mockImplementationOnce(() => new Promise(resolve => {
+      resolveOrder = resolve
+    }))
+    const wrapper = mountPage()
+    await Promise.resolve()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
+    resolveOrder({ orderId: 42, companyId: null, managerId: 1 })
+    await flushPromises()
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(useCalculation().orderId.value).toBeNull()
+    expect(mocks.push).not.toHaveBeenCalled()
   })
 
   it('keeps a product disabled when the product-row backend does not support it yet', async () => {

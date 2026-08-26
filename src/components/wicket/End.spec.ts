@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   saveWicketData: vi.fn(),
   fetchSavedOrderPrice: vi.fn(),
   deleteCalculation: vi.fn(),
+  navigateToProductRows: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
@@ -20,6 +21,7 @@ vi.mock('../../app/api/wicket', () => ({
   fetchSavedOrderPrice: mocks.fetchSavedOrderPrice,
   deleteCalculation: mocks.deleteCalculation,
 }))
+vi.mock('../../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
 
 const ButtonStub = {
   props: ['label', 'disabled'],
@@ -64,7 +66,7 @@ describe('End order composition navigation', () => {
       productRowId: 7,
       modelId: '1',
     }))
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
   })
 
   it('deletes through the serialized wicket calculation API and returns to the order composition', async () => {
@@ -87,7 +89,7 @@ describe('End order composition navigation', () => {
       productRowId: 7,
       modelId: '1',
     })
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'product-rows', params: { orderId: 42 } })
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
   })
 
   it('does not navigate away when conflict-aware deletion rejects with a 409', async () => {
@@ -106,7 +108,7 @@ describe('End order composition navigation', () => {
     await flushPromises()
 
     expect(mocks.deleteCalculation).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
-    expect(mocks.push).not.toHaveBeenCalled()
+    expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
   })
 
   it('ignores a calculation result that arrives after End unmounts', async () => {
@@ -130,7 +132,31 @@ describe('End order composition navigation', () => {
     expect(calc.priceRetail.value).toBe('500.00')
     expect(calc.priceDealer.value).toBe('400.00')
     expect(mocks.saveWicketData).toHaveBeenCalledTimes(savesBeforeCalculation)
-    expect(mocks.push).not.toHaveBeenCalled()
+    expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
+  })
+
+  it('ignores a calculation response that arrives after returning to product rows', async () => {
+    const calculation = deferred<{ priceRetail: string, priceDealer: string }>()
+    mocks.finalCalculate.mockReturnValueOnce(calculation.promise)
+    const calc = useCalculation()
+    calc.priceRetail.value = '500.00'
+    calc.priceDealer.value = '400.00'
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+    const savesBeforeCalculation = mocks.saveWicketData.mock.calls.length
+
+    await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click')
+    await vi.waitFor(() => expect(mocks.finalCalculate).toHaveBeenCalledTimes(1))
+    await wrapper.findAll('button').find(button => button.text().includes('К заказу'))!.trigger('click')
+    calculation.resolve({ priceRetail: '1000.00', priceDealer: '800.00' })
+    await flushPromises()
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(calc.priceRetail.value).toBe('500.00')
+    expect(calc.priceDealer.value).toBe('400.00')
+    expect(mocks.saveWicketData).toHaveBeenCalledTimes(savesBeforeCalculation)
   })
 
   it('ignores a delete completion that arrives after End unmounts', async () => {
@@ -153,6 +179,41 @@ describe('End order composition navigation', () => {
     deletion.resolve()
     await flushPromises()
 
-    expect(mocks.push).not.toHaveBeenCalled()
+    expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
+  })
+
+  it('sends one terminal navigation when «К заказу» is clicked twice', async () => {
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('К заказу'))!
+
+    await button.trigger('click')
+    await button.trigger('click')
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends one delete request and one navigation on a double confirmation', async () => {
+    const deletion = deferred<void>()
+    mocks.deleteCalculation.mockReturnValueOnce(deletion.promise)
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Не сохранять расчёт'))!.trigger('click')
+    await flushPromises()
+    const confirmButtons = [...document.body.querySelectorAll('button')]
+      .filter(button => button.textContent?.includes('Да, удалить'))
+    const confirmButton = confirmButtons[confirmButtons.length - 1]!
+    confirmButton.click()
+    confirmButton.click()
+    await vi.waitFor(() => expect(mocks.deleteCalculation).toHaveBeenCalledTimes(1))
+    deletion.resolve()
+    await flushPromises()
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,6 +1,9 @@
 declare global {
   type TPlacementParams = {
     orderCardEmbedded?: boolean;
+    productRowCreateUrl?: string;
+    productRowUpdateUrlTemplate?: string;
+    returnUrl?: string;
     [index: string]: unknown;
   };
 
@@ -25,6 +28,7 @@ declare global {
     };
     _APP_URL_: string;
     _HOSTNAME_: string;
+    __productRowsNavigateTop__?: (url: string) => void;
   }
 
   declare const BX24: {

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { useCalculation } from '../../composables/useCalculation'
 import { createProductRow } from '../../app/api/productRows'
+import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -73,6 +74,11 @@ const currentOrderId = computed(() => orderIdState.value.kind === 'valid' ? orde
 
 function isCurrentRequest(generation: number, orderId: number): boolean {
   return mounted && generation === requestGeneration && currentOrderId.value === orderId
+}
+
+function exitToProductRows(): void {
+  requestGeneration += 1
+  navigateToProductRows()
 }
 
 function getImageSrc(path: string): string {
@@ -180,7 +186,7 @@ onUnmounted(() => {
           <B24Button
             label="Назад"
             color="air-secondary"
-            @click="router.push({ path: '/add-product', query: { orderId: String(currentOrderId ?? '') } })"
+            @click="exitToProductRows"
           />
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
             Выберите заполнение калитки

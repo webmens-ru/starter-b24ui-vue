@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 import {
   calculateProductRow,
@@ -22,7 +22,6 @@ import OrderTotals from '../../components/order/OrderTotals.vue'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
 const route = useRoute()
-const router = useRouter()
 
 const result = ref<ProductRowListResponse | null>(null)
 const loading = ref(true)
@@ -52,6 +51,39 @@ const canReorder = computed(() => {
 
 function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
   return params?.orderCardEmbedded === true
+}
+
+function isSameOriginProductRowUrl(url: unknown, expectedOrderId: number): url is string {
+  if (
+    typeof url !== 'string'
+    || !url.startsWith('/')
+    || url.startsWith('//')
+    || url.startsWith('/\\')
+  ) return false
+
+  const parsed = new URL(url, window.location.origin)
+  return parsed.origin === window.location.origin && parsed.searchParams.get('id') === String(expectedOrderId)
+}
+
+function navigateTop(url: string): void {
+  const testNavigateTop = window.__productRowsNavigateTop__
+  if (testNavigateTop) {
+    testNavigateTop(url)
+    return
+  }
+  window.top?.location.assign(url)
+}
+
+function configurationNavigationError(): void {
+  errorMessage.value = 'Ссылка на конфигуратор недоступна'
+}
+
+function navigateToConfiguration(url: unknown): void {
+  if (!validOrderId() || !isSameOriginProductRowUrl(url, orderId.value)) {
+    configurationNavigationError()
+    return
+  }
+  navigateTop(url)
 }
 
 function validOrderId(): boolean {
@@ -183,19 +215,16 @@ async function runReloadingProductRowAction(
 }
 
 function editProductRow(productRow: ProductRowSummary): void {
-  const path = productRow.productType === 'wicket'
-    ? `/wicket/type${productRow.modelId}`
-    : productRow.productType === 'swing'
-      ? `/swing-gates/type${productRow.modelId}`
-      : null
-  if (!path) {
-    errorMessage.value = 'Для этого типа изделия конфигуратор пока недоступен'
+  if (!Number.isSafeInteger(productRow.id) || productRow.id <= 0) {
+    configurationNavigationError()
     return
   }
-  void router.push({
-    path,
-    query: { orderId: String(orderId.value), productRowId: String(productRow.id) },
-  })
+  const template = window._PARAMS_?.placementOptions?.params?.productRowUpdateUrlTemplate
+  if (typeof template !== 'string' || !template.includes('{productRowId}')) {
+    configurationNavigationError()
+    return
+  }
+  navigateToConfiguration(template.replace('{productRowId}', String(productRow.id)))
 }
 
 async function copyProductRowAction(productRow: ProductRowSummary): Promise<void> {
@@ -339,7 +368,7 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
 
 function addProduct(): void {
   if (!validOrderId()) return
-  void router.push({ path: '/add-product', query: { orderId: String(orderId.value) } })
+  navigateToConfiguration(window._PARAMS_?.placementOptions?.params?.productRowCreateUrl)
 }
 
 async function transitionOrderStatus(toStatus: string): Promise<void> {

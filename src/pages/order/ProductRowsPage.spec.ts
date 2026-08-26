@@ -12,6 +12,7 @@ import ProductRowsPage from './ProductRowsPage.vue'
 const mocks = vi.hoisted(() => ({
   route: { params: { orderId: '42' } } as { params: { orderId: string } },
   push: vi.fn(),
+  navigateTop: vi.fn(),
   listProductRows: vi.fn(),
   copyProductRow: vi.fn(),
   updateProductRow: vi.fn(),
@@ -134,7 +135,7 @@ function withCommercialActions(
   }
 }
 
-function setPlacementOptions(embedded = false): void {
+function setPlacementOptions(embedded = false, params: TPlacementParams = {}): void {
   window._PARAMS_ = {
     placement: 'DEFAULT',
     placementOptions: {
@@ -142,13 +143,22 @@ function setPlacementOptions(embedded = false): void {
       title: '',
       entity: '',
       viewMode: 'view',
-      params: embedded ? { orderCardEmbedded: true } : undefined,
+      params: {
+        ...(embedded ? { orderCardEmbedded: true } : {}),
+        productRowCreateUrl: '/dealer/orders/product-row-create?id=42',
+        productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42&productRowId={productRowId}',
+        ...params,
+      },
     },
   }
 }
 
-function mountPage(options: { embedded?: boolean; attachTo?: HTMLElement } = {}) {
-  setPlacementOptions(options.embedded ?? false)
+function mountPage(options: {
+  embedded?: boolean
+  attachTo?: HTMLElement
+  placementParams?: TPlacementParams
+} = {}) {
+  setPlacementOptions(options.embedded ?? false, options.placementParams)
   return mount(ProductRowsPage, {
     attachTo: options.attachTo,
     global: {
@@ -182,6 +192,7 @@ function expectProductRowActionsDisabled(
 describe('ProductRowsPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    Reflect.set(window, '__productRowsNavigateTop__', mocks.navigateTop)
     mocks.route = reactive({ params: { orderId: '42' } })
     mocks.listProductRows.mockResolvedValue(initial)
     mocks.copyProductRow.mockResolvedValue({ productRow: second, orderTotals: initial.orderTotals })
@@ -293,7 +304,7 @@ describe('ProductRowsPage', () => {
     }
   })
 
-  it('copies through the typed API, refreshes the source-of-truth list, and keeps the order context when adding', async () => {
+  it('copies through the typed API and refreshes the source-of-truth list', async () => {
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce({
@@ -312,8 +323,66 @@ describe('ProductRowsPage', () => {
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(3)
 
+  })
+
+  it('navigates the top window with server-owned product-row URLs', async () => {
+    const wrapper = mountPage({
+      placementParams: {
+        productRowCreateUrl: '/dealer/orders/product-row-create?id=42',
+        productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42&productRowId={productRowId}',
+      },
+    })
+    await flushPromises()
+
     await wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]').trigger('click')
-    expect(mocks.push).toHaveBeenCalledWith({ path: '/add-product', query: { orderId: '42' } })
+    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-row-create?id=42')
+
+    await openProductRowActions(wrapper, 7)
+    await wrapper.get('[aria-label="Редактировать товарную позицию 7"]').trigger('click')
+    expect(mocks.navigateTop).toHaveBeenCalledWith(
+      '/dealer/orders/product-row-update?id=42&productRowId=7',
+    )
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['missing create URL', { productRowCreateUrl: undefined }, '[aria-label="Добавить товарную позицию в заказ 42"]'],
+    [
+      'update template without the row placeholder',
+      { productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42' },
+      '[aria-label="Редактировать товарную позицию 7"]',
+    ],
+    [
+      'absolute create URL',
+      { productRowCreateUrl: 'https://example.test/product-row-create?id=42' },
+      '[aria-label="Добавить товарную позицию в заказ 42"]',
+    ],
+  ] as const)('shows an error without navigating for %s', async (_, placementParams, actionSelector) => {
+    const wrapper = mountPage({ placementParams })
+    await flushPromises()
+
+    if (actionSelector.includes('Редактировать')) await openProductRowActions(wrapper, 7)
+    await wrapper.get(actionSelector).trigger('click')
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('Ссылка')
+    expect(mocks.navigateTop).not.toHaveBeenCalled()
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it('rejects navigation from stale placement URLs after the order changes', async () => {
+    mocks.listProductRows
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(makeOrderResponse([makeProductRow(43, { orderId: 43 })]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    mocks.route.params.orderId = '43'
+    await flushPromises()
+    await wrapper.get('[aria-label="Добавить товарную позицию в заказ 43"]').trigger('click')
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('Ссылка')
+    expect(mocks.navigateTop).not.toHaveBeenCalled()
+    expect(mocks.push).not.toHaveBeenCalled()
   })
 
   it.each(['copy', 'recalculate', 'delete'] as const)(
@@ -526,7 +595,8 @@ describe('ProductRowsPage', () => {
     expect(wrapper.find('[aria-label="Копировать товарную позицию 7"]').exists()).toBe(false)
 
     await wrapper.get('[aria-label="Добавить товарную позицию в заказ 43"]').trigger('click')
-    expect(mocks.push).toHaveBeenLastCalledWith({ path: '/add-product', query: { orderId: '43' } })
+    expect(wrapper.get('[role="alert"]').text()).toContain('Ссылка')
+    expect(mocks.navigateTop).not.toHaveBeenCalled()
   })
 
   it('ignores a locked mutation response after navigation to another order', async () => {
@@ -955,7 +1025,7 @@ describe('ProductRowsPage', () => {
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(3)
 
     await wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]').trigger('click')
-    expect(mocks.push).toHaveBeenCalledWith({ path: '/add-product', query: { orderId: '42' } })
+    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-row-create?id=42')
   })
 
   it('keeps route-change reorder guards and strict reorder payloads when embedded', async () => {

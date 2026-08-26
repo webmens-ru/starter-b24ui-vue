@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
+import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { useCalculation } from '../../composables/useCalculation'
 import { loadWicketData, getAddonList, onWicketProductRowLockConflict } from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
@@ -29,7 +30,6 @@ provide(WICKET_ROUTE_KEY, props.route)
 const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi, reset } = calc
 
 const route = useRoute()
-const router = useRouter()
 /** modelId из пути /wicket/typeN, затем из _PARAMS_ или '1' по умолчанию. */
 const resolvedModelId = (): string => {
   const m = route.path.match(/\/wicket\/type(\d+)$/)
@@ -79,7 +79,8 @@ async function resolveProductRowContext(): Promise<ProductRowContext | null> {
     throw new Error('Некорректный контекст товарной позиции')
   }
 
-  await router.replace(routeOrderId ? `/order/${routeOrderId}/product-rows` : '/add-product')
+  initGeneration += 1
+  navigateToProductRows()
   return null
 }
 

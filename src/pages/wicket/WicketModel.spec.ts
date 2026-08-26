@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   route: { query: { orderId: '42' } as Record<string, unknown> } as { query: Record<string, unknown> },
   push: vi.fn(),
   createProductRow: vi.fn(),
+  navigateToProductRows: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -18,6 +19,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('../../app/api/productRows', () => ({ createProductRow: mocks.createProductRow }))
+vi.mock('../../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
 
 const SlotStub = { template: '<div><slot /></div>' }
 
@@ -38,7 +40,7 @@ describe('WicketModel', () => {
         stubs: {
           B24App: SlotStub,
           B24SidebarLayout: SlotStub,
-          B24Button: true,
+          B24Button: { props: ['label'], emits: ['click'], template: '<button @click="$emit(\'click\')">{{ label }}<slot /></button>' },
           B24Modal: true,
           Teleport: true,
           Transition: false,
@@ -74,6 +76,15 @@ describe('WicketModel', () => {
       path: '/wicket/type3',
       query: { orderId: '42', productRowId: '7' },
     })
+  })
+
+  it('returns through the server-owned URL from the model picker', async () => {
+    const wrapper = mountPage()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.push).not.toHaveBeenCalledWith(expect.objectContaining({ name: 'product-rows' }))
   })
 
   it('does not use stale store identity or malformed direct order ids', async () => {
@@ -145,6 +156,26 @@ describe('WicketModel', () => {
     })
     await flushPromises()
 
+    expect(useCalculation().productRowId.value).toBeNull()
+    expect(mocks.push).not.toHaveBeenCalled()
+  })
+
+  it('ignores a late product-row response after returning to the product rows', async () => {
+    let resolveItem!: (value: { productRow: { id: number, orderId: number }, orderTotals: { priceRetail: null, priceDealer: null } }) => void
+    mocks.createProductRow.mockImplementationOnce(() => new Promise(resolve => {
+      resolveItem = resolve
+    }))
+    const wrapper = mountPage()
+    await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
+    await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
+
+    resolveItem({
+      productRow: { id: 7, orderId: 42 },
+      orderTotals: { priceRetail: null, priceDealer: null },
+    })
+    await flushPromises()
+
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
     expect(useCalculation().productRowId.value).toBeNull()
     expect(mocks.push).not.toHaveBeenCalled()
   })

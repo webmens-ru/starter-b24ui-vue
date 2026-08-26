@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
 import { deleteCalculation, finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
 import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
+import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 
 const emit = defineEmits<{
   (e: 'back'): void
@@ -11,9 +11,9 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 const wicketRoute = inject(WICKET_ROUTE_KEY)
-const router = useRouter()
 let mounted = true
 let actionGeneration = 0
+let exiting = false
 
 function isCurrentAction(generation: number): boolean {
   return mounted && generation === actionGeneration
@@ -24,11 +24,11 @@ const canOpenProductRows = computed(() => {
   return Number.isInteger(orderId) && orderId > 0
 })
 
-async function goToProductRows(): Promise<void> {
-  const orderId = Number(calc.number.value)
-  if (canOpenProductRows.value) {
-    await router.push({ name: 'product-rows', params: { orderId } })
-  }
+function goToProductRows(): void {
+  if (!canOpenProductRows.value || exiting) return
+  exiting = true
+  actionGeneration += 1
+  navigateToProductRows()
 }
 
 // ─── Модальное окно подтверждения удаления ────────────────────────────────────
@@ -72,7 +72,8 @@ function applyActualSavedPrices(retail: string, dealer: string, lastCalculatedAt
       : ''
 }
 
-async function loadSavedPriceIfActual() {
+async function loadSavedPriceIfActual(): Promise<void> {
+  const generation = actionGeneration
   let context: ReturnType<typeof calc.getCurrentProductRowContext>
   try {
     context = calc.getCurrentProductRowContext()
@@ -84,6 +85,7 @@ async function loadSavedPriceIfActual() {
   loadingSavedPrice.value = true
   try {
     const status = await fetchSavedOrderPrice(context)
+    if (!isCurrentAction(generation)) return
     if (status.isActual && status.priceRetail && status.priceDealer) {
       applyActualSavedPrices(status.priceRetail, status.priceDealer, status.lastCalculatedAt)
     } else {
@@ -91,14 +93,15 @@ async function loadSavedPriceIfActual() {
       calculatedAtLabel.value = ''
     }
   } catch (e) {
+    if (!isCurrentAction(generation)) return
     console.warn('fetchSavedOrderPrice:', e)
   } finally {
-    loadingSavedPrice.value = false
+    if (isCurrentAction(generation)) loadingSavedPrice.value = false
   }
 }
 
 /** Сохраняет reachedStep / visitedPages в wicket_type* (иначе при reopen остаётся page11). */
-async function persistWizardProgress() {
+async function persistWizardProgress(): Promise<void> {
   try {
     await saveWicketData(calc.getFullSavePayload())
   } catch (e) {
@@ -132,6 +135,7 @@ const sectionErrors = computed(() => {
 const allSectionsValid = computed(() => sectionErrors.value.length === 0)
 
 async function handleCalculate() {
+  if (calculating.value || deleting.value) return
   if (!allSectionsValid.value) {
     openErrModal(sectionErrors.value.join('\n'))
     return
@@ -149,7 +153,7 @@ async function handleCalculate() {
     applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
     await persistWizardProgress()
     if (!isCurrentAction(generation)) return
-    await goToProductRows()
+    goToProductRows()
   } catch (e) {
     if (!isCurrentAction(generation)) return
     console.error('finalCalculate:', e)
@@ -169,13 +173,14 @@ function isLockConflict(error: unknown): boolean {
 }
 
 async function confirmDelete() {
+  if (deleting.value || calculating.value) return
   const generation = ++actionGeneration
   deleting.value = true
   try {
     const context = calc.getCurrentProductRowContext()
     await deleteCalculation(context)
     if (!isCurrentAction(generation)) return
-    await goToProductRows()
+    goToProductRows()
   } catch (e) {
     if (!isCurrentAction(generation)) return
     console.error('deleteCalculation:', e)
@@ -189,8 +194,10 @@ async function confirmDelete() {
 
 // ─── Монтирование ─────────────────────────────────────────────────────────────
 onMounted(async () => {
+  const generation = actionGeneration
   calc.setActivePage('page12')
   await persistWizardProgress()
+  if (!isCurrentAction(generation)) return
   calc.fieldsFilled.value = 1
   document.dispatchEvent(new Event('dataUpdated'))
   await loadSavedPriceIfActual()

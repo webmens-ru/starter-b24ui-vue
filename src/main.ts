@@ -23,8 +23,7 @@ app.use(router)
 
 if (import.meta.env.DEV) {
   const qs = new URLSearchParams(window.location.search)
-  const orderId = qs.get('orderId')
-  const modelId = qs.get('modelId') ?? '1'
+  const path = qs.get('path') ?? '/'
 
   if (!window._ACCESS_TOKEN_ && qs.get('token')) {
     window._ACCESS_TOKEN_ = qs.get('token')!
@@ -39,13 +38,12 @@ if (import.meta.env.DEV) {
       title: '',
       entity: '',
       viewMode: 'view' as TPlacementOptions['viewMode'],
-      path: orderId ? `/wicket/type${modelId}` : '/add-product',
+      path,
       updateOnCloseSlider: true,
-      ...(orderId ? { id: orderId, modelId } : {}),
     },
   }
 
-  console.log('[app] DEV mode — orderId:', orderId, 'modelId:', modelId)
+  console.log('[app] DEV mode — path:', path)
 
   const devPath = window._PARAMS_?.placementOptions?.path
   if (devPath) {

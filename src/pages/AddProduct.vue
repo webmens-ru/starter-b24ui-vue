@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
 import { createOrder } from '../app/api/wicket'
 import { parsePositiveDecimalId } from '../app/positiveDecimalId'
+import { navigateToProductRows } from '../app/productRowReturnNavigation'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -46,6 +47,11 @@ function getImageSrc(path: string): string {
 
 function isCurrentLifecycle(generation: number): boolean {
   return mounted && generation === lifecycleGeneration
+}
+
+function exitToProductRows(): void {
+  lifecycleGeneration += 1
+  navigateToProductRows()
 }
 
 async function onProductTypeSelect(item: (typeof productTypes)[0]) {
@@ -102,7 +108,7 @@ onMounted(async () => {
     const order = await createOrder()
     if (!isCurrentLifecycle(generation)) return
     calc.orderId.value = order.orderId
-    await router.push({ name: 'product-rows', params: { orderId: order.orderId } })
+    exitToProductRows()
   } catch (e) {
     if (!isCurrentLifecycle(generation)) return
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'
@@ -139,9 +145,7 @@ onUnmounted(() => {
           <B24Button
             label="Назад"
             color="air-secondary"
-            @click="currentOrderId
-              ? router.push({ name: 'product-rows', params: { orderId: currentOrderId } })
-              : router.push('/')"
+            @click="exitToProductRows"
           />
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
             Выберите тип изделия

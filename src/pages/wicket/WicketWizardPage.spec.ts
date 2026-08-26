@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   getAddonList: vi.fn(),
   listProductRows: vi.fn(),
   onWicketProductRowLockConflict: vi.fn(),
+  navigateToProductRows: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -32,6 +33,7 @@ vi.mock('../../app/api/wicket', () => ({
 }))
 
 vi.mock('../../app/api/productRows', () => ({ listProductRows: mocks.listProductRows }))
+vi.mock('../../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
 
 const EmptyStep = defineComponent({ template: '<div>Шаг</div>' })
 const wicketRoute: WicketRouteDefinition = {
@@ -130,7 +132,8 @@ describe('WicketWizardPage mobile summary', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(mocks.replace).toHaveBeenCalledWith('/order/42/product-rows')
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.replace).not.toHaveBeenCalled()
     expect(mocks.listProductRows).not.toHaveBeenCalled()
     expect(mocks.loadWicketData).not.toHaveBeenCalled()
 
@@ -138,7 +141,7 @@ describe('WicketWizardPage mobile summary', () => {
     await flushPromises()
 
     expect(wrapper.html(), 'undefined-to-null productRowId transition').toContain('Некорректный контекст товарной позиции')
-    expect(mocks.replace, 'undefined-to-null productRowId transition').toHaveBeenCalledTimes(1)
+    expect(mocks.navigateToProductRows, 'undefined-to-null productRowId transition').toHaveBeenCalledTimes(1)
     expect(mocks.getAddonList, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
     expect(mocks.loadWicketData, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
   })
@@ -153,7 +156,8 @@ describe('WicketWizardPage mobile summary', () => {
     mountPage()
     await flushPromises()
 
-    expect(mocks.replace).toHaveBeenCalledWith('/add-product')
+    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.replace).not.toHaveBeenCalled()
     expect(mocks.listProductRows).not.toHaveBeenCalled()
     expect(mocks.loadWicketData).not.toHaveBeenCalled()
     expect(calc.orderId.value).toBeNull()
@@ -174,7 +178,7 @@ describe('WicketWizardPage mobile summary', () => {
       await flushPromises()
 
       expect(malformedWrapper.html(), testCase.label).toContain('Некорректный контекст товарной позиции')
-      expect(mocks.replace, testCase.label).not.toHaveBeenCalled()
+      expect(mocks.navigateToProductRows, testCase.label).not.toHaveBeenCalled()
       expect(mocks.getAddonList, testCase.label).not.toHaveBeenCalled()
       expect(mocks.loadWicketData, testCase.label).not.toHaveBeenCalled()
       malformedWrapper.unmount()
