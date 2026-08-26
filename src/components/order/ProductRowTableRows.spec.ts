@@ -17,7 +17,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
+function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
   return mount(ProductRowTableRows, { props: { productRow, canMoveUp: false, canMoveDown: false, ...props } })
 }
 
@@ -38,7 +38,10 @@ describe('ProductRowTableRows', () => {
     expect(text).toContain('1 440')
     expect(mainRow.get('[data-price-kind="final-retail-unit"]').text()).toMatch(/900/)
     expect(mainRow.get('[data-price-kind="retail-total"]').text()).toMatch(/1\s*800/)
-    expect(text).toContain('Черновик · 01.09.2026')
+    const statusCell = mainRow.get('[data-label="Статус"]')
+    expect(statusCell.get('[data-product-row-status]').text()).toBe('Черновик')
+    expect(statusCell.get('[data-product-row-deadline]').text()).toBe('Плановый срок: 01.09.2026')
+    expect(statusCell.text()).not.toContain('Черновик ·')
     expect(text).toContain('Расчёт актуален')
     await wrapper.get('[aria-label="Подробнее о товарной позиции 7"]').trigger('click')
     const details = wrapper.get('tr[data-product-row-details]')
@@ -65,10 +68,21 @@ describe('ProductRowTableRows', () => {
     expect(wrapper.findAll('[data-price-redacted]')).toHaveLength(8)
   })
 
-  it('renders mobile cell labels for every main row field', () => {
+  it('stacks every mobile cell label above a full-width value without horizontal basis squeezing', () => {
     const wrapper = mountRows()
+    const mainRow = wrapper.get('tr[data-product-row-main]')
     for (const label of ['Товарная позиция', 'Количество', 'Цена за единицу', 'Сумма', 'Статус', 'Действия']) {
-      expect(wrapper.get(`[data-label="${label}"]`)).toBeTruthy()
+      const cell = mainRow.get(`[data-label="${label}"]`)
+      const mobileLabel = cell.get('[data-mobile-cell-label]')
+      const mobileValue = cell.get('[data-mobile-cell-value]')
+      expect(cell.classes()).toEqual(expect.arrayContaining(['max-md:block', 'max-md:w-full', 'max-md:text-left']))
+      expect(cell.classes()).not.toContain('max-md:flex')
+      expect(mobileLabel.text()).toBe(label)
+      expect(mobileLabel.classes()).toEqual(expect.arrayContaining(['block', 'md:hidden']))
+      expect(mobileLabel.classes().some(className => className.includes('basis-'))).toBe(false)
+      expect(mobileValue.classes()).toEqual(expect.arrayContaining(['block', 'w-full', 'min-w-0']))
+      expect(cell.element.children[0]).toBe(mobileLabel.element)
+      expect(cell.element.children[1]).toBe(mobileValue.element)
     }
   })
 

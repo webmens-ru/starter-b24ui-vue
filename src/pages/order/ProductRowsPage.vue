@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
@@ -33,6 +33,8 @@ const reorderBusy = ref(false)
 const orderTransitionBusy = ref(false)
 const loadFailed = ref(false)
 const staleView = ref(false)
+const addProductButton = ref<HTMLButtonElement | null>(null)
+const pageMain = ref<HTMLElement | null>(null)
 let latestLoadId = 0
 let routeGeneration = 0
 
@@ -247,11 +249,37 @@ async function recalculateProductRow(productRow: ProductRowSummary): Promise<voi
 }
 
 async function deleteProductRowAction(productRow: ProductRowSummary): Promise<void> {
-  await runLockedProductRowMutation(productRow, () => deleteProductRow({
-    orderId: orderId.value,
-    productRowId: productRow.id,
-    lockVersion: productRow.lockVersion,
-  }), { reload: true })
+  const generation = routeGeneration
+  const mutationOrderId = orderId.value
+  const originalIndex = result.value?.productRows.findIndex(row => row.id === productRow.id) ?? -1
+  const deletingRowSelector = `[data-product-row="${productRow.id}"]`
+  let shouldRestoreFocus = Boolean(document.activeElement?.closest(deletingRowSelector))
+  const trackFocusOwnership = (event: FocusEvent): void => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (target === document.body || target === document.documentElement) return
+    if (!target.closest(deletingRowSelector)) shouldRestoreFocus = false
+  }
+  document.addEventListener('focusin', trackFocusOwnership)
+  try {
+    await runLockedProductRowMutation(productRow, () => deleteProductRow({
+      orderId: orderId.value,
+      productRowId: productRow.id,
+      lockVersion: productRow.lockVersion,
+    }), { reload: true })
+  } finally {
+    document.removeEventListener('focusin', trackFocusOwnership)
+  }
+  if (!isCurrentRoute(generation, mutationOrderId) || !result.value) return
+  if (!shouldRestoreFocus) return
+  if (result.value.productRows.some(row => row.id === productRow.id)) return
+
+  const adjacentRow = result.value.productRows[Math.min(originalIndex, result.value.productRows.length - 1)]
+  await nextTick()
+  const target = adjacentRow
+    ? pageMain.value?.querySelector<HTMLButtonElement>(`#product-row-actions-trigger-${adjacentRow.id}`)
+    : addProductButton.value ?? pageMain.value
+  target?.focus()
 }
 
 async function transitionProductRowAction(productRow: ProductRowSummary, toStatus: string): Promise<void> {
@@ -387,6 +415,7 @@ watch(orderIdParam, () => {
           </div>
           <button
             v-if="result?.orderWorkflow.canCreateProductRow"
+            ref="addProductButton"
             type="button"
             class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
@@ -396,7 +425,7 @@ watch(orderIdParam, () => {
           </button>
         </header>
 
-        <main :class="embeddedInOrderCard ? 'p-4' : 'flex-1 overflow-y-auto p-4'">
+        <main ref="pageMain" tabindex="-1" :class="embeddedInOrderCard ? 'p-4' : 'flex-1 overflow-y-auto p-4'">
           <div class="mx-auto flex w-full max-w-[1152px] flex-col gap-4">
             <div
               v-if="embeddedInOrderCard && result?.orderWorkflow.canCreateProductRow"
@@ -404,6 +433,7 @@ watch(orderIdParam, () => {
             >
               <button
                 type="button"
+                ref="addProductButton"
                 class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
                 @click="addProduct"
@@ -469,9 +499,10 @@ watch(orderIdParam, () => {
                   </thead>
                   <ProductRowTableRows
                   v-for="(productRow, index) in result.productRows"
-                  :key="productRow.id"
+                    :key="productRow.id"
                     :product-row="productRow"
-                    :disabled="staleView || reorderBusy || busyProductRowIds.has(productRow.id)"
+                    :disabled="staleView || busyProductRowIds.has(productRow.id)"
+                    :reorder-disabled="staleView || reorderBusy"
                     :can-move-up="canReorder && index > 0"
                     :can-move-down="canReorder && index < result.productRows.length - 1"
                     @edit="editProductRow"

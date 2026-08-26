@@ -6,10 +6,12 @@ import type { ProductRowAllowedAction, ProductRowSummary } from '../../app/api/p
 const props = withDefaults(defineProps<{
   productRow: ProductRowSummary
   disabled?: boolean
+  reorderDisabled?: boolean
   canMoveUp: boolean
   canMoveDown: boolean
 }>(), {
   disabled: false,
+  reorderDisabled: false,
 })
 
 const emit = defineEmits<{
@@ -24,6 +26,7 @@ const emit = defineEmits<{
 const open = ref(false)
 const confirmingDelete = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
+const menuPanel = ref<HTMLElement | null>(null)
 const triggerButton = ref<HTMLButtonElement | null>(null)
 const deleteActionButton = ref<HTMLButtonElement | null>(null)
 const cancelDeleteButton = ref<HTMLButtonElement | null>(null)
@@ -43,10 +46,89 @@ function closeWithoutRestoringFocus(): void {
   confirmingDelete.value = false
 }
 
+function enabledMenuItems(): HTMLButtonElement[] {
+  return Array.from(menuPanel.value?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])
+}
+
+function focusMenuItem(target: HTMLButtonElement | undefined | null): void {
+  if (!target) return
+  for (const item of enabledMenuItems()) item.tabIndex = item === target ? 0 : -1
+  target.focus()
+}
+
+function focusMenuBoundary(boundary: 'first' | 'last'): void {
+  void nextTick(() => {
+    const items = enabledMenuItems()
+    const target = boundary === 'first' ? items[0] : items[items.length - 1]
+    focusMenuItem(target)
+  })
+}
+
+function focusOutsideMenu(backwards: boolean): void {
+  const focusable = Array.from(document.querySelectorAll<HTMLElement>(
+    'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+  ))
+  const activeIndex = focusable.findIndex(element => element === document.activeElement)
+  const step = backwards ? -1 : 1
+  let target = focusable[activeIndex + step]
+  while (target && menuPanel.value?.contains(target)) {
+    target = focusable[focusable.indexOf(target) + step]
+  }
+  closeWithoutRestoringFocus()
+  void nextTick(() => (target ?? triggerButton.value)?.focus())
+}
+
+function openMenu(initialFocus: 'first' | 'last'): void {
+  if (props.disabled) return
+  open.value = true
+  confirmingDelete.value = false
+  focusMenuBoundary(initialFocus)
+}
+
 function toggle(): void {
   if (props.disabled) return
   if (open.value) close()
-  else open.value = true
+  else openMenu('first')
+}
+
+function handleTriggerKeydown(event: KeyboardEvent): void {
+  const boundary = event.key === 'ArrowUp' ? 'last' : 'first'
+  if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) return
+  event.preventDefault()
+  event.stopPropagation()
+  openMenu(boundary)
+}
+
+function handleMenuKeydown(event: KeyboardEvent): void {
+  if (!open.value || confirmingDelete.value) return
+  if (event.key === 'Tab') {
+    event.preventDefault()
+    event.stopPropagation()
+    focusOutsideMenu(event.shiftKey)
+    return
+  }
+  const items = enabledMenuItems()
+  if (items.length === 0) return
+  const currentIndex = items.findIndex(item => item === document.activeElement)
+  let nextIndex: number | null = null
+  switch (event.key) {
+    case 'ArrowDown':
+      nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length
+      break
+    case 'ArrowUp':
+      nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length
+      break
+    case 'Home':
+      nextIndex = 0
+      break
+    case 'End':
+      nextIndex = items.length - 1
+      break
+  }
+  if (nextIndex === null) return
+  event.preventDefault()
+  event.stopPropagation()
+  focusMenuItem(items[nextIndex])
 }
 
 function select(event: 'edit' | 'recalculate' | 'copy'): void {
@@ -73,7 +155,7 @@ function requestDelete(): void {
 
 function cancelDelete(): void {
   confirmingDelete.value = false
-  void nextTick(() => deleteActionButton.value?.focus())
+  void nextTick(() => focusMenuItem(deleteActionButton.value))
 }
 
 function confirmDelete(): void {
@@ -89,7 +171,7 @@ function selectTransition(toStatus: string): void {
 }
 
 function selectMove(direction: -1 | 1): void {
-  if (props.disabled || !isAllowed('product_row.reorder')) return
+  if (props.disabled || props.reorderDisabled || !isAllowed('product_row.reorder')) return
   if (direction === -1 && !props.canMoveUp) return
   if (direction === 1 && !props.canMoveDown) return
   emit('move', direction)
@@ -111,17 +193,23 @@ function handleDocumentClick(event: MouseEvent): void {
   if (open.value && !menuRoot.value?.contains(event.target as Node)) closeWithoutRestoringFocus()
 }
 
+function handleDocumentFocusIn(event: FocusEvent): void {
+  if (open.value && !menuRoot.value?.contains(event.target as Node)) closeWithoutRestoringFocus()
+}
+
 function handleDocumentKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape' && open.value) close()
 }
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  document.addEventListener('focusin', handleDocumentFocusIn)
   document.addEventListener('keydown', handleDocumentKeydown)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
+  document.removeEventListener('focusin', handleDocumentFocusIn)
   document.removeEventListener('keydown', handleDocumentKeydown)
 })
 </script>
@@ -130,28 +218,37 @@ onBeforeUnmount(() => {
   <div ref="menuRoot" class="relative inline-flex" @keydown.esc.stop="close">
     <button
       ref="triggerButton"
+      :id="`product-row-actions-trigger-${productRow.id}`"
       type="button"
-      class="rounded border border-gray-300 px-2.5 py-1.5 text-lg leading-none text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+      class="rounded border border-gray-300 px-2.5 py-1.5 text-lg leading-none text-gray-700 hover:bg-gray-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
       :aria-label="`Действия товарной позиции ${productRow.id}`"
       aria-haspopup="menu"
       :aria-expanded="open"
-      :disabled="disabled"
+      :aria-controls="`product-row-actions-${productRow.id}`"
+      :aria-disabled="disabled ? 'true' : undefined"
       @click="toggle"
+      @keydown="handleTriggerKeydown"
     >
       ⋯
     </button>
 
     <div
       v-if="open"
+      :id="`product-row-actions-${productRow.id}`"
+      ref="menuPanel"
       :role="confirmingDelete ? 'alertdialog' : 'menu'"
-      :aria-labelledby="confirmingDelete ? `delete-confirmation-title-${productRow.id}` : undefined"
+      :aria-labelledby="confirmingDelete
+        ? `delete-confirmation-title-${productRow.id}`
+        : `product-row-actions-trigger-${productRow.id}`"
       class="absolute right-0 z-10 mt-1 min-w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+      @keydown="handleMenuKeydown"
     >
       <template v-if="!confirmingDelete">
         <button
           v-if="isAllowed('product_row.edit_configuration')"
           type="button"
           role="menuitem"
+          tabindex="-1"
           class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           :aria-label="`Редактировать товарную позицию ${productRow.id}`"
           :disabled="disabled"
@@ -163,6 +260,7 @@ onBeforeUnmount(() => {
           v-if="isAllowed('product_row.calculate')"
           type="button"
           role="menuitem"
+          tabindex="-1"
           class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           :aria-label="`Пересчитать товарную позицию ${productRow.id}`"
           :disabled="disabled"
@@ -174,6 +272,7 @@ onBeforeUnmount(() => {
           v-if="isAllowed('product_row.copy')"
           type="button"
           role="menuitem"
+          tabindex="-1"
           class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           :aria-label="`Копировать товарную позицию ${productRow.id}`"
           :disabled="disabled"
@@ -189,6 +288,7 @@ onBeforeUnmount(() => {
               :key="target"
               type="button"
               role="menuitem"
+              tabindex="-1"
               class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
               :aria-label="`Перевести товарную позицию ${productRow.id} в статус ${target}`"
               :disabled="disabled"
@@ -204,9 +304,10 @@ onBeforeUnmount(() => {
             <button
               type="button"
               role="menuitem"
+              tabindex="-1"
               class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
               :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
-              :disabled="disabled || !canMoveUp"
+              :disabled="disabled || reorderDisabled || !canMoveUp"
               @click="selectMove(-1)"
             >
               Переместить вверх
@@ -214,9 +315,10 @@ onBeforeUnmount(() => {
             <button
               type="button"
               role="menuitem"
+              tabindex="-1"
               class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
               :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
-              :disabled="disabled || !canMoveDown"
+              :disabled="disabled || reorderDisabled || !canMoveDown"
               @click="selectMove(1)"
             >
               Переместить вниз
@@ -234,6 +336,7 @@ onBeforeUnmount(() => {
             ref="deleteActionButton"
             type="button"
             role="menuitem"
+            tabindex="-1"
             class="block w-full rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
             :aria-label="`Удалить товарную позицию ${productRow.id}`"
             :disabled="disabled"

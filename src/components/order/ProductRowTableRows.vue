@@ -8,10 +8,12 @@ import { formatOrderPrice } from './orderPrice'
 const props = withDefaults(defineProps<{
   productRow: ProductRowSummary
   disabled?: boolean
+  reorderDisabled?: boolean
   canMoveUp: boolean
   canMoveDown: boolean
 }>(), {
   disabled: false,
+  reorderDisabled: false,
 })
 
 const emit = defineEmits<{
@@ -113,71 +115,91 @@ function emitDeadline(): void {
 <template>
   <tbody :data-product-row="productRow.id" class="overflow-visible">
     <tr data-product-row-main>
-      <td data-label="Товарная позиция" class="align-top">
-        <div class="font-medium text-gray-800">№{{ productRow.id }} · {{ productRow.productType }}, модель {{ productRow.modelId }}</div>
-        <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
-          <span
-            class="inline-block size-2.5 rounded-full border border-black/10"
-            :style="productRow.status.color ? { backgroundColor: productRow.status.color } : undefined"
-            aria-hidden="true"
+      <td data-label="Товарная позиция" class="align-top max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Товарная позиция</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <div class="font-medium text-gray-800">№{{ productRow.id }} · {{ productRow.productType }}, модель {{ productRow.modelId }}</div>
+          <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
+            <span
+              class="inline-block size-2.5 rounded-full border border-black/10"
+              :style="productRow.status.color ? { backgroundColor: productRow.status.color } : undefined"
+              aria-hidden="true"
+            />
+            <span>{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</span>
+          </div>
+        </div>
+      </td>
+      <td data-label="Количество" class="align-top max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Количество</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <input
+            v-model.number="quantity"
+            type="number"
+            min="1"
+            step="1"
+            class="w-20 rounded border border-gray-300 px-2 py-1.5 text-right disabled:bg-gray-100"
+            :aria-label="`Количество товарной позиции ${productRow.id}`"
+            :disabled="!isAllowed('product_row.change_quantity')"
+            @change="emitQuantity"
+          >
+        </div>
+      </td>
+      <td data-label="Цена за единицу" class="align-top text-right tabular-nums max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Цена за единицу</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <div>
+            <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
+            <span v-else data-price-redacted>Недоступно</span>
+          </div>
+          <div
+            v-if="formatOrderPrice(productRow.finalRetailUnitPrice)"
+            data-price-kind="final-retail-unit"
+            class="mt-1 text-xs font-normal text-gray-500"
+          >
+            Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
+          </div>
+        </div>
+      </td>
+      <td data-label="Сумма" class="align-top text-right font-semibold tabular-nums max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Сумма</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <div>
+            <span v-if="formatOrderPrice(productRow.dealerTotalPrice)">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
+            <span v-else data-price-redacted>Недоступно</span>
+          </div>
+          <div
+            v-if="formatOrderPrice(productRow.retailTotalPrice)"
+            data-price-kind="retail-total"
+            class="mt-1 text-xs font-normal text-gray-500"
+          >
+            Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
+          </div>
+        </div>
+      </td>
+      <td data-label="Статус" class="align-top text-sm text-gray-700 max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Статус</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <div data-product-row-status>{{ statusName }}</div>
+          <div data-product-row-deadline class="mt-1 text-xs text-gray-500">Плановый срок: {{ deadlineLabel }}</div>
+        </div>
+      </td>
+      <td data-label="Действия" class="align-top text-right max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
+        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Действия</span>
+        <div data-mobile-cell-value class="block w-full min-w-0">
+          <ProductRowActionsMenu
+            :product-row="productRow"
+            :disabled="disabled"
+            :reorder-disabled="reorderDisabled"
+            :can-move-up="canMoveUp"
+            :can-move-down="canMoveDown"
+            @edit="emit('edit', productRow)"
+            @recalculate="emit('recalculate', productRow)"
+            @copy="emit('copy', productRow)"
+            @delete="emit('delete', productRow)"
+            @transition="status => emit('transition', productRow, status)"
+            @move="direction => emit('move', productRow, direction)"
           />
-          <span>{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</span>
         </div>
-      </td>
-      <td data-label="Количество" class="align-top">
-        <input
-          v-model.number="quantity"
-          type="number"
-          min="1"
-          step="1"
-          class="w-20 rounded border border-gray-300 px-2 py-1.5 text-right disabled:bg-gray-100"
-          :aria-label="`Количество товарной позиции ${productRow.id}`"
-          :disabled="!isAllowed('product_row.change_quantity')"
-          @change="emitQuantity"
-        >
-      </td>
-      <td data-label="Цена за единицу" class="align-top text-right tabular-nums">
-        <div>
-          <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
-          <span v-else data-price-redacted>Недоступно</span>
-        </div>
-        <div
-          v-if="formatOrderPrice(productRow.finalRetailUnitPrice)"
-          data-price-kind="final-retail-unit"
-          class="mt-1 text-xs font-normal text-gray-500"
-        >
-          Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
-        </div>
-      </td>
-      <td data-label="Сумма" class="align-top text-right font-semibold tabular-nums">
-        <div>
-          <span v-if="formatOrderPrice(productRow.dealerTotalPrice)">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
-          <span v-else data-price-redacted>Недоступно</span>
-        </div>
-        <div
-          v-if="formatOrderPrice(productRow.retailTotalPrice)"
-          data-price-kind="retail-total"
-          class="mt-1 text-xs font-normal text-gray-500"
-        >
-          Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
-        </div>
-      </td>
-      <td data-label="Статус" class="align-top text-sm text-gray-700">
-        {{ statusName }} · {{ deadlineLabel }}
-      </td>
-      <td data-label="Действия" class="align-top text-right">
-        <ProductRowActionsMenu
-          :product-row="productRow"
-          :disabled="disabled"
-          :can-move-up="canMoveUp"
-          :can-move-down="canMoveDown"
-          @edit="emit('edit', productRow)"
-          @recalculate="emit('recalculate', productRow)"
-          @copy="emit('copy', productRow)"
-          @delete="emit('delete', productRow)"
-          @transition="status => emit('transition', productRow, status)"
-          @move="direction => emit('move', productRow, direction)"
-        />
       </td>
     </tr>
 
@@ -279,30 +301,6 @@ function emitDeadline(): void {
   tr[data-product-row-main] {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  tr[data-product-row-main] > td {
-    display: flex;
-    min-width: 0;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    text-align: right;
-  }
-
-  tr[data-product-row-main] > td::before {
-    content: attr(data-label);
-    flex: 0 0 42%;
-    color: rgb(107 114 128);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: left;
-  }
-
-  tr[data-product-row-main] > td:first-child,
-  tr[data-product-row-main] > td:first-child::before {
-    text-align: left;
   }
 
   tr[data-product-row-error],

@@ -41,7 +41,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-async function openMenu(row = makeProductRow(), props: { disabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
+async function openMenu(row = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
   const wrapper = mount(ProductRowActionsMenu, {
     props: { productRow: row, canMoveUp: true, canMoveDown: true, ...props },
   })
@@ -215,6 +215,121 @@ describe('ProductRowActionsMenu', () => {
     expect(wrapper.emitted('move')).toEqual([[1]])
   })
 
+  it('keeps non-reorder actions enabled while globally disabling every move command', async () => {
+    const row = makeProductRow()
+    const wrapper = await openMenu(row, { reorderDisabled: true })
+
+    const copy = wrapper.get(`[aria-label="Копировать товарную позицию ${row.id}"]`)
+    const moveUp = wrapper.get(`[aria-label="Переместить товарную позицию ${row.id} вверх"]`)
+    const moveDown = wrapper.get(`[aria-label="Переместить товарную позицию ${row.id} вниз"]`)
+    expect(copy.attributes('disabled')).toBeUndefined()
+    expect(moveUp.attributes('disabled')).toBeDefined()
+    expect(moveDown.attributes('disabled')).toBeDefined()
+
+    await moveDown.trigger('click')
+    expect(wrapper.emitted('move')).toBeUndefined()
+    await copy.trigger('click')
+    expect(wrapper.emitted('copy')).toHaveLength(1)
+  })
+
+  it('opens from the keyboard and navigates enabled menu items with Arrow keys, Home, and End', async () => {
+    const row = makeProductRow()
+    const wrapper = mount(ProductRowActionsMenu, {
+      attachTo: document.body,
+      props: { productRow: row, canMoveUp: true, canMoveDown: true },
+    })
+
+    try {
+      const trigger = wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`)
+      ;(trigger.element as HTMLButtonElement).focus()
+      await trigger.trigger('keydown', { key: 'ArrowDown' })
+      await nextTick()
+
+      const items = wrapper.findAll('[role="menuitem"]')
+        .filter(item => item.attributes('disabled') === undefined)
+      const lastItem = items[items.length - 1]!
+      expect(items.length).toBeGreaterThan(3)
+      expect(wrapper.get('[role="menu"]').attributes('aria-labelledby')).toBe(
+        `product-row-actions-trigger-${row.id}`,
+      )
+      expect(trigger.attributes('id')).toBe(`product-row-actions-trigger-${row.id}`)
+      expect(items.map(item => item.attributes('tabindex'))).toEqual([
+        '0',
+        ...Array.from({ length: items.length - 1 }, () => '-1'),
+      ])
+      expect(document.activeElement).toBe(items[0]!.element)
+
+      await items[0]!.trigger('keydown', { key: 'ArrowDown' })
+      expect(document.activeElement).toBe(items[1]!.element)
+      expect(items[0]!.attributes('tabindex')).toBe('-1')
+      expect(items[1]!.attributes('tabindex')).toBe('0')
+      await items[1]!.trigger('keydown', { key: 'End' })
+      expect(document.activeElement).toBe(lastItem.element)
+      await lastItem.trigger('keydown', { key: 'ArrowDown' })
+      expect(document.activeElement).toBe(items[0]!.element)
+      await items[0]!.trigger('keydown', { key: 'ArrowUp' })
+      expect(document.activeElement).toBe(lastItem.element)
+      await lastItem.trigger('keydown', { key: 'Home' })
+      expect(document.activeElement).toBe(items[0]!.element)
+
+      await items[0]!.trigger('keydown', { key: 'Escape' })
+      await nextTick()
+      expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(trigger.element)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('closes on Tab exit and allows keyboard opening of only the newly focused row menu', async () => {
+    const firstRow = makeProductRow({ id: 7 })
+    const secondRow = makeProductRow({ id: 8 })
+    const wrapper = mount(
+      defineComponent({
+        components: { ProductRowActionsMenu },
+        setup: () => ({ firstRow, secondRow }),
+        template: `
+          <div>
+            <ProductRowActionsMenu :product-row="firstRow" :can-move-up="false" :can-move-down="true" />
+            <ProductRowActionsMenu :product-row="secondRow" :can-move-up="true" :can-move-down="false" />
+          </div>
+        `,
+      }),
+      { attachTo: document.body },
+    )
+
+    try {
+      const firstTrigger = wrapper.get('[aria-label="Действия товарной позиции 7"]')
+      const secondTrigger = wrapper.get('[aria-label="Действия товарной позиции 8"]')
+      ;(firstTrigger.element as HTMLButtonElement).focus()
+      await firstTrigger.trigger('keydown', { key: 'ArrowDown' })
+      await nextTick()
+      expect(wrapper.findAll('[role="menu"]')).toHaveLength(1)
+
+      const firstItem = wrapper.findAll('[role="menuitem"]')
+        .find(item => item.attributes('disabled') === undefined)!
+      await firstItem.trigger('keydown', { key: 'Tab' })
+      await nextTick()
+      expect(wrapper.findAll('[role="menu"]')).toHaveLength(0)
+      expect(document.activeElement).toBe(secondTrigger.element)
+
+      await secondTrigger.trigger('keydown', { key: 'ArrowDown' })
+      await nextTick()
+      expect(wrapper.findAll('[role="menu"]')).toHaveLength(1)
+      expect(wrapper.find('[aria-label="Редактировать товарную позицию 7"]').exists()).toBe(false)
+      expect(wrapper.find('[aria-label="Редактировать товарную позицию 8"]').exists()).toBe(true)
+
+      const secondFirstItem = wrapper.findAll('[role="menuitem"]')
+        .find(item => item.attributes('disabled') === undefined)!
+      await secondFirstItem.trigger('keydown', { key: 'Tab', shiftKey: true })
+      await nextTick()
+      expect(wrapper.findAll('[role="menu"]')).toHaveLength(0)
+      expect(document.activeElement).toBe(secondTrigger.element)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   it('closes on outside click and Escape', async () => {
     const row = makeProductRow()
     const wrapper = await openMenu(row)
@@ -256,13 +371,21 @@ describe('ProductRowActionsMenu', () => {
   it('cannot open or emit an action while disabled', async () => {
     const row = makeProductRow()
     const wrapper = mount(ProductRowActionsMenu, {
+      attachTo: document.body,
       props: { productRow: row, disabled: true, canMoveUp: true, canMoveDown: true },
     })
     const trigger = wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`)
 
-    expect(trigger.attributes('disabled')).toBeDefined()
+    expect(trigger.attributes('disabled')).toBeUndefined()
+    expect(trigger.attributes('aria-disabled')).toBe('true')
+    ;(trigger.element as HTMLButtonElement).focus()
+    expect(document.activeElement).toBe(trigger.element)
     await trigger.trigger('click')
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
-    expect(wrapper.emitted()).toEqual({})
+    for (const event of ['edit', 'recalculate', 'copy', 'delete', 'transition', 'move']) {
+      expect(wrapper.emitted(event)).toBeUndefined()
+    }
+    wrapper.unmount()
   })
 })
