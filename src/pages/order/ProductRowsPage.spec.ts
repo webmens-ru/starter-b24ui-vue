@@ -145,8 +145,8 @@ function setPlacementOptions(embedded = false, params: TPlacementParams = {}): v
       viewMode: 'view',
       params: {
         ...(embedded ? { orderCardEmbedded: true } : {}),
-        productRowCreateUrl: '/dealer/orders/product-row-create?id=42',
-        productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42&productRowId={productRowId}',
+        productRowCreateUrl: '/dealer/orders/product-create?id=42',
+        productRowUpdateUrlTemplate: '/dealer/orders/product-update?id=42&productRowId={productRowId}',
         ...params,
       },
     },
@@ -328,19 +328,19 @@ describe('ProductRowsPage', () => {
   it('navigates the top window with server-owned product-row URLs', async () => {
     const wrapper = mountPage({
       placementParams: {
-        productRowCreateUrl: '/dealer/orders/product-row-create?id=42',
-        productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42&productRowId={productRowId}',
+        productRowCreateUrl: '/dealer/orders/product-create?id=42',
+        productRowUpdateUrlTemplate: '/dealer/orders/product-update?id=42&productRowId={productRowId}',
       },
     })
     await flushPromises()
 
     await wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]').trigger('click')
-    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-row-create?id=42')
+    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-create?id=42')
 
     await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Редактировать товарную позицию 7"]').trigger('click')
     expect(mocks.navigateTop).toHaveBeenCalledWith(
-      '/dealer/orders/product-row-update?id=42&productRowId=7',
+      '/dealer/orders/product-update?id=42&productRowId=7',
     )
     expect(mocks.push).not.toHaveBeenCalled()
   })
@@ -349,12 +349,12 @@ describe('ProductRowsPage', () => {
     ['missing create URL', { productRowCreateUrl: undefined }, '[aria-label="Добавить товарную позицию в заказ 42"]'],
     [
       'update template without the row placeholder',
-      { productRowUpdateUrlTemplate: '/dealer/orders/product-row-update?id=42' },
+      { productRowUpdateUrlTemplate: '/dealer/orders/product-update?id=42' },
       '[aria-label="Редактировать товарную позицию 7"]',
     ],
     [
       'absolute create URL',
-      { productRowCreateUrl: 'https://example.test/product-row-create?id=42' },
+      { productRowCreateUrl: 'https://example.test/product-create?id=42' },
       '[aria-label="Добавить товарную позицию в заказ 42"]',
     ],
   ] as const)('shows an error without navigating for %s', async (_, placementParams, actionSelector) => {
@@ -1025,7 +1025,7 @@ describe('ProductRowsPage', () => {
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(3)
 
     await wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]').trigger('click')
-    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-row-create?id=42')
+    expect(mocks.navigateTop).toHaveBeenCalledWith('/dealer/orders/product-create?id=42')
   })
 
   it('keeps route-change reorder guards and strict reorder payloads when embedded', async () => {
