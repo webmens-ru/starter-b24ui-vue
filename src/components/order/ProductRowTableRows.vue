@@ -111,7 +111,7 @@ function emitDeadline(): void {
 </script>
 
 <template>
-  <tbody :data-product-row="productRow.id">
+  <tbody :data-product-row="productRow.id" class="overflow-visible">
     <tr data-product-row-main>
       <td data-label="Товарная позиция" class="align-top">
         <div class="font-medium text-gray-800">№{{ productRow.id }} · {{ productRow.productType }}, модель {{ productRow.modelId }}</div>
@@ -137,12 +137,30 @@ function emitDeadline(): void {
         >
       </td>
       <td data-label="Цена за единицу" class="align-top text-right tabular-nums">
-        <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
-        <span v-else data-price-redacted>Недоступно</span>
+        <div>
+          <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
+          <span v-else data-price-redacted>Недоступно</span>
+        </div>
+        <div
+          v-if="formatOrderPrice(productRow.finalRetailUnitPrice)"
+          data-price-kind="final-retail-unit"
+          class="mt-1 text-xs font-normal text-gray-500"
+        >
+          Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
+        </div>
       </td>
       <td data-label="Сумма" class="align-top text-right font-semibold tabular-nums">
-        <span v-if="formatOrderPrice(productRow.dealerTotalPrice)">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
-        <span v-else data-price-redacted>Недоступно</span>
+        <div>
+          <span v-if="formatOrderPrice(productRow.dealerTotalPrice)">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
+          <span v-else data-price-redacted>Недоступно</span>
+        </div>
+        <div
+          v-if="formatOrderPrice(productRow.retailTotalPrice)"
+          data-price-kind="retail-total"
+          class="mt-1 text-xs font-normal text-gray-500"
+        >
+          Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
+        </div>
       </td>
       <td data-label="Статус" class="align-top text-sm text-gray-700">
         {{ statusName }} · {{ deadlineLabel }}
@@ -255,7 +273,7 @@ function emitDeadline(): void {
     margin-bottom: 1rem;
     border: 1px solid rgb(229 231 235);
     border-radius: 0.75rem;
-    overflow: hidden;
+    overflow: visible;
   }
 
   tr[data-product-row-main] {

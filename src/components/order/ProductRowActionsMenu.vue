@@ -22,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const open = ref(false)
+const confirmingDelete = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
 
 function isAllowed(action: ProductRowAllowedAction): boolean {
@@ -30,14 +31,16 @@ function isAllowed(action: ProductRowAllowedAction): boolean {
 
 function close(): void {
   open.value = false
+  confirmingDelete.value = false
 }
 
 function toggle(): void {
   if (props.disabled) return
-  open.value = !open.value
+  if (open.value) close()
+  else open.value = true
 }
 
-function select(event: 'edit' | 'recalculate' | 'copy' | 'delete'): void {
+function select(event: 'edit' | 'recalculate' | 'copy'): void {
   if (props.disabled) return
   switch (event) {
     case 'edit':
@@ -49,10 +52,22 @@ function select(event: 'edit' | 'recalculate' | 'copy' | 'delete'): void {
     case 'copy':
       emit('copy')
       break
-    case 'delete':
-      emit('delete')
-      break
   }
+  close()
+}
+
+function requestDelete(): void {
+  if (props.disabled || !isAllowed('product_row.delete')) return
+  confirmingDelete.value = true
+}
+
+function cancelDelete(): void {
+  confirmingDelete.value = false
+}
+
+function confirmDelete(): void {
+  if (props.disabled || !isAllowed('product_row.delete')) return
+  emit('delete')
   close()
 }
 
@@ -101,7 +116,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="menuRoot" class="relative inline-flex" @click.stop @keydown.esc="close">
+  <div ref="menuRoot" class="relative inline-flex" @keydown.esc="close">
     <button
       type="button"
       class="rounded border border-gray-300 px-2.5 py-1.5 text-lg leading-none text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -116,95 +131,131 @@ onBeforeUnmount(() => {
 
     <div
       v-if="open"
-      role="menu"
+      :role="confirmingDelete ? 'alertdialog' : 'menu'"
+      :aria-labelledby="confirmingDelete ? `delete-confirmation-title-${productRow.id}` : undefined"
       class="absolute right-0 z-10 mt-1 min-w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
     >
-      <button
-        v-if="isAllowed('product_row.edit_configuration')"
-        type="button"
-        role="menuitem"
-        class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Редактировать товарную позицию ${productRow.id}`"
-        :disabled="disabled"
-        @click="select('edit')"
-      >
-        Редактировать
-      </button>
-      <button
-        v-if="isAllowed('product_row.calculate')"
-        type="button"
-        role="menuitem"
-        class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Пересчитать товарную позицию ${productRow.id}`"
-        :disabled="disabled"
-        @click="select('recalculate')"
-      >
-        Пересчитать
-      </button>
-      <button
-        v-if="isAllowed('product_row.copy')"
-        type="button"
-        role="menuitem"
-        class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Копировать товарную позицию ${productRow.id}`"
-        :disabled="disabled"
-        @click="select('copy')"
-      >
-        Копировать
-      </button>
-      <button
-        v-if="isAllowed('product_row.delete')"
-        type="button"
-        role="menuitem"
-        class="block w-full rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :aria-label="`Удалить товарную позицию ${productRow.id}`"
-        :disabled="disabled"
-        @click="select('delete')"
-      >
-        Удалить
-      </button>
+      <template v-if="!confirmingDelete">
+        <button
+          v-if="isAllowed('product_row.edit_configuration')"
+          type="button"
+          role="menuitem"
+          class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :aria-label="`Редактировать товарную позицию ${productRow.id}`"
+          :disabled="disabled"
+          @click="select('edit')"
+        >
+          Редактировать
+        </button>
+        <button
+          v-if="isAllowed('product_row.calculate')"
+          type="button"
+          role="menuitem"
+          class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :aria-label="`Пересчитать товарную позицию ${productRow.id}`"
+          :disabled="disabled"
+          @click="select('recalculate')"
+        >
+          Пересчитать
+        </button>
+        <button
+          v-if="isAllowed('product_row.copy')"
+          type="button"
+          role="menuitem"
+          class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :aria-label="`Копировать товарную позицию ${productRow.id}`"
+          :disabled="disabled"
+          @click="select('copy')"
+        >
+          Копировать
+        </button>
 
-      <template v-if="isAllowed('product_row.transition')">
-        <div v-if="productRow.availableTransitions.length > 0" class="my-1 border-t border-gray-100 pt-1" role="none">
+        <template v-if="isAllowed('product_row.transition')">
+          <div v-if="productRow.availableTransitions.length > 0" class="my-1 border-t border-gray-100 pt-1" role="none">
+            <button
+              v-for="target in productRow.availableTransitions"
+              :key="target"
+              type="button"
+              role="menuitem"
+              class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              :aria-label="`Перевести товарную позицию ${productRow.id} в статус ${target}`"
+              :disabled="disabled"
+              @click="selectTransition(target)"
+            >
+              {{ transitionLabel(target) }}
+            </button>
+          </div>
+        </template>
+
+        <template v-if="isAllowed('product_row.reorder')">
+          <div class="my-1 border-t border-gray-100 pt-1" role="none">
+            <button
+              type="button"
+              role="menuitem"
+              class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
+              :disabled="disabled || !canMoveUp"
+              @click="selectMove(-1)"
+            >
+              Переместить вверх
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
+              :disabled="disabled || !canMoveDown"
+              @click="selectMove(1)"
+            >
+              Переместить вниз
+            </button>
+          </div>
+        </template>
+
+        <div
+          v-if="isAllowed('product_row.delete')"
+          data-destructive-actions
+          class="my-1 border-t border-gray-200 pt-1"
+          role="none"
+        >
           <button
-            v-for="target in productRow.availableTransitions"
-            :key="target"
             type="button"
             role="menuitem"
-            class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :aria-label="`Перевести товарную позицию ${productRow.id} в статус ${target}`"
+            class="block w-full rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+            :aria-label="`Удалить товарную позицию ${productRow.id}`"
             :disabled="disabled"
-            @click="selectTransition(target)"
+            @click="requestDelete"
           >
-            {{ transitionLabel(target) }}
+            Удалить
           </button>
         </div>
       </template>
 
-      <template v-if="isAllowed('product_row.reorder')">
-        <div class="my-1 border-t border-gray-100 pt-1" role="none">
+      <div v-else class="p-2">
+        <p :id="`delete-confirmation-title-${productRow.id}`" class="text-sm font-semibold text-gray-900">
+          Удалить товарную позицию?
+        </p>
+        <p class="mt-1 text-xs text-gray-600">Это действие нельзя отменить.</p>
+        <div class="mt-3 flex justify-end gap-2">
           <button
             type="button"
-            role="menuitem"
-            class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :aria-label="`Переместить товарную позицию ${productRow.id} вверх`"
-            :disabled="disabled || !canMoveUp"
-            @click="selectMove(-1)"
+            class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+            :aria-label="`Отменить удаление товарной позиции ${productRow.id}`"
+            @click="cancelDelete"
           >
-            Переместить вверх
+            Отмена
           </button>
           <button
             type="button"
-            role="menuitem"
-            class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :aria-label="`Переместить товарную позицию ${productRow.id} вниз`"
-            :disabled="disabled || !canMoveDown"
-            @click="selectMove(1)"
+            class="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40"
+            :aria-label="`Подтвердить удаление товарной позиции ${productRow.id}`"
+            :disabled="disabled"
+            @click="confirmDelete"
           >
-            Переместить вниз
+            Удалить
           </button>
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>

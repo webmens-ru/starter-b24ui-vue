@@ -260,6 +260,28 @@ describe('ProductRowsPage', () => {
     expect(container.classes()).not.toContain('max-w-6xl')
   })
 
+  it('keeps the only product-row actions menu outside clipping table ancestors', async () => {
+    mocks.listProductRows.mockResolvedValueOnce(makeOrderResponse([first]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const table = wrapper.get('table[aria-label="Товарные позиции заказа"]')
+    const frame = table.element.parentElement
+    expect(frame).not.toBeNull()
+    expect(frame!.classList).toContain('overflow-visible')
+    expect(frame!.classList).not.toContain('overflow-hidden')
+
+    const onlyRowGroup = wrapper.get('tbody[data-product-row="7"]')
+    expect(onlyRowGroup.classes()).toContain('overflow-visible')
+    await openProductRowActions(wrapper, 7)
+
+    let ancestor = wrapper.get('[role="menu"]').element.parentElement
+    while (ancestor && ancestor !== wrapper.get('main').element) {
+      expect(ancestor.classList).not.toContain('overflow-hidden')
+      ancestor = ancestor.parentElement
+    }
+  })
+
   it('copies through the typed API, refreshes the source-of-truth list, and keeps the order context when adding', async () => {
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
@@ -497,7 +519,14 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 8)
     await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
+    expect(mocks.deleteProductRow).not.toHaveBeenCalled()
+    await wrapper.get('[aria-label="Отменить удаление товарной позиции 8"]').trigger('click')
+    expect(mocks.deleteProductRow).not.toHaveBeenCalled()
+
+    await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 8"]').trigger('click')
     await flushPromises()
+    expect(mocks.deleteProductRow).toHaveBeenCalledTimes(1)
     expect(mocks.deleteProductRow).toHaveBeenCalledWith({ orderId: 42, productRowId: 8, lockVersion: 1 })
   })
 
@@ -703,6 +732,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 7"]').trigger('click')
     expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
     mocks.route.params.orderId = '43'
@@ -710,6 +740,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 7)
     await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 7"]').trigger('click')
     expect(mocks.deleteProductRow).toHaveBeenNthCalledWith(2, { orderId: 43, productRowId: 7, lockVersion: 8 })
     expect(wrapper.get('[aria-label="Действия товарной позиции 7"]').attributes('disabled')).toBeDefined()
 
@@ -823,6 +854,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 8)
     await wrapper.get('[aria-label="Удалить товарную позицию 8"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 8"]').trigger('click')
     await flushPromises()
 
     expect(mocks.deleteProductRow).toHaveBeenCalledWith({ orderId: 42, productRowId: 8, lockVersion: 1 })

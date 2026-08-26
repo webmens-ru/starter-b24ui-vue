@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
 
 import type { ProductRowSummary } from '../../app/api/productRows'
@@ -67,7 +68,7 @@ describe('ProductRowActionsMenu', () => {
     expect(wrapper.find(`[aria-label="Переместить товарную позицию ${row.id} вверх"]`).exists()).toBe(false)
   })
 
-  it('emits each selected action and closes the menu immediately', async () => {
+  it('emits each selected non-destructive action and closes the menu immediately', async () => {
     const row = makeProductRow()
     const wrapper = await openMenu(row)
 
@@ -82,11 +83,33 @@ describe('ProductRowActionsMenu', () => {
     await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
     await wrapper.get(`[aria-label="Копировать товарную позицию ${row.id}"]`).trigger('click')
     expect(wrapper.emitted('copy')).toHaveLength(1)
+  })
 
-    await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
-    expect(wrapper.find(`[aria-label="Удалить товарную позицию ${row.id}"]`).classes()).toContain('text-red-700')
+  it('visually separates the destructive action from the other actions', async () => {
+    const row = makeProductRow()
+    const wrapper = await openMenu(row)
+
+    const destructiveActions = wrapper.get('[data-destructive-actions]')
+    expect(destructiveActions.classes()).toContain('border-t')
+    expect(destructiveActions.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).classes()).toContain('text-red-700')
+  })
+
+  it('requires an accessible confirmation and emits delete only after acceptance', async () => {
+    const row = makeProductRow()
+    const wrapper = await openMenu(row)
+
     await wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).trigger('click')
+    expect(wrapper.emitted('delete')).toBeUndefined()
+    expect(wrapper.get('[role="alertdialog"]').text()).toContain('Удалить товарную позицию?')
+
+    await wrapper.get(`[aria-label="Отменить удаление товарной позиции ${row.id}"]`).trigger('click')
+    expect(wrapper.emitted('delete')).toBeUndefined()
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+
+    await wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`).trigger('click')
+    await wrapper.get(`[aria-label="Подтвердить удаление товарной позиции ${row.id}"]`).trigger('click')
     expect(wrapper.emitted('delete')).toHaveLength(1)
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
   })
 
   it('emits transitions and permitted moves while disabling movement at boundaries', async () => {
@@ -116,6 +139,32 @@ describe('ProductRowActionsMenu', () => {
     await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
     await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('keydown', { key: 'Escape' })
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+  })
+
+  it('keeps only one product-row menu open at a time', async () => {
+    const firstRow = makeProductRow({ id: 7 })
+    const secondRow = makeProductRow({ id: 8 })
+    const wrapper = mount(
+      defineComponent({
+        components: { ProductRowActionsMenu },
+        setup: () => ({ firstRow, secondRow }),
+        template: `
+          <div>
+            <ProductRowActionsMenu :product-row="firstRow" :can-move-up="false" :can-move-down="true" />
+            <ProductRowActionsMenu :product-row="secondRow" :can-move-up="true" :can-move-down="false" />
+          </div>
+        `,
+      }),
+      { attachTo: document.body },
+    )
+
+    await wrapper.get('[aria-label="Действия товарной позиции 7"]').trigger('click')
+    expect(wrapper.findAll('[role="menu"]')).toHaveLength(1)
+    await wrapper.get('[aria-label="Действия товарной позиции 8"]').trigger('click')
+    expect(wrapper.findAll('[role="menu"]')).toHaveLength(1)
+    expect(wrapper.find('[aria-label="Редактировать товарную позицию 7"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Редактировать товарную позицию 8"]').exists()).toBe(true)
+    wrapper.unmount()
   })
 
   it('cannot open or emit an action while disabled', async () => {

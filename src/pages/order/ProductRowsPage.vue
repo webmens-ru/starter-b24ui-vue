@@ -455,7 +455,7 @@ watch(orderIdParam, () => {
                 <p class="mt-1 text-sm text-gray-500">Добавьте первую товарную позицию, чтобы начать конфигурацию.</p>
               </div>
 
-              <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div v-else class="overflow-visible rounded-xl border border-gray-200 bg-white shadow-sm">
                 <table aria-label="Товарные позиции заказа" class="w-full border-collapse">
                   <thead>
                     <tr>
