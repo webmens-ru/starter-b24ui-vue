@@ -514,37 +514,31 @@ watch(orderIdParam, () => {
                 <p class="mt-1 text-sm text-gray-500">Добавьте первую товарную позицию, чтобы начать конфигурацию.</p>
               </div>
 
-              <div v-else class="overflow-visible rounded-xl border border-gray-200 bg-white shadow-sm">
-                <table aria-label="Товарные позиции заказа" class="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th>Товарная позиция</th>
-                      <th>Количество</th>
-                      <th>Цена за единицу</th>
-                      <th>Сумма</th>
-                      <th>Статус</th>
-                      <th><span class="sr-only">Действия</span></th>
-                    </tr>
-                  </thead>
-                  <ProductRowTableRows
+              <div
+                v-else
+                data-product-rows-table
+                role="table"
+                aria-label="Товарные позиции заказа"
+                class="grid gap-3"
+              >
+                <ProductRowTableRows
                   v-for="(productRow, index) in result.productRows"
-                    :key="productRow.id"
-                    :product-row="productRow"
-                    :disabled="staleView || busyProductRowIds.has(productRow.id)"
-                    :reorder-disabled="staleView || reorderBusy"
-                    :can-move-up="canReorder && index > 0"
-                    :can-move-down="canReorder && index < result.productRows.length - 1"
-                    @edit="editProductRow"
-                    @copy="copyProductRowAction"
-                    @update-quantity="updateQuantity"
-                    @update-adjustment="updateAdjustment"
-                    @update-deadline="updateDeadline"
-                    @recalculate="recalculateProductRow"
-                    @delete="deleteProductRowAction"
-                    @transition="transitionProductRowAction"
-                    @move="(_, direction) => moveProductRow(index, direction)"
-                  />
-                </table>
+                  :key="productRow.id"
+                  :product-row="productRow"
+                  :disabled="staleView || busyProductRowIds.has(productRow.id)"
+                  :reorder-disabled="staleView || reorderBusy"
+                  :can-move-up="canReorder && index > 0"
+                  :can-move-down="canReorder && index < result.productRows.length - 1"
+                  @edit="editProductRow"
+                  @copy="copyProductRowAction"
+                  @update-quantity="updateQuantity"
+                  @update-adjustment="updateAdjustment"
+                  @update-deadline="updateDeadline"
+                  @recalculate="recalculateProductRow"
+                  @delete="deleteProductRowAction"
+                  @transition="transitionProductRowAction"
+                  @move="(_, direction) => moveProductRow(index, direction)"
+                />
               </div>
 
               <OrderTotals :totals="result.orderTotals" />

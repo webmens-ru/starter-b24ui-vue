@@ -26,25 +26,55 @@ async function openActions(wrapper: ReturnType<typeof mountRows>, id = 7): Promi
 }
 
 describe('ProductRowTableRows', () => {
-  it('renders a semantic six-cell table row and expands price and terms details', async () => {
+  it('renders one spacious aligned card with six labelled cells', () => {
     const wrapper = mountRows()
-    const mainRow = wrapper.get('tr[data-product-row-main]')
-    const text = mainRow.text().replace(/\s+/g, ' ')
-    expect(wrapper.get('tbody[data-product-row="7"]')).toBeTruthy()
-    expect(mainRow.findAll('td')).toHaveLength(6)
-    expect(wrapper.find('tr[data-product-row-details]').exists()).toBe(false)
-    expect(text).toContain('№7 · wicket, модель 3')
-    expect(text).toContain('720')
-    expect(text).toContain('1 440')
-    expect(mainRow.get('[data-price-kind="final-retail-unit"]').text()).toMatch(/900/)
-    expect(mainRow.get('[data-price-kind="retail-total"]').text()).toMatch(/1\s*800/)
-    const statusCell = mainRow.get('[data-label="Статус"]')
-    expect(statusCell.get('[data-product-row-status]').text()).toBe('Черновик')
-    expect(statusCell.get('[data-product-row-deadline]').text()).toBe('Плановый срок: 01.09.2026')
-    expect(statusCell.text()).not.toContain('Черновик ·')
-    expect(text).toContain('Расчёт актуален')
+    const card = wrapper.get('[data-product-row="7"][role="rowgroup"]')
+    const main = card.get('[data-product-row-main][role="row"]')
+    expect(main.classes()).toContain('product-row-grid')
+    expect(main.findAll('[role="cell"]')).toHaveLength(6)
+    expect(main.get('[data-label="Товарная позиция"] [data-product-row-eyebrow]').text()).toBe('Позиция №7')
+    expect(main.get('[data-label="Товарная позиция"] [data-product-row-title]').text()).toBe('wicket · модель 3')
+  })
+
+  it('keeps dealer prices primary and retail prices secondary', () => {
+    const wrapper = mountRows()
+    const unit = wrapper.get('[data-label="Цена за единицу"]')
+    expect(unit.get('[data-price-kind="final-dealer-unit"]').text()).toMatch(/720/)
+    expect(unit.get('[data-price-kind="final-retail-unit"]').text()).toMatch(/900/)
+    expect(unit.get('[data-price-kind="final-dealer-unit"]').classes()).toContain('font-semibold')
+    expect(unit.get('[data-price-kind="final-retail-unit"]').classes()).toContain('text-gray-500')
+  })
+
+  it('renders status as a badge and deadline as separate secondary text', () => {
+    const wrapper = mountRows()
+    expect(wrapper.get('[data-product-row-status]').attributes('data-status-badge')).toBe('')
+    expect(wrapper.get('[data-product-row-deadline]').text()).toBe('Срок: 01.09.2026')
+  })
+
+  it('renders a full-width calculation error strip with details action', () => {
+    const wrapper = mountRows(makeProductRow({ calculationError: 'Проблемы в данных справочников' }))
+    const error = wrapper.get('[data-product-row-error]')
+    expect(error.classes()).toEqual(expect.arrayContaining(['bg-red-50', 'text-red-700']))
+    expect(error.text()).toContain('Проблемы в данных справочников')
+    expect(error.get('[aria-label="Подробнее об ошибке расчёта товарной позиции 7"]')).toBeTruthy()
+  })
+
+  it('keeps the action menu outside clipping card boundaries', async () => {
+    const wrapper = mountRows()
+    await openActions(wrapper)
+    let ancestor: HTMLElement | null = wrapper.get('[role="menu"]').element.parentElement
+    while (ancestor) {
+      expect(ancestor.classList).not.toContain('overflow-hidden')
+      if (ancestor === wrapper.element) break
+      ancestor = ancestor.parentElement
+    }
+  })
+
+  it('expands price and terms details', async () => {
+    const wrapper = mountRows()
+    expect(wrapper.find('[data-product-row-details]').exists()).toBe(false)
     await wrapper.get('[aria-label="Подробнее о товарной позиции 7"]').trigger('click')
-    const details = wrapper.get('tr[data-product-row-details]')
+    const details = wrapper.get('[data-product-row-details]')
     const detailsText = details.text().replace(/\s+/g, ' ')
     expect(details.text()).toContain('Базовая цена за единицу')
     expect(detailsText).toContain('1 000')
@@ -57,8 +87,8 @@ describe('ProductRowTableRows', () => {
 
   it('keeps calculation errors visible before details are expanded', () => {
     const wrapper = mountRows(makeProductRow({ calculationError: 'Не удалось рассчитать позицию' }))
-    expect(wrapper.get('tr[data-product-row-error]').text()).toContain('Не удалось рассчитать позицию')
-    expect(wrapper.find('tr[data-product-row-details]').exists()).toBe(false)
+    expect(wrapper.get('[data-product-row-error]').text()).toContain('Не удалось рассчитать позицию')
+    expect(wrapper.find('[data-product-row-details]').exists()).toBe(false)
   })
 
   it('redacts nullable prices instead of coercing them to zero', async () => {
@@ -70,15 +100,13 @@ describe('ProductRowTableRows', () => {
 
   it('stacks every mobile cell label above a full-width value without horizontal basis squeezing', () => {
     const wrapper = mountRows()
-    const mainRow = wrapper.get('tr[data-product-row-main]')
+    const mainRow = wrapper.get('[data-product-row-main]')
     for (const label of ['Товарная позиция', 'Количество', 'Цена за единицу', 'Сумма', 'Статус', 'Действия']) {
       const cell = mainRow.get(`[data-label="${label}"]`)
       const mobileLabel = cell.get('[data-mobile-cell-label]')
       const mobileValue = cell.get('[data-mobile-cell-value]')
-      expect(cell.classes()).toEqual(expect.arrayContaining(['max-md:block', 'max-md:w-full', 'max-md:text-left']))
-      expect(cell.classes()).not.toContain('max-md:flex')
       expect(mobileLabel.text()).toBe(label)
-      expect(mobileLabel.classes()).toEqual(expect.arrayContaining(['block', 'md:hidden']))
+      expect(mobileLabel.classes()).toEqual(expect.arrayContaining(['block', 'text-xs', 'font-medium', 'uppercase', 'tracking-wide', 'text-gray-500']))
       expect(mobileLabel.classes().some(className => className.includes('basis-'))).toBe(false)
       expect(mobileValue.classes()).toEqual(expect.arrayContaining(['block', 'w-full', 'min-w-0']))
       expect(cell.element.children[0]).toBe(mobileLabel.element)
@@ -91,12 +119,12 @@ describe('ProductRowTableRows', () => {
     const wrapper = mount(defineComponent({
       components: { ProductRowTableRows },
       setup: () => ({ firstRow: makeProductRow(), secondRow }),
-      template: `<table><ProductRowTableRows :product-row="firstRow" :can-move-up="false" :can-move-down="true" /><ProductRowTableRows :product-row="secondRow" :can-move-up="true" :can-move-down="false" /></table>`,
+      template: `<div><ProductRowTableRows :product-row="firstRow" :can-move-up="false" :can-move-down="true" /><ProductRowTableRows :product-row="secondRow" :can-move-up="true" :can-move-down="false" /></div>`,
     }))
-    const rows = wrapper.findAll('tbody[data-product-row]')
+    const rows = wrapper.findAll('[data-product-row]')
     await rows[0]!.get('[aria-label="Подробнее о товарной позиции 7"]').trigger('click')
-    expect(rows[0]!.find('tr[data-product-row-details]').exists()).toBe(true)
-    expect(rows[1]!.find('tr[data-product-row-details]').exists()).toBe(false)
+    expect(rows[0]!.find('[data-product-row-details]').exists()).toBe(true)
+    expect(rows[1]!.find('[data-product-row-details]').exists()).toBe(false)
   })
 
   it('forwards permitted action-menu and quantity events with the current product row', async () => {

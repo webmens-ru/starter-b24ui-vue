@@ -113,25 +113,19 @@ function emitDeadline(): void {
 </script>
 
 <template>
-  <tbody :data-product-row="productRow.id" class="overflow-visible">
-    <tr data-product-row-main>
-      <td data-label="Товарная позиция" class="align-top max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Товарная позиция</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
-          <div class="font-medium text-gray-800">№{{ productRow.id }} · {{ productRow.productType }}, модель {{ productRow.modelId }}</div>
-          <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
-            <span
-              class="inline-block size-2.5 rounded-full border border-black/10"
-              :style="productRow.status.color ? { backgroundColor: productRow.status.color } : undefined"
-              aria-hidden="true"
-            />
-            <span>{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</span>
-          </div>
+  <section :data-product-row="productRow.id" role="rowgroup" class="overflow-visible rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div data-product-row-main role="row" class="product-row-grid items-start gap-x-5 gap-y-4 px-5 py-5">
+      <div role="cell" data-label="Товарная позиция" class="min-w-0">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Товарная позиция</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
+          <div data-product-row-eyebrow class="text-sm text-gray-500">Позиция №{{ productRow.id }}</div>
+          <div data-product-row-title class="font-medium text-gray-800">{{ productRow.productType }} · модель {{ productRow.modelId }}</div>
+          <div class="mt-1 text-sm text-gray-600">{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</div>
         </div>
-      </td>
-      <td data-label="Количество" class="align-top max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Количество</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
+      </div>
+      <div role="cell" data-label="Количество" class="min-w-0">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Количество</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
           <input
             v-model.number="quantity"
             type="number"
@@ -143,12 +137,12 @@ function emitDeadline(): void {
             @change="emitQuantity"
           >
         </div>
-      </td>
-      <td data-label="Цена за единицу" class="align-top text-right tabular-nums max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Цена за единицу</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
+      </div>
+      <div role="cell" data-label="Цена за единицу" class="min-w-0 text-right tabular-nums max-lg:text-left">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Цена за единицу</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
           <div>
-            <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
+            <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)" data-price-kind="final-dealer-unit" class="font-semibold">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
             <span v-else data-price-redacted>Недоступно</span>
           </div>
           <div
@@ -159,12 +153,12 @@ function emitDeadline(): void {
             Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
           </div>
         </div>
-      </td>
-      <td data-label="Сумма" class="align-top text-right font-semibold tabular-nums max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Сумма</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
+      </div>
+      <div role="cell" data-label="Сумма" class="min-w-0 text-right tabular-nums max-lg:text-left">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Сумма</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
           <div>
-            <span v-if="formatOrderPrice(productRow.dealerTotalPrice)">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
+            <span v-if="formatOrderPrice(productRow.dealerTotalPrice)" data-price-kind="dealer-total" class="font-semibold">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
             <span v-else data-price-redacted>Недоступно</span>
           </div>
           <div
@@ -175,17 +169,24 @@ function emitDeadline(): void {
             Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
           </div>
         </div>
-      </td>
-      <td data-label="Статус" class="align-top text-sm text-gray-700 max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Статус</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
-          <div data-product-row-status>{{ statusName }}</div>
-          <div data-product-row-deadline class="mt-1 text-xs text-gray-500">Плановый срок: {{ deadlineLabel }}</div>
+      </div>
+      <div role="cell" data-label="Статус" class="min-w-0 text-sm text-gray-700">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Статус</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
+          <div data-product-row-status data-status-badge class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+            <span
+              class="inline-block size-2.5 rounded-full border border-black/10"
+              :style="productRow.status.color ? { backgroundColor: productRow.status.color } : undefined"
+              aria-hidden="true"
+            />
+            <span>{{ statusName }}</span>
+          </div>
+          <div data-product-row-deadline class="mt-2 text-xs text-gray-500">Срок: {{ deadlineLabel }}</div>
         </div>
-      </td>
-      <td data-label="Действия" class="align-top text-right max-md:block max-md:w-full max-md:px-4 max-md:py-3 max-md:text-left">
-        <span data-mobile-cell-label class="mb-1 block text-xs font-semibold text-gray-500 md:hidden">Действия</span>
-        <div data-mobile-cell-value class="block w-full min-w-0">
+      </div>
+      <div role="cell" data-label="Действия" class="min-w-0 text-right max-lg:text-left">
+        <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Действия</span>
+        <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
           <ProductRowActionsMenu
             :product-row="productRow"
             :disabled="disabled"
@@ -200,32 +201,39 @@ function emitDeadline(): void {
             @move="direction => emit('move', productRow, direction)"
           />
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
 
-    <tr v-if="productRow.calculationError" data-product-row-error>
-      <td colspan="6" class="border-t border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-        {{ productRow.calculationError }}
-      </td>
-    </tr>
+    <div
+      v-if="productRow.calculationError"
+      data-product-row-error
+      class="flex items-center justify-between gap-4 border-t border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700"
+    >
+      <span>{{ productRow.calculationError }}</span>
+      <button
+        type="button"
+        class="shrink-0 font-medium text-blue-700 hover:text-blue-900"
+        :aria-label="`Подробнее об ошибке расчёта товарной позиции ${productRow.id}`"
+        @click="detailsOpen = true"
+      >
+        Подробнее
+      </button>
+    </div>
 
-    <tr data-product-row-toggle>
-      <td colspan="6" class="border-t border-gray-100 px-4 py-2">
-        <button
-          type="button"
-          class="text-sm font-medium text-blue-700 hover:text-blue-900"
-          :aria-label="`Подробнее о товарной позиции ${productRow.id}`"
-          :aria-expanded="detailsOpen"
-          :aria-controls="`product-row-details-${productRow.id}`"
-          @click="detailsOpen = !detailsOpen"
-        >
-          {{ detailsOpen ? 'Скрыть подробности' : 'Подробнее' }}
-        </button>
-      </td>
-    </tr>
+    <div data-product-row-toggle class="border-t border-gray-100 px-5 py-3">
+      <button
+        type="button"
+        class="text-sm font-medium text-blue-700 hover:text-blue-900"
+        :aria-label="`Подробнее о товарной позиции ${productRow.id}`"
+        :aria-expanded="detailsOpen"
+        :aria-controls="`product-row-details-${productRow.id}`"
+        @click="detailsOpen = !detailsOpen"
+      >
+        {{ detailsOpen ? 'Скрыть подробности' : 'Подробнее' }}
+      </button>
+    </div>
 
-    <tr v-if="detailsOpen" :id="`product-row-details-${productRow.id}`" data-product-row-details>
-      <td colspan="6" class="bg-gray-50 px-4 py-4">
+    <div v-if="detailsOpen" :id="`product-row-details-${productRow.id}`" data-product-row-details class="bg-gray-50 px-5 py-5">
         <section aria-label="Цены и коммерческие условия" class="grid gap-4 lg:grid-cols-3">
           <section>
             <h3 class="mb-2 text-sm font-semibold text-gray-700">Базовая цена за единицу</h3>
@@ -279,38 +287,25 @@ function emitDeadline(): void {
             <button type="button" class="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40" :aria-label="`Сохранить срок товарной позиции ${productRow.id}`" :disabled="disabled" @click="emitDeadline">Сохранить</button>
           </div>
         </div>
-      </td>
-    </tr>
-  </tbody>
+    </div>
+  </section>
 </template>
 
 <style scoped>
+.product-row-grid {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) minmax(5rem, .65fr) minmax(8.5rem, 1.15fr) minmax(8.5rem, 1.15fr) minmax(9rem, 1.2fr) 2.75rem;
+}
+
+@media (max-width: 1023px) {
+  .product-row-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
-  :global(table:has(tbody[data-product-row]) > thead) {
-    display: none;
-  }
-
-  tbody[data-product-row] {
-    display: block;
-    margin-bottom: 1rem;
-    border: 1px solid rgb(229 231 235);
-    border-radius: 0.75rem;
-    overflow: visible;
-  }
-
-  tr[data-product-row-main] {
-    display: grid;
+  .product-row-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  tr[data-product-row-error],
-  tr[data-product-row-toggle],
-  tr[data-product-row-details],
-  tr[data-product-row-error] > td,
-  tr[data-product-row-toggle] > td,
-  tr[data-product-row-details] > td {
-    display: block;
-    width: auto;
   }
 }
 </style>

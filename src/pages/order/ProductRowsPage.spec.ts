@@ -246,7 +246,7 @@ describe('ProductRowsPage', () => {
     },
   )
 
-  it('shows product rows in a semantic table and keeps status, quantities, prices and dual order totals', async () => {
+  it('renders product rows as a spacious table of aligned row cards', async () => {
     const wrapper = mountPage()
     expect(wrapper.text()).toContain('Загрузка состава заказа')
 
@@ -259,10 +259,11 @@ describe('ProductRowsPage', () => {
     expect(text).toContain('Количество')
     expect(text).toContain('1 800')
     expect(text).toContain('1 440')
-    expect(wrapper.get('table[aria-label="Товарные позиции заказа"]')).toBeTruthy()
-    expect(wrapper.findAll('tbody[data-product-row]')).toHaveLength(2)
-    expect(wrapper.get('thead').text()).toContain('Цена за единицу')
-    expect(wrapper.find('[data-product-row-card]').exists()).toBe(false)
+    const table = wrapper.get('[data-product-rows-table][role="table"]')
+    expect(table.element.tagName).toBe('DIV')
+    expect(table.find('thead').exists()).toBe(false)
+    expect(table.findAll('[data-product-row][role="rowgroup"]')).toHaveLength(2)
+    expect(table.classes()).toEqual(expect.arrayContaining(['grid', 'gap-3']))
 
     await openProductRowActions(wrapper, 7)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вверх"]').attributes('disabled')).toBeDefined()
@@ -287,13 +288,10 @@ describe('ProductRowsPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    const table = wrapper.get('table[aria-label="Товарные позиции заказа"]')
-    const frame = table.element.parentElement
-    expect(frame).not.toBeNull()
-    expect(frame!.classList).toContain('overflow-visible')
-    expect(frame!.classList).not.toContain('overflow-hidden')
+    const table = wrapper.get('[data-product-rows-table][role="table"]')
+    expect(table.classes()).not.toContain('overflow-hidden')
 
-    const onlyRowGroup = wrapper.get('tbody[data-product-row="7"]')
+    const onlyRowGroup = wrapper.get('[data-product-row="7"][role="rowgroup"]')
     expect(onlyRowGroup.classes()).toContain('overflow-visible')
     await openProductRowActions(wrapper, 7)
 
@@ -582,7 +580,7 @@ describe('ProductRowsPage', () => {
     secondLoad.resolve(order43)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('№43 · wicket, модель 43')
+    expect(wrapper.text()).toContain('Позиция №43')
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(1)
     expect(wrapper.find('[data-layout="b24-app"]').exists()).toBe(false)
     expect(wrapper.find('[data-layout="b24-sidebar"]').exists()).toBe(false)
@@ -590,7 +588,7 @@ describe('ProductRowsPage', () => {
     firstLoad.resolve(initial)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('№43 · wicket, модель 43')
+    expect(wrapper.text()).toContain('Позиция №43')
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(1)
     expect(wrapper.find('[aria-label="Копировать товарную позицию 7"]').exists()).toBe(false)
 
