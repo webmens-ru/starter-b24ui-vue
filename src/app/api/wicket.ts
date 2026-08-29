@@ -540,3 +540,80 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
     }
   })
 }
+
+export type MaterialAttributeDataType = 'string' | 'integer' | 'decimal' | 'boolean' | 'option'
+
+export interface MaterialUnitDto {
+  code: string
+  name: string
+  symbol: string
+}
+
+export interface MaterialTypeDto {
+  id: number
+  code: string
+  name: string
+}
+
+export interface MaterialAttributeOptionDto {
+  id: number
+  code: string
+  name: string
+}
+
+export interface MaterialAttributeDefinitionDto {
+  id: number
+  code: string
+  name: string
+  dataType: MaterialAttributeDataType
+  unit: MaterialUnitDto | null
+  isRequired: boolean
+  isFilterable: boolean
+  options: MaterialAttributeOptionDto[]
+}
+
+export interface MaterialDocumentDto {
+  name: string
+  url: string
+  mimeType: string
+  sizeBytes: number
+}
+
+export interface MaterialItemDto {
+  id: number
+  typeCode: string
+  name: string
+  article: string
+  price: number
+  unit: MaterialUnitDto
+  attributes: Record<string, string | number | boolean>
+  imageUrls: string[]
+  documents: MaterialDocumentDto[]
+}
+
+export interface MaterialItemQuery {
+  typeCode: string
+  productType: 'wicket'
+  modelId: number
+  attributes?: Record<string, string | number | boolean>
+}
+
+export async function getMaterialTypes(): Promise<MaterialTypeDto[]> {
+  const { data } = await api.get('/api/dict/material/types')
+  return data.data.items
+}
+
+export async function getMaterialAttributes(typeCode: string): Promise<MaterialAttributeDefinitionDto[]> {
+  const { data } = await api.get('/api/dict/material/attributes', { params: { typeCode } })
+  return data.data.items
+}
+
+export async function getMaterialItems(params: MaterialItemQuery): Promise<MaterialItemDto[]> {
+  const { data } = await api.get('/api/dict/material/items', { params })
+  return data.data.items
+}
+
+export async function getMaterialItem(id: number): Promise<MaterialItemDto> {
+  const { data } = await api.get('/api/dict/material/view', { params: { id } })
+  return data.data.items[0]
+}
