@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import axios, { type AxiosRequestConfig } from 'axios'
 
 const api = {
   get: vi.fn(),
@@ -50,8 +51,12 @@ describe('material directory API', () => {
       imageUrls: [],
       documents: [],
     }
+    let serializedUrl = ''
     api.get
-      .mockResolvedValueOnce({ data: { data: { items: [item] } } })
+      .mockImplementationOnce((url: string, config?: AxiosRequestConfig) => {
+        serializedUrl = axios.getUri({ url, ...config })
+        return Promise.resolve({ data: { data: { items: [item] } } })
+      })
       .mockResolvedValueOnce({ data: { data: { items: [item] } } })
 
     const { getMaterialItem, getMaterialItems } = await import('./wicket')
@@ -59,12 +64,14 @@ describe('material directory API', () => {
       typeCode: 'plug',
       productType: 'wicket' as const,
       modelId: 1,
-      attributes: { profileWidth: 60, withFlange: true },
+      attributes: { profileWidth: 60, withFlange: true, isPainted: false },
     }
 
     await expect(getMaterialItems(query)).resolves.toEqual([item])
     await expect(getMaterialItem(101)).resolves.toEqual(item)
-    expect(api.get).toHaveBeenNthCalledWith(1, '/api/dict/material/items', { params: query })
+    expect(serializedUrl).toBe(
+      '/api/dict/material/items?typeCode=plug&productType=wicket&modelId=1&attributes%5BprofileWidth%5D=60&attributes%5BwithFlange%5D=1&attributes%5BisPainted%5D=0',
+    )
     expect(api.get).toHaveBeenNthCalledWith(2, '/api/dict/material/view', { params: { id: 101 } })
   })
 })

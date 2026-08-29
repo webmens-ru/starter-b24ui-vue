@@ -609,7 +609,15 @@ export async function getMaterialAttributes(typeCode: string): Promise<MaterialA
 }
 
 export async function getMaterialItems(params: MaterialItemQuery): Promise<MaterialItemDto[]> {
-  const { data } = await api.get('/api/dict/material/items', { params })
+  const attributes = params.attributes === undefined
+    ? undefined
+    : Object.fromEntries(Object.entries(params.attributes).map(([code, value]) => [
+        code,
+        typeof value === 'boolean' ? Number(value) : value,
+      ]))
+  const { data } = await api.get('/api/dict/material/items', {
+    params: { ...params, attributes },
+  })
   return data.data.items
 }
 
