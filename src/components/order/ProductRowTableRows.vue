@@ -119,7 +119,10 @@ function emitDeadline(): void {
         <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Товарная позиция</span>
         <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
           <div data-product-row-eyebrow class="text-sm text-gray-500">Позиция №{{ productRow.id }}</div>
-          <div data-product-row-title class="font-medium text-gray-800">{{ productRow.productType }} · модель {{ productRow.modelId }}</div>
+          <div data-product-row-title class="font-medium text-gray-800">
+            {{ productRow.name }}<template v-if="productRow.article"> · {{ productRow.article }}</template>
+          </div>
+          <div v-if="productRow.unit" class="text-xs text-gray-500">{{ productRow.unit.name }} ({{ productRow.unit.symbol }})</div>
           <div class="mt-1 text-sm text-gray-600">{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</div>
         </div>
       </div>

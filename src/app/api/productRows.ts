@@ -3,6 +3,8 @@ import type {
   CopyProductRowPayload,
   CalculateProductRowPayload,
   CreateProductRowPayload,
+  CreateMaterialProductRowPayload,
+  CreateInstallationProductRowPayload,
   DeleteProductRowPayload,
   ProductRowListResponse,
   ProductRowCalculationResponse,
@@ -19,6 +21,8 @@ export type {
   CopyProductRowPayload,
   CalculateProductRowPayload,
   CreateProductRowPayload,
+  CreateMaterialProductRowPayload,
+  CreateInstallationProductRowPayload,
   DeleteProductRowPayload,
   ProductRowAllowedAction,
   ProductRowContext,
@@ -43,6 +47,20 @@ export async function listProductRows(orderId: number): Promise<ProductRowListRe
 
 export async function createProductRow(payload: CreateProductRowPayload): Promise<ProductRowMutationResponse> {
   const { data } = await api.post('/api/product-row/create', payload)
+  return data.data
+}
+
+export async function createMaterialProductRow(
+  payload: CreateMaterialProductRowPayload,
+): Promise<ProductRowMutationResponse> {
+  const { data } = await api.post('/api/product-row/create-material', payload)
+  return data.data
+}
+
+export async function createInstallationProductRow(
+  payload: CreateInstallationProductRowPayload,
+): Promise<ProductRowMutationResponse> {
+  const { data } = await api.post('/api/product-row/create-installation', payload)
   return data.data
 }
 

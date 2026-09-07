@@ -11,6 +11,8 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
     orderId: 42,
     productType: 'wicket',
     modelId: '3',
+    parentProductRowId: null, materialItemId: null, rowKind: 'product', relationRole: null,
+    name: 'Калитка', article: null, unit: null,
     quantity: 2,
     sortOrder: 10,
     status: { id: 1, code: 'draft', name: 'Черновик', color: '#777777' },

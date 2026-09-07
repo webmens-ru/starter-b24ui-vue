@@ -26,7 +26,14 @@ export interface ProductRowSummary {
   id: number
   orderId: number
   productType: string
-  modelId: string
+  modelId: string | null
+  parentProductRowId: number | null
+  materialItemId: number | null
+  rowKind: 'product' | 'material' | 'service'
+  relationRole: string | null
+  name: string
+  article: string | null
+  unit: { code: string, name: string, symbol: string } | null
   quantity: number
   sortOrder: number
   status: ProductRowStatus
@@ -78,6 +85,18 @@ export interface CreateProductRowPayload {
   productType: string
   modelId: string
   model: string
+}
+
+export interface CreateMaterialProductRowPayload {
+  orderId: number
+  materialItemId: number
+  quantity: number
+}
+
+export interface CreateInstallationProductRowPayload {
+  orderId: number
+  materialItemId: number
+  relationRole: string
 }
 
 export interface UpdateProductRowPayload {

@@ -269,10 +269,12 @@ async function updateDeadline(productRow: ProductRowSummary, plannedCompletionAt
 }
 
 async function recalculateProductRow(productRow: ProductRowSummary): Promise<void> {
+  const modelId = productRow.modelId
+  if (modelId === null) return
   await runReloadingProductRowAction(productRow, () => calculateProductRow({
     orderId: orderId.value,
     productRowId: productRow.id,
-    modelId: productRow.modelId,
+    modelId,
     lockVersion: productRow.lockVersion,
   }))
 }
