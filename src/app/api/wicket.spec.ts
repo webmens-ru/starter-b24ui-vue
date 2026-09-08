@@ -84,9 +84,11 @@ describe('wicket accessory composition API', () => {
       bumpers: [],
       orderTotals: { priceRetail: 125, priceDealer: 125 },
     }
+    api.get.mockResolvedValueOnce({ data: { data: { lockVersion: 3 } } })
     api.post.mockResolvedValueOnce({ data: { data: response } })
-    const { saveWicketAccessoryComposition } = await import('./wicket')
+    const { getWicketAccessoryComposition, saveWicketAccessoryComposition } = await import('./wicket')
 
+    await getWicketAccessoryComposition(payload)
     await expect(saveWicketAccessoryComposition(payload)).resolves.toEqual(response)
     expect(api.post).toHaveBeenCalledWith('/api/wicket/accessory-composition', payload)
   })
@@ -97,7 +99,8 @@ describe('wicket accessory composition API', () => {
     api.post
       .mockReturnValueOnce(firstResponse)
       .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
-    const { saveWicketAccessoryComposition } = await import('./wicket')
+    api.get.mockResolvedValueOnce({ data: { data: { lockVersion: 3 } } })
+    const { getWicketAccessoryComposition, saveWicketAccessoryComposition } = await import('./wicket')
     const payload = {
       orderId: 42,
       productRowId: 7,
@@ -108,6 +111,7 @@ describe('wicket accessory composition API', () => {
       bumpers: [],
     }
 
+    await getWicketAccessoryComposition(payload)
     const first = saveWicketAccessoryComposition(payload)
     const second = saveWicketAccessoryComposition(payload)
     await Promise.resolve()
@@ -128,5 +132,48 @@ describe('wicket accessory composition API', () => {
       ...payload,
       lockVersion: 5,
     })
+  })
+
+  it('keeps a 409 conflict latched until an authoritative load supplies a newer version', async () => {
+    const conflict = { response: { status: 409 } }
+    const payload = {
+      orderId: 42,
+      productRowId: 7,
+      lockVersion: 3,
+      lockComponents: [],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+    }
+    api.get
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 3 } } })
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 4 } } })
+    api.post
+      .mockRejectedValueOnce(conflict)
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+    const {
+      getWicketAccessoryComposition,
+      onWicketProductRowLockConflict,
+      saveWicketAccessoryComposition,
+    } = await import('./wicket')
+    const listener = vi.fn()
+    const unsubscribe = onWicketProductRowLockConflict(listener)
+
+    await getWicketAccessoryComposition(payload)
+    await expect(saveWicketAccessoryComposition(payload)).rejects.toBe(conflict)
+    await expect(saveWicketAccessoryComposition(payload)).rejects.toThrow(
+      'Конфликт версии позиции',
+    )
+    expect(api.post).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    await getWicketAccessoryComposition(payload)
+    await expect(saveWicketAccessoryComposition(payload)).resolves.toEqual({ lockVersion: 5 })
+    expect(api.post).toHaveBeenCalledTimes(2)
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/accessory-composition', {
+      ...payload,
+      lockVersion: 4,
+    })
+    unsubscribe()
   })
 })

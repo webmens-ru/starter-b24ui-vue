@@ -124,7 +124,6 @@ export async function saveWicketAccessoryComposition(
   payload: WicketAccessoryCompositionPayload,
 ): Promise<WicketAccessoryCompositionResponse> {
   const context = accessoryCompositionLockContext(payload)
-  rememberWicketProductRowLockVersion(context, payload.lockVersion)
   return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post('/api/wicket/accessory-composition', { ...payload, lockVersion })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
