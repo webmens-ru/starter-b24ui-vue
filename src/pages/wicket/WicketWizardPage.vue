@@ -138,9 +138,15 @@ onMounted(() => {
       showLockConflictModal.value = true
       if (context.modelId === 'accessory-composition') {
         const generation = initGeneration
+        const orderId = context.orderId
+        const productRowId = context.productRowId
         void getWicketAccessoryComposition({ orderId: context.orderId, productRowId: context.productRowId })
           .then(composition => {
-            if (isCurrentInitialization(generation)) calc.applyAccessoryComposition(composition)
+            if (
+              isCurrentInitialization(generation)
+              && calc.orderId.value === orderId
+              && calc.productRowId.value === productRowId
+            ) calc.applyAccessoryComposition(composition)
           })
           .catch(error => console.warn('getWicketAccessoryComposition:', error))
       }

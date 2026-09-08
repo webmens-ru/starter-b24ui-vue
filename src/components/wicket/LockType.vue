@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { getLocks, getPensByLock, saveWicketData, recalculate } from '../../app/api/wicket'
+import { getLocks, getPensByLock, recalculate } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
 
 interface LockItem {
@@ -182,14 +182,9 @@ async function save() {
   updateLockBlock()
 
   try {
-    await saveWicketData({
-      ...calc.getBaseSavePayload(),
-      lockSetId:        calc.lockSetId.value,
-      lockPenId:        calc.lockPenId.value,
-      lockPenColorId:   calc.lockPenColorId.value,
-    })
+    await calc.saveAccessoryComposition()
   } catch (e) {
-    console.warn('saveWicketData:', e)
+    console.warn('saveAccessoryComposition:', e)
   }
 
   if (calc.priceRetail.value) {

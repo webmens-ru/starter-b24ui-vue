@@ -21,6 +21,11 @@ const testRouter = createRouter({
 
 vi.mock('../../app/api/wicket', () => ({
   saveWicketData: vi.fn().mockResolvedValue(undefined),
+  saveWicketAccessoryComposition: vi.fn().mockImplementation(async (payload: { lockVersion: number }) => ({
+    lockVersion: payload.lockVersion + 1,
+    lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+    orderTotals: { priceRetail: 0, priceDealer: 0 },
+  })),
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 10000, priceRetail: 13500 }),
   saveOrderData: vi.fn().mockResolvedValue(undefined),
   saveClientInfo: vi.fn().mockResolvedValue(undefined),
@@ -59,7 +64,7 @@ vi.mock('../../app/api/wicket', () => ({
   deleteCalculation: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { saveWicketData, getColorShield, getNetWidths } = await import('../../app/api/wicket')
+const { saveWicketData, saveWicketAccessoryComposition, getColorShield, getNetWidths } = await import('../../app/api/wicket')
 
 describe('saveWicketData — данные передаются на бэк', () => {
   let calc: ReturnType<typeof useCalculation>
@@ -71,6 +76,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.modelId.value = '1'
     calc.number.value = 42
     calc.productRowId.value = 7
+    calc.accessoryCompositionLockVersion.value = 1
     vi.mocked(saveWicketData).mockClear()
   })
 
@@ -145,7 +151,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload.materialYardGlob).toBe('Профлист')
   })
 
-  it('IsTherelock передаёт isThereLock', async () => {
+  it('IsTherelock сохраняет комплектующие только через composition API', async () => {
     calc.isThereLock.value = 0
     calc.isThereLockName.value = 'Нет'
     calc.lockPenColorId.value = 7
@@ -159,13 +165,8 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketData).toHaveBeenCalled()
-    const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload).toHaveProperty('isThereLock')
-    expect(payload).toHaveProperty('isThereLockName')
-    expect(payload).toHaveProperty('reachedStep')
-    expect(payload.modelId).toBe('1')
-    expect(payload.lockPenColorId).toBeNull()
+    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketData).not.toHaveBeenCalled()
   })
 
   it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
@@ -183,14 +184,11 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketData).toHaveBeenCalled()
-    const saveCalls = vi.mocked(saveWicketData).mock.calls
-    const payload = saveCalls[saveCalls.length - 1]?.[0]
-    expect(payload).toMatchObject({
-      lockSetId: 7,
-      lockPenId: 3,
-      lockPenColorId: 5,
-    })
+    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.lockSetId.value).toBe(7)
+    expect(calc.lockPenId.value).toBe(3)
+    expect(calc.lockPenColorId.value).toBe(5)
   })
 
   it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {

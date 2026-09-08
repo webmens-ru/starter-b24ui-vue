@@ -13,6 +13,11 @@ vi.mock('../../../app/api/wicket', () => ({
     ],
   }),
   saveWicketData: vi.fn().mockResolvedValue(undefined),
+  saveWicketAccessoryComposition: vi.fn().mockImplementation(async (payload: { lockVersion: number }) => ({
+    lockVersion: payload.lockVersion + 1,
+    lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+    orderTotals: { priceRetail: 0, priceDealer: 0 },
+  })),
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
 }))
 
@@ -27,6 +32,7 @@ describe('LockComponentsStep', () => {
     calc.modelId.value = '2'
     calc.number.value = 42
     calc.productRowId.value = 7
+    calc.accessoryCompositionLockVersion.value = 1
     calc.lockComponentIds.value = [2]
     calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
 
@@ -41,10 +47,8 @@ describe('LockComponentsStep', () => {
     expect(checked).toHaveLength(1)
     expect((checked[0].element as HTMLInputElement).value).toBe('on')
 
-    expect(api.saveWicketData).toHaveBeenCalled()
-    const payload = vi.mocked(api.saveWicketData).mock.calls[0][0] as Record<string, unknown>
-    expect(payload.lockComponentIds).toBe('[2]')
-    expect(payload.lockComponentsInstalled).toBe('Устанавливает заказчик')
+    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.saveWicketData).not.toHaveBeenCalled()
   })
 
   it('сохраняет смену исполнителя установки', async () => {
@@ -52,20 +56,19 @@ describe('LockComponentsStep', () => {
     calc.modelId.value = '2'
     calc.number.value = 42
     calc.productRowId.value = 7
+    calc.accessoryCompositionLockVersion.value = 1
 
     const wrapper = mount(LockComponentsStep, {
       global: { stubs: { B24Button: true } },
     })
     await new Promise(r => setTimeout(r, 100))
-    vi.mocked(api.saveWicketData).mockClear()
+    vi.mocked(api.saveWicketAccessoryComposition).mockClear()
 
     const customerRadio = wrapper.find('input[type="radio"][value="Устанавливает заказчик"]')
     await customerRadio.setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    expect(api.saveWicketData).toHaveBeenCalled()
-    const calls = vi.mocked(api.saveWicketData).mock.calls
-    const payload = calls[calls.length - 1][0] as Record<string, unknown>
-    expect(payload.lockComponentsInstalled).toBe('Устанавливает заказчик')
+    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.saveWicketData).not.toHaveBeenCalled()
   })
 })

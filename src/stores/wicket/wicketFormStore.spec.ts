@@ -39,7 +39,7 @@ function composition(): WicketAccessoryCompositionResponse {
   return {
     lockVersion: 8,
     lockComponents: [row(11, 'lock_component'), row(11, 'lock_component_installation'), row(12, 'lock_component')],
-    skud: [row(21, 'skud_installation')],
+    skud: [row(21, 'skud'), row(22, 'skud_installation')],
     doorClosers: [row(31, 'door_closer')],
     bumpers: [],
     orderTotals: { priceRetail: null, priceDealer: null },
@@ -60,8 +60,8 @@ describe('wicketFormStore accessory composition', () => {
     expect(store.addons.skud).toMatchObject({
       isThere: 1,
       itemId: 21,
-      itemIds: [21],
-      provided: 'Предоставляет заказчик',
+      itemIds: [21, 22],
+      provided: 'Предоставляет изготовитель',
       installed: 'Устанавливает изготовитель',
     })
     expect(store.addons.doorCloser).toMatchObject({
@@ -84,7 +84,28 @@ describe('wicketFormStore accessory composition', () => {
         { role: 'lock_component', materialItemId: 12, providedByManufacturer: true, installedByManufacturer: false },
       ],
       skud: [
-        { role: 'skud', materialItemId: 21, providedByManufacturer: false, installedByManufacturer: true },
+        { role: 'skud', materialItemId: 21, providedByManufacturer: true, installedByManufacturer: false },
+        { role: 'skud', materialItemId: 22, providedByManufacturer: false, installedByManufacturer: true },
+      ],
+      doorClosers: [
+        { role: 'door_closer', materialItemId: 31, providedByManufacturer: true, installedByManufacturer: false },
+      ],
+      bumpers: [],
+    })
+  })
+
+  it('round-trips mixed plural ownership and installation associations unchanged', () => {
+    const store = useWicketFormStore()
+    store.applyAccessoryComposition(composition())
+
+    expect(store.getAccessorySelections()).toEqual({
+      lockComponents: [
+        { role: 'lock_component', materialItemId: 11, providedByManufacturer: true, installedByManufacturer: true },
+        { role: 'lock_component', materialItemId: 12, providedByManufacturer: true, installedByManufacturer: false },
+      ],
+      skud: [
+        { role: 'skud', materialItemId: 21, providedByManufacturer: true, installedByManufacturer: false },
+        { role: 'skud', materialItemId: 22, providedByManufacturer: false, installedByManufacturer: true },
       ],
       doorClosers: [
         { role: 'door_closer', materialItemId: 31, providedByManufacturer: true, installedByManufacturer: false },

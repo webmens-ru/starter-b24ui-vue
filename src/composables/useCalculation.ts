@@ -144,8 +144,16 @@ export function useCalculation() {
   }
 
   async function saveAccessoryComposition(): Promise<void> {
-    const response = await persistWicketAccessoryComposition(getAccessoryCompositionPayload())
-    form.applyAccessoryComposition(response)
+    const payload = getAccessoryCompositionPayload()
+    const generation = form.beginAccessorySave()
+    const response = await persistWicketAccessoryComposition(payload)
+    if (
+      form.isCurrentAccessorySave(generation)
+      && wizard.orderId === payload.orderId
+      && wizard.productRowId === payload.productRowId
+    ) {
+      form.applyAccessoryComposition(response)
+    }
   }
 
   function reset() {
@@ -164,6 +172,10 @@ export function useCalculation() {
     getAccessoryCompositionPayload,
     saveAccessoryComposition,
     applyAccessoryComposition: form.applyAccessoryComposition,
+    replaceAccessorySelectionIds: form.replaceAccessorySelectionIds,
+    setAccessoryGroupProvided: form.setAccessoryGroupProvided,
+    setAccessoryGroupInstalled: form.setAccessoryGroupInstalled,
+    clearAccessorySelections: form.clearAccessorySelections,
     loadFromApi: form.loadFromApi,
     reset,
     updateOrCreateBlock: form.updateOrCreateBlock,

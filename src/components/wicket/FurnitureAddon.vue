@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { saveWicketData, recalculate } from '../../app/api/wicket'
-import type { WicketSavePayload } from '../../app/api/wicket.types'
+import { recalculate } from '../../app/api/wicket'
+import type { WicketAccessoryRole } from '../../app/api/wicket.types'
 import ImageViewer from './ImageViewer.vue'
 
 interface AddonConfig {
   key: 'doorCloser' | 'bumper' | 'skud'
   title: string
   page: string
-  saveKeys: { isThere: string; id: string; provided: string; installed: string; ids?: string }
 }
 const props = defineProps<{ config: AddonConfig }>()
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
@@ -17,6 +16,7 @@ const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
 const items = computed(() => calc.addonItems.value[props.config.key])
 const isMulti = computed(() => props.config.key === 'skud')
+const role = computed<WicketAccessoryRole>(() => props.config.key === 'doorCloser' ? 'door_closer' : props.config.key)
 
 const isThereName = ref<string>(isMulti.value ? 'Будет' : (calc.addons.value[props.config.key].isThere === 1 ? 'Будет' : 'Не будет'))
 const provided = ref<string>(calc.addons.value[props.config.key].provided || 'Предоставляет изготовитель')
@@ -94,8 +94,6 @@ function sync() {
     } else if (showSelection.value) {
       st.itemId = selectedId.value
       st.marking = items.value.find(i => i.id === selectedId.value)?.marking ?? ''
-    } else {
-      st.itemId = null; st.marking = ''
     }
   } else {
     st.provided = ''; st.installed = ''; st.itemId = null; st.marking = ''
@@ -128,20 +126,18 @@ function buildBlock() {
 async function save() {
   sync(); buildBlock()
   const st = calc.addons.value[props.config.key]
-  const k = props.config.saveKeys
   try {
-    const payload: WicketSavePayload = {
-      ...calc.getBaseSavePayload(),
-      [k.isThere]: st.isThere,
-      [k.provided]: st.provided || null,
-      [k.installed]: st.installed || null,
-      [k.id]: st.itemId,
+    if (st.isThere !== 1) {
+      calc.clearAccessorySelections(role.value)
+    } else {
+      const ids = isMulti.value ? st.itemIds : [st.itemId].filter((id): id is number => id !== null)
+      calc.replaceAccessorySelectionIds(role.value, ids, {
+        providedByManufacturer: st.provided === 'Предоставляет изготовитель',
+        installedByManufacturer: st.installed === 'Устанавливает изготовитель',
+      })
     }
-    if (isMulti.value && k.ids) {
-      payload[k.ids] = JSON.stringify(st.itemIds)
-    }
-    await saveWicketData(payload)
-  } catch (e) { console.warn('saveWicketData:', e) }
+    await calc.saveAccessoryComposition()
+  } catch (e) { console.warn('saveAccessoryComposition:', e) }
 
   if (calc.priceRetail.value) {
     try {
@@ -157,10 +153,17 @@ async function save() {
   }
 }
 
-watch(selectedId, () => { if (!isMulti.value) save() })
-watch(selectedIds, () => { if (isMulti.value) save() }, { deep: true })
+watch(selectedId, () => { if (!isMulti.value) void save() })
+watch(selectedIds, () => { if (isMulti.value) void save() }, { deep: true })
 watch(isThereName, () => save())
-watch([provided, installed], () => save())
+watch(provided, () => {
+  calc.setAccessoryGroupProvided(role.value, provided.value === 'Предоставляет изготовитель')
+  void save()
+})
+watch(installed, () => {
+  calc.setAccessoryGroupInstalled(role.value, installed.value === 'Устанавливает изготовитель')
+  void save()
+})
 
 onMounted(async () => {
   calc.setActivePage(props.config.page)

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from './useCalculation'
+import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
+import type { WicketAccessoryCompositionResponse } from '../app/api/wicket.types'
 
 const apiMocks = vi.hoisted(() => ({ saveWicketAccessoryComposition: vi.fn() }))
 vi.mock('../app/api/wicket', async importOriginal => ({
@@ -576,6 +578,13 @@ describe('useCalculation', () => {
         provided: 'Предоставляет заказчик',
         installed: 'Устанавливает изготовитель',
       }
+      const form = useWicketFormStore()
+      form.replaceAccessorySelectionIds('lock_component', [2, 4])
+      form.setAccessoryGroupProvided('lock_component', true)
+      form.setAccessoryGroupInstalled('lock_component', false)
+      form.replaceAccessorySelectionIds('door_closer', [9])
+      form.setAccessoryGroupProvided('door_closer', false)
+      form.setAccessoryGroupInstalled('door_closer', true)
 
       expect(calc.getAccessoryCompositionPayload()).toEqual({
         orderId: 42,
@@ -610,6 +619,26 @@ describe('useCalculation', () => {
         lockComponents: [], skud: [], doorClosers: [], bumpers: [],
       })
       expect(calc.accessoryCompositionLockVersion.value).toBe(9)
+    })
+
+    it('не применяет отложенный ответ composition после перехода на другую позицию', async () => {
+      calc.accessoryCompositionLockVersion.value = 8
+      let resolveSave!: (value: WicketAccessoryCompositionResponse) => void
+      const emptyComposition = (lockVersion: number): WicketAccessoryCompositionResponse => ({
+        lockVersion,
+        lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+        orderTotals: { priceRetail: 0, priceDealer: 0 },
+      })
+      apiMocks.saveWicketAccessoryComposition.mockImplementation(() => new Promise(resolve => { resolveSave = resolve }))
+
+      const saving = calc.saveAccessoryComposition()
+      calc.productRowId.value = 99
+      calc.accessoryCompositionLockVersion.value = 20
+      resolveSave(emptyComposition(9))
+      await saving
+
+      expect(calc.productRowId.value).toBe(99)
+      expect(calc.accessoryCompositionLockVersion.value).toBe(20)
     })
 
     it('не сохраняет вычисляемый внешний вид заполнения в payload заказа', () => {

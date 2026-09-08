@@ -5,7 +5,6 @@ const config = {
   key: 'doorCloser' as const,
   title: 'Доводчик',
   page: 'page_door_closer',
-  saveKeys: { isThere: 'isThereDoorCloser', id: 'doorCloserId', provided: 'doorCloserProvided', installed: 'doorCloserInstalled' },
 }
 </script>
 <template>

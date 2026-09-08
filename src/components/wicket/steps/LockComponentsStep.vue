@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getLockComponents, saveWicketData, recalculate } from '../../../app/api/wicket'
+import { getLockComponents, recalculate } from '../../../app/api/wicket'
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 
@@ -90,6 +90,10 @@ async function save() {
 
   calc.lockComponentIds.value = [...selectedIds.value]
   calc.lockComponentsInstalled.value = installed.value
+  calc.replaceAccessorySelectionIds('lock_component', selectedIds.value, {
+    providedByManufacturer: calc.providesLock.value === 'Предоставляет изготовитель',
+    installedByManufacturer: installed.value === 'Устанавливает изготовитель',
+  })
 
   calc.updateOrCreateBlock('Комплектующие замка', [
     { name: 'Комплектующие', value: marking || 'Не выбрано' },
@@ -97,12 +101,8 @@ async function save() {
   ])
 
   try {
-    await saveWicketData({
-      ...calc.getBaseSavePayload(),
-      lockComponentIds: JSON.stringify(selectedIds.value),
-      lockComponentsInstalled: installed.value,
-    })
-  } catch (e) { console.warn('saveWicketData:', e) }
+    await calc.saveAccessoryComposition()
+  } catch (e) { console.warn('saveAccessoryComposition:', e) }
 
   if (calc.priceRetail.value) {
     try {
@@ -119,7 +119,10 @@ async function save() {
 }
 
 watch(selectedIds, () => save(), { deep: true })
-watch(installed, () => save())
+watch(installed, () => {
+  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
+  void save()
+})
 
 onMounted(async () => {
   calc.setActivePage('page_lock_components')

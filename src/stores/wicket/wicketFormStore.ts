@@ -70,6 +70,14 @@ const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bum
 const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
 const availableSections = ref<string[]>([])
 const accessoryCompositionLockVersion = ref<number | null>(null)
+const accessorySaveGeneration = ref(0)
+type AccessorySelections = {
+  lockComponents: WicketAccessorySelectionPayload<'lock_component'>[]
+  skud: WicketAccessorySelectionPayload<'skud'>[]
+  doorClosers: WicketAccessorySelectionPayload<'door_closer'>[]
+  bumpers: WicketAccessorySelectionPayload<'bumper'>[]
+}
+const accessorySelections = ref<AccessorySelections>({ lockComponents: [], skud: [], doorClosers: [], bumpers: [] })
 
 // Поля шага "Тип замка" и ручки в комплекте
 const typeLock      = ref<string>('Тип_1')
@@ -225,6 +233,8 @@ const fieldsFilled = ref<number>(0)
     addonItems.value = { doorCloser: [], bumper: [], skud: [] }
     availableSections.value = []
     accessoryCompositionLockVersion.value = null
+    accessorySaveGeneration.value += 1
+    accessorySelections.value = { lockComponents: [], skud: [], doorClosers: [], bumpers: [] }
     typeLock.value = 'Тип_1'
     lockSetId.value = null
     lockPenId.value = null
@@ -348,6 +358,15 @@ const fieldsFilled = ref<number>(0)
   function applyAccessoryComposition(composition: WicketAccessoryCompositionResponse): void {
     accessoryCompositionLockVersion.value = composition.lockVersion
     const lockSelections = selectionsFromRows(composition.lockComponents, 'lock_component')
+    const skudSelections = selectionsFromRows(composition.skud, 'skud')
+    const doorCloserSelections = selectionsFromRows(composition.doorClosers, 'door_closer')
+    const bumperSelections = selectionsFromRows(composition.bumpers, 'bumper')
+    accessorySelections.value = {
+      lockComponents: lockSelections,
+      skud: skudSelections,
+      doorClosers: doorCloserSelections,
+      bumpers: bumperSelections,
+    }
     lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
     lockComponentsInstalled.value = lockSelections.some(selection => selection.installedByManufacturer)
       ? 'Устанавливает изготовитель'
@@ -357,29 +376,9 @@ const fieldsFilled = ref<number>(0)
       : 'Предоставляет заказчик'
     isThereLock.value = lockSelections.length > 0 ? 1 : 0
     isThereLockName.value = lockSelections.length > 0 ? 'Есть' : 'Нет'
-    applyAddonSelections('skud', selectionsFromRows(composition.skud, 'skud'))
-    applyAddonSelections('doorCloser', selectionsFromRows(composition.doorClosers, 'door_closer'))
-    applyAddonSelections('bumper', selectionsFromRows(composition.bumpers, 'bumper'))
-  }
-
-  function addonSelections<Role extends Exclude<WicketAccessoryRole, 'lock_component'>>(
-    key: AddonKey,
-    role: Role,
-  ): WicketAccessorySelectionPayload<Role>[] {
-    const state = addons.value[key]
-    if (state.isThere !== 1) return []
-    const ids = key === 'skud' ? state.itemIds : [state.itemId]
-    const providedByManufacturer = state.provided === 'Предоставляет изготовитель'
-    const installs = state.installed === 'Устанавливает изготовитель'
-    return ids
-      .filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0)
-      .map((materialItemId, index) => ({
-        role,
-        materialItemId,
-        providedByManufacturer,
-        installedByManufacturer: installs && index === 0,
-      }))
-      .filter(selection => selection.providedByManufacturer || selection.installedByManufacturer)
+    applyAddonSelections('skud', skudSelections)
+    applyAddonSelections('doorCloser', doorCloserSelections)
+    applyAddonSelections('bumper', bumperSelections)
   }
 
   function getAccessorySelections(): {
@@ -388,22 +387,65 @@ const fieldsFilled = ref<number>(0)
     doorClosers: WicketAccessorySelectionPayload<'door_closer'>[]
     bumpers: WicketAccessorySelectionPayload<'bumper'>[]
   } {
-    const providedByManufacturer = providesLock.value === 'Предоставляет изготовитель'
-    const installs = lockComponentsInstalled.value === 'Устанавливает изготовитель'
-    const lockComponents = isThereLock.value === 1
-      ? lockComponentIds.value.map((materialItemId, index) => ({
-          role: 'lock_component' as const,
-          materialItemId,
-          providedByManufacturer,
-          installedByManufacturer: installs && index === 0,
-        })).filter(selection => selection.providedByManufacturer || selection.installedByManufacturer)
-      : []
     return {
-      lockComponents,
-      skud: addonSelections('skud', 'skud'),
-      doorClosers: addonSelections('doorCloser', 'door_closer'),
-      bumpers: addonSelections('bumper', 'bumper'),
+      lockComponents: accessorySelections.value.lockComponents.map(selection => ({ ...selection })),
+      skud: accessorySelections.value.skud.map(selection => ({ ...selection })),
+      doorClosers: accessorySelections.value.doorClosers.map(selection => ({ ...selection })),
+      bumpers: accessorySelections.value.bumpers.map(selection => ({ ...selection })),
     }
+  }
+
+  function selectionBucket(role: WicketAccessoryRole): WicketAccessorySelectionPayload[] {
+    if (role === 'lock_component') return accessorySelections.value.lockComponents
+    if (role === 'skud') return accessorySelections.value.skud
+    if (role === 'door_closer') return accessorySelections.value.doorClosers
+    return accessorySelections.value.bumpers
+  }
+
+  function replaceAccessorySelectionIds(
+    role: WicketAccessoryRole,
+    ids: number[],
+    defaults: { providedByManufacturer: boolean; installedByManufacturer: boolean } = {
+      providedByManufacturer: true,
+      installedByManufacturer: false,
+    },
+  ): void {
+    const uniqueIds = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))]
+    const existing = new Map(selectionBucket(role).map(selection => [selection.materialItemId, selection]))
+    const next = uniqueIds.map((materialItemId, index): WicketAccessorySelectionPayload => ({
+      role,
+      materialItemId,
+      providedByManufacturer: existing.get(materialItemId)?.providedByManufacturer ?? defaults.providedByManufacturer,
+      installedByManufacturer: existing.get(materialItemId)?.installedByManufacturer
+        ?? (defaults.installedByManufacturer && index === 0),
+    }))
+    if (role === 'lock_component') accessorySelections.value.lockComponents = next as WicketAccessorySelectionPayload<'lock_component'>[]
+    else if (role === 'skud') accessorySelections.value.skud = next as WicketAccessorySelectionPayload<'skud'>[]
+    else if (role === 'door_closer') accessorySelections.value.doorClosers = next as WicketAccessorySelectionPayload<'door_closer'>[]
+    else accessorySelections.value.bumpers = next as WicketAccessorySelectionPayload<'bumper'>[]
+  }
+
+  function setAccessoryGroupProvided(role: WicketAccessoryRole, providedByManufacturer: boolean): void {
+    selectionBucket(role).forEach(selection => { selection.providedByManufacturer = providedByManufacturer })
+  }
+
+  function setAccessoryGroupInstalled(role: WicketAccessoryRole, installedByManufacturer: boolean): void {
+    selectionBucket(role).forEach((selection, index) => {
+      selection.installedByManufacturer = installedByManufacturer && index === 0
+    })
+  }
+
+  function clearAccessorySelections(role: WicketAccessoryRole): void {
+    replaceAccessorySelectionIds(role, [])
+  }
+
+  function beginAccessorySave(): number {
+    accessorySaveGeneration.value += 1
+    return accessorySaveGeneration.value
+  }
+
+  function isCurrentAccessorySave(generation: number): boolean {
+    return accessorySaveGeneration.value === generation
   }
 
   /**
@@ -1024,5 +1066,11 @@ const fieldsFilled = ref<number>(0)
     accessoryCompositionLockVersion,
     applyAccessoryComposition,
     getAccessorySelections,
+    replaceAccessorySelectionIds,
+    setAccessoryGroupProvided,
+    setAccessoryGroupInstalled,
+    clearAccessorySelections,
+    beginAccessorySave,
+    isCurrentAccessorySave,
   }
 })

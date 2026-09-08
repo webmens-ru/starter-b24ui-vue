@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { saveWicketData, recalculate } from '../../app/api/wicket'
-import type { WicketSavePayload } from '../../app/api/wicket.types'
+import { recalculate } from '../../app/api/wicket'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -84,26 +83,12 @@ async function save() {
   buildBlock()
 
   try {
-    const payload: WicketSavePayload = {
-      ...calc.getBaseSavePayload(),
-      isThereLock:   calc.isThereLock.value,
-      isThereLockName: calc.isThereLockName.value,
-      providesLock:      calc.providesLock.value || null,
-      lockInstaller:     calc.lockInstaller.value || null,
-      isThereCable:     calc.isThereCable.value || null,
-    }
     if (calc.isThereLock.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
-      payload.typeLock = null
-      payload.lockSetId = null
-      payload.lockPenId = null
-      payload.lockPenColor = null
-      payload.lockPenColorId = null
-      payload.lockComponentIds = JSON.stringify([])
-      payload.lockComponentsInstalled = null
+      calc.clearAccessorySelections('lock_component')
     }
-    await saveWicketData(payload)
+    await calc.saveAccessoryComposition()
   } catch (e) {
-    console.warn('saveWicketData:', e)
+    console.warn('saveAccessoryComposition:', e)
   }
 
   if (calc.priceRetail.value) {

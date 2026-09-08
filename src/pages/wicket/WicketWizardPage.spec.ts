@@ -178,6 +178,39 @@ describe('WicketWizardPage mobile summary', () => {
     expect(wrapper.html()).toContain('Требуется перезагрузка')
   })
 
+  it('ignores a deferred conflict reload after navigating to another product row', async () => {
+    let resolveConflict!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mountPage()
+    await flushPromises()
+    mocks.getWicketAccessoryComposition.mockClear()
+    mocks.getWicketAccessoryComposition.mockImplementation((context: { productRowId: number }) => {
+      if (context.productRowId === 7) return new Promise(resolve => { resolveConflict = resolve })
+      return Promise.resolve({
+        lockVersion: 10,
+        lockComponents: [{ materialItemId: 88, relationRole: 'lock_component' }],
+        skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+      })
+    })
+    const listener = mocks.onWicketProductRowLockConflict.mock.calls[0]?.[0] as (context: {
+      orderId: number
+      productRowId: number
+      modelId: string
+    }) => void
+
+    listener({ orderId: 42, productRowId: 7, modelId: 'accessory-composition' })
+    mocks.route.query.productRowId = '8'
+    await vi.waitFor(() => expect(useCalculation().productRowId.value).toBe(8))
+    resolveConflict({
+      lockVersion: 9,
+      lockComponents: [{ materialItemId: 77, relationRole: 'lock_component' }],
+      skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+    await flushPromises()
+
+    expect(useCalculation().lockComponentIds.value).toEqual([88])
+  })
+
   it('clears fields from the previously opened product row before loading the requested product row', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
     const calc = useCalculation()

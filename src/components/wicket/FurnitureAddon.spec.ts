@@ -8,6 +8,11 @@ import * as api from '../../app/api/wicket'
 
 vi.mock('../../app/api/wicket', () => ({
   saveWicketData: vi.fn().mockResolvedValue(undefined),
+  saveWicketAccessoryComposition: vi.fn().mockImplementation(async (payload: { lockVersion: number }) => ({
+    lockVersion: payload.lockVersion + 1,
+    lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+    orderTotals: { priceRetail: 0, priceDealer: 0 },
+  })),
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
   saveOrderData: vi.fn().mockResolvedValue(undefined),
   saveClientInfo: vi.fn().mockResolvedValue(undefined),
@@ -30,14 +35,12 @@ const config = {
   key: 'doorCloser' as const,
   title: 'Доводчик',
   page: 'page_door_closer',
-  saveKeys: { isThere: 'isThereDoorCloser', id: 'doorCloserId', provided: 'doorCloserProvided', installed: 'doorCloserInstalled' },
 }
 
 const skudConfig = {
   key: 'skud' as const,
   title: 'СКУД',
   page: 'page_skud',
-  saveKeys: { isThere: 'isThereSkud', id: 'skudId', provided: 'skudProvided', installed: 'skudInstalled', ids: 'skudIds' },
 }
 
 describe('FurnitureAddon', () => {
@@ -48,9 +51,10 @@ describe('FurnitureAddon', () => {
     calc.orderId.value = 42
     calc.productRowId.value = 7
     calc.modelId.value = '1'
+    calc.accessoryCompositionLockVersion.value = 1
   })
 
-  it('по умолчанию «Не будет» — без сетки моделей, save вызван с ключом isThereDoorCloser=0', async () => {
+  it('сохраняет состояние доводчика только через composition API', async () => {
     const form = useWicketFormStore()
     form.addonItems.doorCloser = [{ id: 1, marking: 'DC-1' }]
     const wrapper = mount(FurnitureAddon, {
@@ -61,9 +65,8 @@ describe('FurnitureAddon', () => {
     // Wait for onMounted async save to complete
     await new Promise(r => setTimeout(r, 100))
     expect(wrapper.text()).toContain('Доводчик')
-    expect(api.saveWicketData).toHaveBeenCalled()
-    const payload = (api.saveWicketData as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as Record<string, unknown>
-    expect(payload).toHaveProperty('isThereDoorCloser', 0)
+    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.saveWicketData).not.toHaveBeenCalled()
   })
 
   it('выбор «Будет» раскрывает опции предоставления', async () => {
@@ -108,14 +111,39 @@ describe('FurnitureAddon', () => {
     await flushPromises()
 
     expect(wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').exists()).toBe(true)
-    expect(api.saveWicketData).toHaveBeenCalled()
-    const payload = (api.saveWicketData as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as Record<string, unknown>
-    expect(payload).toMatchObject({
-      isThereSkud: 1,
-      skudId: 10,
-      skudIds: '[10,11]',
-      skudProvided: 'Предоставляет заказчик',
-      skudInstalled: 'Устанавливает заказчик',
+    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.saveWicketData).not.toHaveBeenCalled()
+    const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.calls[0][0]
+    expect(payload.skud).toEqual([
+      { role: 'skud', materialItemId: 10, providedByManufacturer: false, installedByManufacturer: false },
+      { role: 'skud', materialItemId: 11, providedByManufacturer: false, installedByManufacturer: false },
+    ])
+  })
+
+  it('не теряет singular item, предоставленный заказчиком для установки изготовителем', async () => {
+    const form = useWicketFormStore()
+    form.addonItems.doorCloser = [{ id: 31, marking: 'DC-31' }]
+    form.addons.doorCloser = {
+      isThere: 1,
+      provided: 'Предоставляет заказчик',
+      installed: 'Устанавливает изготовитель',
+      itemId: 31,
+      marking: 'DC-31',
+      itemIds: [31],
+    }
+    form.replaceAccessorySelectionIds('door_closer', [31])
+    form.setAccessoryGroupProvided('door_closer', false)
+    form.setAccessoryGroupInstalled('door_closer', true)
+
+    mount(FurnitureAddon, {
+      props: { config },
+      global: { stubs: { B24Button: true, ImageViewer: true } },
     })
+    await flushPromises()
+
+    const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.calls[0][0]
+    expect(payload.doorClosers).toEqual([
+      { role: 'door_closer', materialItemId: 31, providedByManufacturer: false, installedByManufacturer: true },
+    ])
   })
 })

@@ -5,7 +5,6 @@ const config = {
   key: 'skud' as const,
   title: 'СКУД',
   page: 'page_skud',
-  saveKeys: { isThere: 'isThereSkud', id: 'skudId', provided: 'skudProvided', installed: 'skudInstalled', ids: 'skudIds' },
 }
 </script>
 <template>

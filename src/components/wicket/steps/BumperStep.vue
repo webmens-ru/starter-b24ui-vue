@@ -5,7 +5,6 @@ const config = {
   key: 'bumper' as const,
   title: 'Отбойник',
   page: 'page_bumper',
-  saveKeys: { isThere: 'isThereBumper', id: 'bumperId', provided: 'bumperProvided', installed: 'bumperInstalled' },
 }
 </script>
 <template>
