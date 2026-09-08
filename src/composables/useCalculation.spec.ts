@@ -1,6 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from './useCalculation'
+
+const apiMocks = vi.hoisted(() => ({ saveWicketAccessoryComposition: vi.fn() }))
+vi.mock('../app/api/wicket', async importOriginal => ({
+  ...await importOriginal<typeof import('../app/api/wicket')>(),
+  saveWicketAccessoryComposition: apiMocks.saveWicketAccessoryComposition,
+}))
 
 describe('useCalculation', () => {
   let calc: ReturnType<typeof useCalculation>
@@ -12,6 +18,7 @@ describe('useCalculation', () => {
     calc.orderId.value = 42
     calc.productRowId.value = 7
     calc.modelId.value = '1'
+    apiMocks.saveWicketAccessoryComposition.mockReset()
   })
 
   describe('loadFromApi — данные не теряются при загрузке', () => {
@@ -136,7 +143,7 @@ describe('useCalculation', () => {
       expect(calc.clientName.value).toBe('Иван')
       expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
       expect(calc.isTherePen.value).toBe(1)
-      expect(calc.isThereLock.value).toBe(0)
+      expect(calc.isThereLock.value).toBe(1)
       expect(calc.widthProyema.value).toBe('1100')
       expect(calc.shieldType.value).toBe('Тип_3')
       expect(calc.heightTopPart.value).toBe('150')
@@ -264,31 +271,24 @@ describe('useCalculation', () => {
         hasStolby: '1',
         openingOptionId: '2',
         isTherePen: '1',
-        isThereLock: '0',
       })
 
       expect(calc.hasStolby.value).toBe(1)
       expect(typeof calc.hasStolby.value).toBe('number')
     })
 
-    it('восстанавливает lockComponentIds из JSON-строки API', () => {
+    it('игнорирует legacy lockComponentIds из get-data', () => {
       calc.loadFromApi({
         lockComponentIds: '[2,5]',
         lockComponentsInstalled: 'Устанавливает заказчик',
       })
 
-      expect(calc.lockComponentIds.value).toEqual([2, 5])
-      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает заказчик')
+      expect(calc.lockComponentIds.value).toEqual([])
+      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает изготовитель')
     })
 
-    it('восстанавливает полный канонический блок фурнитуры из get-data', () => {
-      const furnitureKeys = [
-        'isThereLock',
-        'providesLock',
-        'lockInstaller',
-        'lockSetId',
-        'lockComponentIds',
-        'lockComponentsInstalled',
+    it('из get-data восстанавливает ручки, но не legacy-состав фурнитуры', () => {
+      const retainedKeys = [
         'lockPenId',
         'lockPenColorId',
         'isTherePen',
@@ -296,19 +296,6 @@ describe('useCalculation', () => {
         'penProvided',
         'penInstalled',
         'penColorId',
-        'isThereDoorCloser',
-        'doorCloserId',
-        'doorCloserProvided',
-        'doorCloserInstalled',
-        'isThereBumper',
-        'bumperId',
-        'bumperProvided',
-        'bumperInstalled',
-        'isThereSkud',
-        'skudId',
-        'skudIds',
-        'skudProvided',
-        'skudInstalled',
       ] as const
       const furniturePayload = {
         isThereLock: 0,
@@ -339,38 +326,14 @@ describe('useCalculation', () => {
         skudInstalled: 'Устанавливает заказчик',
       }
 
-      const alternatePayload = {
-        ...furniturePayload,
-        isThereLock: 1,
-        providesLock: 'Предоставляет изготовитель',
-        lockInstaller: 'Выполняет изготовитель',
-        isTherePen: 0,
-        penProvided: 'Предоставляет заказчик',
-        penInstalled: 'Устанавливает изготовитель',
-        isThereDoorCloser: 0,
-        doorCloserProvided: 'Предоставляет изготовитель',
-        doorCloserInstalled: 'Устанавливает изготовитель',
-        isThereBumper: 1,
-        bumperProvided: 'Предоставляет заказчик',
-        bumperInstalled: 'Устанавливает заказчик',
+      calc.loadFromApi(furniturePayload)
+      const savedPayload = calc.getFullSavePayload()
+      expect(Object.fromEntries(retainedKeys.map(key => [key, savedPayload[key]]))).toEqual(
+        Object.fromEntries(retainedKeys.map(key => [key, furniturePayload[key]])),
+      )
+      for (const key of ['lockSetId', 'lockComponentIds', 'doorCloserId', 'bumperId', 'skudId', 'skudIds']) {
+        expect(savedPayload).not.toHaveProperty(key)
       }
-
-      const expectExactRoundTrip = (payload: typeof furniturePayload) => {
-        expect(furnitureKeys).toHaveLength(26)
-        expect(Object.keys(payload).sort()).toEqual([...furnitureKeys].sort())
-
-        calc.loadFromApi(payload)
-
-        const savedPayload = calc.getFullSavePayload()
-        const furnitureRoundTrip = Object.fromEntries(
-          furnitureKeys.map(key => [key, savedPayload[key]]),
-        )
-
-        expect(furnitureRoundTrip).toEqual(payload)
-      }
-
-      expectExactRoundTrip(furniturePayload)
-      expectExactRoundTrip(alternatePayload)
     })
 
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
@@ -437,6 +400,11 @@ describe('useCalculation', () => {
     })
 
     it('для type2 при редактировании не блокирует вложенные шаги замка из старого visitedPages', () => {
+      calc.applyAccessoryComposition({
+        lockVersion: 2,
+        lockComponents: [{ materialItemId: 2, relationRole: 'lock_component' }],
+        skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+      } as never)
       calc.loadFromApi({
         orderId: 42,
         modelId: '2',
@@ -561,7 +529,7 @@ describe('useCalculation', () => {
       })
     })
 
-    it('getFullSavePayload досылает данные второго типа вместе с прогрессом', () => {
+    it('getFullSavePayload не дублирует комплектующие или их provider/installer в калитку', () => {
       calc.number.value = 42
       calc.modelId.value = '2'
       calc.setActivePage('page12')
@@ -580,17 +548,68 @@ describe('useCalculation', () => {
         orderId: 42,
         modelId: '2',
         reachedStep: 'page12',
-        lockSetId: 7,
         lockPenId: 3,
         lockPenColorId: 5,
-        lockComponentsInstalled: 'Устанавливает заказчик',
-        isThereDoorCloser: 1,
-        doorCloserId: 9,
       })
-      expect(payload.lockComponentIds).toBe('[2,4]')
-      expect(payload.skudIds).toBe('[10,11]')
+      const legacyAccessoryKeys = [
+        'isThereLock', 'isThereLockName', 'providesLock', 'lockInstaller',
+        'lockSetId', 'lockComponentIds', 'lockComponentsInstalled',
+        'isThereDoorCloser', 'doorCloserId', 'doorCloserProvided', 'doorCloserInstalled',
+        'isThereBumper', 'bumperId', 'bumperProvided', 'bumperInstalled',
+        'isThereSkud', 'skudId', 'skudIds', 'skudProvided', 'skudInstalled',
+      ]
+      legacyAccessoryKeys.forEach(key => expect(payload).not.toHaveProperty(key))
       expect(payload).not.toHaveProperty('materialSupplierFacade')
       expect(payload).not.toHaveProperty('materialSupplierYard')
+    })
+
+    it('сериализует полный состав комплектующих только для composition API', () => {
+      calc.accessoryCompositionLockVersion.value = 8
+      calc.lockComponentIds.value = [2, 4]
+      calc.providesLock.value = 'Предоставляет изготовитель'
+      calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
+      calc.addons.value.doorCloser = {
+        isThere: 1,
+        itemId: 9,
+        itemIds: [9],
+        marking: '',
+        provided: 'Предоставляет заказчик',
+        installed: 'Устанавливает изготовитель',
+      }
+
+      expect(calc.getAccessoryCompositionPayload()).toEqual({
+        orderId: 42,
+        productRowId: 7,
+        lockVersion: 8,
+        lockComponents: [
+          { role: 'lock_component', materialItemId: 2, providedByManufacturer: true, installedByManufacturer: false },
+          { role: 'lock_component', materialItemId: 4, providedByManufacturer: true, installedByManufacturer: false },
+        ],
+        skud: [],
+        doorClosers: [
+          { role: 'door_closer', materialItemId: 9, providedByManufacturer: false, installedByManufacturer: true },
+        ],
+        bumpers: [],
+      })
+    })
+
+    it('сохраняет complete composition после появления контекста и применяет канонический ответ', async () => {
+      calc.accessoryCompositionLockVersion.value = 8
+      apiMocks.saveWicketAccessoryComposition.mockResolvedValue({
+        lockVersion: 9,
+        lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+        orderTotals: { priceRetail: 0, priceDealer: 0 },
+      })
+
+      await calc.saveAccessoryComposition()
+
+      expect(apiMocks.saveWicketAccessoryComposition).toHaveBeenCalledWith({
+        orderId: 42,
+        productRowId: 7,
+        lockVersion: 8,
+        lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+      })
+      expect(calc.accessoryCompositionLockVersion.value).toBe(9)
     })
 
     it('не сохраняет вычисляемый внешний вид заполнения в payload заказа', () => {

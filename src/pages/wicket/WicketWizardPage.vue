@@ -4,7 +4,12 @@ import { useRoute } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { useCalculation } from '../../composables/useCalculation'
-import { loadWicketData, getAddonList, onWicketProductRowLockConflict } from '../../app/api/wicket'
+import {
+  loadWicketData,
+  getAddonList,
+  getWicketAccessoryComposition,
+  onWicketProductRowLockConflict,
+} from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
@@ -99,13 +104,15 @@ async function initCalculation(): Promise<void> {
     const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
     if (!context) return
-    const [availability, apiData] = await Promise.all([
+    const [availability, apiData, accessoryComposition] = await Promise.all([
       fetchAddonAvailability(Number(context.modelId)),
       loadWicketData(context),
+      getWicketAccessoryComposition({ orderId: context.orderId, productRowId: context.productRowId }),
     ])
     if (!isCurrentInitialization(generation)) return
     calc.addonItems.value = availability.items
     calc.availableSections.value = availability.sections
+    calc.applyAccessoryComposition(accessoryComposition)
     loadFromApi(apiData)
     calc.orderId.value = context.orderId
     calc.productRowId.value = context.productRowId
@@ -126,8 +133,18 @@ onMounted(() => {
     if (
       calc.orderId.value === context.orderId
       && calc.productRowId.value === context.productRowId
-      && String(calc.modelId.value) === context.modelId
-    ) showLockConflictModal.value = true
+      && (String(calc.modelId.value) === context.modelId || context.modelId === 'accessory-composition')
+    ) {
+      showLockConflictModal.value = true
+      if (context.modelId === 'accessory-composition') {
+        const generation = initGeneration
+        void getWicketAccessoryComposition({ orderId: context.orderId, productRowId: context.productRowId })
+          .then(composition => {
+            if (isCurrentInitialization(generation)) calc.applyAccessoryComposition(composition)
+          })
+          .catch(error => console.warn('getWicketAccessoryComposition:', error))
+      }
+    }
   })
   window.addEventListener('resize', onResize)
   void initCalculation()

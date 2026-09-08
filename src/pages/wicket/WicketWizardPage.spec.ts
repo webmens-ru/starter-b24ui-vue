@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   },
   replace: vi.fn(),
   loadWicketData: vi.fn(),
+  getWicketAccessoryComposition: vi.fn(),
   getAddonList: vi.fn(),
   listProductRows: vi.fn(),
   onWicketProductRowLockConflict: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('../../app/api/wicket', () => ({
   loadWicketData: mocks.loadWicketData,
+  getWicketAccessoryComposition: mocks.getWicketAccessoryComposition,
   getAddonList: mocks.getAddonList,
   onWicketProductRowLockConflict: mocks.onWicketProductRowLockConflict,
 }))
@@ -73,6 +75,14 @@ describe('WicketWizardPage mobile summary', () => {
       reachedStep: 'page1',
       visitedPages: ['page1'],
     })
+    mocks.getWicketAccessoryComposition.mockResolvedValue({
+      lockVersion: 3,
+      lockComponents: [],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
     mocks.getAddonList.mockResolvedValue({ items: [] })
     Reflect.deleteProperty(window, '_PARAMS_')
   })
@@ -93,6 +103,37 @@ describe('WicketWizardPage mobile summary', () => {
     await flushPromises()
 
     expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
+    expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledWith({ orderId: 42, productRowId: 7 })
+  })
+
+  it('applies canonical accessory rows instead of legacy configuration fields', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      lockComponentIds: '[999]',
+      doorCloserId: 998,
+    })
+    mocks.getWicketAccessoryComposition.mockResolvedValue({
+      lockVersion: 4,
+      lockComponents: [{ materialItemId: 11, relationRole: 'lock_component' }],
+      skud: [],
+      doorClosers: [{ materialItemId: 31, relationRole: 'door_closer_installation' }],
+      bumpers: [],
+      orderTotals: { priceRetail: 100, priceDealer: 90 },
+    })
+
+    mountPage()
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.lockComponentIds.value).toEqual([11])
+    expect(calc.addons.value.doorCloser).toMatchObject({
+      itemId: 31,
+      provided: 'Предоставляет заказчик',
+      installed: 'Устанавливает изготовитель',
+    })
   })
 
   it('shows a reload-required modal for a lock conflict in the open product row', async () => {
@@ -111,6 +152,30 @@ describe('WicketWizardPage mobile summary', () => {
 
     expect(wrapper.html()).toContain('Требуется перезагрузка')
     expect(wrapper.html()).toContain('Данные товарной позиции изменились')
+  })
+
+  it('reloads canonical children once and shows an explicit notice after a composition conflict', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    const wrapper = mountPage()
+    await flushPromises()
+    mocks.getWicketAccessoryComposition.mockClear()
+    mocks.getWicketAccessoryComposition.mockResolvedValue({
+      lockVersion: 6,
+      lockComponents: [{ materialItemId: 55, relationRole: 'lock_component' }],
+      skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 1, priceDealer: 1 },
+    })
+    const listener = mocks.onWicketProductRowLockConflict.mock.calls[0]?.[0] as (context: {
+      orderId: number
+      productRowId: number
+      modelId: string
+    }) => void
+
+    listener({ orderId: 42, productRowId: 7, modelId: 'accessory-composition' })
+    await flushPromises()
+
+    expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledTimes(1)
+    expect(useCalculation().lockComponentIds.value).toEqual([55])
+    expect(wrapper.html()).toContain('Требуется перезагрузка')
   })
 
   it('clears fields from the previously opened product row before loading the requested product row', async () => {
@@ -225,6 +290,34 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.orderId.value).toBe(43)
     expect(calc.productRowId.value).toBe(8)
     expect(calc.widthProyema.value).toBe('430')
+  })
+
+  it('ignores a stale composition response after the product row route changes', async () => {
+    let resolveOld!: (value: Record<string, unknown>) => void
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.getWicketAccessoryComposition.mockImplementation((context: { productRowId: number }) => {
+      if (context.productRowId === 7) return new Promise(resolve => { resolveOld = resolve })
+      return Promise.resolve({
+        lockVersion: 5,
+        lockComponents: [{ materialItemId: 88, relationRole: 'lock_component' }],
+        skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+      })
+    })
+    mountPage()
+    await vi.waitFor(() => expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledTimes(1))
+
+    mocks.route.query.productRowId = '8'
+    await vi.waitFor(() => expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledTimes(2))
+    await flushPromises()
+    resolveOld({
+      lockVersion: 4,
+      lockComponents: [{ materialItemId: 77, relationRole: 'lock_component' }],
+      skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+    await flushPromises()
+
+    expect(useCalculation().productRowId.value).toBe(8)
+    expect(useCalculation().lockComponentIds.value).toEqual([88])
   })
 
   it('reinitializes when the model route changes and ignores the previous model load', async () => {

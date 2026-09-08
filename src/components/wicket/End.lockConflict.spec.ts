@@ -67,6 +67,16 @@ describe('End lock-conflict integration', () => {
       if (url === '/api/order/saved-price') {
         return Promise.resolve(response({ hasSavedPrice: false, isActual: false }))
       }
+      if (url === '/api/wicket/accessory-composition') {
+        return Promise.resolve(response({
+          lockVersion: 4,
+          lockComponents: [],
+          skud: [],
+          doorClosers: [],
+          bumpers: [],
+          orderTotals: { priceRetail: 0, priceDealer: 0 },
+        }))
+      }
       return Promise.resolve(response({ items: [] }))
     })
     api.post

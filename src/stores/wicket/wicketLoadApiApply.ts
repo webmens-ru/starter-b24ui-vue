@@ -28,6 +28,30 @@ export const WICKET_API_ARRAY_KEYS = new Set([
   'lockComponentIds',
 ])
 
+/** Состав комплектующих загружается только из canonical composition API. */
+export const WICKET_LEGACY_ACCESSORY_KEYS = new Set([
+  'isThereLock',
+  'isThereLockName',
+  'providesLock',
+  'lockInstaller',
+  'lockSetId',
+  'lockComponentIds',
+  'lockComponentsInstalled',
+  'isThereDoorCloser',
+  'doorCloserId',
+  'doorCloserProvided',
+  'doorCloserInstalled',
+  'isThereBumper',
+  'bumperId',
+  'bumperProvided',
+  'bumperInstalled',
+  'isThereSkud',
+  'skudId',
+  'skudIds',
+  'skudProvided',
+  'skudInstalled',
+])
+
 const WICKET_NET_PROVIDER_KEYS = new Set([
   'netWidthProviderTop',
   'netWidthProviderLower',
@@ -126,6 +150,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (WICKET_LEGACY_ACCESSORY_KEYS.has(key)) continue
     set(key, value)
   }
 }

@@ -1,6 +1,11 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed } from 'vue'
 import type { CalcBlock } from './types'
+import type {
+  WicketAccessoryCompositionResponse,
+  WicketAccessoryRole,
+  WicketAccessorySelectionPayload,
+} from '../../app/api/wicket.types'
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
@@ -64,6 +69,7 @@ function emptyAddon(): AddonState {
 const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
 const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
 const availableSections = ref<string[]>([])
+const accessoryCompositionLockVersion = ref<number | null>(null)
 
 // Поля шага "Тип замка" и ручки в комплекте
 const typeLock      = ref<string>('Тип_1')
@@ -218,6 +224,7 @@ const fieldsFilled = ref<number>(0)
     addons.value = { doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() }
     addonItems.value = { doorCloser: [], bumper: [], skud: [] }
     availableSections.value = []
+    accessoryCompositionLockVersion.value = null
     typeLock.value = 'Тип_1'
     lockSetId.value = null
     lockPenId.value = null
@@ -297,6 +304,108 @@ const fieldsFilled = ref<number>(0)
     ])
   }
 
+  function selectionsFromRows<Role extends WicketAccessoryRole>(
+    rows: WicketAccessoryCompositionResponse[
+      Role extends 'lock_component' ? 'lockComponents'
+        : Role extends 'skud' ? 'skud'
+          : Role extends 'door_closer' ? 'doorClosers'
+            : 'bumpers'
+    ],
+    role: Role,
+  ): WicketAccessorySelectionPayload<Role>[] {
+    const selections = new Map<number, WicketAccessorySelectionPayload<Role>>()
+    for (const row of rows) {
+      const materialItemId = Number(row.materialItemId)
+      if (!Number.isSafeInteger(materialItemId) || materialItemId <= 0) continue
+      const selection = selections.get(materialItemId) ?? {
+        role,
+        materialItemId,
+        providedByManufacturer: false,
+        installedByManufacturer: false,
+      }
+      if (row.relationRole === role) selection.providedByManufacturer = true
+      if (row.relationRole === `${role}_installation`) selection.installedByManufacturer = true
+      selections.set(materialItemId, selection)
+    }
+    return [...selections.values()]
+  }
+
+  function applyAddonSelections(key: AddonKey, selections: WicketAccessorySelectionPayload[]): void {
+    const state = addons.value[key]
+    const ids = selections.map(selection => selection.materialItemId)
+    const first = selections[0]
+    state.isThere = first ? 1 : 0
+    state.itemId = first?.materialItemId ?? null
+    state.itemIds = ids
+    state.provided = first?.providedByManufacturer
+      ? 'Предоставляет изготовитель'
+      : 'Предоставляет заказчик'
+    state.installed = selections.some(selection => selection.installedByManufacturer)
+      ? 'Устанавливает изготовитель'
+      : 'Устанавливает заказчик'
+  }
+
+  function applyAccessoryComposition(composition: WicketAccessoryCompositionResponse): void {
+    accessoryCompositionLockVersion.value = composition.lockVersion
+    const lockSelections = selectionsFromRows(composition.lockComponents, 'lock_component')
+    lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
+    lockComponentsInstalled.value = lockSelections.some(selection => selection.installedByManufacturer)
+      ? 'Устанавливает изготовитель'
+      : 'Устанавливает заказчик'
+    providesLock.value = lockSelections.some(selection => selection.providedByManufacturer)
+      ? 'Предоставляет изготовитель'
+      : 'Предоставляет заказчик'
+    isThereLock.value = lockSelections.length > 0 ? 1 : 0
+    isThereLockName.value = lockSelections.length > 0 ? 'Есть' : 'Нет'
+    applyAddonSelections('skud', selectionsFromRows(composition.skud, 'skud'))
+    applyAddonSelections('doorCloser', selectionsFromRows(composition.doorClosers, 'door_closer'))
+    applyAddonSelections('bumper', selectionsFromRows(composition.bumpers, 'bumper'))
+  }
+
+  function addonSelections<Role extends Exclude<WicketAccessoryRole, 'lock_component'>>(
+    key: AddonKey,
+    role: Role,
+  ): WicketAccessorySelectionPayload<Role>[] {
+    const state = addons.value[key]
+    if (state.isThere !== 1) return []
+    const ids = key === 'skud' ? state.itemIds : [state.itemId]
+    const providedByManufacturer = state.provided === 'Предоставляет изготовитель'
+    const installs = state.installed === 'Устанавливает изготовитель'
+    return ids
+      .filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0)
+      .map((materialItemId, index) => ({
+        role,
+        materialItemId,
+        providedByManufacturer,
+        installedByManufacturer: installs && index === 0,
+      }))
+      .filter(selection => selection.providedByManufacturer || selection.installedByManufacturer)
+  }
+
+  function getAccessorySelections(): {
+    lockComponents: WicketAccessorySelectionPayload<'lock_component'>[]
+    skud: WicketAccessorySelectionPayload<'skud'>[]
+    doorClosers: WicketAccessorySelectionPayload<'door_closer'>[]
+    bumpers: WicketAccessorySelectionPayload<'bumper'>[]
+  } {
+    const providedByManufacturer = providesLock.value === 'Предоставляет изготовитель'
+    const installs = lockComponentsInstalled.value === 'Устанавливает изготовитель'
+    const lockComponents = isThereLock.value === 1
+      ? lockComponentIds.value.map((materialItemId, index) => ({
+          role: 'lock_component' as const,
+          materialItemId,
+          providedByManufacturer,
+          installedByManufacturer: installs && index === 0,
+        })).filter(selection => selection.providedByManufacturer || selection.installedByManufacturer)
+      : []
+    return {
+      lockComponents,
+      skud: addonSelections('skud', 'skud'),
+      doorClosers: addonSelections('doorCloser', 'door_closer'),
+      bumpers: addonSelections('bumper', 'bumper'),
+    }
+  }
+
   /**
    * Вычисляет visitedPages и activePage по текущему состоянию ref'ов.
    * Используется при пустом visitedPages из API (старые заказы).
@@ -362,10 +471,10 @@ const fieldsFilled = ref<number>(0)
           completed = isThereLock.value !== null
           break
         case 'page_lock_type':
-          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockSetId.value != null
+          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockComponentIds.value.length > 0
           break
         case 'page_lock_components':
-          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockSetId.value != null
+          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockComponentIds.value.length > 0
           break
         case 'page10':
           completed = isTherePen.value !== null
@@ -542,28 +651,6 @@ const fieldsFilled = ref<number>(0)
         colorFacadeImage: colorFacadeImage.value,
       })
     }
-
-    const A = apiData as Record<string, unknown>
-    const numOrNull = (v: unknown) => (v == null || v === '' ? null : Number(v))
-    const fillAddon = (k: AddonKey, isThere: unknown, id: unknown, prov: unknown, inst: unknown, ids?: unknown) => {
-      addons.value[k].isThere = Number(isThere ?? 0)
-      addons.value[k].itemId = numOrNull(id)
-      addons.value[k].provided = String(prov ?? 'Предоставляет изготовитель')
-      addons.value[k].installed = String(inst ?? 'Устанавливает изготовитель')
-      if (ids !== undefined && ids !== null && ids !== '') {
-        try {
-          const parsed = typeof ids === 'string' ? JSON.parse(ids) : ids
-          addons.value[k].itemIds = Array.isArray(parsed) ? parsed.map(Number) : []
-        } catch {
-          addons.value[k].itemIds = id ? [Number(id)] : []
-        }
-      } else {
-        addons.value[k].itemIds = id ? [Number(id)] : []
-      }
-    }
-    fillAddon('doorCloser', A.isThereDoorCloser, A.doorCloserId, A.doorCloserProvided, A.doorCloserInstalled)
-    fillAddon('bumper', A.isThereBumper, A.bumperId, A.bumperProvided, A.bumperInstalled)
-    fillAddon('skud', A.isThereSkud, A.skudId, A.skudProvided, A.skudInstalled, A.skudIds)
 
     // Когда additionalPenId задан, цвет хранится в penColor — синхронизируем additionalPenColor
     if (additionalPenId.value != null && penColor.value && !additionalPenColor.value) {
@@ -934,5 +1021,8 @@ const fieldsFilled = ref<number>(0)
     addons,
     addonItems,
     availableSections,
+    accessoryCompositionLockVersion,
+    applyAccessoryComposition,
+    getAccessorySelections,
   }
 })

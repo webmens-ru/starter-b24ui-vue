@@ -2,6 +2,8 @@ import { storeToRefs } from 'pinia'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
 import type { ProductRowContext, WicketSavePayload } from '../app/api/wicket.types'
+import type { WicketAccessoryCompositionPayload } from '../app/api/wicket.types'
+import { saveWicketAccessoryComposition as persistWicketAccessoryComposition } from '../app/api/wicket'
 
 export type { CalcBlock } from '../stores/wicket/types'
 
@@ -53,7 +55,6 @@ export function useCalculation() {
   }
 
   function getFullSavePayload(): WicketSavePayload {
-    const addons = form.addons
     const supplierPayload = String(wizard.modelId) === '2'
       ? {}
       : {
@@ -93,16 +94,9 @@ export function useCalculation() {
       heightProyema: form.heightProyema,
       clearanceProyema: form.clearanceProyema,
       sostoyaniyeProyema: form.sostoyaniyeProyema,
-      isThereLock: form.isThereLock,
-      isThereLockName: form.isThereLockName,
-      providesLock: form.providesLock,
-      lockInstaller: form.lockInstaller,
       isThereCable: form.isThereCable,
-      lockSetId: form.lockSetId,
       lockPenId: form.lockPenId,
       lockPenColorId: form.lockPenColorId,
-      lockComponentIds: JSON.stringify(form.lockComponentIds),
-      lockComponentsInstalled: form.lockComponentsInstalled,
       isTherePen: form.isTherePen,
       isTherePenName: form.isTherePenName,
       penProvided: form.penProvided,
@@ -137,20 +131,21 @@ export function useCalculation() {
       clientAddress: form.clientAddress,
       clientComment: form.clientComment,
       countryCode: form.countryCode,
-      isThereDoorCloser: addons.doorCloser.isThere,
-      doorCloserId: addons.doorCloser.itemId,
-      doorCloserProvided: addons.doorCloser.provided,
-      doorCloserInstalled: addons.doorCloser.installed,
-      isThereBumper: addons.bumper.isThere,
-      bumperId: addons.bumper.itemId,
-      bumperProvided: addons.bumper.provided,
-      bumperInstalled: addons.bumper.installed,
-      isThereSkud: addons.skud.isThere,
-      skudId: addons.skud.itemId,
-      skudIds: JSON.stringify(addons.skud.itemIds),
-      skudProvided: addons.skud.provided,
-      skudInstalled: addons.skud.installed,
     }
+  }
+
+  function getAccessoryCompositionPayload(): WicketAccessoryCompositionPayload {
+    const { orderId, productRowId } = getCurrentProductRowContext()
+    const lockVersion = form.accessoryCompositionLockVersion
+    if (!isPositiveInteger(lockVersion)) {
+      throw new Error('Версия состава комплектующих не загружена.')
+    }
+    return { orderId, productRowId, lockVersion, ...form.getAccessorySelections() }
+  }
+
+  async function saveAccessoryComposition(): Promise<void> {
+    const response = await persistWicketAccessoryComposition(getAccessoryCompositionPayload())
+    form.applyAccessoryComposition(response)
   }
 
   function reset() {
@@ -166,6 +161,9 @@ export function useCalculation() {
     getBaseSavePayload,
     getCurrentProductRowContext,
     getFullSavePayload,
+    getAccessoryCompositionPayload,
+    saveAccessoryComposition,
+    applyAccessoryComposition: form.applyAccessoryComposition,
     loadFromApi: form.loadFromApi,
     reset,
     updateOrCreateBlock: form.updateOrCreateBlock,
