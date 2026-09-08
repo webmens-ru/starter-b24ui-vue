@@ -43,9 +43,37 @@ export interface WicketAccessoryCompositionPayload extends WicketAccessoryCompos
   bumpers: WicketAccessorySelectionPayload<'bumper'>[]
 }
 
-export type WicketAccessoryProductRow<Role extends WicketAccessoryRole> = ProductRowSummary & {
-  relationRole: Role | `${Role}_installation`
+type WicketAccessoryProductRowBase = Omit<
+  ProductRowSummary,
+  | 'productType'
+  | 'modelId'
+  | 'parentProductRowId'
+  | 'materialItemId'
+  | 'rowKind'
+  | 'relationRole'
+  | 'name'
+  | 'article'
+  | 'unit'
+> & {
+  modelId: null
+  parentProductRowId: number
+  materialItemId: number
+  name: string
+  article: string
+  unit: NonNullable<ProductRowSummary['unit']>
 }
+
+export type WicketAccessoryProductRow<Role extends WicketAccessoryRole> =
+  | (WicketAccessoryProductRowBase & {
+    productType: 'material'
+    rowKind: 'material'
+    relationRole: Role
+  })
+  | (WicketAccessoryProductRowBase & {
+    productType: 'service'
+    rowKind: 'service'
+    relationRole: `${Role}_installation`
+  })
 
 export interface WicketAccessoryCompositionResponse {
   lockVersion: number

@@ -116,14 +116,26 @@ export async function getWicketAccessoryComposition(
   context: WicketAccessoryCompositionContext,
 ): Promise<WicketAccessoryCompositionResponse> {
   const { data } = await api.get('/api/wicket/accessory-composition', { params: context })
+  rememberWicketProductRowLockVersion(accessoryCompositionLockContext(context), data.data.lockVersion)
   return data.data
 }
 
 export async function saveWicketAccessoryComposition(
   payload: WicketAccessoryCompositionPayload,
 ): Promise<WicketAccessoryCompositionResponse> {
-  const { data } = await api.post('/api/wicket/accessory-composition', payload)
-  return data.data
+  const context = accessoryCompositionLockContext(payload)
+  rememberWicketProductRowLockVersion(context, payload.lockVersion)
+  return runWicketProductRowLockMutation(context, async lockVersion => {
+    const { data } = await api.post('/api/wicket/accessory-composition', { ...payload, lockVersion })
+    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+    return data.data
+  })
+}
+
+function accessoryCompositionLockContext(
+  context: WicketAccessoryCompositionContext,
+): ProductRowContext {
+  return { ...context, modelId: 'accessory-composition' }
 }
 
 function assertProductRowContext(context: Partial<ProductRowContext>): asserts context is ProductRowContext {

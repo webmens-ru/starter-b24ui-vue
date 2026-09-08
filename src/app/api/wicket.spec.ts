@@ -90,4 +90,43 @@ describe('wicket accessory composition API', () => {
     await expect(saveWicketAccessoryComposition(payload)).resolves.toEqual(response)
     expect(api.post).toHaveBeenCalledWith('/api/wicket/accessory-composition', payload)
   })
+
+  it('serializes concurrent composition saves and advances the version for the next save', async () => {
+    let resolveFirst!: (value: unknown) => void
+    const firstResponse = new Promise(resolve => { resolveFirst = resolve })
+    api.post
+      .mockReturnValueOnce(firstResponse)
+      .mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+    const { saveWicketAccessoryComposition } = await import('./wicket')
+    const payload = {
+      orderId: 42,
+      productRowId: 7,
+      lockVersion: 3,
+      lockComponents: [],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+    }
+
+    const first = saveWicketAccessoryComposition(payload)
+    const second = saveWicketAccessoryComposition(payload)
+    await Promise.resolve()
+    expect(api.post).toHaveBeenCalledTimes(1)
+    expect(api.post).toHaveBeenNthCalledWith(1, '/api/wicket/accessory-composition', payload)
+
+    resolveFirst({ data: { data: { lockVersion: 4 } } })
+    await expect(first).resolves.toEqual({ lockVersion: 4 })
+    await expect(second).resolves.toEqual({ lockVersion: 5 })
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/accessory-composition', {
+      ...payload,
+      lockVersion: 4,
+    })
+
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 6 } } })
+    await saveWicketAccessoryComposition(payload)
+    expect(api.post).toHaveBeenNthCalledWith(3, '/api/wicket/accessory-composition', {
+      ...payload,
+      lockVersion: 5,
+    })
+  })
 })
