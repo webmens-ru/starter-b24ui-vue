@@ -6,7 +6,7 @@ import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { useCalculation } from '../../composables/useCalculation'
 import {
   loadWicketData,
-  getAddonList,
+  getMaterialItems,
   getWicketAccessoryComposition,
   onWicketProductRowLockConflict,
 } from '../../app/api/wicket'
@@ -178,25 +178,25 @@ watch(isMobile, (mobile) => {
 })
 
 type AddonKey = 'doorCloser' | 'bumper' | 'skud'
-type AddonItem = Awaited<ReturnType<typeof getAddonList>>['items'][number]
+type AddonItem = Awaited<ReturnType<typeof getMaterialItems>>[number]
 
 async function fetchAddonAvailability(modelId: number): Promise<{
   items: Record<AddonKey, AddonItem[]>
   sections: string[]
 }> {
-  const map: Array<['doorCloser' | 'bumper' | 'skud', 'door-closer' | 'bumper' | 'skud', string]> = [
-    ['doorCloser', 'door-closer', 'page_door_closer'],
+  const map: Array<[AddonKey, 'door_closer' | 'bumper' | 'skud', string]> = [
+    ['doorCloser', 'door_closer', 'page_door_closer'],
     ['bumper', 'bumper', 'page_bumper'],
     ['skud', 'skud', 'page_skud'],
   ]
   const items: Record<AddonKey, AddonItem[]> = { doorCloser: [], bumper: [], skud: [] }
   const sections: string[] = []
-  await Promise.all(map.map(async ([key, section, page]) => {
+  await Promise.all(map.map(async ([key, typeCode, page]) => {
     try {
-      const res = await getAddonList(section, modelId)
-      items[key] = res.items
-      if (res.items.length) sections.push(page)
-    } catch (e) { console.warn('getAddonList', section, e) }
+      const result = await getMaterialItems({ typeCode, productType: 'wicket', modelId })
+      items[key] = result
+      if (result.length) sections.push(page)
+    } catch (e) { console.warn('getMaterialItems', typeCode, e) }
   }))
 
   return { items, sections }

@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getLockComponents, recalculate } from '../../../app/api/wicket'
+import { getMaterialItems, recalculate, type MaterialItemDto } from '../../../app/api/wicket'
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 
 const calc = useCalculation()
 
-const items = ref<Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>([])
+const items = ref<MaterialItemDto[]>([])
 const selectedIds = ref<number[]>([])
 const installed = ref<string>('Устанавливает изготовитель')
 const loading = ref(false)
+let isRestoringSelection = false
 
 const installedOptions = [
   { value: 'Устанавливает изготовитель', label: 'Устанавливает изготовитель' },
@@ -63,19 +64,20 @@ function normalizeComponentIds(value: unknown): number[] {
 }
 
 function applySavedSelection() {
-  const availableIds = new Set(items.value.map(item => item.id))
   selectedIds.value = normalizeComponentIds(calc.lockComponentIds.value)
-    .filter(id => availableIds.has(id))
   installed.value = calc.lockComponentsInstalled.value || 'Устанавливает изготовитель'
 }
 
 async function loadItems() {
   loading.value = true
   try {
-    const result = await getLockComponents(calc.modelId.value)
-    items.value = result.items ?? []
+    items.value = await getMaterialItems({
+      typeCode: 'lock_component',
+      productType: 'wicket',
+      modelId: Number(calc.modelId.value),
+    })
   } catch (e) {
-    console.warn('getLockComponents недоступен:', e)
+    console.warn('getMaterialItems недоступен:', e)
     items.value = []
   } finally {
     loading.value = false
@@ -84,7 +86,7 @@ async function loadItems() {
 
 async function save() {
   const marking = selectedIds.value
-    .map(id => items.value.find(i => i.id === id)?.marking)
+    .map(id => items.value.find(i => i.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
@@ -118,17 +120,20 @@ async function save() {
   }
 }
 
-watch(selectedIds, () => save(), { deep: true })
+watch(selectedIds, () => { if (!isRestoringSelection) void save() }, { deep: true })
 watch(installed, () => {
+  if (isRestoringSelection) return
   calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
   void save()
 })
 
 onMounted(async () => {
   calc.setActivePage('page_lock_components')
+  isRestoringSelection = true
   await loadItems()
   applySavedSelection()
-  await save()
+  await nextTick()
+  isRestoringSelection = false
 })
 </script>
 
@@ -169,12 +174,12 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">
               <div v-if="it.imageUrls?.length"
                    class="cursor-pointer"
-                   @click.stop="openLightbox(it.imageUrls, it.marking)">
-                <img :src="it.imageUrls[0]" :alt="it.marking" class="h-10 w-10 object-contain" />
+                   @click.stop="openLightbox(it.imageUrls, it.name)">
+                <img :src="it.imageUrls[0]" :alt="it.name" class="h-10 w-10 object-contain" />
               </div>
               <div v-else class="h-10 w-10 bg-gray-100 rounded" />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ it.marking }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ it.name }}</td>
           </tr>
           <tr v-if="items.length === 0">
             <td colspan="3" class="text-center py-4 text-gray-400">Нет доступных комплектующих</td>

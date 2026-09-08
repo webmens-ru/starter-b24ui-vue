@@ -54,9 +54,9 @@ describe('FurnitureAddon', () => {
     calc.accessoryCompositionLockVersion.value = 1
   })
 
-  it('сохраняет состояние доводчика только через composition API', async () => {
+  it('не сохраняет и не удаляет состав при открытии шага', async () => {
     const form = useWicketFormStore()
-    form.addonItems.doorCloser = [{ id: 1, marking: 'DC-1' }]
+    form.addonItems.doorCloser = [{ id: 101, name: 'DC-1', article: 'DC-1', imageUrls: [] }]
     const wrapper = mount(FurnitureAddon, {
       props: { config },
       global: { stubs: { B24Button: true, ImageViewer: true } },
@@ -65,13 +65,13 @@ describe('FurnitureAddon', () => {
     // Wait for onMounted async save to complete
     await new Promise(r => setTimeout(r, 100))
     expect(wrapper.text()).toContain('Доводчик')
-    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(api.saveWicketData).not.toHaveBeenCalled()
   })
 
   it('выбор «Будет» раскрывает опции предоставления', async () => {
     const form = useWicketFormStore()
-    form.addonItems.doorCloser = [{ id: 1, marking: 'DC-1' }]
+    form.addonItems.doorCloser = [{ id: 101, name: 'DC-1', article: 'DC-1', imageUrls: [] }]
     const wrapper = mount(FurnitureAddon, {
       props: { config },
       global: { stubs: { B24Button: true, ImageViewer: true } },
@@ -92,17 +92,18 @@ describe('FurnitureAddon', () => {
   it('при повторной загрузке СКУД сохраняет выбранного поставщика в первом payload', async () => {
     const form = useWicketFormStore()
     form.addonItems.skud = [
-      { id: 10, marking: 'SKUD-10' },
-      { id: 11, marking: 'SKUD-11' },
+      { id: 110, name: 'SKUD-110', article: 'SKUD-110', imageUrls: [] },
+      { id: 111, name: 'SKUD-111', article: 'SKUD-111', imageUrls: [] },
     ]
     form.addons.skud = {
       isThere: 1,
       provided: 'Предоставляет заказчик',
       installed: 'Устанавливает заказчик',
-      itemId: 10,
+      itemId: 110,
       marking: 'SKUD-10, SKUD-11',
-      itemIds: [10, 11],
+      itemIds: [110, 111],
     }
+    form.replaceAccessorySelectionIds('skud', [110, 111], { providedByManufacturer: false, installedByManufacturer: false })
 
     const wrapper = mount(FurnitureAddon, {
       props: { config: skudConfig },
@@ -111,18 +112,20 @@ describe('FurnitureAddon', () => {
     await flushPromises()
 
     expect(wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').exists()).toBe(true)
+    const secondCheckbox = wrapper.findAll('input[type="checkbox"]')[1]
+    await secondCheckbox.setValue(false)
+    await flushPromises()
     expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
     expect(api.saveWicketData).not.toHaveBeenCalled()
     const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.calls[0][0]
     expect(payload.skud).toEqual([
-      { role: 'skud', materialItemId: 10, providedByManufacturer: false, installedByManufacturer: false },
-      { role: 'skud', materialItemId: 11, providedByManufacturer: false, installedByManufacturer: false },
+      { role: 'skud', materialItemId: 110, providedByManufacturer: false, installedByManufacturer: false },
     ])
   })
 
   it('не теряет singular item, предоставленный заказчиком для установки изготовителем', async () => {
     const form = useWicketFormStore()
-    form.addonItems.doorCloser = [{ id: 31, marking: 'DC-31' }]
+    form.addonItems.doorCloser = [{ id: 31, name: 'DC-31', article: 'DC-31', imageUrls: [] }]
     form.addons.doorCloser = {
       isThere: 1,
       provided: 'Предоставляет заказчик',
@@ -135,15 +138,19 @@ describe('FurnitureAddon', () => {
     form.setAccessoryGroupProvided('door_closer', false)
     form.setAccessoryGroupInstalled('door_closer', true)
 
-    mount(FurnitureAddon, {
+    const wrapper = mount(FurnitureAddon, {
       props: { config },
       global: { stubs: { B24Button: true, ImageViewer: true } },
     })
     await flushPromises()
 
+    const customerInstall = wrapper.find('input[type="radio"][value="Устанавливает заказчик"]')
+    await customerInstall.setValue()
+    await flushPromises()
+
     const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.calls[0][0]
     expect(payload.doorClosers).toEqual([
-      { role: 'door_closer', materialItemId: 31, providedByManufacturer: false, installedByManufacturer: true },
+      { role: 'door_closer', materialItemId: 31, providedByManufacturer: false, installedByManufacturer: false },
     ])
   })
 })

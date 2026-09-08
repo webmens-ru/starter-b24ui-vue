@@ -151,12 +151,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload.materialYardGlob).toBe('Профлист')
   })
 
-  it('IsTherelock сохраняет комплектующие только через composition API', async () => {
-    calc.isThereLock.value = 0
-    calc.isThereLockName.value = 'Нет'
+  it('IsTherelock сохраняет isThereCable отдельно без legacy accessory полей', async () => {
+    calc.isThereLock.value = 1
+    calc.isThereLockName.value = 'Есть'
     calc.lockPenColorId.value = 7
 
-    mount(IsTherelock, {
+    const wrapper = mount(IsTherelock, {
       global: {
         plugins: [testRouter],
         stubs: ['B24Button'],
@@ -165,8 +165,18 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.find('input[value="Изготовитель не устанавливает"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    const payload = vi.mocked(saveWicketData).mock.calls[0][0]
+    expect(payload).toMatchObject({ orderId: 42, productRowId: 7, modelId: '1', isThereCable: 'Изготовитель не устанавливает' })
+    for (const key of ['isThereLock', 'isThereLockName', 'providesLock', 'lockInstaller', 'lockSetId', 'lockComponentIds', 'lockComponentsInstalled']) {
+      expect(payload).not.toHaveProperty(key)
+    }
   })
 
   it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
@@ -175,7 +185,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.lockPenId.value = 3
     calc.lockPenColorId.value = 5
 
-    mount(LockType, {
+    const wrapper = mount(LockType, {
       global: {
         plugins: [testRouter],
         stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
@@ -184,11 +194,22 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).not.toHaveBeenCalled()
-    expect(calc.lockSetId.value).toBe(7)
-    expect(calc.lockPenId.value).toBe(3)
-    expect(calc.lockPenColorId.value).toBe(5)
+    const penRadios = wrapper.findAll('input[type="radio"]')
+    const matchingPenRadios = penRadios.filter(input => Number((input.element as HTMLInputElement).value) === 1)
+    const firstPen = matchingPenRadios[matchingPenRadios.length - 1]
+    await firstPen?.setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketData).toHaveBeenCalled()
+    const saveCalls = vi.mocked(saveWicketData).mock.calls
+    const payload = saveCalls[saveCalls.length - 1]?.[0]
+    expect(payload).toMatchObject({ orderId: 42, productRowId: 7, modelId: '2', lockPenId: 1, lockPenColorId: 1 })
+    for (const key of ['lockSetId', 'typeLock', 'lockComponentIds', 'lockComponentsInstalled']) {
+      expect(payload).not.toHaveProperty(key)
+    }
   })
 
   it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {

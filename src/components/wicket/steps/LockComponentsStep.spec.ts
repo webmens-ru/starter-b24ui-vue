@@ -6,12 +6,11 @@ import { useCalculation } from '../../../composables/useCalculation'
 import * as api from '../../../app/api/wicket'
 
 vi.mock('../../../app/api/wicket', () => ({
-  getLockComponents: vi.fn().mockResolvedValue({
-    items: [
-      { id: 1, marking: 'Комплект 1' },
-      { id: 2, marking: 'Комплект 2' },
-    ],
-  }),
+  getMaterialItems: vi.fn().mockResolvedValue([
+    { id: 101, typeCode: 'lock_component', name: 'Комплект 1', article: 'LC-1', imageUrls: [], attributes: {}, documents: [], unit: { code: 'pcs', name: 'Штука', symbol: 'шт' }, price: 10 },
+    { id: 202, typeCode: 'lock_component', name: 'Комплект 2', article: 'LC-2', imageUrls: [], attributes: {}, documents: [], unit: { code: 'pcs', name: 'Штука', symbol: 'шт' }, price: 20 },
+  ]),
+  getLockComponents: vi.fn(),
   saveWicketData: vi.fn().mockResolvedValue(undefined),
   saveWicketAccessoryComposition: vi.fn().mockImplementation(async (payload: { lockVersion: number }) => ({
     lockVersion: payload.lockVersion + 1,
@@ -27,13 +26,13 @@ describe('LockComponentsStep', () => {
     vi.clearAllMocks()
   })
 
-  it('восстанавливает сохранённые комплектующие перед первым сохранением', async () => {
+  it('загружает universal material IDs и не сохраняет при открытии шага', async () => {
     const calc = useCalculation()
     calc.modelId.value = '2'
     calc.number.value = 42
     calc.productRowId.value = 7
     calc.accessoryCompositionLockVersion.value = 1
-    calc.lockComponentIds.value = [2]
+    calc.lockComponentIds.value = [202]
     calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
 
     const wrapper = mount(LockComponentsStep, {
@@ -47,7 +46,9 @@ describe('LockComponentsStep', () => {
     expect(checked).toHaveLength(1)
     expect((checked[0].element as HTMLInputElement).value).toBe('on')
 
-    expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(api.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'lock_component', productType: 'wicket', modelId: 2 })
+    expect(api.getLockComponents).not.toHaveBeenCalled()
+    expect(api.saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(api.saveWicketData).not.toHaveBeenCalled()
   })
 

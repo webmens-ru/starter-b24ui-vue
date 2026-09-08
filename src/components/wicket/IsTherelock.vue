@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { recalculate } from '../../app/api/wicket'
+import { saveWicketData, recalculate } from '../../app/api/wicket'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -79,6 +79,14 @@ function buildBlock() {
 }
 
 async function save() {
+  const previousLockComponents = calc.getAccessorySelections().lockComponents
+  const previous = {
+    isThereLockName: calc.isThereLockName.value,
+    isThereLock: calc.isThereLock.value,
+    providesLock: calc.providesLock.value,
+    lockInstaller: calc.lockInstaller.value,
+    isThereCable: calc.isThereCable.value,
+  }
   syncCalcFields()
   buildBlock()
 
@@ -86,8 +94,22 @@ async function save() {
     if (calc.isThereLock.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
       calc.clearAccessorySelections('lock_component')
     }
+    await saveWicketData({
+      ...calc.getBaseSavePayload(),
+      isThereCable: calc.isThereCable.value || null,
+    })
     await calc.saveAccessoryComposition()
   } catch (e) {
+    calc.setAccessorySelections('lock_component', previousLockComponents)
+    calc.isThereLockName.value = previous.isThereLockName
+    calc.isThereLock.value = previous.isThereLock
+    calc.providesLock.value = previous.providesLock
+    calc.lockInstaller.value = previous.lockInstaller
+    calc.isThereCable.value = previous.isThereCable
+    isThereLockName.value = previous.isThereLockName
+    providesLock.value = previous.providesLock
+    lockInstaller.value = previous.lockInstaller
+    isThereCable.value = previous.isThereCable
     console.warn('saveAccessoryComposition:', e)
   }
 
@@ -108,7 +130,7 @@ async function save() {
 }
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
-onMounted(async () => {
+onMounted(() => {
   calc.setActivePage('page9')
 
   if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
@@ -116,7 +138,6 @@ onMounted(async () => {
   if (calc.lockInstaller.value)     lockInstaller.value = calc.lockInstaller.value
   if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
 
-  await save()
 })
 </script>
 

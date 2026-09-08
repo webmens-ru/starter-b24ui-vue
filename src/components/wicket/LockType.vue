@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { getLocks, getPensByLock, recalculate } from '../../app/api/wicket'
+import { getLocks, getPensByLock, saveWicketData, recalculate } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
 
 interface LockItem {
@@ -127,31 +127,22 @@ watch(selectedLockId, async (id) => {
   if (!colors.some(c => c.id === selectedColor.value)) {
     selectedColor.value = colors[0]?.id ?? null
   }
-  syncSelectionToCalc()
-  updateLockBlock()
   await save()
 })
 
 watch(selectedPenId, (id) => {
   if (isRestoringSelection) return
-  calc.lockPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   const colors = pen?.colors ?? []
   if (!colors.some(c => c.id === selectedColor.value)) {
     selectedColor.value = colors[0]?.id ?? null
   }
-  updateLockBlock()
-  save()
+  void save()
 })
 
-watch(selectedColor, (colorId) => {
+watch(selectedColor, () => {
   if (isRestoringSelection) return
-  calc.lockPenColorId.value = colorId
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colorObj = pen?.colors?.find(c => c.id === colorId)
-  calc.lockPenColor.value = colorObj?.name ?? ''
-  updateLockBlock()
-  save()
+  void save()
 })
 
 function applySavedSelection() {
@@ -178,12 +169,35 @@ function applySavedSelection() {
 }
 
 async function save() {
+  const previous = {
+    lockSetId: calc.lockSetId.value,
+    typeLock: calc.typeLock.value,
+    lockPenId: calc.lockPenId.value,
+    lockPenColorId: calc.lockPenColorId.value,
+    lockPenColor: calc.lockPenColor.value,
+  }
   syncSelectionToCalc()
   updateLockBlock()
 
   try {
+    await saveWicketData({
+      ...calc.getBaseSavePayload(),
+      lockPenId: calc.lockPenId.value,
+      lockPenColorId: calc.lockPenColorId.value,
+    })
     await calc.saveAccessoryComposition()
   } catch (e) {
+    isRestoringSelection = true
+    calc.lockSetId.value = previous.lockSetId
+    calc.typeLock.value = previous.typeLock
+    calc.lockPenId.value = previous.lockPenId
+    calc.lockPenColorId.value = previous.lockPenColorId
+    calc.lockPenColor.value = previous.lockPenColor
+    selectedLockId.value = previous.lockSetId
+    selectedPenId.value = previous.lockPenId
+    selectedColor.value = previous.lockPenColorId
+    await nextTick()
+    isRestoringSelection = false
     console.warn('saveAccessoryComposition:', e)
   }
 
@@ -218,7 +232,6 @@ onMounted(async () => {
   await loadPensForLock(selectedLockId.value)
   applySavedSelection()
   isRestoringSelection = false
-  await save()
 })
 </script>
 

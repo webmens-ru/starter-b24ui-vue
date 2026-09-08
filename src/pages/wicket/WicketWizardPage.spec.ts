@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   loadWicketData: vi.fn(),
   getWicketAccessoryComposition: vi.fn(),
-  getAddonList: vi.fn(),
+  getMaterialItems: vi.fn(),
   listProductRows: vi.fn(),
   onWicketProductRowLockConflict: vi.fn(),
   navigateToProductRows: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('vue-router', () => ({
 vi.mock('../../app/api/wicket', () => ({
   loadWicketData: mocks.loadWicketData,
   getWicketAccessoryComposition: mocks.getWicketAccessoryComposition,
-  getAddonList: mocks.getAddonList,
+  getMaterialItems: mocks.getMaterialItems,
   onWicketProductRowLockConflict: mocks.onWicketProductRowLockConflict,
 }))
 
@@ -83,7 +83,7 @@ describe('WicketWizardPage mobile summary', () => {
       bumpers: [],
       orderTotals: { priceRetail: 0, priceDealer: 0 },
     })
-    mocks.getAddonList.mockResolvedValue({ items: [] })
+    mocks.getMaterialItems.mockResolvedValue([])
     Reflect.deleteProperty(window, '_PARAMS_')
   })
 
@@ -104,6 +104,10 @@ describe('WicketWizardPage mobile summary', () => {
 
     expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
     expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledWith({ orderId: 42, productRowId: 7 })
+    expect(mocks.getMaterialItems).toHaveBeenCalledTimes(3)
+    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'door_closer', productType: 'wicket', modelId: 1 })
+    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'bumper', productType: 'wicket', modelId: 1 })
+    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'skud', productType: 'wicket', modelId: 1 })
   })
 
   it('applies canonical accessory rows instead of legacy configuration fields', async () => {
@@ -240,7 +244,7 @@ describe('WicketWizardPage mobile summary', () => {
 
     expect(wrapper.html(), 'undefined-to-null productRowId transition').toContain('Некорректный контекст товарной позиции')
     expect(mocks.navigateToProductRows, 'undefined-to-null productRowId transition').toHaveBeenCalledTimes(1)
-    expect(mocks.getAddonList, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
+    expect(mocks.getMaterialItems, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
     expect(mocks.loadWicketData, 'undefined-to-null productRowId transition').not.toHaveBeenCalled()
   })
 
@@ -277,7 +281,7 @@ describe('WicketWizardPage mobile summary', () => {
 
       expect(malformedWrapper.html(), testCase.label).toContain('Некорректный контекст товарной позиции')
       expect(mocks.navigateToProductRows, testCase.label).not.toHaveBeenCalled()
-      expect(mocks.getAddonList, testCase.label).not.toHaveBeenCalled()
+      expect(mocks.getMaterialItems, testCase.label).not.toHaveBeenCalled()
       expect(mocks.loadWicketData, testCase.label).not.toHaveBeenCalled()
       malformedWrapper.unmount()
     }

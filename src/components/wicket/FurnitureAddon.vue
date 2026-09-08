@@ -88,12 +88,12 @@ function sync() {
       st.itemIds = [...selectedIds.value]
       st.itemId = selectedIds.value[0] ?? null
       st.marking = selectedIds.value
-        .map(id => items.value.find(i => i.id === id)?.marking)
+        .map(id => items.value.find(i => i.id === id)?.name)
         .filter(Boolean)
         .join(', ')
     } else if (showSelection.value) {
       st.itemId = selectedId.value
-      st.marking = items.value.find(i => i.id === selectedId.value)?.marking ?? ''
+      st.marking = items.value.find(i => i.id === selectedId.value)?.name ?? ''
     }
   } else {
     st.provided = ''; st.installed = ''; st.itemId = null; st.marking = ''
@@ -111,7 +111,7 @@ function buildBlock() {
     params.push({ name: 'Устанавливает', value: st.installed })
     if (isMulti.value && st.itemIds.length > 0) {
       const labels = st.itemIds
-        .map(id => items.value.find(i => i.id === id)?.marking)
+        .map(id => items.value.find(i => i.id === id)?.name)
         .filter(Boolean)
       if (labels.length > 0) {
         params.push({ name: 'Модели', value: labels.join(', ') })
@@ -167,10 +167,6 @@ watch(installed, () => {
 
 onMounted(async () => {
   calc.setActivePage(props.config.page)
-  if (!isMulti.value && showSelection.value && items.value.length && !items.value.some(i => i.id === selectedId.value)) {
-    selectedId.value = items.value[0].id
-  }
-  await save()
 })
 </script>
 
@@ -228,12 +224,12 @@ onMounted(async () => {
                       <td class="border border-gray-300 px-2 py-1">
                         <div v-if="it.imageUrls?.length"
                              class="cursor-pointer"
-                             @click.stop="openLightbox(it.imageUrls, it.marking)">
-                          <img :src="it.imageUrls[0]" :alt="it.marking" class="h-10 w-10 object-contain" />
+                             @click.stop="openLightbox(it.imageUrls, it.name)">
+                          <img :src="it.imageUrls[0]" :alt="it.name" class="h-10 w-10 object-contain" />
                         </div>
                         <div v-else class="h-10 w-10 bg-gray-100 rounded" />
                       </td>
-                      <td class="border border-gray-300 px-2 py-1">{{ it.marking }}</td>
+                      <td class="border border-gray-300 px-2 py-1">{{ it.name }}</td>
                     </tr>
                     <tr v-if="items.length === 0">
                       <td colspan="3" class="text-center py-4 text-gray-400">Нет доступных моделей</td>
@@ -248,9 +244,9 @@ onMounted(async () => {
                 <label v-for="it in items" :key="it.id" class="lock-viewer-card pen-card">
                   <input v-model="selectedId" type="radio" :value="it.id" class="sr-only" />
                   <div class="card-content">
-                    <ImageViewer v-if="it.imageUrls?.length" :title="it.marking" :images="it.imageUrls" image-height="100px" />
+                    <ImageViewer v-if="it.imageUrls?.length" :title="it.name" :images="it.imageUrls" image-height="100px" />
                     <div v-else class="pen-placeholder" aria-hidden="true" />
-                    <span class="block text-sm font-semibold text-center mt-2">{{ it.marking }}</span>
+                    <span class="block text-sm font-semibold text-center mt-2">{{ it.name }}</span>
                   </div>
                 </label>
               </div>

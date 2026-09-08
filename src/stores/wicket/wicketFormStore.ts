@@ -67,7 +67,13 @@ function emptyAddon(): AddonState {
   return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '', itemIds: [] }
 }
 const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
-const addonItems = ref<Record<AddonKey, Array<{ id: number; marking: string; weight?: number; price?: number; priceInstall?: number; imageUrls?: string[] }>>>({ doorCloser: [], bumper: [], skud: [] })
+interface AccessoryCatalogItem {
+  id: number
+  name: string
+  article: string
+  imageUrls: string[]
+}
+const addonItems = ref<Record<AddonKey, AccessoryCatalogItem[]>>({ doorCloser: [], bumper: [], skud: [] })
 const availableSections = ref<string[]>([])
 const accessoryCompositionLockVersion = ref<number | null>(null)
 const accessorySaveGeneration = ref(0)
@@ -400,6 +406,19 @@ const fieldsFilled = ref<number>(0)
     if (role === 'skud') return accessorySelections.value.skud
     if (role === 'door_closer') return accessorySelections.value.doorClosers
     return accessorySelections.value.bumpers
+  }
+
+  function setAccessorySelections(
+    role: WicketAccessoryRole,
+    selections: WicketAccessorySelectionPayload[],
+  ): void {
+    const exact = selections
+      .filter(selection => selection.role === role)
+      .map(selection => ({ ...selection }))
+    if (role === 'lock_component') accessorySelections.value.lockComponents = exact as WicketAccessorySelectionPayload<'lock_component'>[]
+    else if (role === 'skud') accessorySelections.value.skud = exact as WicketAccessorySelectionPayload<'skud'>[]
+    else if (role === 'door_closer') accessorySelections.value.doorClosers = exact as WicketAccessorySelectionPayload<'door_closer'>[]
+    else accessorySelections.value.bumpers = exact as WicketAccessorySelectionPayload<'bumper'>[]
   }
 
   function replaceAccessorySelectionIds(
@@ -903,7 +922,7 @@ const fieldsFilled = ref<number>(0)
           if (key === 'skud' && ad.itemIds.length > 0) {
             const skudItems = addonItems.value.skud
             const selectedMarkings = ad.itemIds
-              .map(id => skudItems.find(i => i.id === id)?.marking)
+              .map(id => skudItems.find(i => i.id === id)?.name)
               .filter(Boolean)
             if (selectedMarkings.length > 0) {
               p.push({ name: 'Модели', value: selectedMarkings.join(', ') })
@@ -1067,6 +1086,7 @@ const fieldsFilled = ref<number>(0)
     applyAccessoryComposition,
     getAccessorySelections,
     replaceAccessorySelectionIds,
+    setAccessorySelections,
     setAccessoryGroupProvided,
     setAccessoryGroupInstalled,
     clearAccessorySelections,
