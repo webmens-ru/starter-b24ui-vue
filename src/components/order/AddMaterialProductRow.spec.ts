@@ -6,11 +6,13 @@ import AddMaterialProductRow from './AddMaterialProductRow.vue'
 const mocks = vi.hoisted(() => ({
   getMaterialTypes: vi.fn(),
   getMaterialItems: vi.fn(),
+  getStandaloneMaterialItems: vi.fn(),
 }))
 
 vi.mock('../../app/api/wicket', () => ({
   getMaterialTypes: mocks.getMaterialTypes,
   getMaterialItems: mocks.getMaterialItems,
+  getStandaloneMaterialItems: mocks.getStandaloneMaterialItems,
 }))
 
 describe('AddMaterialProductRow', () => {
@@ -28,6 +30,28 @@ describe('AddMaterialProductRow', () => {
         attributes: {}, imageUrls: [], documents: [],
       },
     ])
+    mocks.getStandaloneMaterialItems.mockResolvedValue([
+      {
+        id: 104,
+        typeCode: 'lock_component',
+        name: 'Универсальный замок без applicability',
+        article: 'UNSCOPED-LOCK',
+        price: 900,
+        unit: { code: 'pcs', name: 'Штука', symbol: 'шт.' },
+        attributes: {}, imageUrls: [], documents: [],
+      },
+    ])
+  })
+
+  it('loads standalone catalog items without wicket-model applicability requests', async () => {
+    const wrapper = mount(AddMaterialProductRow, { props: { orderId: 42 } })
+    await flushPromises()
+    await wrapper.get('[aria-label="Тип материала"]').setValue('lock_component')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Универсальный замок без applicability')
+    expect(mocks.getStandaloneMaterialItems).toHaveBeenCalledWith('lock_component')
+    expect(mocks.getMaterialItems).not.toHaveBeenCalled()
   })
 
   it('searches active catalog items and emits a manufacturer material submission', async () => {
@@ -35,40 +59,42 @@ describe('AddMaterialProductRow', () => {
       { id: 1, code: 'lock_component', name: 'Комплектующие замка' },
       { id: 2, code: 'inactive', name: 'Архивный материал', isActive: false },
     ])
-    mocks.getMaterialItems.mockImplementation(({ modelId }: { modelId: number }) => Promise.resolve([
+    mocks.getStandaloneMaterialItems.mockResolvedValue([
       {
-        id: modelId === 2 ? 102 : 101,
+        id: 101,
         typeCode: 'lock_component',
-        name: modelId === 2 ? 'Замок для второй модели' : 'Замок из каталога',
-        article: modelId === 2 ? 'MODEL-2' : 'NEW-LOCK',
+        name: 'Замок из каталога',
+        article: 'NEW-LOCK',
         price: 1250,
         unit: { code: 'pcs', name: 'Штука', symbol: 'шт.' },
         attributes: {}, imageUrls: [], documents: [],
       },
-      ...(modelId === 3 ? [{
-        id: 103, typeCode: 'lock_component', name: 'Архивная позиция', article: 'OLD', price: 1,
-        unit: { code: 'pcs', name: 'Штука', symbol: 'шт.' }, attributes: {}, imageUrls: [], documents: [], isActive: false,
-      }] : []),
-    ]))
+      {
+        id: 102,
+        typeCode: 'lock_component',
+        name: 'Замок для standalone-продажи',
+        article: 'STANDALONE-LOCK',
+        price: 1250,
+        unit: { code: 'pcs', name: 'Штука', symbol: 'шт.' },
+        attributes: {}, imageUrls: [], documents: [],
+      },
+    ])
     const wrapper = mount(AddMaterialProductRow, { props: { orderId: 42 } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('Архивный материал')
     await wrapper.get('[aria-label="Тип материала"]').setValue('lock_component')
     await flushPromises()
-    await wrapper.get('[aria-label="Поиск материала"]').setValue('второй')
-    expect(wrapper.text()).toContain('Замок для второй модели')
+    await wrapper.get('[aria-label="Поиск материала"]').setValue('standalone')
+    expect(wrapper.text()).toContain('Замок для standalone-продажи')
     expect(wrapper.text()).not.toContain('Замок из каталога')
-    expect(wrapper.text()).not.toContain('Архивная позиция')
-    expect(mocks.getMaterialItems).toHaveBeenCalledTimes(11)
-    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'lock_component', productType: 'wicket', modelId: 11 })
+    expect(mocks.getStandaloneMaterialItems).toHaveBeenCalledTimes(1)
+    expect(mocks.getStandaloneMaterialItems).toHaveBeenCalledWith('lock_component')
+    expect(mocks.getMaterialItems).not.toHaveBeenCalled()
     await wrapper.get('[aria-label="Поиск материала"]').setValue('')
     await wrapper.get('[aria-label="Материал"]').setValue('101')
     await wrapper.get('[aria-label="Количество материала"]').setValue('3')
     await wrapper.get('[aria-label="Добавить материал в заказ"]').trigger('click')
 
-    expect(mocks.getMaterialItems).toHaveBeenCalledWith({
-      typeCode: 'lock_component', productType: 'wicket', modelId: 1,
-    })
     expect(wrapper.emitted('submit')).toEqual([[
       { materialItemId: 101, quantity: 3, installationRole: null, customerOwned: false },
     ]])
@@ -80,14 +106,14 @@ describe('AddMaterialProductRow', () => {
     await flushPromises()
     await wrapper.get('[aria-label="Тип материала"]').setValue('lock_component')
     await flushPromises()
-    await wrapper.get('[aria-label="Материал"]').setValue('101')
+    await wrapper.get('[aria-label="Материал"]').setValue('104')
     await wrapper.get('[aria-label="Материал заказчика"]').setValue(true)
     await wrapper.get('[aria-label="Добавить установку"]').setValue(true)
     await wrapper.get('[aria-label="Добавить материал в заказ"]').trigger('click')
 
     expect(wrapper.emitted('submit')).toEqual([[
       {
-        materialItemId: 101,
+        materialItemId: 104,
         quantity: 1,
         installationRole: 'lock_component_installation',
         customerOwned: true,
@@ -104,7 +130,7 @@ describe('AddMaterialProductRow', () => {
     await flushPromises()
     await wrapper.get('[aria-label="Тип материала"]').setValue('lock_component')
     await flushPromises()
-    await wrapper.get('[aria-label="Материал"]').setValue('101')
+    await wrapper.get('[aria-label="Материал"]').setValue('104')
     await wrapper.get('[aria-label="Материал заказчика"]').setValue(true)
     expect(wrapper.get('[aria-label="Добавить материал в заказ"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[aria-label="Добавить установку"]').setValue(true)

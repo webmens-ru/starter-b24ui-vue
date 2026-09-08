@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 
-import { getMaterialItems, getMaterialTypes, type MaterialItemDto, type MaterialTypeDto } from '../../app/api/wicket'
+import { getMaterialTypes, getStandaloneMaterialItems, type MaterialItemDto, type MaterialTypeDto } from '../../app/api/wicket'
 import type { ProductRowInstallationRole } from '../../app/api/productRows'
 
 export interface StandaloneMaterialSubmission {
@@ -30,7 +30,6 @@ const loadingTypes = ref(false)
 const loadingItems = ref(false)
 const errorMessage = ref<string | null>(null)
 let latestItemsLoad = 0
-const wicketModelIds = Array.from({ length: 11 }, (_, index) => index + 1)
 
 const installationRoleByType: Record<string, ProductRowInstallationRole> = {
   lock_component: 'lock_component_installation',
@@ -76,19 +75,9 @@ async function loadItems(typeCode: string): Promise<void> {
   loadingItems.value = true
   errorMessage.value = null
   try {
-    const responses = await Promise.allSettled(wicketModelIds.map(modelId => getMaterialItems({
-      typeCode,
-      productType: 'wicket',
-      modelId,
-    })))
+    const loadedItems = await getStandaloneMaterialItems(typeCode)
     if (loadId !== latestItemsLoad || selectedTypeCode.value !== typeCode) return
-    const activeItems = responses
-      .flatMap(response => response.status === 'fulfilled' ? response.value : [])
-      .filter(item => (item as MaterialItemDto & { isActive?: boolean }).isActive !== false)
-    items.value = Array.from(new Map(activeItems.map(item => [item.id, item])).values())
-    if (items.value.length === 0 && responses.every(response => response.status === 'rejected')) {
-      errorMessage.value = 'Не удалось загрузить материалы'
-    }
+    items.value = loadedItems
   } catch {
     if (loadId === latestItemsLoad && selectedTypeCode.value === typeCode) errorMessage.value = 'Не удалось загрузить материалы'
   } finally {

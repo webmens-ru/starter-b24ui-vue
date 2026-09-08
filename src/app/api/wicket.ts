@@ -654,6 +654,11 @@ export async function getMaterialItems(params: MaterialItemQuery): Promise<Mater
   return data.data.items
 }
 
+export async function getStandaloneMaterialItems(typeCode: string): Promise<MaterialItemDto[]> {
+  const { data } = await api.get('/api/dict/material/standalone-items', { params: { typeCode } })
+  return data.data.items
+}
+
 export async function getMaterialItem(id: number): Promise<MaterialItemDto> {
   const { data } = await api.get('/api/dict/material/view', { params: { id } })
   return data.data.items[0]

@@ -74,4 +74,26 @@ describe('material directory API', () => {
     )
     expect(api.get).toHaveBeenNthCalledWith(2, '/api/dict/material/view', { params: { id: 101 } })
   })
+
+  it('loads standalone catalog items without wicket applicability parameters', async () => {
+    const item = {
+      id: 104,
+      typeCode: 'plug',
+      name: 'Универсальная заглушка',
+      article: 'PLUG-STANDALONE',
+      price: 75,
+      unit: { code: 'pcs', name: 'Штука', symbol: 'шт.' },
+      attributes: {},
+      imageUrls: [],
+      documents: [],
+    }
+    api.get.mockResolvedValue({ data: { data: { items: [item] } } })
+
+    const { getStandaloneMaterialItems } = await import('./wicket')
+
+    await expect(getStandaloneMaterialItems('plug')).resolves.toEqual([item])
+    expect(api.get).toHaveBeenCalledWith('/api/dict/material/standalone-items', {
+      params: { typeCode: 'plug' },
+    })
+  })
 })
