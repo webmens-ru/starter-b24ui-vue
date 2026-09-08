@@ -55,7 +55,7 @@ vi.mock('../../components/order/AddMaterialProductRow.vue', () => ({
     props: ['orderId', 'disabled'],
     emits: ['close', 'submit'],
     setup: () => ({ materialSubmission: mocks.materialSubmission }),
-    template: '<button type="button" aria-label="Подтвердить добавление материала" @click="$emit(\'submit\', materialSubmission)">Подтвердить</button>',
+    template: '<button type="button" aria-label="Подтвердить добавление материала" @click="$emit(\'submit\', materialSubmission)">Подтвердить</button><button type="button" aria-label="Отменить добавление материала" @click="$emit(\'close\')">Отмена</button>',
   },
 }))
 
@@ -402,6 +402,78 @@ describe('ProductRowsPage', () => {
     expect(mocks.createInstallationProductRow).toHaveBeenCalledWith({
       orderId: 43, materialItemId: 101, relationRole: 'lock_component_installation',
     })
+  })
+
+  it('refreshes canonical rows and closes safely after installation fails without duplicating material creation', async () => {
+    mocks.createInstallationProductRow.mockRejectedValueOnce(new Error('Не настроена цена установки'))
+    mocks.listProductRows
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(makeOrderResponse([first, second, makeProductRow(101, { productType: 'material', modelId: null, rowKind: 'material' })]))
+    const wrapper = mountPage({ attachTo: document.body })
+    await flushPromises()
+
+    const trigger = wrapper.get('[aria-label="Добавить материал в заказ 42"]')
+    await trigger.trigger('click')
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createMaterialProductRow).toHaveBeenCalledTimes(1)
+    expect(mocks.createInstallationProductRow).toHaveBeenCalledTimes(1)
+    expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
+    expect(wrapper.get('[role="alert"]').text()).toContain('Материал добавлен, но установку не удалось добавить')
+    expect(document.activeElement).toBe(trigger.element)
+    wrapper.unmount()
+  })
+
+  it('reloads canonical rows with a conflict notice for standalone creation conflicts', async () => {
+    mocks.createMaterialProductRow.mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } })
+    mocks.listProductRows.mockResolvedValueOnce(initial).mockResolvedValueOnce(makeOrderResponse([second]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.get('[aria-label="Добавить материал в заказ 42"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
+    expect(wrapper.get('[role="status"]').text()).toContain('Товарная позиция уже была изменена другим пользователем')
+  })
+
+  it('restores the add-material trigger focus when dialog is cancelled', async () => {
+    const wrapper = mountPage({ attachTo: document.body })
+    await flushPromises()
+    const trigger = wrapper.get('[aria-label="Добавить материал в заказ 42"]')
+    await trigger.trigger('click')
+    const cancel = wrapper.get('[aria-label="Отменить добавление материала"]')
+    ;(cancel.element as HTMLButtonElement).focus()
+    await cancel.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
+    expect(document.activeElement).toBe(trigger.element)
+    wrapper.unmount()
+  })
+
+  it('removes a root and all of its children after cascade-delete refresh', async () => {
+    const child = makeProductRow(70, {
+      productType: 'material', modelId: null, rowKind: 'material', parentProductRowId: 7,
+      relationRole: 'lock_component', materialItemId: 101,
+    })
+    mocks.listProductRows
+      .mockResolvedValueOnce(makeOrderResponse([first, child, second]))
+      .mockResolvedValueOnce(makeOrderResponse([second]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await openProductRowActions(wrapper, 7)
+    await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 7"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-product-row="7"]').exists()).toBe(false)
+    expect(wrapper.find('[data-product-row="70"]').exists()).toBe(false)
+    expect(wrapper.find('[data-product-row="8"]').exists()).toBe(true)
   })
 
   it('uses a container width independent of the B24 spacing-6xl token', async () => {

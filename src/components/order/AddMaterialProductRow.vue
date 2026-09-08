@@ -30,6 +30,7 @@ const loadingTypes = ref(false)
 const loadingItems = ref(false)
 const errorMessage = ref<string | null>(null)
 let latestItemsLoad = 0
+const wicketModelIds = Array.from({ length: 11 }, (_, index) => index + 1)
 
 const installationRoleByType: Record<string, ProductRowInstallationRole> = {
   lock_component: 'lock_component_installation',
@@ -50,6 +51,10 @@ const filteredItems = computed(() => {
 
 const selectedItem = computed(() => items.value.find(item => item.id === selectedMaterialItemId.value) ?? null)
 const installationRole = computed(() => installationRoleByType[selectedTypeCode.value] ?? null)
+const canSubmit = computed(() => selectedItem.value !== null
+  && Number.isInteger(quantity.value)
+  && quantity.value > 0
+  && (!customerOwned.value || (withInstallation.value && installationRole.value !== null)))
 
 async function loadTypes(): Promise<void> {
   loadingTypes.value = true
@@ -71,9 +76,19 @@ async function loadItems(typeCode: string): Promise<void> {
   loadingItems.value = true
   errorMessage.value = null
   try {
-    const nextItems = await getMaterialItems({ typeCode, productType: 'wicket', modelId: 1 })
+    const responses = await Promise.allSettled(wicketModelIds.map(modelId => getMaterialItems({
+      typeCode,
+      productType: 'wicket',
+      modelId,
+    })))
     if (loadId !== latestItemsLoad || selectedTypeCode.value !== typeCode) return
-    items.value = nextItems
+    const activeItems = responses
+      .flatMap(response => response.status === 'fulfilled' ? response.value : [])
+      .filter(item => (item as MaterialItemDto & { isActive?: boolean }).isActive !== false)
+    items.value = Array.from(new Map(activeItems.map(item => [item.id, item])).values())
+    if (items.value.length === 0 && responses.every(response => response.status === 'rejected')) {
+      errorMessage.value = 'Не удалось загрузить материалы'
+    }
   } catch {
     if (loadId === latestItemsLoad && selectedTypeCode.value === typeCode) errorMessage.value = 'Не удалось загрузить материалы'
   } finally {
@@ -82,8 +97,7 @@ async function loadItems(typeCode: string): Promise<void> {
 }
 
 function submit(): void {
-  if (!selectedItem.value || !Number.isInteger(quantity.value) || quantity.value <= 0) return
-  if (withInstallation.value && installationRole.value === null) return
+  if (!canSubmit.value || !selectedItem.value) return
   emit('submit', {
     materialItemId: selectedItem.value.id,
     quantity: quantity.value,
@@ -92,7 +106,10 @@ function submit(): void {
   })
 }
 
-watch(selectedTypeCode, typeCode => { void loadItems(typeCode) })
+watch(selectedTypeCode, typeCode => {
+  withInstallation.value = false
+  void loadItems(typeCode)
+})
 onMounted(() => { void loadTypes() })
 </script>
 
@@ -135,7 +152,7 @@ onMounted(() => { void loadTypes() })
       </label>
       <div class="flex justify-end gap-2">
         <button type="button" class="rounded border border-gray-300 px-4 py-2" :disabled="disabled" @click="emit('close')">Отмена</button>
-        <button type="button" class="rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-40" aria-label="Добавить материал в заказ" :disabled="disabled || !selectedItem" @click="submit">Добавить</button>
+        <button type="button" class="rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-40" aria-label="Добавить материал в заказ" :disabled="disabled || !canSubmit" @click="submit">Добавить</button>
       </div>
     </div>
   </section>

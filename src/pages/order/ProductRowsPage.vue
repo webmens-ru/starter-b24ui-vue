@@ -436,19 +436,31 @@ function openAddMaterial(): void {
   if (validOrderId()) addMaterialOpen.value = true
 }
 
+async function closeAddMaterial(): Promise<void> {
+  addMaterialOpen.value = false
+  await nextTick()
+  addMaterialButton.value?.focus()
+}
+
 async function addMaterial(submission: StandaloneMaterialSubmission): Promise<void> {
   const generation = routeGeneration
   const mutationOrderId = orderId.value
   addMaterialBusy.value = true
   errorMessage.value = null
   noticeMessage.value = null
+  let materialCreated = false
   try {
+    if (submission.customerOwned && submission.installationRole === null) {
+      errorMessage.value = 'Для материала заказчика выберите установку'
+      return
+    }
     if (!submission.customerOwned) {
       await createMaterialProductRow({
         orderId: mutationOrderId,
         materialItemId: submission.materialItemId,
         quantity: submission.quantity,
       })
+      materialCreated = true
       if (!isCurrentRoute(generation, mutationOrderId)) return
     }
     if (submission.installationRole !== null) {
@@ -463,14 +475,27 @@ async function addMaterial(submission: StandaloneMaterialSubmission): Promise<vo
     if (!isCurrentRoute(generation, mutationOrderId)) return
     if (refreshResult === 'failed') {
       errorMessage.value = 'Материал добавлен, но состав заказа не удалось обновить'
+      await closeAddMaterial()
       return
     }
-    addMaterialOpen.value = false
-    await nextTick()
-    addMaterialButton.value?.focus()
+    await closeAddMaterial()
   } catch (error) {
     if (!isCurrentRoute(generation, mutationOrderId)) return
-    errorMessage.value = mutationMessage(error)
+    if (isConflict(error)) {
+      noticeMessage.value = 'Товарная позиция уже была изменена другим пользователем'
+      await loadProductRows({ preserveNotice: true })
+      if (isCurrentRoute(generation, mutationOrderId)) {
+        if (materialCreated) errorMessage.value = 'Материал добавлен, но установку не удалось добавить'
+        await closeAddMaterial()
+      }
+    } else if (materialCreated) {
+      await loadProductRows()
+      if (!isCurrentRoute(generation, mutationOrderId)) return
+      errorMessage.value = 'Материал добавлен, но установку не удалось добавить'
+      await closeAddMaterial()
+    } else {
+      errorMessage.value = mutationMessage(error)
+    }
   } finally {
     if (isCurrentRoute(generation, mutationOrderId)) addMaterialBusy.value = false
   }
@@ -636,7 +661,7 @@ watch(orderIdParam, () => {
                 v-if="addMaterialOpen"
                 :order-id="orderId"
                 :disabled="addMaterialBusy"
-                @close="addMaterialOpen = false"
+                @close="closeAddMaterial"
                 @submit="addMaterial"
               />
               <div
