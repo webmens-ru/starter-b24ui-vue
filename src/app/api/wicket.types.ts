@@ -21,9 +21,10 @@ export interface WicketCalculationPayload {
 }
 
 export type WicketAccessoryRole = 'lock_component' | 'skud' | 'door_closer' | 'bumper'
+export type WicketAccessoryInstallationRole = `${WicketAccessoryRole}_installation`
 
-export interface WicketAccessorySelectionPayload {
-  role: WicketAccessoryRole
+export interface WicketAccessorySelectionPayload<Role extends WicketAccessoryRole = WicketAccessoryRole> {
+  role: Role
   materialItemId: number
   providedByManufacturer: boolean
   installedByManufacturer: boolean
@@ -36,18 +37,22 @@ export interface WicketAccessoryCompositionContext {
 
 export interface WicketAccessoryCompositionPayload extends WicketAccessoryCompositionContext {
   lockVersion: number
-  lockComponents: WicketAccessorySelectionPayload[]
-  skud: WicketAccessorySelectionPayload[]
-  doorClosers: WicketAccessorySelectionPayload[]
-  bumpers: WicketAccessorySelectionPayload[]
+  lockComponents: WicketAccessorySelectionPayload<'lock_component'>[]
+  skud: WicketAccessorySelectionPayload<'skud'>[]
+  doorClosers: WicketAccessorySelectionPayload<'door_closer'>[]
+  bumpers: WicketAccessorySelectionPayload<'bumper'>[]
+}
+
+export type WicketAccessoryProductRow<Role extends WicketAccessoryRole> = ProductRowSummary & {
+  relationRole: Role | `${Role}_installation`
 }
 
 export interface WicketAccessoryCompositionResponse {
   lockVersion: number
-  lockComponents: ProductRowSummary[]
-  skud: ProductRowSummary[]
-  doorClosers: ProductRowSummary[]
-  bumpers: ProductRowSummary[]
+  lockComponents: WicketAccessoryProductRow<'lock_component'>[]
+  skud: WicketAccessoryProductRow<'skud'>[]
+  doorClosers: WicketAccessoryProductRow<'door_closer'>[]
+  bumpers: WicketAccessoryProductRow<'bumper'>[]
   orderTotals: OrderTotals
 }
 
