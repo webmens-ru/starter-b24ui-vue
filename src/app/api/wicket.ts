@@ -63,6 +63,9 @@ import type {
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
+  WicketAccessoryCompositionContext,
+  WicketAccessoryCompositionPayload,
+  WicketAccessoryCompositionResponse,
 } from './wicket.types'
 
 export type {
@@ -100,11 +103,28 @@ export type {
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
+  WicketAccessoryCompositionContext,
+  WicketAccessoryCompositionPayload,
+  WicketAccessoryCompositionResponse,
 }
 
 export { onWicketProductRowLockConflict } from './wicketProductRowLockVersion'
 
 const isMock = import.meta.env.VITE_MOCK === 'true'
+
+export async function getWicketAccessoryComposition(
+  context: WicketAccessoryCompositionContext,
+): Promise<WicketAccessoryCompositionResponse> {
+  const { data } = await api.get('/api/wicket/accessory-composition', { params: context })
+  return data.data
+}
+
+export async function saveWicketAccessoryComposition(
+  payload: WicketAccessoryCompositionPayload,
+): Promise<WicketAccessoryCompositionResponse> {
+  const { data } = await api.post('/api/wicket/accessory-composition', payload)
+  return data.data
+}
 
 function assertProductRowContext(context: Partial<ProductRowContext>): asserts context is ProductRowContext {
   const { orderId, productRowId, modelId } = context

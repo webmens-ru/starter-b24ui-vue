@@ -1,4 +1,4 @@
-import type { ProductRowContext } from './productRows.types'
+import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
 
 export type { ProductRowContext } from './productRows.types'
 
@@ -18,6 +18,37 @@ export interface WicketCalculationPayload {
   companyId?: number | null
   productType?: string
   model?: string
+}
+
+export type WicketAccessoryRole = 'lock_component' | 'skud' | 'door_closer' | 'bumper'
+
+export interface WicketAccessorySelectionPayload {
+  role: WicketAccessoryRole
+  materialItemId: number
+  providedByManufacturer: boolean
+  installedByManufacturer: boolean
+}
+
+export interface WicketAccessoryCompositionContext {
+  orderId: number
+  productRowId: number
+}
+
+export interface WicketAccessoryCompositionPayload extends WicketAccessoryCompositionContext {
+  lockVersion: number
+  lockComponents: WicketAccessorySelectionPayload[]
+  skud: WicketAccessorySelectionPayload[]
+  doorClosers: WicketAccessorySelectionPayload[]
+  bumpers: WicketAccessorySelectionPayload[]
+}
+
+export interface WicketAccessoryCompositionResponse {
+  lockVersion: number
+  lockComponents: ProductRowSummary[]
+  skud: ProductRowSummary[]
+  doorClosers: ProductRowSummary[]
+  bumpers: ProductRowSummary[]
+  orderTotals: OrderTotals
 }
 
 export interface SelectItem {
