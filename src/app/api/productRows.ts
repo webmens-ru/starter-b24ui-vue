@@ -26,6 +26,7 @@ export type {
   DeleteProductRowPayload,
   ProductRowAllowedAction,
   ProductRowContext,
+  ProductRowInstallationRole,
   ProductRowCalculationResponse,
   ProductRowCollectionMutationResponse,
   ProductRowListResponse,

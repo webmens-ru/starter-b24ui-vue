@@ -6,6 +6,8 @@ import { useRoute } from 'vue-router'
 import {
   calculateProductRow,
   copyProductRow,
+  createInstallationProductRow,
+  createMaterialProductRow,
   deleteProductRow,
   listProductRows,
   reorderProductRows,
@@ -18,6 +20,7 @@ import {
   type UpdateProductRowPayload,
 } from '../../app/api/productRows'
 import ProductRowTableRows from '../../components/order/ProductRowTableRows.vue'
+import AddMaterialProductRow, { type StandaloneMaterialSubmission } from '../../components/order/AddMaterialProductRow.vue'
 import OrderTotals from '../../components/order/OrderTotals.vue'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
@@ -33,7 +36,10 @@ const orderTransitionBusy = ref(false)
 const loadFailed = ref(false)
 const staleView = ref(false)
 const addProductButton = ref<HTMLButtonElement | null>(null)
+const addMaterialButton = ref<HTMLButtonElement | null>(null)
 const pageMain = ref<HTMLElement | null>(null)
+const addMaterialOpen = ref(false)
+const addMaterialBusy = ref(false)
 let latestLoadId = 0
 let routeGeneration = 0
 
@@ -44,10 +50,60 @@ const orderId = computed(() => {
 })
 const embeddedInOrderCard = computed(() => isOrderCardEmbedded(window._PARAMS_?.placementOptions?.params))
 const canReorder = computed(() => {
-  const productRows = result.value?.productRows ?? []
-  return productRows.length > 1
-    && productRows.every(productRow => productRow.allowedActions.includes('product_row.reorder'))
+  const roots = groupedProductRows.value.roots
+  return roots.length > 1
+    && roots.every(productRow => productRow.allowedActions.includes('product_row.reorder'))
 })
+
+interface GroupedProductRows {
+  roots: ProductRowSummary[]
+  groups: Array<{ root: ProductRowSummary, children: ProductRowSummary[] }>
+  rows: Array<{ productRow: ProductRowSummary, depth: 0 | 1 }>
+}
+
+const groupedProductRows = computed<GroupedProductRows>(() => {
+  const productRows = result.value?.productRows ?? []
+  const rootIds = new Set(productRows.filter(row => row.parentProductRowId === null).map(row => row.id))
+  const roots = [...productRows]
+    .filter(row => row.parentProductRowId === null || !rootIds.has(row.parentProductRowId))
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.id - right.id)
+  const childrenByParentId = new Map<number, ProductRowSummary[]>()
+  for (const productRow of productRows) {
+    if (productRow.parentProductRowId === null || !rootIds.has(productRow.parentProductRowId)) continue
+    const children = childrenByParentId.get(productRow.parentProductRowId) ?? []
+    children.push(productRow)
+    childrenByParentId.set(productRow.parentProductRowId, children)
+  }
+  const groups: GroupedProductRows['groups'] = []
+  const rows: GroupedProductRows['rows'] = []
+  for (const root of roots) {
+    const children = [...(childrenByParentId.get(root.id) ?? [])].sort(
+      (left, right) => left.sortOrder - right.sortOrder || left.id - right.id,
+    )
+    groups.push({ root, children })
+    rows.push({ productRow: presentationProductRow(root), depth: 0 })
+    for (const child of children) {
+      rows.push({ productRow: presentationProductRow(child), depth: 1 })
+    }
+  }
+  return { roots, groups, rows }
+})
+
+function presentationProductRow(productRow: ProductRowSummary): ProductRowSummary {
+  if (productRow.parentProductRowId === null && productRow.rowKind === 'product') return productRow
+  const prefix = productRow.rowKind === 'service' ? 'Услуга' : 'Комплектующее'
+  return {
+    ...productRow,
+    name: `${prefix}: ${productRow.name}`,
+    allowedActions: productRow.parentProductRowId === null
+      ? productRow.allowedActions.filter(action => action !== 'product_row.edit_configuration' && action !== 'product_row.calculate')
+      : productRow.allowedActions.filter(action => ![
+          'product_row.edit_configuration',
+          'product_row.calculate',
+          'product_row.reorder',
+        ].includes(action)),
+  }
+}
 
 function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
   return params?.orderCardEmbedded === true
@@ -322,17 +378,20 @@ async function transitionProductRowAction(productRow: ProductRowSummary, toStatu
   }))
 }
 
-async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
+async function moveProductRow(productRow: ProductRowSummary, direction: -1 | 1): Promise<void> {
   if (!result.value || staleView.value || reorderBusy.value || !canReorder.value) return
   const generation = routeGeneration
   const mutationOrderId = orderId.value
+  const index = groupedProductRows.value.roots.findIndex(root => root.id === productRow.id)
+  if (index < 0) return
   const targetIndex = index + direction
-  if (targetIndex < 0 || targetIndex >= result.value.productRows.length) return
+  if (targetIndex < 0 || targetIndex >= groupedProductRows.value.roots.length) return
 
-  const reordered = [...result.value.productRows]
-  const [moved] = reordered.splice(index, 1)
+  const reorderedGroups = [...groupedProductRows.value.groups]
+  const [movedGroup] = reorderedGroups.splice(index, 1)
+  const moved = movedGroup?.root
   if (!moved) return
-  reordered.splice(targetIndex, 0, moved)
+  reorderedGroups.splice(targetIndex, 0, movedGroup)
   errorMessage.value = null
   noticeMessage.value = null
   reorderBusy.value = true
@@ -340,7 +399,7 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
   try {
     const response = await reorderProductRows({
       orderId: mutationOrderId,
-      productRows: reordered.map(productRow => ({
+      productRows: reorderedGroups.flatMap(group => [group.root, ...group.children]).map(productRow => ({
         productRowId: productRow.id,
         lockVersion: productRow.lockVersion,
       })),
@@ -371,6 +430,50 @@ async function moveProductRow(index: number, direction: -1 | 1): Promise<void> {
 function addProduct(): void {
   if (!validOrderId()) return
   navigateToConfiguration(window._PARAMS_?.placementOptions?.params?.productRowCreateUrl)
+}
+
+function openAddMaterial(): void {
+  if (validOrderId()) addMaterialOpen.value = true
+}
+
+async function addMaterial(submission: StandaloneMaterialSubmission): Promise<void> {
+  const generation = routeGeneration
+  const mutationOrderId = orderId.value
+  addMaterialBusy.value = true
+  errorMessage.value = null
+  noticeMessage.value = null
+  try {
+    if (!submission.customerOwned) {
+      await createMaterialProductRow({
+        orderId: mutationOrderId,
+        materialItemId: submission.materialItemId,
+        quantity: submission.quantity,
+      })
+      if (!isCurrentRoute(generation, mutationOrderId)) return
+    }
+    if (submission.installationRole !== null) {
+      await createInstallationProductRow({
+        orderId: mutationOrderId,
+        materialItemId: submission.materialItemId,
+        relationRole: submission.installationRole,
+      })
+    }
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    const refreshResult = await loadProductRows()
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    if (refreshResult === 'failed') {
+      errorMessage.value = 'Материал добавлен, но состав заказа не удалось обновить'
+      return
+    }
+    addMaterialOpen.value = false
+    await nextTick()
+    addMaterialButton.value?.focus()
+  } catch (error) {
+    if (!isCurrentRoute(generation, mutationOrderId)) return
+    errorMessage.value = mutationMessage(error)
+  } finally {
+    if (isCurrentRoute(generation, mutationOrderId)) addMaterialBusy.value = false
+  }
 }
 
 async function transitionOrderStatus(toStatus: string): Promise<void> {
@@ -425,6 +528,8 @@ watch(orderIdParam, () => {
   busyProductRowIds.value = new Set()
   reorderBusy.value = false
   orderTransitionBusy.value = false
+  addMaterialOpen.value = false
+  addMaterialBusy.value = false
   void loadProductRows()
 })
 </script>
@@ -454,6 +559,16 @@ watch(orderIdParam, () => {
           >
             Добавить товарную позицию
           </button>
+          <button
+            v-if="result?.orderWorkflow.canCreateProductRow"
+            ref="addMaterialButton"
+            type="button"
+            class="rounded-lg border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            :aria-label="`Добавить материал в заказ ${orderIdParam}`"
+            @click="openAddMaterial"
+          >
+            Добавить материал
+          </button>
         </header>
 
         <main ref="pageMain" tabindex="-1" :class="embeddedInOrderCard ? 'p-4' : 'flex-1 overflow-y-auto p-4'">
@@ -470,6 +585,15 @@ watch(orderIdParam, () => {
                 @click="addProduct"
               >
                 Добавить товарную позицию
+              </button>
+              <button
+                type="button"
+                ref="addMaterialButton"
+                class="rounded-lg border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                :aria-label="`Добавить материал в заказ ${orderIdParam}`"
+                @click="openAddMaterial"
+              >
+                Добавить материал
               </button>
             </div>
 
@@ -508,6 +632,13 @@ watch(orderIdParam, () => {
             </div>
 
             <template v-else-if="result">
+              <AddMaterialProductRow
+                v-if="addMaterialOpen"
+                :order-id="orderId"
+                :disabled="addMaterialBusy"
+                @close="addMaterialOpen = false"
+                @submit="addMaterial"
+              />
               <div
                 v-if="result.productRows.length === 0"
                 class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center"
@@ -524,13 +655,15 @@ watch(orderIdParam, () => {
                 class="grid gap-3"
               >
                 <ProductRowTableRows
-                  v-for="(productRow, index) in result.productRows"
-                  :key="productRow.id"
-                  :product-row="productRow"
-                  :disabled="staleView || busyProductRowIds.has(productRow.id)"
+                  v-for="row in groupedProductRows.rows"
+                  :key="row.productRow.id"
+                  :data-product-row-depth="row.depth"
+                  :class="row.depth === 1 ? 'ml-6' : undefined"
+                  :product-row="row.productRow"
+                  :disabled="staleView || busyProductRowIds.has(row.productRow.id)"
                   :reorder-disabled="staleView || reorderBusy"
-                  :can-move-up="canReorder && index > 0"
-                  :can-move-down="canReorder && index < result.productRows.length - 1"
+                  :can-move-up="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) > 0"
+                  :can-move-down="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) < groupedProductRows.roots.length - 1"
                   @edit="editProductRow"
                   @copy="copyProductRowAction"
                   @update-quantity="updateQuantity"
@@ -539,7 +672,7 @@ watch(orderIdParam, () => {
                   @recalculate="recalculateProductRow"
                   @delete="deleteProductRowAction"
                   @transition="transitionProductRowAction"
-                  @move="(_, direction) => moveProductRow(index, direction)"
+                  @move="(_, direction) => moveProductRow(row.productRow, direction)"
                 />
               </div>
 

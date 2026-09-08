@@ -96,8 +96,14 @@ export interface CreateMaterialProductRowPayload {
 export interface CreateInstallationProductRowPayload {
   orderId: number
   materialItemId: number
-  relationRole: string
+  relationRole: ProductRowInstallationRole
 }
+
+export type ProductRowInstallationRole =
+  | 'lock_component_installation'
+  | 'skud_installation'
+  | 'door_closer_installation'
+  | 'bumper_installation'
 
 export interface UpdateProductRowPayload {
   orderId: number

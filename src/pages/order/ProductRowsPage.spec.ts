@@ -21,6 +21,14 @@ const mocks = vi.hoisted(() => ({
   calculateProductRow: vi.fn(),
   transitionOrder: vi.fn(),
   reorderProductRows: vi.fn(),
+  createMaterialProductRow: vi.fn(),
+  createInstallationProductRow: vi.fn(),
+  materialSubmission: {
+    materialItemId: 101,
+    quantity: 2,
+    installationRole: 'lock_component_installation',
+    customerOwned: false,
+  },
 }))
 
 vi.mock('vue-router', () => ({
@@ -37,6 +45,18 @@ vi.mock('../../app/api/productRows', () => ({
   calculateProductRow: mocks.calculateProductRow,
   transitionOrder: mocks.transitionOrder,
   reorderProductRows: mocks.reorderProductRows,
+  createMaterialProductRow: mocks.createMaterialProductRow,
+  createInstallationProductRow: mocks.createInstallationProductRow,
+}))
+
+vi.mock('../../components/order/AddMaterialProductRow.vue', () => ({
+  default: {
+    name: 'AddMaterialProductRow',
+    props: ['orderId', 'disabled'],
+    emits: ['close', 'submit'],
+    setup: () => ({ materialSubmission: mocks.materialSubmission }),
+    template: '<button type="button" aria-label="Подтвердить добавление материала" @click="$emit(\'submit\', materialSubmission)">Подтвердить</button>',
+  },
 }))
 
 const B24AppStub = { template: '<div data-layout="b24-app"><slot /></div>' }
@@ -209,6 +229,14 @@ describe('ProductRowsPage', () => {
     mocks.calculateProductRow.mockResolvedValue({ priceRetail: '900.00', priceDealer: '720.00', lockVersion: 5 })
     mocks.transitionOrder.mockResolvedValue({ statusCode: 'submitted_to_order' })
     mocks.reorderProductRows.mockResolvedValue({ productRows: [second, first], orderTotals: initial.orderTotals })
+    mocks.createMaterialProductRow.mockResolvedValue({ productRow: first, orderTotals: initial.orderTotals })
+    mocks.createInstallationProductRow.mockResolvedValue({ productRow: first, orderTotals: initial.orderTotals })
+    mocks.materialSubmission = {
+      materialItemId: 101,
+      quantity: 2,
+      installationRole: 'lock_component_installation',
+      customerOwned: false,
+    }
   })
 
   it('keeps the standalone B24 shell when embedded mode is not requested', async () => {
@@ -278,6 +306,102 @@ describe('ProductRowsPage', () => {
     await openProductRowActions(wrapper, 8)
     expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вверх"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('[aria-label="Переместить товарную позицию 8 вниз"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('groups child snapshots under their root and keeps reorder controls on roots only', async () => {
+    const root = makeProductRow(7, { name: 'Калитка из снимка', sortOrder: 20 })
+    const child = makeProductRow(8, {
+      productType: 'material', modelId: null, rowKind: 'material', parentProductRowId: 7,
+      materialItemId: 101, relationRole: 'lock_component', name: 'Замок из снимка', article: 'OLD-LOCK',
+      sortOrder: 10,
+      allowedActions: ['product_row.edit_configuration', 'product_row.calculate', 'product_row.reorder'],
+    })
+    const anotherRoot = makeProductRow(9, { name: 'Вторая калитка', sortOrder: 30 })
+    mocks.listProductRows.mockResolvedValueOnce(makeOrderResponse([child, anotherRoot, root]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-product-row]').map(row => row.attributes('data-product-row')))
+      .toEqual(['7', '8', '9'])
+    const childCard = wrapper.get('[data-product-row="8"]')
+    expect(childCard.attributes('data-product-row-depth')).toBe('1')
+    expect(childCard.text()).toContain('Комплектующее: Замок из снимка')
+    expect(childCard.text()).toContain('OLD-LOCK')
+    expect(childCard.classes()).toContain('ml-6')
+    await openProductRowActions(wrapper, 8)
+    expect(wrapper.find('[aria-label="Переместить товарную позицию 8 вверх"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Редактировать товарную позицию 8"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Пересчитать товарную позицию 8"]').exists()).toBe(false)
+
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').attributes('disabled')).toBeUndefined()
+    await wrapper.get('[aria-label="Переместить товарную позицию 7 вниз"]').trigger('click')
+    expect(mocks.reorderProductRows).toHaveBeenCalledWith({
+      orderId: 42,
+      productRows: [
+        { productRowId: 9, lockVersion: 1 },
+        { productRowId: 7, lockVersion: 4 },
+        { productRowId: 8, lockVersion: 1 },
+      ],
+    })
+  })
+
+  it('creates a standalone material then its root installation and restores add-button focus', async () => {
+    mocks.listProductRows
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(makeOrderResponse([first, second, makeProductRow(101, { productType: 'material', modelId: null, rowKind: 'material' })]))
+    const wrapper = mountPage({ attachTo: document.body })
+    await flushPromises()
+
+    const addButton = wrapper.get('[aria-label="Добавить материал в заказ 42"]')
+    await addButton.trigger('click')
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createMaterialProductRow).toHaveBeenCalledWith({ orderId: 42, materialItemId: 101, quantity: 2 })
+    expect(mocks.createInstallationProductRow).toHaveBeenCalledWith({
+      orderId: 42, materialItemId: 101, relationRole: 'lock_component_installation',
+    })
+    expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
+    expect(document.activeElement).toBe(addButton.element)
+    wrapper.unmount()
+  })
+
+  it('creates only a root installation for customer-owned standalone material and ignores stale route completions', async () => {
+    const pendingMaterial = deferred<unknown>()
+    mocks.createMaterialProductRow.mockImplementationOnce(() => pendingMaterial.promise)
+    mocks.listProductRows
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(makeOrderResponse([makeProductRow(43, { orderId: 43 })]))
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.get('[aria-label="Добавить материал в заказ 42"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    mocks.route.params.orderId = '43'
+    await flushPromises()
+    pendingMaterial.resolve({ productRow: first, orderTotals: initial.orderTotals })
+    await flushPromises()
+
+    expect(mocks.createInstallationProductRow).not.toHaveBeenCalled()
+    expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
+
+    mocks.materialSubmission = {
+      materialItemId: 101,
+      quantity: 1,
+      installationRole: 'lock_component_installation',
+      customerOwned: true,
+    }
+    await wrapper.get('[aria-label="Добавить материал в заказ 43"]').trigger('click')
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createMaterialProductRow).toHaveBeenCalledTimes(1)
+    expect(mocks.createInstallationProductRow).toHaveBeenCalledWith({
+      orderId: 43, materialItemId: 101, relationRole: 'lock_component_installation',
+    })
   })
 
   it('uses a container width independent of the B24 spacing-6xl token', async () => {
