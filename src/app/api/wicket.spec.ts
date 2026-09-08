@@ -84,11 +84,9 @@ describe('wicket accessory composition API', () => {
       bumpers: [],
       orderTotals: { priceRetail: 125, priceDealer: 125 },
     }
-    api.get.mockResolvedValueOnce({ data: { data: { lockVersion: 3 } } })
     api.post.mockResolvedValueOnce({ data: { data: response } })
-    const { getWicketAccessoryComposition, saveWicketAccessoryComposition } = await import('./wicket')
+    const { saveWicketAccessoryComposition } = await import('./wicket')
 
-    await getWicketAccessoryComposition(payload)
     await expect(saveWicketAccessoryComposition(payload)).resolves.toEqual(response)
     expect(api.post).toHaveBeenCalledWith('/api/wicket/accessory-composition', payload)
   })
@@ -162,6 +160,9 @@ describe('wicket accessory composition API', () => {
     await getWicketAccessoryComposition(payload)
     await expect(saveWicketAccessoryComposition(payload)).rejects.toBe(conflict)
     await expect(saveWicketAccessoryComposition(payload)).rejects.toThrow(
+      'Конфликт версии позиции',
+    )
+    await expect(saveWicketAccessoryComposition({ ...payload, lockVersion: 99 })).rejects.toThrow(
       'Конфликт версии позиции',
     )
     expect(api.post).toHaveBeenCalledTimes(1)

@@ -2,6 +2,7 @@ import api from '.'
 import { isPositiveSafeInteger } from '../positiveDecimalId'
 import {
   forgetWicketProductRowLockVersion,
+  initializeWicketProductRowLockVersion,
   rememberWicketProductRowLockVersion,
   runWicketProductRowLockMutation,
 } from './wicketProductRowLockVersion'
@@ -124,6 +125,7 @@ export async function saveWicketAccessoryComposition(
   payload: WicketAccessoryCompositionPayload,
 ): Promise<WicketAccessoryCompositionResponse> {
   const context = accessoryCompositionLockContext(payload)
+  initializeWicketProductRowLockVersion(context, payload.lockVersion)
   return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post('/api/wicket/accessory-composition', { ...payload, lockVersion })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)

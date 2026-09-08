@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   forgetWicketProductRowLockVersion,
+  initializeWicketProductRowLockVersion,
   onWicketProductRowLockConflict,
   rememberWicketProductRowLockVersion,
   requireWicketProductRowLockVersion,
@@ -10,6 +11,16 @@ import {
 } from './wicketProductRowLockVersion'
 
 describe('wicket lock version registry', () => {
+  it('initializes only an empty cache and never overwrites an existing version', () => {
+    const context = { orderId: 42, productRowId: 16, modelId: '1' }
+
+    initializeWicketProductRowLockVersion(context, 3)
+    expect(requireWicketProductRowLockVersion(context)).toBe(3)
+    initializeWicketProductRowLockVersion(context, 3)
+    initializeWicketProductRowLockVersion(context, 99)
+    expect(requireWicketProductRowLockVersion(context)).toBe(3)
+  })
+
   it('remembers versions separately, rejects unsafe boundaries, and forgets only the requested item', async () => {
     const first = { orderId: 42, productRowId: 7, modelId: '1' }
     const second = { orderId: 42, productRowId: 8, modelId: '1' }

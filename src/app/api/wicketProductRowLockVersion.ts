@@ -42,6 +42,17 @@ export function rememberWicketProductRowLockVersion(context: ProductRowContext, 
   return value
 }
 
+export function initializeWicketProductRowLockVersion(
+  context: ProductRowContext,
+  value: unknown,
+): void {
+  assertLockVersion(value)
+  const key = getKey(context)
+  if (!lockVersions.has(key) && !conflictKeys.has(key)) {
+    lockVersions.set(key, value)
+  }
+}
+
 export function requireWicketProductRowLockVersion(context: ProductRowContext): number {
   const version = lockVersions.get(getKey(context))
   if (version === undefined) {
