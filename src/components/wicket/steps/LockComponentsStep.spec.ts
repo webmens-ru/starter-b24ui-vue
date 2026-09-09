@@ -10,7 +10,6 @@ vi.mock('../../../app/api/wicket', () => ({
     { id: 101, typeCode: 'lock_component', name: 'Комплект 1', article: 'LC-1', imageUrls: [], attributes: {}, documents: [], unit: { code: 'pcs', name: 'Штука', symbol: 'шт' }, price: 10 },
     { id: 202, typeCode: 'lock_component', name: 'Комплект 2', article: 'LC-2', imageUrls: [], attributes: {}, documents: [], unit: { code: 'pcs', name: 'Штука', symbol: 'шт' }, price: 20 },
   ]),
-  getLockComponents: vi.fn(),
   saveWicketData: vi.fn().mockResolvedValue(undefined),
   saveWicketAccessoryComposition: vi.fn().mockImplementation(async (payload: { lockVersion: number }) => ({
     lockVersion: payload.lockVersion + 1,
@@ -47,7 +46,6 @@ describe('LockComponentsStep', () => {
     expect((checked[0].element as HTMLInputElement).value).toBe('on')
 
     expect(api.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'lock_component', productType: 'wicket', modelId: 2 })
-    expect(api.getLockComponents).not.toHaveBeenCalled()
     expect(api.saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(api.saveWicketData).not.toHaveBeenCalled()
   })
