@@ -6,8 +6,7 @@ import { useRoute } from 'vue-router'
 import {
   calculateProductRow,
   copyProductRow,
-  createInstallationProductRow,
-  createMaterialProductRow,
+  createStandaloneProductRows,
   deleteProductRow,
   listProductRows,
   reorderProductRows,
@@ -42,6 +41,7 @@ const addMaterialOpen = ref(false)
 const addMaterialBusy = ref(false)
 let latestLoadId = 0
 let routeGeneration = 0
+let pendingStandaloneRequest: { fingerprint: string, idempotencyKey: string } | null = null
 
 const orderIdParam = computed(() => String(route.params.orderId ?? ''))
 const orderId = computed(() => {
@@ -399,7 +399,7 @@ async function moveProductRow(productRow: ProductRowSummary, direction: -1 | 1):
   try {
     const response = await reorderProductRows({
       orderId: mutationOrderId,
-      productRows: reorderedGroups.flatMap(group => [group.root, ...group.children]).map(productRow => ({
+      productRows: reorderedGroups.map(group => group.root).map(productRow => ({
         productRowId: productRow.id,
         lockVersion: productRow.lockVersion,
       })),
@@ -437,9 +437,29 @@ function openAddMaterial(): void {
 }
 
 async function closeAddMaterial(): Promise<void> {
+  pendingStandaloneRequest = null
   addMaterialOpen.value = false
   await nextTick()
   addMaterialButton.value?.focus()
+}
+
+function standaloneRequestIdentity(
+  submission: StandaloneMaterialSubmission,
+  mutationOrderId: number,
+): { fingerprint: string, idempotencyKey: string } {
+  const fingerprint = JSON.stringify({
+    orderId: mutationOrderId,
+    materialItemId: submission.materialItemId,
+    quantity: submission.quantity,
+    providedByManufacturer: !submission.customerOwned,
+    installationRole: submission.installationRole,
+  })
+  if (pendingStandaloneRequest?.fingerprint === fingerprint) return pendingStandaloneRequest
+  const idempotencyKey = globalThis.crypto?.randomUUID?.()
+    ?? `standalone-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  pendingStandaloneRequest = { fingerprint, idempotencyKey }
+
+  return pendingStandaloneRequest
 }
 
 async function addMaterial(submission: StandaloneMaterialSubmission): Promise<void> {
@@ -448,33 +468,28 @@ async function addMaterial(submission: StandaloneMaterialSubmission): Promise<vo
   addMaterialBusy.value = true
   errorMessage.value = null
   noticeMessage.value = null
-  let materialCreated = false
   try {
     if (submission.customerOwned && submission.installationRole === null) {
       errorMessage.value = 'Для материала заказчика выберите установку'
       return
     }
-    if (!submission.customerOwned) {
-      await createMaterialProductRow({
-        orderId: mutationOrderId,
-        materialItemId: submission.materialItemId,
-        quantity: submission.quantity,
-      })
-      materialCreated = true
-      if (!isCurrentRoute(generation, mutationOrderId)) return
-    }
-    if (submission.installationRole !== null) {
-      await createInstallationProductRow({
-        orderId: mutationOrderId,
-        materialItemId: submission.materialItemId,
-        relationRole: submission.installationRole,
-      })
-    }
+    const request = standaloneRequestIdentity(submission, mutationOrderId)
+    await createStandaloneProductRows({
+      orderId: mutationOrderId,
+      materialItemId: submission.materialItemId,
+      quantity: submission.quantity,
+      providedByManufacturer: !submission.customerOwned,
+      installationRole: submission.installationRole,
+      idempotencyKey: request.idempotencyKey,
+    })
     if (!isCurrentRoute(generation, mutationOrderId)) return
+    if (pendingStandaloneRequest?.idempotencyKey === request.idempotencyKey) {
+      pendingStandaloneRequest = null
+    }
     const refreshResult = await loadProductRows()
     if (!isCurrentRoute(generation, mutationOrderId)) return
     if (refreshResult === 'failed') {
-      errorMessage.value = 'Материал добавлен, но состав заказа не удалось обновить'
+      errorMessage.value = 'Позиции созданы, но состав заказа не удалось обновить'
       await closeAddMaterial()
       return
     }
@@ -485,14 +500,8 @@ async function addMaterial(submission: StandaloneMaterialSubmission): Promise<vo
       noticeMessage.value = 'Товарная позиция уже была изменена другим пользователем'
       await loadProductRows({ preserveNotice: true })
       if (isCurrentRoute(generation, mutationOrderId)) {
-        if (materialCreated) errorMessage.value = 'Материал добавлен, но установку не удалось добавить'
         await closeAddMaterial()
       }
-    } else if (materialCreated) {
-      await loadProductRows()
-      if (!isCurrentRoute(generation, mutationOrderId)) return
-      errorMessage.value = 'Материал добавлен, но установку не удалось добавить'
-      await closeAddMaterial()
     } else {
       errorMessage.value = mutationMessage(error)
     }
@@ -545,6 +554,7 @@ onUnmounted(() => {
 
 watch(orderIdParam, () => {
   routeGeneration += 1
+  pendingStandaloneRequest = null
   result.value = null
   errorMessage.value = null
   noticeMessage.value = null

@@ -30,6 +30,13 @@ vi.mock('vue-router', () => ({
 vi.mock('../../app/api/wicket', () => ({
   loadWicketData: mocks.loadWicketData,
   getWicketAccessoryComposition: mocks.getWicketAccessoryComposition,
+  loadCoherentWicketState: async (context: { orderId: number, productRowId: number, modelId: string }) => ({
+    wicketData: await mocks.loadWicketData(context),
+    accessoryComposition: await mocks.getWicketAccessoryComposition({
+      orderId: context.orderId,
+      productRowId: context.productRowId,
+    }),
+  }),
   getMaterialItems: mocks.getMaterialItems,
   onWicketProductRowLockConflict: mocks.onWicketProductRowLockConflict,
 }))

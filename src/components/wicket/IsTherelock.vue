@@ -12,8 +12,14 @@ const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const isThereLockName  = ref<string>('Есть')
-const providesLock  = ref<string>('Предоставляет изготовитель')
-const lockInstaller = ref<string>('Выполняет изготовитель')
+const providesLock = computed<string>({
+  get: () => calc.providesLock.value || 'Предоставляет изготовитель',
+  set: value => { calc.providesLock.value = value },
+})
+const lockInstaller = computed<string>({
+  get: () => calc.lockInstaller.value || 'Выполняет изготовитель',
+  set: value => { calc.lockInstaller.value = value },
+})
 const isThereCable = ref<string>('Изготовитель устанавливает')
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
@@ -40,18 +46,7 @@ function syncCalcFields() {
   calc.isThereLock.value   = isThereLockName.value === 'Есть' ? 1 : 0
 
   if (showLockDetails.value) {
-    calc.providesLock.value  = providesLock.value
-    calc.lockInstaller.value = lockInstaller.value
     calc.isThereCable.value = isThereCable.value
-    if (providesLock.value === 'Предоставляет заказчик') {
-      calc.typeLock.value      = ''
-      calc.lockSetId.value    = null
-      calc.lockPenId.value    = null
-      calc.lockPenColor.value = ''
-      calc.lockPenColorId.value = null
-      calc.lockComponentIds.value = []
-      calc.lockComponentsInstalled.value = 'Устанавливает изготовитель'
-    }
   } else {
     calc.providesLock.value  = ''
     calc.lockInstaller.value = ''
@@ -80,6 +75,7 @@ function buildBlock() {
 
 async function save() {
   const previousLockComponents = calc.getAccessorySelections().lockComponents
+  const hadCanonicalSelection = previousLockComponents.length > 0
   const previous = {
     isThereLockName: calc.isThereLockName.value,
     isThereLock: calc.isThereLock.value,
@@ -91,14 +87,25 @@ async function save() {
   buildBlock()
 
   try {
-    if (calc.isThereLock.value === 0 || calc.providesLock.value === 'Предоставляет заказчик') {
+    if (calc.isThereLock.value === 0) {
       calc.clearAccessorySelections('lock_component')
+    } else {
+      calc.setAccessoryGroupProvided(
+        'lock_component',
+        calc.providesLock.value === 'Предоставляет изготовитель',
+      )
+      calc.setAccessoryGroupInstalled(
+        'lock_component',
+        calc.lockInstaller.value === 'Выполняет изготовитель',
+      )
     }
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       isThereCable: calc.isThereCable.value || null,
     })
-    await calc.saveAccessoryComposition()
+    if (calc.isThereLock.value === 0 || hadCanonicalSelection) {
+      await calc.saveAccessoryComposition()
+    }
   } catch (e) {
     calc.setAccessorySelections('lock_component', previousLockComponents)
     calc.isThereLockName.value = previous.isThereLockName
@@ -134,8 +141,6 @@ onMounted(() => {
   calc.setActivePage('page9')
 
   if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
-  if (calc.providesLock.value)      providesLock.value  = calc.providesLock.value
-  if (calc.lockInstaller.value)     lockInstaller.value = calc.lockInstaller.value
   if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
 
 })

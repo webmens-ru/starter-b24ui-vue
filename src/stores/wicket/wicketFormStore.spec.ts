@@ -49,6 +49,30 @@ function composition(): WicketAccessoryCompositionResponse {
 describe('wicketFormStore accessory composition', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
+  it('keeps manufacturer defaults when an empty canonical composition starts a fresh choice', () => {
+    const store = useWicketFormStore()
+    const empty = composition()
+    empty.lockComponents = []
+    empty.skud = []
+    empty.doorClosers = []
+    empty.bumpers = []
+
+    store.applyAccessoryComposition(empty)
+
+    expect(store.providesLock).toBe('Предоставляет изготовитель')
+    expect(store.lockInstaller).toBe('Выполняет изготовитель')
+    expect(store.addons.doorCloser).toMatchObject({
+      isThere: 0,
+      provided: 'Предоставляет изготовитель',
+      installed: 'Устанавливает изготовитель',
+    })
+    expect(store.addons.bumper).toMatchObject({
+      isThere: 0,
+      provided: 'Предоставляет изготовитель',
+      installed: 'Устанавливает изготовитель',
+    })
+  })
+
   it('restores grouped selections and installation choices from canonical child rows', () => {
     const store = useWicketFormStore()
 
@@ -111,6 +135,35 @@ describe('wicketFormStore accessory composition', () => {
         { role: 'door_closer', materialItemId: 31, providedByManufacturer: true, installedByManufacturer: false },
       ],
       bumpers: [],
+    })
+  })
+
+  it('round-trips customer-owned lock, closer, and bumper installation tariffs unchanged', () => {
+    const store = useWicketFormStore()
+    store.lockInstaller = 'Выполняет заказчик'
+    const source = composition()
+    source.lockComponents = [source.lockComponents[1]]
+    source.doorClosers = [{ ...source.doorClosers[0], productType: 'service', rowKind: 'service', relationRole: 'door_closer_installation' }]
+    source.bumpers = [{ ...source.doorClosers[0], materialItemId: 41, productType: 'service', rowKind: 'service', relationRole: 'bumper_installation' }]
+
+    store.applyAccessoryComposition(source)
+
+    expect(store.providesLock).toBe('Предоставляет заказчик')
+    expect(store.lockInstaller).toBe('Выполняет изготовитель')
+    expect(store.addons.doorCloser).toMatchObject({
+      itemId: 31,
+      provided: 'Предоставляет заказчик',
+      installed: 'Устанавливает изготовитель',
+    })
+    expect(store.addons.bumper).toMatchObject({
+      itemId: 41,
+      provided: 'Предоставляет заказчик',
+      installed: 'Устанавливает изготовитель',
+    })
+    expect(store.getAccessorySelections()).toMatchObject({
+      lockComponents: [{ role: 'lock_component', materialItemId: 11, providedByManufacturer: false, installedByManufacturer: true }],
+      doorClosers: [{ role: 'door_closer', materialItemId: 31, providedByManufacturer: false, installedByManufacturer: true }],
+      bumpers: [{ role: 'bumper', materialItemId: 41, providedByManufacturer: false, installedByManufacturer: true }],
     })
   })
 })

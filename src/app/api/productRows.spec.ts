@@ -257,6 +257,25 @@ describe('product row API', () => {
     })
   })
 
+  it('creates standalone goods and installation through one idempotent command', async () => {
+    api.post.mockResolvedValueOnce({
+      data: { data: { productRows: [item], orderTotals: { priceRetail: 1000, priceDealer: 800 } } },
+    })
+    const { createStandaloneProductRows } = await import('./productRows')
+    const payload = {
+      orderId: 42,
+      materialItemId: 101,
+      quantity: 2,
+      providedByManufacturer: true,
+      installationRole: 'lock_component_installation' as const,
+      idempotencyKey: 'request-123',
+    }
+
+    await createStandaloneProductRows(payload)
+
+    expect(api.post).toHaveBeenCalledWith('/api/product-row/create-standalone', payload)
+  })
+
   it('updates an item with its optimistic lock version', async () => {
     api.post.mockResolvedValueOnce({ data: { data: { item, orderTotals: { priceRetail: 1000, priceDealer: 800 } } } })
 

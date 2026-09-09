@@ -99,6 +99,15 @@ export interface CreateInstallationProductRowPayload {
   relationRole: ProductRowInstallationRole
 }
 
+export interface CreateStandaloneProductRowsPayload {
+  orderId: number
+  materialItemId: number
+  quantity: number
+  providedByManufacturer: boolean
+  installationRole: ProductRowInstallationRole | null
+  idempotencyKey: string
+}
+
 export type ProductRowInstallationRole =
   | 'lock_component_installation'
   | 'skud_installation'

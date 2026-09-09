@@ -5,9 +5,9 @@ import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { useCalculation } from '../../composables/useCalculation'
 import {
-  loadWicketData,
-  getMaterialItems,
   getWicketAccessoryComposition,
+  getMaterialItems,
+  loadCoherentWicketState,
   onWicketProductRowLockConflict,
 } from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
@@ -104,16 +104,15 @@ async function initCalculation(): Promise<void> {
     const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
     if (!context) return
-    const [availability, apiData, accessoryComposition] = await Promise.all([
+    const [availability, coherentState] = await Promise.all([
       fetchAddonAvailability(Number(context.modelId)),
-      loadWicketData(context),
-      getWicketAccessoryComposition({ orderId: context.orderId, productRowId: context.productRowId }),
+      loadCoherentWicketState(context),
     ])
     if (!isCurrentInitialization(generation)) return
     calc.addonItems.value = availability.items
     calc.availableSections.value = availability.sections
-    calc.applyAccessoryComposition(accessoryComposition)
-    loadFromApi(apiData)
+    calc.applyAccessoryComposition(coherentState.accessoryComposition)
+    loadFromApi(coherentState.wicketData)
     calc.orderId.value = context.orderId
     calc.productRowId.value = context.productRowId
     calc.modelId.value = context.modelId

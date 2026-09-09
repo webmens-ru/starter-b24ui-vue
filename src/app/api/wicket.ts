@@ -116,9 +116,7 @@ const isMock = import.meta.env.VITE_MOCK === 'true'
 export async function getWicketAccessoryComposition(
   context: WicketAccessoryCompositionContext,
 ): Promise<WicketAccessoryCompositionResponse> {
-  const { data } = await api.get('/api/wicket/accessory-composition', { params: context })
-  rememberWicketProductRowLockVersion(accessoryCompositionLockContext(context), data.data.lockVersion)
-  return data.data
+  return fetchWicketAccessoryComposition(context, true)
 }
 
 export async function saveWicketAccessoryComposition(
@@ -126,11 +124,22 @@ export async function saveWicketAccessoryComposition(
 ): Promise<WicketAccessoryCompositionResponse> {
   const context = accessoryCompositionLockContext(payload)
   initializeWicketProductRowLockVersion(context, payload.lockVersion)
-  return runWicketProductRowLockMutation(context, async lockVersion => {
-    const { data } = await api.post('/api/wicket/accessory-composition', { ...payload, lockVersion })
+  return runWicketProductRowLockMutation(context, async () => {
+    const { data } = await api.post('/api/wicket/accessory-composition', payload)
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
     return data.data
   })
+}
+
+async function fetchWicketAccessoryComposition(
+  context: WicketAccessoryCompositionContext,
+  rememberVersion: boolean,
+): Promise<WicketAccessoryCompositionResponse> {
+  const { data } = await api.get('/api/wicket/accessory-composition', { params: context })
+  if (rememberVersion) {
+    rememberWicketProductRowLockVersion(accessoryCompositionLockContext(context), data.data.lockVersion)
+  }
+  return data.data
 }
 
 function accessoryCompositionLockContext(
@@ -192,9 +201,45 @@ export async function createWicketMainMenu(payload: WicketMainMenuPayload): Prom
 export async function loadWicketData(context: ProductRowContext): Promise<Record<string, unknown>> {
   assertProductRowContext(context)
   if (isMock) return mockLoadWicketData(context.orderId)
+  return fetchWicketData(context, true)
+}
+
+async function fetchWicketData(
+  context: ProductRowContext,
+  rememberVersion: boolean,
+): Promise<Record<string, unknown>> {
   const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
-  rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+  if (rememberVersion) rememberWicketProductRowLockVersion(context, data.data.lockVersion)
   return data.data
+}
+
+export async function loadCoherentWicketState(context: ProductRowContext): Promise<{
+  wicketData: Record<string, unknown>
+  accessoryComposition: WicketAccessoryCompositionResponse
+}> {
+  assertProductRowContext(context)
+  const compositionContext = { orderId: context.orderId, productRowId: context.productRowId }
+  const maxAttempts = 3
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const [wicketData, accessoryComposition] = isMock
+      ? await Promise.all([loadWicketData(context), getWicketAccessoryComposition(compositionContext)])
+      : await Promise.all([
+          fetchWicketData(context, false),
+          fetchWicketAccessoryComposition(compositionContext, false),
+        ])
+    const wicketVersion = wicketData.lockVersion
+    const compositionVersion = accessoryComposition.lockVersion
+    if (
+      isPositiveSafeInteger(wicketVersion)
+      && wicketVersion === compositionVersion
+    ) {
+      rememberWicketProductRowLockVersion(context, wicketVersion)
+      return { wicketData, accessoryComposition }
+    }
+  }
+
+  throw new Error('Не удалось загрузить согласованное состояние товарной позиции. Повторите загрузку.')
 }
 
 export async function getFilterOptions(url: string, type?: string): Promise<FilterOptions> {
@@ -427,11 +472,11 @@ export async function getNetsByWidth(sizeA: number | string): Promise<{
 }
 
 /** Список замков с картинками — для выбора карточкой. */
-export async function getLocks(): Promise<{
-  items: Array<{ id: number; marking: string; imageUrls: string[] }>
+export async function getLocks(modelId: number): Promise<{
+  items: Array<{ id: number; marking: string; imageUrls: string[]; materialItemIds: number[] }>
 }> {
   if (isMock) return mockGetLocks()
-  const { data } = await api.get('/api/dict/lock/get-list')
+  const { data } = await api.get('/api/dict/lock/get-list', { params: { modelId } })
   return data.data
 }
 

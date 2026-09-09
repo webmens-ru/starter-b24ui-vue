@@ -5,6 +5,7 @@ import type {
   CreateProductRowPayload,
   CreateMaterialProductRowPayload,
   CreateInstallationProductRowPayload,
+  CreateStandaloneProductRowsPayload,
   DeleteProductRowPayload,
   ProductRowListResponse,
   ProductRowCalculationResponse,
@@ -23,6 +24,7 @@ export type {
   CreateProductRowPayload,
   CreateMaterialProductRowPayload,
   CreateInstallationProductRowPayload,
+  CreateStandaloneProductRowsPayload,
   DeleteProductRowPayload,
   ProductRowAllowedAction,
   ProductRowContext,
@@ -62,6 +64,13 @@ export async function createInstallationProductRow(
   payload: CreateInstallationProductRowPayload,
 ): Promise<ProductRowMutationResponse> {
   const { data } = await api.post('/api/product-row/create-installation', payload)
+  return data.data
+}
+
+export async function createStandaloneProductRows(
+  payload: CreateStandaloneProductRowsPayload,
+): Promise<ProductRowCollectionMutationResponse> {
+  const { data } = await api.post('/api/product-row/create-standalone', payload)
   return data.data
 }
 

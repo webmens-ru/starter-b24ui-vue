@@ -464,13 +464,13 @@ export async function mockGetNetsByWidth(_sizeA: number | string): Promise<{
 // ─── Мок замков ─────────────────────────────────────────────────────────────────
 
 export async function mockGetLocks(): Promise<{
-  items: Array<{ id: number; marking: string; imageUrls: string[] }>
+  items: Array<{ id: number; marking: string; imageUrls: string[]; materialItemIds: number[] }>
 }> {
   await delay(100)
   return {
     items: [
-      { id: 1, marking: 'STUBLINA 1032', imageUrls: [] },
-      { id: 2, marking: 'STUBLINA 1028', imageUrls: [] },
+      { id: 1, marking: 'STUBLINA 1032', imageUrls: [], materialItemIds: [] },
+      { id: 2, marking: 'STUBLINA 1028', imageUrls: [], materialItemIds: [] },
     ],
   }
 }

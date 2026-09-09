@@ -3,6 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const api = { get: vi.fn(), post: vi.fn() }
 vi.mock('.', () => ({ default: api }))
 
+function deferred<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+} {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 const productRow = {
   id: 11,
   orderId: 42,
@@ -61,6 +72,17 @@ describe('wicket accessory composition API', () => {
     })
   })
 
+  it('loads lock templates scoped to the wicket model with exact universal material ids', async () => {
+    const response = {
+      items: [{ id: 7, marking: 'Set 7', imageUrls: [], materialItemIds: [701, 702] }],
+    }
+    api.get.mockResolvedValueOnce({ data: { data: response } })
+    const { getLocks } = await import('./wicket')
+
+    await expect(getLocks(2)).resolves.toEqual(response)
+    expect(api.get).toHaveBeenCalledWith('/api/dict/lock/get-list', { params: { modelId: 2 } })
+  })
+
   it('saves the complete composition with its lock version', async () => {
     const payload = {
       orderId: 42,
@@ -91,7 +113,7 @@ describe('wicket accessory composition API', () => {
     expect(api.post).toHaveBeenCalledWith('/api/wicket/accessory-composition', payload)
   })
 
-  it('serializes concurrent composition saves and advances the version for the next save', async () => {
+  it('serializes concurrent complete composition saves without silently changing their expected versions', async () => {
     let resolveFirst!: (value: unknown) => void
     const firstResponse = new Promise(resolve => { resolveFirst = resolve })
     api.post
@@ -119,17 +141,75 @@ describe('wicket accessory composition API', () => {
     resolveFirst({ data: { data: { lockVersion: 4 } } })
     await expect(first).resolves.toEqual({ lockVersion: 4 })
     await expect(second).resolves.toEqual({ lockVersion: 5 })
-    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/accessory-composition', {
-      ...payload,
-      lockVersion: 4,
-    })
+    expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/accessory-composition', payload)
 
     api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 6 } } })
     await saveWicketAccessoryComposition(payload)
-    expect(api.post).toHaveBeenNthCalledWith(3, '/api/wicket/accessory-composition', {
-      ...payload,
-      lockVersion: 5,
+    expect(api.post).toHaveBeenNthCalledWith(3, '/api/wicket/accessory-composition', payload)
+  })
+
+  it('retries independently delayed reads and never upgrades the coherent desired-state version on save', async () => {
+    const staleRoot = { orderId: 42, productRowId: 7, modelId: '1', lockVersion: 3, width: 900 }
+    const currentRoot = { ...staleRoot, lockVersion: 4, width: 1000 }
+    const currentComposition = {
+      lockVersion: 4,
+      lockComponents: [productRow],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+      orderTotals: { priceRetail: 125, priceDealer: 125 },
+    }
+    const staleRootResponse = deferred<{ data: { data: typeof staleRoot } }>()
+    const firstCompositionResponse = deferred<{ data: { data: typeof currentComposition } }>()
+    const currentRootResponse = deferred<{ data: { data: typeof currentRoot } }>()
+    const secondCompositionResponse = deferred<{ data: { data: typeof currentComposition } }>()
+    api.get
+      .mockReturnValueOnce(staleRootResponse.promise)
+      .mockReturnValueOnce(firstCompositionResponse.promise)
+      .mockReturnValueOnce(currentRootResponse.promise)
+      .mockReturnValueOnce(secondCompositionResponse.promise)
+
+    const {
+      loadCoherentWicketState,
+      loadWicketData,
+      saveWicketAccessoryComposition,
+    } = await import('./wicket')
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    const coherentLoad = loadCoherentWicketState(context)
+
+    expect(api.get).toHaveBeenCalledTimes(2)
+    firstCompositionResponse.resolve({ data: { data: currentComposition } })
+    await Promise.resolve()
+    expect(api.get).toHaveBeenCalledTimes(2)
+    staleRootResponse.resolve({ data: { data: staleRoot } })
+    await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(4))
+
+    currentRootResponse.resolve({ data: { data: currentRoot } })
+    await Promise.resolve()
+    secondCompositionResponse.resolve({ data: { data: currentComposition } })
+
+    await expect(coherentLoad).resolves.toEqual({
+      wicketData: currentRoot,
+      accessoryComposition: currentComposition,
     })
+    expect(api.get).toHaveBeenCalledTimes(4)
+
+    api.get.mockResolvedValueOnce({ data: { data: { ...currentRoot, lockVersion: 5 } } })
+    await loadWicketData(context)
+
+    const conflict = { response: { status: 409 } }
+    api.post.mockRejectedValueOnce(conflict)
+    const desiredState = {
+      orderId: 42,
+      productRowId: 7,
+      lockVersion: currentComposition.lockVersion,
+      lockComponents: [],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+    }
+    await expect(saveWicketAccessoryComposition(desiredState)).rejects.toBe(conflict)
+    expect(api.post).toHaveBeenCalledWith('/api/wicket/accessory-composition', desiredState)
   })
 
   it('keeps a 409 conflict latched until an authoritative load supplies a newer version', async () => {
@@ -169,7 +249,7 @@ describe('wicket accessory composition API', () => {
     expect(listener).toHaveBeenCalledTimes(1)
 
     await getWicketAccessoryComposition(payload)
-    await expect(saveWicketAccessoryComposition(payload)).resolves.toEqual({ lockVersion: 5 })
+    await expect(saveWicketAccessoryComposition({ ...payload, lockVersion: 4 })).resolves.toEqual({ lockVersion: 5 })
     expect(api.post).toHaveBeenCalledTimes(2)
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/accessory-composition', {
       ...payload,

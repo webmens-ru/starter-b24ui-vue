@@ -19,13 +19,19 @@ const isMulti = computed(() => props.config.key === 'skud')
 const role = computed<WicketAccessoryRole>(() => props.config.key === 'doorCloser' ? 'door_closer' : props.config.key)
 
 const isThereName = ref<string>(isMulti.value ? 'Будет' : (calc.addons.value[props.config.key].isThere === 1 ? 'Будет' : 'Не будет'))
-const provided = ref<string>(calc.addons.value[props.config.key].provided || 'Предоставляет изготовитель')
-const installed = ref<string>(calc.addons.value[props.config.key].installed || 'Устанавливает изготовитель')
+const provided = computed<string>({
+  get: () => calc.addons.value[props.config.key].provided || 'Предоставляет изготовитель',
+  set: value => { calc.addons.value[props.config.key].provided = value },
+})
+const installed = computed<string>({
+  get: () => calc.addons.value[props.config.key].installed || 'Устанавливает изготовитель',
+  set: value => { calc.addons.value[props.config.key].installed = value },
+})
 const selectedId = ref<number | null>(calc.addons.value[props.config.key].itemId)
 const selectedIds = ref<number[]>([...calc.addons.value[props.config.key].itemIds])
 
 const showDetails = computed(() => isMulti.value || isThereName.value === 'Будет')
-const showSelection = computed(() => isMulti.value || provided.value === 'Предоставляет изготовитель')
+const showSelection = computed(() => true)
 const showProvided = true
 const showIsThere = computed(() => !isMulti.value)
 
@@ -124,19 +130,29 @@ function buildBlock() {
 }
 
 async function save() {
+  const previousSelections = calc.getAccessorySelections()
+  const hadCanonicalSelection = role.value === 'door_closer'
+    ? previousSelections.doorClosers.length > 0
+    : role.value === 'bumper'
+      ? previousSelections.bumpers.length > 0
+      : previousSelections.skud.length > 0
   sync(); buildBlock()
   const st = calc.addons.value[props.config.key]
+  let hasDesiredSelection = false
   try {
     if (st.isThere !== 1) {
       calc.clearAccessorySelections(role.value)
     } else {
       const ids = isMulti.value ? st.itemIds : [st.itemId].filter((id): id is number => id !== null)
+      hasDesiredSelection = ids.length > 0
       calc.replaceAccessorySelectionIds(role.value, ids, {
         providedByManufacturer: st.provided === 'Предоставляет изготовитель',
         installedByManufacturer: st.installed === 'Устанавливает изготовитель',
       })
     }
-    await calc.saveAccessoryComposition()
+    if (hasDesiredSelection || hadCanonicalSelection) {
+      await calc.saveAccessoryComposition()
+    }
   } catch (e) { console.warn('saveAccessoryComposition:', e) }
 
   if (calc.priceRetail.value) {
@@ -156,14 +172,16 @@ async function save() {
 watch(selectedId, () => { if (!isMulti.value) void save() })
 watch(selectedIds, () => { if (isMulti.value) void save() }, { deep: true })
 watch(isThereName, () => save())
-watch(provided, () => {
+
+function changeProvided(): void {
   calc.setAccessoryGroupProvided(role.value, provided.value === 'Предоставляет изготовитель')
   void save()
-})
-watch(installed, () => {
+}
+
+function changeInstalled(): void {
   calc.setAccessoryGroupInstalled(role.value, installed.value === 'Устанавливает изготовитель')
   void save()
-})
+}
 
 onMounted(async () => {
   calc.setActivePage(props.config.page)
@@ -189,12 +207,12 @@ onMounted(async () => {
       <template v-if="showDetails">
         <div v-if="showProvided" class="option-grid">
           <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
-            <input v-model="provided" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="provided" type="radio" :value="opt.value" class="sr-only" @change="changeProvided" />
             <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
         </div>
         <div class="option-grid">
           <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-            <input v-model="installed" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="installed" type="radio" :value="opt.value" class="sr-only" @change="changeInstalled" />
             <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
         </div>
 

@@ -92,13 +92,22 @@ const lockPenId    = ref<number | null>(null)
 const lockPenColor = ref<string>('')
 const lockPenColorId = ref<number | null>(null)
 const lockComponentIds = ref<number[]>([])
-const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
 const isThereLock     = ref<number>(1)
 const providesLock      = ref<string>('Предоставляет изготовитель')
 const lockInstaller     = ref<string>('Выполняет изготовитель')
+const lockComponentsInstalled = computed<string>({
+  get: () => lockInstaller.value === 'Выполняет изготовитель'
+    ? 'Устанавливает изготовитель'
+    : 'Устанавливает заказчик',
+  set: value => {
+    lockInstaller.value = value === 'Устанавливает изготовитель'
+      ? 'Выполняет изготовитель'
+      : 'Выполняет заказчик'
+  },
+})
 const isThereCable     = ref<string>('Изготовитель устанавливает')
 
 // Поля шага "Проем"
@@ -353,10 +362,10 @@ const fieldsFilled = ref<number>(0)
     state.isThere = first ? 1 : 0
     state.itemId = first?.materialItemId ?? null
     state.itemIds = ids
-    state.provided = first?.providedByManufacturer
+    state.provided = !first || first.providedByManufacturer
       ? 'Предоставляет изготовитель'
       : 'Предоставляет заказчик'
-    state.installed = selections.some(selection => selection.installedByManufacturer)
+    state.installed = !first || selections.some(selection => selection.installedByManufacturer)
       ? 'Устанавливает изготовитель'
       : 'Устанавливает заказчик'
   }
@@ -374,12 +383,13 @@ const fieldsFilled = ref<number>(0)
       bumpers: bumperSelections,
     }
     lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
-    lockComponentsInstalled.value = lockSelections.some(selection => selection.installedByManufacturer)
-      ? 'Устанавливает изготовитель'
-      : 'Устанавливает заказчик'
-    providesLock.value = lockSelections.some(selection => selection.providedByManufacturer)
+    const hasLockComponents = lockSelections.length > 0
+    providesLock.value = !hasLockComponents || lockSelections.some(selection => selection.providedByManufacturer)
       ? 'Предоставляет изготовитель'
       : 'Предоставляет заказчик'
+    lockInstaller.value = !hasLockComponents || lockSelections.some(selection => selection.installedByManufacturer)
+      ? 'Выполняет изготовитель'
+      : 'Выполняет заказчик'
     isThereLock.value = lockSelections.length > 0 ? 1 : 0
     isThereLockName.value = lockSelections.length > 0 ? 'Есть' : 'Нет'
     applyAddonSelections('skud', skudSelections)
@@ -532,10 +542,10 @@ const fieldsFilled = ref<number>(0)
           completed = isThereLock.value !== null
           break
         case 'page_lock_type':
-          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockComponentIds.value.length > 0
+          completed = isThereLock.value !== 1 || lockComponentIds.value.length > 0
           break
         case 'page_lock_components':
-          completed = isThereLock.value !== 1 || providesLock.value === 'Предоставляет заказчик' || lockComponentIds.value.length > 0
+          completed = isThereLock.value !== 1 || lockComponentIds.value.length > 0
           break
         case 'page10':
           completed = isTherePen.value !== null

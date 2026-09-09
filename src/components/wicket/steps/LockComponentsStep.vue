@@ -9,7 +9,16 @@ const calc = useCalculation()
 
 const items = ref<MaterialItemDto[]>([])
 const selectedIds = ref<number[]>([])
-const installed = ref<string>('Устанавливает изготовитель')
+const installed = computed<string>({
+  get: () => calc.lockInstaller.value === 'Выполняет изготовитель'
+    ? 'Устанавливает изготовитель'
+    : 'Устанавливает заказчик',
+  set: value => {
+    calc.lockInstaller.value = value === 'Устанавливает изготовитель'
+      ? 'Выполняет изготовитель'
+      : 'Выполняет заказчик'
+  },
+})
 const loading = ref(false)
 let isRestoringSelection = false
 
@@ -65,7 +74,6 @@ function normalizeComponentIds(value: unknown): number[] {
 
 function applySavedSelection() {
   selectedIds.value = normalizeComponentIds(calc.lockComponentIds.value)
-  installed.value = calc.lockComponentsInstalled.value || 'Устанавливает изготовитель'
 }
 
 async function loadItems() {
@@ -121,11 +129,12 @@ async function save() {
 }
 
 watch(selectedIds, () => { if (!isRestoringSelection) void save() }, { deep: true })
-watch(installed, () => {
+
+function changeInstalled(): void {
   if (isRestoringSelection) return
   calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
   void save()
-})
+}
 
 onMounted(async () => {
   calc.setActivePage('page_lock_components')
@@ -147,7 +156,7 @@ onMounted(async () => {
 
     <div class="option-grid">
       <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-        <input v-model="installed" type="radio" :value="opt.value" class="sr-only" />
+        <input v-model="installed" type="radio" :value="opt.value" class="sr-only" @change="changeInstalled" />
         <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
     </div>
 

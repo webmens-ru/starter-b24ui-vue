@@ -8,6 +8,7 @@ interface LockItem {
   id: number
   marking: string
   imageUrls: string[]
+  materialItemIds: number[]
 }
 
 interface PenItem {
@@ -54,6 +55,15 @@ function syncSelectionToCalc() {
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
   calc.lockPenColor.value = colorObj?.name ?? ''
+  if (lock) applyLockTemplate(lock)
+}
+
+function applyLockTemplate(lock: LockItem) {
+  calc.lockComponentIds.value = [...lock.materialItemIds]
+  calc.replaceAccessorySelectionIds('lock_component', lock.materialItemIds, {
+    providedByManufacturer: calc.providesLock.value === 'Предоставляет изготовитель',
+    installedByManufacturer: calc.lockInstaller.value === 'Выполняет изготовитель',
+  })
 }
 
 function updateLockBlock() {
@@ -79,7 +89,7 @@ function updateLockBlock() {
 async function loadLocks() {
   loading.value = true
   try {
-    const res = await getLocks()
+    const res = await getLocks(Number(calc.modelId.value))
     lockItems.value = res.items
   } catch (e) {
     console.warn('getLocks:', e)
@@ -115,29 +125,38 @@ async function loadPensForLock(lockSetId: number | null) {
 
 watch(selectedLockId, async (id) => {
   if (isRestoringSelection) return
-  await loadPensForLock(id)
-  if (penItems.value.length === 0) {
-    selectedPenId.value = null
-    selectedColor.value = null
-  } else if (!selectedPenId.value || !penItems.value.some(p => p.id === selectedPenId.value)) {
-    selectedPenId.value = penItems.value[0].id
-  }
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors ?? []
-  if (!colors.some(c => c.id === selectedColor.value)) {
-    selectedColor.value = colors[0]?.id ?? null
+  isRestoringSelection = true
+  try {
+    await loadPensForLock(id)
+    if (penItems.value.length === 0) {
+      selectedPenId.value = null
+      selectedColor.value = null
+    } else if (!selectedPenId.value || !penItems.value.some(p => p.id === selectedPenId.value)) {
+      selectedPenId.value = penItems.value[0].id
+    }
+    const pen = penItems.value.find(p => p.id === selectedPenId.value)
+    const colors = pen?.colors ?? []
+    if (!colors.some(c => c.id === selectedColor.value)) {
+      selectedColor.value = colors[0]?.id ?? null
+    }
+    await nextTick()
+  } finally {
+    isRestoringSelection = false
   }
   await save()
 })
 
-watch(selectedPenId, (id) => {
+watch(selectedPenId, async (id) => {
   if (isRestoringSelection) return
+  isRestoringSelection = true
   const pen = penItems.value.find(p => p.id === id)
   const colors = pen?.colors ?? []
   if (!colors.some(c => c.id === selectedColor.value)) {
     selectedColor.value = colors[0]?.id ?? null
   }
-  void save()
+  await nextTick()
+  isRestoringSelection = false
+  await save()
 })
 
 watch(selectedColor, () => {
@@ -149,7 +168,13 @@ function applySavedSelection() {
   if (!lockItems.value.length) return
   const savedLockSetId = calc.lockSetId.value
   const lockMatch = lockItems.value.find(l => l.id === savedLockSetId)
-  selectedLockId.value = lockMatch ? lockMatch.id : lockItems.value[0].id
+  if (!lockMatch) {
+    selectedLockId.value = null
+    selectedPenId.value = null
+    selectedColor.value = null
+    return
+  }
+  selectedLockId.value = lockMatch.id
 
   const savedPenId = calc.lockPenId.value
   if (savedPenId != null && penItems.value.some(p => p.id === savedPenId)) {
@@ -168,6 +193,20 @@ function applySavedSelection() {
   }
 }
 
+function inferSavedLockSetId(): number | null {
+  if (calc.lockSetId.value != null && lockItems.value.some(lock => lock.id === calc.lockSetId.value)) {
+    return calc.lockSetId.value
+  }
+  const currentIds = [...calc.lockComponentIds.value].sort((left, right) => left - right)
+  const exact = lockItems.value.find(lock => (
+    [...lock.materialItemIds].sort((left, right) => left - right).join(',') === currentIds.join(',')
+  ))
+  if (exact) return exact.id
+  if (currentIds.length !== 1) return null
+  const installationMatches = lockItems.value.filter(lock => lock.materialItemIds[0] === currentIds[0])
+  return installationMatches.length === 1 ? installationMatches[0].id : null
+}
+
 async function save() {
   const previous = {
     lockSetId: calc.lockSetId.value,
@@ -175,6 +214,8 @@ async function save() {
     lockPenId: calc.lockPenId.value,
     lockPenColorId: calc.lockPenColorId.value,
     lockPenColor: calc.lockPenColor.value,
+    lockComponentIds: [...calc.lockComponentIds.value],
+    lockComponents: calc.getAccessorySelections().lockComponents,
   }
   syncSelectionToCalc()
   updateLockBlock()
@@ -193,6 +234,8 @@ async function save() {
     calc.lockPenId.value = previous.lockPenId
     calc.lockPenColorId.value = previous.lockPenColorId
     calc.lockPenColor.value = previous.lockPenColor
+    calc.lockComponentIds.value = previous.lockComponentIds
+    calc.setAccessorySelections('lock_component', previous.lockComponents)
     selectedLockId.value = previous.lockSetId
     selectedPenId.value = previous.lockPenId
     selectedColor.value = previous.lockPenColorId
@@ -221,16 +264,18 @@ onMounted(async () => {
   calc.setActivePage('page_lock_type')
   isRestoringSelection = true
   await loadLocks()
-  const savedLockSetId = calc.lockSetId.value
+  const savedLockSetId = inferSavedLockSetId()
   selectedPenId.value = calc.lockPenId.value
   selectedColor.value = calc.lockPenColorId.value
   if (savedLockSetId != null && lockItems.value.some(l => l.id === savedLockSetId)) {
+    calc.lockSetId.value = savedLockSetId
     selectedLockId.value = savedLockSetId
-  } else if (lockItems.value.length > 0) {
-    selectedLockId.value = lockItems.value[0].id
   }
   await loadPensForLock(selectedLockId.value)
   applySavedSelection()
+  const selectedLock = lockItems.value.find(lock => lock.id === selectedLockId.value)
+  if (selectedLock && savedLockSetId !== null) applyLockTemplate(selectedLock)
+  await nextTick()
   isRestoringSelection = false
 })
 </script>

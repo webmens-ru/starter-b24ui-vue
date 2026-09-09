@@ -153,4 +153,74 @@ describe('FurnitureAddon', () => {
       { role: 'door_closer', materialItemId: 31, providedByManufacturer: false, installedByManufacturer: false },
     ])
   })
+
+  it.each([
+    ['doorCloser', 'door_closer', 'Доводчик', 'page_door_closer', 31],
+    ['bumper', 'bumper', 'Отбойник', 'page_bumper', 41],
+  ] as const)(
+    'позволяет свежему customer-owned %s выбрать тариф установки изготовителем',
+    async (key, role, title, page, materialItemId) => {
+      const form = useWicketFormStore()
+      form.addonItems[key] = [{ id: materialItemId, name: `${title}-${materialItemId}`, article: `A-${materialItemId}`, imageUrls: [] }]
+      const wrapper = mount(FurnitureAddon, {
+        props: { config: { key, title, page } },
+        global: { stubs: { B24Button: true, ImageViewer: true } },
+      })
+      await wrapper.find('input[type="radio"][value="Будет"]').setValue()
+      await wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').setValue()
+      expect(form.addons[key].provided).toBe('Предоставляет заказчик')
+      expect(form.addons[key].installed).toBe('Устанавливает изготовитель')
+      const material = wrapper.find(`input[type="radio"][value="${materialItemId}"]`)
+      expect(material.exists()).toBe(true)
+      await material.setValue()
+      await flushPromises()
+
+      const calls = vi.mocked(api.saveWicketAccessoryComposition).mock.calls
+      const payload = calls[calls.length - 1]?.[0]
+      const bucket = role === 'door_closer' ? payload?.doorClosers : payload?.bumpers
+      expect(bucket).toEqual([{ role, materialItemId, providedByManufacturer: false, installedByManufacturer: true }])
+    },
+  )
+
+  it.each([
+    ['doorCloser', 'door_closer', 'Доводчик', 'page_door_closer', 31, true, false],
+    ['doorCloser', 'door_closer', 'Доводчик', 'page_door_closer', 31, false, true],
+    ['bumper', 'bumper', 'Отбойник', 'page_bumper', 41, true, false],
+    ['bumper', 'bumper', 'Отбойник', 'page_bumper', 41, false, true],
+  ] as const)(
+    'round-trips GET → %s UI → unchanged POST for provider=%s installer flags',
+    async (key, role, title, page, materialItemId, providedByManufacturer, installedByManufacturer) => {
+      const form = useWicketFormStore()
+      form.addonItems[key] = [{ id: materialItemId, name: `${title}-${materialItemId}`, article: `A-${materialItemId}`, imageUrls: [] }]
+      const row = (relationRole: string) => ({ materialItemId, relationRole }) as never
+      const rows = [
+        ...(providedByManufacturer ? [row(role)] : []),
+        ...(installedByManufacturer ? [row(`${role}_installation`)] : []),
+      ]
+      form.applyAccessoryComposition({
+        lockVersion: 1,
+        lockComponents: [], skud: [],
+        doorClosers: key === 'doorCloser' ? rows : [],
+        bumpers: key === 'bumper' ? rows : [],
+        orderTotals: { priceRetail: 0, priceDealer: 0 },
+      })
+
+      const wrapper = mount(FurnitureAddon, {
+        props: { config: { key, title, page } },
+        global: { stubs: { B24Button: true, ImageViewer: true } },
+      })
+      await flushPromises()
+
+      const provider = providedByManufacturer ? 'Предоставляет изготовитель' : 'Предоставляет заказчик'
+      const installer = installedByManufacturer ? 'Устанавливает изготовитель' : 'Устанавливает заказчик'
+      expect(wrapper.find(`input[value="${provider}"]:checked`).exists()).toBe(true)
+      expect(wrapper.find(`input[value="${installer}"]:checked`).exists()).toBe(true)
+      await wrapper.find(`input[value="${provider}"]`).trigger('change')
+      await flushPromises()
+
+      const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.calls[0]?.[0]
+      const bucket = role === 'door_closer' ? payload?.doorClosers : payload?.bumpers
+      expect(bucket).toEqual([{ role, materialItemId, providedByManufacturer, installedByManufacturer }])
+    },
+  )
 })

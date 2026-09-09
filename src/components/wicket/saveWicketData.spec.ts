@@ -40,8 +40,8 @@ vi.mock('../../app/api/wicket', () => ({
   getProfnastilTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getLocks: vi.fn().mockResolvedValue({
     items: [
-      { id: 1, marking: 'Первый замок', imageUrls: [] },
-      { id: 7, marking: 'Сохранённый замок', imageUrls: [] },
+      { id: 1, marking: 'Первый замок', imageUrls: [], materialItemIds: [101] },
+      { id: 7, marking: 'Сохранённый замок', imageUrls: [], materialItemIds: [701, 702] },
     ],
   }),
   getPensByLock: vi.fn().mockResolvedValue({
@@ -170,13 +170,80 @@ describe('saveWicketData — данные передаются на бэк', () 
     await wrapper.find('input[value="Изготовитель не устанавливает"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).toHaveBeenCalledTimes(1)
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
     expect(payload).toMatchObject({ orderId: 42, productRowId: 7, modelId: '1', isThereCable: 'Изготовитель не устанавливает' })
     for (const key of ['isThereLock', 'isThereLockName', 'providesLock', 'lockInstaller', 'lockSetId', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
     }
+  })
+
+  it('IsTherelock round-trips customer-owned installation GET → UI → unchanged POST', async () => {
+    calc.applyAccessoryComposition({
+      lockVersion: 1,
+      lockComponents: [{ materialItemId: 701, relationRole: 'lock_component_installation' }] as never,
+      skud: [], doorClosers: [], bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+
+    const wrapper = mount(IsTherelock, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await new Promise(r => setTimeout(r, 100))
+    vi.mocked(saveWicketAccessoryComposition).mockClear()
+
+    expect(wrapper.find('input[value="Предоставляет заказчик"]:checked').exists()).toBe(true)
+    expect(wrapper.find('input[value="Выполняет изготовитель"]:checked').exists()).toBe(true)
+    await wrapper.find('input[value="Предоставляет заказчик"]').trigger('change')
+    await new Promise(r => setTimeout(r, 100))
+
+    const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
+    const payload = compositionCalls[compositionCalls.length - 1]?.[0]
+    expect(payload?.lockComponents).toEqual([
+      { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
+    ])
+  })
+
+  it('проводит свежий customer-owned замок сверху вниз до exact manufacturer-install template', async () => {
+    calc.applyAccessoryComposition({
+      lockVersion: 1,
+      lockComponents: [], skud: [], doorClosers: [], bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+    const lockPresence = mount(IsTherelock, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await new Promise(r => setTimeout(r, 100))
+
+    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[value="Предоставляет заказчик"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(calc.isThereLock.value).toBe(1)
+    expect(calc.providesLock.value).toBe('Предоставляет заказчик')
+    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    lockPresence.unmount()
+
+    const lockType = mount(LockType, {
+      global: {
+        plugins: [testRouter],
+        stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
+      },
+    })
+    await new Promise(r => setTimeout(r, 100))
+    expect(lockType.find('input[type="radio"]:checked').exists()).toBe(false)
+    expect(calc.lockSetId.value).toBeNull()
+    await lockType.find('input[type="radio"][value="7"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
+    const payload = compositionCalls[compositionCalls.length - 1]?.[0]
+    expect(payload?.lockComponents).toEqual([
+      { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
+      { role: 'lock_component', materialItemId: 702, providedByManufacturer: false, installedByManufacturer: false },
+    ])
   })
 
   it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
@@ -210,6 +277,52 @@ describe('saveWicketData — данные передаются на бэк', () 
     for (const key of ['lockSetId', 'typeLock', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
     }
+  })
+
+  it('LockType раскрывает customer-owned комплект в exact universal material template', async () => {
+    calc.modelId.value = '2'
+    calc.providesLock.value = 'Предоставляет заказчик'
+    calc.lockInstaller.value = 'Выполняет изготовитель'
+
+    const wrapper = mount(LockType, {
+      global: {
+        plugins: [testRouter],
+        stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
+      },
+    })
+    await new Promise(r => setTimeout(r, 100))
+    vi.mocked(saveWicketAccessoryComposition).mockClear()
+    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    vi.mocked(saveWicketAccessoryComposition).mockResolvedValueOnce({
+      lockVersion: 2,
+      lockComponents: [{ materialItemId: 701, relationRole: 'lock_component_installation' }] as never,
+      skud: [], doorClosers: [], bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+
+    const savedSet = wrapper.find('input[type="radio"][value="7"]')
+    await savedSet.setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
+    const payload = compositionCalls[compositionCalls.length - 1]?.[0]
+    expect(payload?.lockComponents).toEqual([
+      { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
+      { role: 'lock_component', materialItemId: 702, providedByManufacturer: false, installedByManufacturer: false },
+    ])
+    wrapper.unmount()
+
+    mount(LockType, {
+      global: {
+        plugins: [testRouter],
+        stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'],
+      },
+    })
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(calc.lockSetId.value).toBe(7)
+    expect(calc.lockComponentIds.value).toEqual([701, 702])
+    expect(saveWicketAccessoryComposition).toHaveBeenCalledTimes(1)
   })
 
   it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {

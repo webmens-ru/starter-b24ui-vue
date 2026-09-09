@@ -97,25 +97,15 @@ export function canvasSection(): WicketRouteSection {
 export function lockSection(): WicketRouteSection {
   const result = section('page9', 'Комплект замка', 'is-there-lock', ['page9', 'page_lock_type'])
   result.next = (from, state) => {
-    if (
-      from === 'page9'
-      && state.isThereLock === 1
-      && state.providesLock !== 'Предоставляет заказчик'
-    ) {
+    if (from === 'page9' && state.isThereLock === 1) {
       return 'page_lock_type'
     }
     return undefined
   }
   result.prev = from => from === 'page_lock_type' ? 'page9' : undefined
-  result.last = state => (
-    state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик'
-      ? 'page_lock_type'
-      : 'page9'
-  )
+  result.last = state => state.isThereLock === 1 ? 'page_lock_type' : 'page9'
   result.validate = state => {
-    if (state.isThereLock !== 1 || state.providesLock === 'Предоставляет заказчик') {
-      return ok()
-    }
+    if (state.isThereLock !== 1) return ok()
     return state.lockSetId == null
       ? { valid: false, errors: ['Не выбран тип замка'] }
       : ok()
@@ -125,9 +115,7 @@ export function lockSection(): WicketRouteSection {
 
 export function lockComponentsSection(): WicketRouteSection {
   const result = section('page_lock_components', 'Комплектующие замка', 'lock-components')
-  result.visible = state => (
-    state.isThereLock === 1 && state.providesLock !== 'Предоставляет заказчик'
-  )
+  result.visible = state => state.isThereLock === 1
   return result
 }
 

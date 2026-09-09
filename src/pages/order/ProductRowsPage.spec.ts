@@ -21,8 +21,7 @@ const mocks = vi.hoisted(() => ({
   calculateProductRow: vi.fn(),
   transitionOrder: vi.fn(),
   reorderProductRows: vi.fn(),
-  createMaterialProductRow: vi.fn(),
-  createInstallationProductRow: vi.fn(),
+  createStandaloneProductRows: vi.fn(),
   materialSubmission: {
     materialItemId: 101,
     quantity: 2,
@@ -45,8 +44,7 @@ vi.mock('../../app/api/productRows', () => ({
   calculateProductRow: mocks.calculateProductRow,
   transitionOrder: mocks.transitionOrder,
   reorderProductRows: mocks.reorderProductRows,
-  createMaterialProductRow: mocks.createMaterialProductRow,
-  createInstallationProductRow: mocks.createInstallationProductRow,
+  createStandaloneProductRows: mocks.createStandaloneProductRows,
 }))
 
 vi.mock('../../components/order/AddMaterialProductRow.vue', () => ({
@@ -229,8 +227,7 @@ describe('ProductRowsPage', () => {
     mocks.calculateProductRow.mockResolvedValue({ priceRetail: '900.00', priceDealer: '720.00', lockVersion: 5 })
     mocks.transitionOrder.mockResolvedValue({ statusCode: 'submitted_to_order' })
     mocks.reorderProductRows.mockResolvedValue({ productRows: [second, first], orderTotals: initial.orderTotals })
-    mocks.createMaterialProductRow.mockResolvedValue({ productRow: first, orderTotals: initial.orderTotals })
-    mocks.createInstallationProductRow.mockResolvedValue({ productRow: first, orderTotals: initial.orderTotals })
+    mocks.createStandaloneProductRows.mockResolvedValue({ productRows: [first], orderTotals: initial.orderTotals })
     mocks.materialSubmission = {
       materialItemId: 101,
       quantity: 2,
@@ -341,12 +338,11 @@ describe('ProductRowsPage', () => {
       productRows: [
         { productRowId: 9, lockVersion: 1 },
         { productRowId: 7, lockVersion: 4 },
-        { productRowId: 8, lockVersion: 1 },
       ],
     })
   })
 
-  it('creates a standalone material then its root installation and restores add-button focus', async () => {
+  it('creates standalone material and installation with one atomic request and restores add-button focus', async () => {
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce(makeOrderResponse([first, second, makeProductRow(101, { productType: 'material', modelId: null, rowKind: 'material' })]))
@@ -358,9 +354,13 @@ describe('ProductRowsPage', () => {
     await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.createMaterialProductRow).toHaveBeenCalledWith({ orderId: 42, materialItemId: 101, quantity: 2 })
-    expect(mocks.createInstallationProductRow).toHaveBeenCalledWith({
-      orderId: 42, materialItemId: 101, relationRole: 'lock_component_installation',
+    expect(mocks.createStandaloneProductRows).toHaveBeenCalledWith({
+      orderId: 42,
+      materialItemId: 101,
+      quantity: 2,
+      providedByManufacturer: true,
+      installationRole: 'lock_component_installation',
+      idempotencyKey: expect.any(String),
     })
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
@@ -368,9 +368,9 @@ describe('ProductRowsPage', () => {
     wrapper.unmount()
   })
 
-  it('creates only a root installation for customer-owned standalone material and ignores stale route completions', async () => {
+  it('preserves customer-owned installation-only and ignores stale route completions', async () => {
     const pendingMaterial = deferred<unknown>()
-    mocks.createMaterialProductRow.mockImplementationOnce(() => pendingMaterial.promise)
+    mocks.createStandaloneProductRows.mockImplementationOnce(() => pendingMaterial.promise)
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce(makeOrderResponse([makeProductRow(43, { orderId: 43 })]))
@@ -384,7 +384,7 @@ describe('ProductRowsPage', () => {
     pendingMaterial.resolve({ productRow: first, orderTotals: initial.orderTotals })
     await flushPromises()
 
-    expect(mocks.createInstallationProductRow).not.toHaveBeenCalled()
+    expect(mocks.createStandaloneProductRows).toHaveBeenCalledTimes(1)
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
 
@@ -398,14 +398,20 @@ describe('ProductRowsPage', () => {
     await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.createMaterialProductRow).toHaveBeenCalledTimes(1)
-    expect(mocks.createInstallationProductRow).toHaveBeenCalledWith({
-      orderId: 43, materialItemId: 101, relationRole: 'lock_component_installation',
+    expect(mocks.createStandaloneProductRows).toHaveBeenLastCalledWith({
+      orderId: 43,
+      materialItemId: 101,
+      quantity: 1,
+      providedByManufacturer: false,
+      installationRole: 'lock_component_installation',
+      idempotencyKey: expect.any(String),
     })
   })
 
-  it('refreshes canonical rows and closes safely after installation fails without duplicating material creation', async () => {
-    mocks.createInstallationProductRow.mockRejectedValueOnce(new Error('Не настроена цена установки'))
+  it('reuses the request key when the response is lost and retry completes without duplicate workflow calls', async () => {
+    mocks.createStandaloneProductRows
+      .mockRejectedValueOnce(new Error('Ответ потерян'))
+      .mockResolvedValueOnce({ productRows: [first], orderTotals: initial.orderTotals })
     mocks.listProductRows
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce(makeOrderResponse([first, second, makeProductRow(101, { productType: 'material', modelId: null, rowKind: 'material' })]))
@@ -417,17 +423,23 @@ describe('ProductRowsPage', () => {
     await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.createMaterialProductRow).toHaveBeenCalledTimes(1)
-    expect(mocks.createInstallationProductRow).toHaveBeenCalledTimes(1)
+    expect(mocks.createStandaloneProductRows).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(true)
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createStandaloneProductRows).toHaveBeenCalledTimes(2)
+    const firstKey = mocks.createStandaloneProductRows.mock.calls[0][0].idempotencyKey
+    const retryKey = mocks.createStandaloneProductRows.mock.calls[1][0].idempotencyKey
+    expect(retryKey).toBe(firstKey)
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
-    expect(wrapper.get('[role="alert"]').text()).toContain('Материал добавлен, но установку не удалось добавить')
     expect(document.activeElement).toBe(trigger.element)
     wrapper.unmount()
   })
 
   it('reloads canonical rows with a conflict notice for standalone creation conflicts', async () => {
-    mocks.createMaterialProductRow.mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } })
+    mocks.createStandaloneProductRows.mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } })
     mocks.listProductRows.mockResolvedValueOnce(initial).mockResolvedValueOnce(makeOrderResponse([second]))
     const wrapper = mountPage()
     await flushPromises()
