@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, onScopeDispose } from 'vue'
 import type { CalcBlock } from './types'
 import type {
   WicketAccessoryCompositionResponse,
@@ -9,6 +9,7 @@ import type {
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
+import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
 
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
@@ -76,6 +77,19 @@ interface AccessoryCatalogItem {
 const addonItems = ref<Record<AddonKey, AccessoryCatalogItem[]>>({ doorCloser: [], bumper: [], skud: [] })
 const availableSections = ref<string[]>([])
 const accessoryCompositionLockVersion = ref<number | null>(null)
+const stopRootVersionSync = onWicketProductRowLockVersionAdvanced((advance) => {
+  const wizard = useWicketWizardStore()
+  const isCurrentContext = wizard.orderId === advance.context.orderId
+    && wizard.productRowId === advance.context.productRowId
+    && String(wizard.modelId) === advance.context.modelId
+  if (
+    isCurrentContext
+    && accessoryCompositionLockVersion.value === advance.expectedLockVersion
+  ) {
+    accessoryCompositionLockVersion.value = advance.lockVersion
+  }
+})
+onScopeDispose(stopRootVersionSync)
 const accessorySaveGeneration = ref(0)
 type AccessorySelections = {
   lockComponents: WicketAccessorySelectionPayload<'lock_component'>[]

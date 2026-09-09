@@ -69,7 +69,7 @@ describe('product row API', () => {
     const { loadWicketData, recalculate, saveWicketData } = await import('./wicket')
 
     await loadWicketData(context)
-    await saveWicketData({ ...context, widthProyema: 900 })
+    await expect(saveWicketData({ ...context, widthProyema: 900 })).resolves.toEqual({ lockVersion: 5 })
     await recalculate(context)
 
     expect(api.post).toHaveBeenNthCalledWith(1, '/api/wicket/type1/data', {

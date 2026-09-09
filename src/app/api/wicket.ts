@@ -3,6 +3,7 @@ import { isPositiveSafeInteger } from '../positiveDecimalId'
 import {
   forgetWicketProductRowLockVersion,
   initializeWicketProductRowLockVersion,
+  notifyWicketProductRowLockVersionAdvanced,
   rememberWicketProductRowLockVersion,
   runWicketProductRowLockMutation,
 } from './wicketProductRowLockVersion'
@@ -64,6 +65,7 @@ import type {
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
+  WicketRootMutationResponse,
   WicketAccessoryCompositionContext,
   WicketAccessoryCompositionPayload,
   WicketAccessoryCompositionResponse,
@@ -104,6 +106,7 @@ export type {
   WicketCalculationPayload,
   WicketMainMenuPayload,
   WicketSavePayload,
+  WicketRootMutationResponse,
   WicketAccessoryCompositionContext,
   WicketAccessoryCompositionPayload,
   WicketAccessoryCompositionResponse,
@@ -406,7 +409,7 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
   return data
 }
 
-export async function saveWicketData(payload: WicketSavePayload): Promise<void> {
+export async function saveWicketData(payload: WicketSavePayload): Promise<WicketRootMutationResponse> {
   assertProductRowContext(payload)
   if (isMock) return mockSaveWicketData(payload)
   const context = {
@@ -414,9 +417,11 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<void> 
     productRowId: payload.productRowId,
     modelId: payload.modelId,
   }
-  await runWicketProductRowLockMutation(context, async lockVersion => {
+  return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post(`/api/wicket/type${payload.modelId}/data`, { ...payload, lockVersion })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+    notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
+    return { lockVersion: data.data.lockVersion }
   })
 }
 
@@ -548,6 +553,7 @@ export async function finalCalculate(payload: WicketCalculationPayload): Promise
       lockVersion,
     })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+    notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
     return data.data
   })
 }
@@ -580,6 +586,7 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
         lockVersion,
       })
       rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+      notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
       return data.data
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'response' in error) {
@@ -594,6 +601,7 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
           const data = response.data
           if (typeof data === 'object' && data !== null && 'lockVersion' in data) {
             rememberWicketProductRowLockVersion(context, data.lockVersion)
+            notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.lockVersion)
           }
         }
       }

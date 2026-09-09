@@ -5,6 +5,13 @@ const lockVersions = new Map<string, number>()
 const mutationTails = new Map<string, Promise<void>>()
 const conflictKeys = new Set<string>()
 const conflictListeners = new Set<(context: ProductRowContext) => void>()
+const localMutationListeners = new Set<(advance: WicketProductRowLockVersionAdvance) => void>()
+
+export interface WicketProductRowLockVersionAdvance {
+  context: ProductRowContext
+  expectedLockVersion: number
+  lockVersion: number
+}
 
 export class WicketProductRowLockConflictError extends Error {
   public constructor() {
@@ -71,6 +78,30 @@ export function forgetWicketProductRowLockVersion(context: ProductRowContext): v
 export function onWicketProductRowLockConflict(listener: (context: ProductRowContext) => void): () => void {
   conflictListeners.add(listener)
   return () => conflictListeners.delete(listener)
+}
+
+export function onWicketProductRowLockVersionAdvanced(
+  listener: (advance: WicketProductRowLockVersionAdvance) => void,
+): () => void {
+  localMutationListeners.add(listener)
+  return () => localMutationListeners.delete(listener)
+}
+
+export function notifyWicketProductRowLockVersionAdvanced(
+  context: ProductRowContext,
+  expectedLockVersion: number,
+  lockVersion: unknown,
+): void {
+  assertLockVersion(expectedLockVersion)
+  assertLockVersion(lockVersion)
+  if (lockVersion < expectedLockVersion) return
+
+  const advance = {
+    context: { ...context },
+    expectedLockVersion,
+    lockVersion,
+  }
+  localMutationListeners.forEach(listener => listener(advance))
 }
 
 function isHttpConflict(error: unknown): boolean {

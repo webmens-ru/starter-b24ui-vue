@@ -1,4 +1,15 @@
-import type { SelectItem, ColorShieldItem, RecalculateResponse, FilterOptions, SidingFilters, SidingRow, ProfnastilFilters, ProfnastilRow, ProfnastilTableResponse } from './wicket.types'
+import type {
+  SelectItem,
+  ColorShieldItem,
+  RecalculateResponse,
+  FilterOptions,
+  SidingFilters,
+  SidingRow,
+  ProfnastilFilters,
+  ProfnastilRow,
+  ProfnastilTableResponse,
+  WicketRootMutationResponse,
+} from './wicket.types'
 
 // ─── Таблица сайдинга (реальные данные) ──────────────────────────────────────
 
@@ -575,8 +586,8 @@ export async function mockFetchWicketPage(_modelId: number | string, _url: strin
   return ''
 }
 
-export async function mockSaveWicketData(_payload: Record<string, unknown>): Promise<void> {
-  // no-op
+export async function mockSaveWicketData(_payload: Record<string, unknown>): Promise<WicketRootMutationResponse> {
+  return { lockVersion: 1 }
 }
 
 export async function mockCreateOrder(): Promise<{

@@ -6,6 +6,10 @@ export interface WicketSavePayload extends ProductRowContext {
   [key: string]: unknown
 }
 
+export interface WicketRootMutationResponse {
+  lockVersion: number
+}
+
 export interface WicketMainMenuPayload extends ProductRowContext {
   model: string
   productType?: string
