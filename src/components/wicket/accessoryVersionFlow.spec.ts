@@ -61,7 +61,6 @@ describe('wicket root/accessory version flow', () => {
   it('saves the real IsTherelock → LockType sequence without conflicting with its own root saves', async () => {
     const context = { orderId: 42, productRowId: 7, modelId: '1' }
     let serverLockVersion = 3
-    let acceptedComposition: Record<string, unknown> | null = null
     let conflicts = 0
 
     api.get.mockImplementation(async (url: string) => {
@@ -105,7 +104,6 @@ describe('wicket root/accessory version flow', () => {
           conflicts += 1
           return Promise.reject({ response: { status: 409 } })
         }
-        acceptedComposition = payload
         serverLockVersion += 1
         return { data: { data: emptyComposition(serverLockVersion) } }
       }
@@ -135,17 +133,90 @@ describe('wicket root/accessory version flow', () => {
       expect(lockType.find('input[type="radio"][value="7"]').exists()).toBe(true)
     })
     await lockType.find('input[type="radio"][value="7"]').setValue()
-    await vi.waitFor(() => expect(acceptedComposition).not.toBeNull())
+    await vi.waitFor(() => expect(serverLockVersion).toBe(6))
 
     expect(conflicts).toBe(0)
-    expect(acceptedComposition).toMatchObject({
-      orderId: context.orderId,
-      productRowId: context.productRowId,
-      lockVersion: 6,
-      lockComponents: [],
-    })
-    expect(serverLockVersion).toBe(7)
+    expect(api.post).not.toHaveBeenCalledWith('/api/wicket/accessory-composition', expect.anything())
     lockType.unmount()
+  })
+
+  it('No → Yes → select set persists the manufacturer defaults shown by the UI before reload/recalculate', async () => {
+    const context = { orderId: 42, productRowId: 75, modelId: '1' }
+    let serverLockVersion = 30
+    const serverWicket: Record<string, unknown> = {
+      ...context,
+      lockSetId: 7,
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет изготовитель',
+    }
+
+    api.get.mockImplementation(async (url: string) => {
+      if (url === '/api/wicket/type1/get-data') {
+        return { data: { data: { ...serverWicket, lockVersion: serverLockVersion } } }
+      }
+      if (url === '/api/wicket/accessory-composition') {
+        return { data: { data: emptyComposition(serverLockVersion) } }
+      }
+      if (url === '/api/dict/lock/get-list') {
+        return { data: { data: { items: [{ id: 7, marking: 'Комплект 7', imageUrls: [], materialItemIds: [] }] } } }
+      }
+      if (url === '/api/dict/pen/get-by-lock') {
+        return { data: { data: { items: [] } } }
+      }
+      throw new Error(`Unexpected GET ${url}`)
+    })
+    api.post.mockImplementation(async (url: string, payload: Record<string, unknown>) => {
+      if (url === '/api/wicket/type1/data') {
+        for (const key of ['lockSetId', 'providesLock', 'lockInstaller']) {
+          if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
+        }
+        serverLockVersion += 1
+        return { data: { data: { lockVersion: serverLockVersion } } }
+      }
+      if (url === '/api/wicket/accessory-composition') {
+        serverLockVersion += 1
+        return { data: { data: emptyComposition(serverLockVersion) } }
+      }
+      if (url === '/api/order/calculate') {
+        const productPrice = serverWicket.providesLock === 'Предоставляет изготовитель' ? 500 : 0
+        const installPrice = serverWicket.lockInstaller === 'Выполняет изготовитель' ? 90 : 0
+        serverLockVersion += 1
+        const price = `${productPrice + installPrice}.00`
+        return { data: { data: { priceDealer: price, priceRetail: price, lockVersion: serverLockVersion } } }
+      }
+      throw new Error(`Unexpected POST ${url}`)
+    })
+
+    const calc = useCalculation()
+    calc.orderId.value = context.orderId
+    calc.productRowId.value = context.productRowId
+    calc.modelId.value = context.modelId
+    const initial = await loadCoherentWicketState(context)
+    calc.applyAccessoryComposition(initial.accessoryComposition)
+    calc.loadFromApi(initial.wicketData)
+
+    const presence = mount(IsTherelock, mountOptions())
+    await presence.find('input[value="Нет"]').setValue()
+    await vi.waitFor(() => expect(serverWicket.lockSetId).toBeNull())
+    await presence.find('input[value="Есть"]').setValue()
+    await vi.waitFor(() => expect(serverLockVersion).toBe(32))
+    expect(presence.find('input[value="Предоставляет изготовитель"]:checked').exists()).toBe(true)
+    expect(presence.find('input[value="Выполняет изготовитель"]:checked').exists()).toBe(true)
+    presence.unmount()
+
+    const lockType = mount(LockType, mountOptions())
+    await vi.waitFor(() => expect(lockType.find('input[type="radio"][value="7"]').exists()).toBe(true))
+    await lockType.find('input[type="radio"][value="7"]').setValue()
+    await vi.waitFor(() => expect(serverWicket.lockSetId).toBe(7))
+    lockType.unmount()
+
+    calc.reset()
+    const reloaded = await loadCoherentWicketState(context)
+    calc.applyAccessoryComposition(reloaded.accessoryComposition)
+    calc.loadFromApi(reloaded.wicketData)
+    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    await expect(recalculate(context)).resolves.toMatchObject({ priceRetail: '590.00' })
   })
 
   it.each([

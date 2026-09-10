@@ -64,7 +64,7 @@ vi.mock('../../app/api/wicket', () => ({
   deleteCalculation: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { saveWicketData, saveWicketAccessoryComposition, getColorShield, getNetWidths } = await import('../../app/api/wicket')
+const { saveWicketData, saveWicketAccessoryComposition, recalculate, getColorShield, getNetWidths } = await import('../../app/api/wicket')
 
 describe('saveWicketData — данные передаются на бэк', () => {
   let calc: ReturnType<typeof useCalculation>
@@ -264,9 +264,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await lockType.find('input[type="radio"][value="7"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
-    const payload = compositionCalls[compositionCalls.length - 1]?.[0]
-    expect(payload?.lockComponents).toEqual([])
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
       lockSetId: 7,
       providesLock: 'Предоставляет заказчик',
@@ -311,6 +309,32 @@ describe('saveWicketData — данные передаются на бэк', () 
     }])
   })
 
+  it('IsTherelock откатывает локальные radio и не пересчитывает после rejected root save', async () => {
+    calc.lockSetId.value = 7
+    calc.isThereLock.value = 1
+    calc.isThereLockName.value = 'Есть'
+    calc.providesLock.value = 'Предоставляет изготовитель'
+    calc.lockInstaller.value = 'Выполняет изготовитель'
+    calc.priceRetail.value = 100
+    const wrapper = mount(IsTherelock, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await new Promise(r => setTimeout(r, 100))
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('rejected'))
+    vi.mocked(recalculate).mockClear()
+
+    await wrapper.find('input[value="Предоставляет заказчик"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+    expect(wrapper.find('input[value="Предоставляет изготовитель"]:checked').exists()).toBe(true)
+    expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
+      name: 'Замок предоставляет',
+      value: 'Предоставляет изготовитель',
+    })
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
   it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
     calc.modelId.value = '2'
     calc.lockSetId.value = 7
@@ -334,7 +358,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await firstPen?.setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketAccessoryComposition).toHaveBeenCalled()
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).toHaveBeenCalled()
     const saveCalls = vi.mocked(saveWicketData).mock.calls
     const payload = saveCalls[saveCalls.length - 1]?.[0]

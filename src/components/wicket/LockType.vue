@@ -205,7 +205,6 @@ async function save() {
       lockPenId: calc.lockPenId.value,
       lockPenColorId: calc.lockPenColorId.value,
     })
-    await calc.saveAccessoryComposition()
   } catch (e) {
     isRestoringSelection = true
     calc.lockSetId.value = previous.lockSetId
@@ -218,7 +217,7 @@ async function save() {
     selectedColor.value = previous.lockPenColorId
     await nextTick()
     isRestoringSelection = false
-    console.warn('saveAccessoryComposition:', e)
+    console.warn('saveWicketData:', e)
   }
 
   if (calc.priceRetail.value) {

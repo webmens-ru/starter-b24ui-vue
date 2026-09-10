@@ -51,7 +51,7 @@ describe('LockType', () => {
     apiMocks.recalculate.mockResolvedValue({ priceDealer: 0, priceRetail: 0 })
   })
 
-  it('keeps standalone lock components when selecting a lock set', async () => {
+  it('keeps standalone lock components without rewriting their composition when selecting a lock set', async () => {
     const existingStandaloneSelections = [
       { role: 'lock_component' as const, materialItemId: 88, providedByManufacturer: true, installedByManufacturer: false },
     ]
@@ -76,13 +76,6 @@ describe('LockType', () => {
     }))
     expect(calc.lockComponentIds.value).toEqual([88])
     expect(calc.getAccessorySelections().lockComponents).toEqual(existingStandaloneSelections)
-    expect(apiMocks.saveWicketAccessoryComposition).toHaveBeenCalledWith(expect.objectContaining({
-      lockComponents: existingStandaloneSelections,
-    }))
-    expect(apiMocks.saveWicketAccessoryComposition).not.toHaveBeenCalledWith(expect.objectContaining({
-      lockComponents: expect.arrayContaining([
-        expect.objectContaining({ materialItemId: 701 }),
-      ]),
-    }))
+    expect(apiMocks.saveWicketAccessoryComposition).not.toHaveBeenCalled()
   })
 })

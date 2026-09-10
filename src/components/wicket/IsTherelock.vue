@@ -12,14 +12,8 @@ const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const isThereLockName  = ref<string>('Есть')
-const providesLock = computed<string>({
-  get: () => calc.providesLock.value || 'Предоставляет изготовитель',
-  set: value => { calc.providesLock.value = value },
-})
-const lockInstaller = computed<string>({
-  get: () => calc.lockInstaller.value || 'Выполняет изготовитель',
-  set: value => { calc.lockInstaller.value = value },
-})
+const providesLock = ref<string>('Предоставляет изготовитель')
+const lockInstaller = ref<string>('Выполняет изготовитель')
 const isThereCable = ref<string>('Изготовитель устанавливает')
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
@@ -46,6 +40,8 @@ function syncCalcFields() {
   calc.isThereLock.value   = isThereLockName.value === 'Есть' ? 1 : 0
 
   if (showLockDetails.value) {
+    calc.providesLock.value = providesLock.value
+    calc.lockInstaller.value = lockInstaller.value
     calc.isThereCable.value = isThereCable.value
   } else {
     calc.providesLock.value  = ''
@@ -108,10 +104,12 @@ async function save() {
     calc.lockPenColor.value = previous.lockPenColor
     calc.lockPenColorId.value = previous.lockPenColorId
     isThereLockName.value = previous.isThereLockName
-    providesLock.value = previous.providesLock
-    lockInstaller.value = previous.lockInstaller
+    providesLock.value = previous.providesLock || 'Предоставляет изготовитель'
+    lockInstaller.value = previous.lockInstaller || 'Выполняет изготовитель'
     isThereCable.value = previous.isThereCable
-    console.warn('saveAccessoryComposition:', e)
+    buildBlock()
+    console.warn('saveWicketData:', e)
+    return
   }
 
   if (calc.priceRetail.value) {
@@ -135,6 +133,8 @@ onMounted(() => {
   calc.setActivePage('page9')
 
   if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
+  if (calc.providesLock.value)     providesLock.value = calc.providesLock.value
+  if (calc.lockInstaller.value)    lockInstaller.value = calc.lockInstaller.value
   if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
 
 })
