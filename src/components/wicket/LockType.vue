@@ -217,7 +217,9 @@ async function save() {
     selectedColor.value = previous.lockPenColorId
     await nextTick()
     isRestoringSelection = false
+    updateLockBlock()
     console.warn('saveWicketData:', e)
+    return
   }
 
   if (calc.priceRetail.value) {

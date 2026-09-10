@@ -90,6 +90,8 @@ async function save() {
       lockSetId: hasLockSet ? calc.lockSetId.value : null,
       providesLock: hasLockSet ? (calc.providesLock.value || null) : null,
       lockInstaller: hasLockSet ? (calc.lockInstaller.value || null) : null,
+      lockPenId: hasLockSet ? calc.lockPenId.value : null,
+      lockPenColorId: hasLockSet ? calc.lockPenColorId.value : null,
       isThereCable: calc.isThereCable.value || null,
     })
   } catch (e) {

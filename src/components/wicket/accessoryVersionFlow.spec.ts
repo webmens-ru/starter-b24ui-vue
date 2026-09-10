@@ -295,7 +295,7 @@ describe('wicket root/accessory version flow', () => {
     expect(calculated.priceRetail).toBe(expectedPrice)
   })
 
-  it('clears an existing root set through a real request and preserves standalone rows after reload/recalculate', async () => {
+  it('clears an existing root set and handle before immediate and reloaded calculations', async () => {
     const context = { orderId: 42, productRowId: 74, modelId: '1' }
     let serverLockVersion = 20
     let compositionWrites = 0
@@ -304,8 +304,12 @@ describe('wicket root/accessory version flow', () => {
       lockSetId: 7,
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет изготовитель',
+      lockPenId: 3,
+      lockPenColorId: 5,
     }
     let standaloneRows = [{ materialItemId: 701, relationRole: 'lock_component' }]
+    let rootSavePayload: Record<string, unknown> | null = null
+    const calculatedPrices: string[] = []
 
     api.get.mockImplementation(async (url: string) => {
       if (url === '/api/wicket/type1/get-data') {
@@ -319,7 +323,8 @@ describe('wicket root/accessory version flow', () => {
     api.post.mockImplementation(async (url: string, payload: Record<string, unknown>) => {
       expect(payload.lockVersion).toBe(serverLockVersion)
       if (url === '/api/wicket/type1/data') {
-        for (const key of ['lockSetId', 'providesLock', 'lockInstaller']) {
+        rootSavePayload = payload
+        for (const key of ['lockSetId', 'providesLock', 'lockInstaller', 'lockPenId', 'lockPenColorId']) {
           if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
         }
       } else if (url === '/api/wicket/accessory-composition') {
@@ -332,8 +337,10 @@ describe('wicket root/accessory version flow', () => {
           : []
       } else if (url === '/api/order/calculate') {
         expect(serverWicket.lockSetId).toBeNull()
+        const price = serverWicket.lockPenId == null ? '0.00' : '125.00'
+        calculatedPrices.push(price)
         serverLockVersion += 1
-        return { data: { data: { priceDealer: '0.00', priceRetail: '0.00', lockVersion: serverLockVersion } } }
+        return { data: { data: { priceDealer: price, priceRetail: price, lockVersion: serverLockVersion } } }
       } else {
         throw new Error(`Unexpected POST ${url}`)
       }
@@ -348,11 +355,21 @@ describe('wicket root/accessory version flow', () => {
     const initial = await loadCoherentWicketState(context)
     calc.applyAccessoryComposition(initial.accessoryComposition)
     calc.loadFromApi(initial.wicketData)
+    calc.priceRetail.value = 100
     const wrapper = mount(IsTherelock, mountOptions())
     await flushPromises()
 
     await wrapper.find('input[value="Нет"]').setValue()
     await vi.waitFor(() => expect(serverWicket.lockSetId).toBeNull())
+    await vi.waitFor(() => expect(calculatedPrices).toHaveLength(1))
+    expect(rootSavePayload).toMatchObject({
+      lockSetId: null,
+      providesLock: null,
+      lockInstaller: null,
+      lockPenId: null,
+      lockPenColorId: null,
+    })
+    expect(calculatedPrices).toEqual(['0.00'])
 
     calc.reset()
     const reloaded = await loadCoherentWicketState(context)
@@ -360,6 +377,8 @@ describe('wicket root/accessory version flow', () => {
     calc.loadFromApi(reloaded.wicketData)
     expect(compositionWrites).toBe(0)
     expect(calc.isThereLock.value).toBe(0)
+    expect(calc.lockPenId.value).toBeNull()
+    expect(calc.lockPenColorId.value).toBeNull()
     expect(calc.getAccessorySelections().lockComponents).toEqual([{
       role: 'lock_component',
       materialItemId: 701,
@@ -367,6 +386,7 @@ describe('wicket root/accessory version flow', () => {
       installedByManufacturer: false,
     }])
     await expect(recalculate(context)).resolves.toMatchObject({ priceRetail: '0.00' })
+    expect(calculatedPrices).toEqual(['0.00', '0.00'])
     wrapper.unmount()
   })
 

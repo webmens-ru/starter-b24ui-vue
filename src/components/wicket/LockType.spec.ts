@@ -78,4 +78,35 @@ describe('LockType', () => {
     expect(calc.getAccessorySelections().lockComponents).toEqual(existingStandaloneSelections)
     expect(apiMocks.saveWicketAccessoryComposition).not.toHaveBeenCalled()
   })
+
+  it('restores the saved selection and summary without recalculation when root save is rejected', async () => {
+    apiMocks.getLocks.mockResolvedValue({
+      items: [
+        { id: 7, marking: 'Комплект 7', imageUrls: [], materialItemIds: [701, 702] },
+        { id: 8, marking: 'Комплект 8', imageUrls: [], materialItemIds: [801, 802] },
+      ],
+    })
+    calc.lockSetId.value = 7
+    calc.typeLock.value = 'Комплект 7'
+    calc.priceRetail.value = 100
+    calc.updateOrCreateBlock('Замок', [{ name: 'Тип замка', value: 'Комплект 7' }])
+
+    const wrapper = mount(LockType, {
+      global: { stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'] },
+    })
+    await flushPromises()
+    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('rejected'))
+    apiMocks.recalculate.mockClear()
+
+    await wrapper.find('input[type="radio"][value="8"]').setValue()
+    await flushPromises()
+
+    expect(calc.lockSetId.value).toBe(7)
+    expect(calc.typeLock.value).toBe('Комплект 7')
+    expect(wrapper.find('input[type="radio"][value="7"]:checked').exists()).toBe(true)
+    expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toEqual([
+      { name: 'Тип замка', value: 'Комплект 7' },
+    ])
+    expect(apiMocks.recalculate).not.toHaveBeenCalled()
+  })
 })
