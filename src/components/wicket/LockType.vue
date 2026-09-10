@@ -84,11 +84,11 @@ async function loadLocks() {
   }
 }
 
-async function loadPensForLock(lockSetId: number | null) {
+async function loadPensForLock(lockSetId: number | null): Promise<boolean> {
   if (!lockSetId) {
     penItems.value = []
     selectedPenId.value = null
-    return
+    return true
   }
   loadingPens.value = true
   try {
@@ -99,10 +99,12 @@ async function loadPensForLock(lockSetId: number | null) {
     } else if (res.items.length === 0) {
       selectedPenId.value = null
     }
+    return true
   } catch (e) {
     console.warn('getPensByLock:', e)
     penItems.value = []
     selectedPenId.value = null
+    return false
   } finally {
     loadingPens.value = false
   }
@@ -110,6 +112,7 @@ async function loadPensForLock(lockSetId: number | null) {
 
 watch(selectedLockId, async (id) => {
   if (isRestoringSelection) return
+  const previousPenItems = penItems.value
   isRestoringSelection = true
   try {
     await loadPensForLock(id)
@@ -128,7 +131,7 @@ watch(selectedLockId, async (id) => {
   } finally {
     isRestoringSelection = false
   }
-  await save()
+  await save(previousPenItems)
 })
 
 watch(selectedPenId, async (id) => {
@@ -185,7 +188,7 @@ function inferSavedLockSetId(): number | null {
   return null
 }
 
-async function save() {
+async function save(previousPenItems = penItems.value) {
   const previous = {
     lockSetId: calc.lockSetId.value,
     typeLock: calc.typeLock.value,
@@ -207,17 +210,22 @@ async function save() {
     })
   } catch (e) {
     isRestoringSelection = true
-    calc.lockSetId.value = previous.lockSetId
-    calc.typeLock.value = previous.typeLock
-    calc.lockPenId.value = previous.lockPenId
-    calc.lockPenColorId.value = previous.lockPenColorId
-    calc.lockPenColor.value = previous.lockPenColor
-    selectedLockId.value = previous.lockSetId
-    selectedPenId.value = previous.lockPenId
-    selectedColor.value = previous.lockPenColorId
-    await nextTick()
-    isRestoringSelection = false
-    updateLockBlock()
+    try {
+      calc.lockSetId.value = previous.lockSetId
+      calc.typeLock.value = previous.typeLock
+      calc.lockPenId.value = previous.lockPenId
+      calc.lockPenColorId.value = previous.lockPenColorId
+      calc.lockPenColor.value = previous.lockPenColor
+      selectedLockId.value = previous.lockSetId
+      const rollbackReloaded = await loadPensForLock(previous.lockSetId)
+      if (!rollbackReloaded) penItems.value = previousPenItems
+      selectedPenId.value = previous.lockPenId
+      selectedColor.value = previous.lockPenColorId
+      await nextTick()
+      updateLockBlock()
+    } finally {
+      isRestoringSelection = false
+    }
     console.warn('saveWicketData:', e)
     return
   }
