@@ -2,14 +2,8 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getLocks, getPensByLock, saveWicketData, recalculate } from '../../app/api/wicket'
+import type { LockSetListItem } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
-
-interface LockItem {
-  id: number
-  marking: string
-  imageUrls: string[]
-  materialItemIds: number[]
-}
 
 interface PenItem {
   id: number
@@ -25,7 +19,7 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 
-const lockItems = ref<LockItem[]>([])
+const lockItems = ref<LockSetListItem[]>([])
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
 const loadingPens = ref(false)
@@ -55,15 +49,6 @@ function syncSelectionToCalc() {
   const pen = penItems.value.find(p => p.id === selectedPenId.value)
   const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
   calc.lockPenColor.value = colorObj?.name ?? ''
-  if (lock) applyLockTemplate(lock)
-}
-
-function applyLockTemplate(lock: LockItem) {
-  calc.lockComponentIds.value = [...lock.materialItemIds]
-  calc.replaceAccessorySelectionIds('lock_component', lock.materialItemIds, {
-    providedByManufacturer: calc.providesLock.value === 'Предоставляет изготовитель',
-    installedByManufacturer: calc.lockInstaller.value === 'Выполняет изготовитель',
-  })
 }
 
 function updateLockBlock() {
@@ -197,14 +182,7 @@ function inferSavedLockSetId(): number | null {
   if (calc.lockSetId.value != null && lockItems.value.some(lock => lock.id === calc.lockSetId.value)) {
     return calc.lockSetId.value
   }
-  const currentIds = [...calc.lockComponentIds.value].sort((left, right) => left - right)
-  const exact = lockItems.value.find(lock => (
-    [...lock.materialItemIds].sort((left, right) => left - right).join(',') === currentIds.join(',')
-  ))
-  if (exact) return exact.id
-  if (currentIds.length !== 1) return null
-  const installationMatches = lockItems.value.filter(lock => lock.materialItemIds[0] === currentIds[0])
-  return installationMatches.length === 1 ? installationMatches[0].id : null
+  return null
 }
 
 async function save() {
@@ -214,8 +192,6 @@ async function save() {
     lockPenId: calc.lockPenId.value,
     lockPenColorId: calc.lockPenColorId.value,
     lockPenColor: calc.lockPenColor.value,
-    lockComponentIds: [...calc.lockComponentIds.value],
-    lockComponents: calc.getAccessorySelections().lockComponents,
   }
   syncSelectionToCalc()
   updateLockBlock()
@@ -234,8 +210,6 @@ async function save() {
     calc.lockPenId.value = previous.lockPenId
     calc.lockPenColorId.value = previous.lockPenColorId
     calc.lockPenColor.value = previous.lockPenColor
-    calc.lockComponentIds.value = previous.lockComponentIds
-    calc.setAccessorySelections('lock_component', previous.lockComponents)
     selectedLockId.value = previous.lockSetId
     selectedPenId.value = previous.lockPenId
     selectedColor.value = previous.lockPenColorId
@@ -273,8 +247,6 @@ onMounted(async () => {
   }
   await loadPensForLock(selectedLockId.value)
   applySavedSelection()
-  const selectedLock = lockItems.value.find(lock => lock.id === selectedLockId.value)
-  if (selectedLock && savedLockSetId !== null) applyLockTemplate(selectedLock)
   await nextTick()
   isRestoringSelection = false
 })

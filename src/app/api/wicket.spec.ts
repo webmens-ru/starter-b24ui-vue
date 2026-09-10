@@ -72,9 +72,9 @@ describe('wicket accessory composition API', () => {
     })
   })
 
-  it('loads lock templates scoped to the wicket model with exact universal material ids', async () => {
+  it('loads lock sets scoped to the wicket model without their composition', async () => {
     const response = {
-      items: [{ id: 7, marking: 'Set 7', imageUrls: [], materialItemIds: [701, 702] }],
+      items: [{ id: 7, marking: 'Set 7', imageUrls: [] }],
     }
     api.get.mockResolvedValueOnce({ data: { data: response } })
     const { getLocks } = await import('./wicket')

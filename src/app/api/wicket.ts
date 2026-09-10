@@ -476,9 +476,16 @@ export async function getNetsByWidth(sizeA: number | string): Promise<{
   return data.data
 }
 
-/** Список замков с картинками — для выбора карточкой. */
+/** Комплект замка, доступный для выбора карточкой. */
+export interface LockSetListItem {
+  id: number
+  marking: string
+  imageUrls: string[]
+}
+
+/** Список комплектов замка с картинками — для выбора карточкой. */
 export async function getLocks(modelId: number): Promise<{
-  items: Array<{ id: number; marking: string; imageUrls: string[]; materialItemIds: number[] }>
+  items: LockSetListItem[]
 }> {
   if (isMock) return mockGetLocks()
   const { data } = await api.get('/api/dict/lock/get-list', { params: { modelId } })

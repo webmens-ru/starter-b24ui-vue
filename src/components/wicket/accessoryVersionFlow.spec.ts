@@ -142,10 +142,7 @@ describe('wicket root/accessory version flow', () => {
       orderId: context.orderId,
       productRowId: context.productRowId,
       lockVersion: 6,
-      lockComponents: [
-        { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
-        { role: 'lock_component', materialItemId: 702, providedByManufacturer: false, installedByManufacturer: false },
-      ],
+      lockComponents: [],
     })
     expect(serverLockVersion).toBe(7)
     lockType.unmount()

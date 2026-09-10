@@ -567,6 +567,7 @@ describe('useCalculation', () => {
 
     it('сериализует полный состав комплектующих только для composition API', () => {
       calc.accessoryCompositionLockVersion.value = 8
+      calc.lockSetId.value = 7
       calc.lockComponentIds.value = [2, 4]
       calc.providesLock.value = 'Предоставляет изготовитель'
       calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
