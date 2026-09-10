@@ -56,8 +56,6 @@ function syncCalcFields() {
     calc.lockPenId.value    = null
     calc.lockPenColor.value = ''
     calc.lockPenColorId.value = null
-    calc.lockComponentIds.value = []
-    calc.lockComponentsInstalled.value = 'Устанавливает изготовитель'
   }
 }
 
@@ -74,45 +72,41 @@ function buildBlock() {
 }
 
 async function save() {
-  const previousLockComponents = calc.getAccessorySelections().lockComponents
-  const hadCanonicalSelection = previousLockComponents.length > 0
   const previous = {
     isThereLockName: calc.isThereLockName.value,
     isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
     lockInstaller: calc.lockInstaller.value,
     isThereCable: calc.isThereCable.value,
+    lockSetId: calc.lockSetId.value,
+    typeLock: calc.typeLock.value,
+    lockPenId: calc.lockPenId.value,
+    lockPenColor: calc.lockPenColor.value,
+    lockPenColorId: calc.lockPenColorId.value,
   }
   syncCalcFields()
   buildBlock()
 
   try {
-    if (calc.isThereLock.value === 0) {
-      calc.clearAccessorySelections('lock_component')
-    } else {
-      calc.setAccessoryGroupProvided(
-        'lock_component',
-        calc.providesLock.value === 'Предоставляет изготовитель',
-      )
-      calc.setAccessoryGroupInstalled(
-        'lock_component',
-        calc.lockInstaller.value === 'Выполняет изготовитель',
-      )
-    }
+    const hasLockSet = calc.isThereLock.value === 1
     await saveWicketData({
       ...calc.getBaseSavePayload(),
+      lockSetId: hasLockSet ? calc.lockSetId.value : null,
+      providesLock: hasLockSet ? (calc.providesLock.value || null) : null,
+      lockInstaller: hasLockSet ? (calc.lockInstaller.value || null) : null,
       isThereCable: calc.isThereCable.value || null,
     })
-    if (calc.isThereLock.value === 0 || hadCanonicalSelection) {
-      await calc.saveAccessoryComposition()
-    }
   } catch (e) {
-    calc.setAccessorySelections('lock_component', previousLockComponents)
     calc.isThereLockName.value = previous.isThereLockName
     calc.isThereLock.value = previous.isThereLock
     calc.providesLock.value = previous.providesLock
     calc.lockInstaller.value = previous.lockInstaller
     calc.isThereCable.value = previous.isThereCable
+    calc.lockSetId.value = previous.lockSetId
+    calc.typeLock.value = previous.typeLock
+    calc.lockPenId.value = previous.lockPenId
+    calc.lockPenColor.value = previous.lockPenColor
+    calc.lockPenColorId.value = previous.lockPenColorId
     isThereLockName.value = previous.isThereLockName
     providesLock.value = previous.providesLock
     lockInstaller.value = previous.lockInstaller

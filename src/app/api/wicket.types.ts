@@ -3,6 +3,9 @@ import type { OrderTotals, ProductRowContext, ProductRowSummary } from './produc
 export type { ProductRowContext } from './productRows.types'
 
 export interface WicketSavePayload extends ProductRowContext {
+  lockSetId?: number | null
+  providesLock?: string | null
+  lockInstaller?: string | null
   [key: string]: unknown
 }
 
@@ -366,6 +369,9 @@ export interface CompanyScopedPayload {
 export interface WicketGetDataResponse {
   visitedPages: string[]
   activePage: string
+  lockSetId?: number | null
+  providesLock?: string | null
+  lockInstaller?: string | null
   /** ID краски (dir_paints); для type1 — единственное хранимое поле выбора краски рамы. */
   colorShieldId?: number | null
   [key: string]: unknown

@@ -199,6 +199,9 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
+      lockSetId: calc.lockSetId.value,
+      providesLock: calc.providesLock.value || null,
+      lockInstaller: calc.lockInstaller.value || null,
       lockPenId: calc.lockPenId.value,
       lockPenColorId: calc.lockPenColorId.value,
     })

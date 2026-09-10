@@ -49,8 +49,11 @@ function composition(): WicketAccessoryCompositionResponse {
 describe('wicketFormStore accessory composition', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
-  it('keeps manufacturer defaults when an empty canonical composition starts a fresh choice', () => {
+  it('empty canonical composition leaves root lock-set state unchanged', () => {
     const store = useWicketFormStore()
+    store.lockSetId = 7
+    store.providesLock = 'Предоставляет заказчик'
+    store.lockInstaller = 'Выполняет заказчик'
     const empty = composition()
     empty.lockComponents = []
     empty.skud = []
@@ -59,8 +62,9 @@ describe('wicketFormStore accessory composition', () => {
 
     store.applyAccessoryComposition(empty)
 
-    expect(store.providesLock).toBe('Предоставляет изготовитель')
-    expect(store.lockInstaller).toBe('Выполняет изготовитель')
+    expect(store.lockSetId).toBe(7)
+    expect(store.providesLock).toBe('Предоставляет заказчик')
+    expect(store.lockInstaller).toBe('Выполняет заказчик')
     expect(store.addons.doorCloser).toMatchObject({
       isThere: 0,
       provided: 'Предоставляет изготовитель',
@@ -138,8 +142,10 @@ describe('wicketFormStore accessory composition', () => {
     })
   })
 
-  it('round-trips customer-owned lock, closer, and bumper installation tariffs unchanged', () => {
+  it('round-trips standalone lock, closer, and bumper branches without changing root lock set', () => {
     const store = useWicketFormStore()
+    store.lockSetId = 7
+    store.providesLock = 'Предоставляет изготовитель'
     store.lockInstaller = 'Выполняет заказчик'
     const source = composition()
     source.lockComponents = [source.lockComponents[1]]
@@ -148,8 +154,9 @@ describe('wicketFormStore accessory composition', () => {
 
     store.applyAccessoryComposition(source)
 
-    expect(store.providesLock).toBe('Предоставляет заказчик')
-    expect(store.lockInstaller).toBe('Выполняет изготовитель')
+    expect(store.lockSetId).toBe(7)
+    expect(store.providesLock).toBe('Предоставляет изготовитель')
+    expect(store.lockInstaller).toBe('Выполняет заказчик')
     expect(store.addons.doorCloser).toMatchObject({
       itemId: 31,
       provided: 'Предоставляет заказчик',

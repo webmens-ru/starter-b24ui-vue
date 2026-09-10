@@ -70,4 +70,45 @@ describe('LockComponentsStep', () => {
     expect(api.saveWicketAccessoryComposition).toHaveBeenCalled()
     expect(api.saveWicketData).not.toHaveBeenCalled()
   })
+
+  it('показывает и сохраняет standalone provider/installer независимо от root-комплекта', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '2'
+    calc.number.value = 42
+    calc.productRowId.value = 7
+    calc.accessoryCompositionLockVersion.value = 1
+    calc.lockSetId.value = 7
+    calc.providesLock.value = 'Предоставляет изготовитель'
+    calc.lockInstaller.value = 'Выполняет заказчик'
+    calc.applyAccessoryComposition({
+      lockVersion: 1,
+      lockComponents: [{ materialItemId: 202, relationRole: 'lock_component_installation' }] as never,
+      skud: [], doorClosers: [], bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+
+    const wrapper = mount(LockComponentsStep, {
+      global: { stubs: { B24Button: true } },
+    })
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(wrapper.find('input[value="Предоставляет заказчик"]:checked').exists()).toBe(true)
+    expect(wrapper.find('input[value="Устанавливает изготовитель"]:checked').exists()).toBe(true)
+    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+
+    vi.mocked(api.saveWicketAccessoryComposition).mockClear()
+    await wrapper.find('input[value="Предоставляет изготовитель"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    const calls = vi.mocked(api.saveWicketAccessoryComposition).mock.calls
+    expect(calls[calls.length - 1]?.[0].lockComponents).toEqual([{
+      role: 'lock_component',
+      materialItemId: 202,
+      providedByManufacturer: true,
+      installedByManufacturer: true,
+    }])
+    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+  })
 })

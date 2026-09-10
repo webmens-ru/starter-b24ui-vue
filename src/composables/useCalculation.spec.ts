@@ -145,7 +145,8 @@ describe('useCalculation', () => {
       expect(calc.clientName.value).toBe('Иван')
       expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
       expect(calc.isTherePen.value).toBe(1)
-      expect(calc.isThereLock.value).toBe(1)
+      expect(calc.isThereLock.value).toBe(0)
+      expect(calc.isThereLockName.value).toBe('Нет')
       expect(calc.widthProyema.value).toBe('1100')
       expect(calc.shieldType.value).toBe('Тип_3')
       expect(calc.heightTopPart.value).toBe('150')
@@ -289,7 +290,7 @@ describe('useCalculation', () => {
       expect(calc.lockComponentsInstalled.value).toBe('Устанавливает изготовитель')
     })
 
-    it('из get-data восстанавливает ручки, но не legacy-состав фурнитуры', () => {
+    it('из get-data восстанавливает root-комплект и ручки, но не legacy-состав фурнитуры', () => {
       const retainedKeys = [
         'lockPenId',
         'lockPenColorId',
@@ -333,9 +334,53 @@ describe('useCalculation', () => {
       expect(Object.fromEntries(retainedKeys.map(key => [key, savedPayload[key]]))).toEqual(
         Object.fromEntries(retainedKeys.map(key => [key, furniturePayload[key]])),
       )
-      for (const key of ['lockSetId', 'lockComponentIds', 'doorCloserId', 'bumperId', 'skudId', 'skudIds']) {
+      expect(savedPayload).toMatchObject({
+        lockSetId: 101,
+        providesLock: 'Предоставляет заказчик',
+        lockInstaller: 'Выполняет заказчик',
+      })
+      expect(calc.isThereLock.value).toBe(1)
+      expect(calc.isThereLockName.value).toBe('Есть')
+      for (const key of ['lockComponentIds', 'doorCloserId', 'bumperId', 'skudId', 'skudIds']) {
         expect(savedPayload).not.toHaveProperty(key)
       }
+    })
+
+    it('root-комплект определяет наличие и не перезаписывается standalone composition', () => {
+      calc.applyAccessoryComposition({
+        lockVersion: 2,
+        lockComponents: [{ materialItemId: 2, relationRole: 'lock_component_installation' }],
+        skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+      } as never)
+
+      calc.loadFromApi({
+        lockSetId: 7,
+        providesLock: 'Предоставляет изготовитель',
+        lockInstaller: 'Выполняет заказчик',
+      })
+
+      expect(calc.lockSetId.value).toBe(7)
+      expect(calc.isThereLock.value).toBe(1)
+      expect(calc.isThereLockName.value).toBe('Есть')
+      expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+      expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+      expect(calc.getAccessorySelections().lockComponents).toEqual([
+        { role: 'lock_component', materialItemId: 2, providedByManufacturer: false, installedByManufacturer: true },
+      ])
+    })
+
+    it('пустой root lockSetId означает отсутствие комплекта даже при standalone component', () => {
+      calc.applyAccessoryComposition({
+        lockVersion: 2,
+        lockComponents: [{ materialItemId: 2, relationRole: 'lock_component' }],
+        skud: [], doorClosers: [], bumpers: [], orderTotals: { priceRetail: 0, priceDealer: 0 },
+      } as never)
+
+      calc.loadFromApi({ lockSetId: null, providesLock: null, lockInstaller: null })
+
+      expect(calc.isThereLock.value).toBe(0)
+      expect(calc.isThereLockName.value).toBe('Нет')
+      expect(calc.lockComponentIds.value).toEqual([2])
     })
 
     it('при materialYardGlob=null оставляет null (при Одна сторона)', () => {
@@ -531,13 +576,15 @@ describe('useCalculation', () => {
       })
     })
 
-    it('getFullSavePayload не дублирует комплектующие или их provider/installer в калитку', () => {
+    it('getFullSavePayload сохраняет root-комплект, но не дублирует standalone комплектующие', () => {
       calc.number.value = 42
       calc.modelId.value = '2'
       calc.setActivePage('page12')
       calc.lockSetId.value = 7
       calc.lockPenId.value = 3
       calc.lockPenColorId.value = 5
+      calc.providesLock.value = 'Предоставляет заказчик'
+      calc.lockInstaller.value = 'Выполняет изготовитель'
       calc.lockComponentIds.value = [2, 4]
       calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
       calc.addons.value.doorCloser.isThere = 1
@@ -552,10 +599,12 @@ describe('useCalculation', () => {
         reachedStep: 'page12',
         lockPenId: 3,
         lockPenColorId: 5,
+        lockSetId: 7,
+        providesLock: 'Предоставляет заказчик',
+        lockInstaller: 'Выполняет изготовитель',
       })
       const legacyAccessoryKeys = [
-        'isThereLock', 'isThereLockName', 'providesLock', 'lockInstaller',
-        'lockSetId', 'lockComponentIds', 'lockComponentsInstalled',
+        'isThereLock', 'isThereLockName', 'lockComponentIds', 'lockComponentsInstalled',
         'isThereDoorCloser', 'doorCloserId', 'doorCloserProvided', 'doorCloserInstalled',
         'isThereBumper', 'bumperId', 'bumperProvided', 'bumperInstalled',
         'isThereSkud', 'skudId', 'skudIds', 'skudProvided', 'skudInstalled',
@@ -563,6 +612,20 @@ describe('useCalculation', () => {
       legacyAccessoryKeys.forEach(key => expect(payload).not.toHaveProperty(key))
       expect(payload).not.toHaveProperty('materialSupplierFacade')
       expect(payload).not.toHaveProperty('materialSupplierYard')
+    })
+
+    it('getFullSavePayload повторно отправляет очищенные root-поля после reload без комплекта', () => {
+      calc.loadFromApi({
+        lockSetId: null,
+        providesLock: null,
+        lockInstaller: null,
+      })
+
+      expect(calc.getFullSavePayload()).toMatchObject({
+        lockSetId: null,
+        providesLock: null,
+        lockInstaller: null,
+      })
     })
 
     it('сериализует полный состав комплектующих только для composition API', () => {

@@ -32,8 +32,6 @@ export const WICKET_API_ARRAY_KEYS = new Set([
 export const WICKET_LEGACY_ACCESSORY_KEYS = new Set([
   'isThereLock',
   'isThereLockName',
-  'providesLock',
-  'lockInstaller',
   'lockComponentIds',
   'lockComponentsInstalled',
   'isThereDoorCloser',

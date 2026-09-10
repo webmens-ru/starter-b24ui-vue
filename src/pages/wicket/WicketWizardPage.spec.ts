@@ -117,12 +117,15 @@ describe('WicketWizardPage mobile summary', () => {
     expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'skud', productType: 'wicket', modelId: 1 })
   })
 
-  it('applies canonical accessory rows instead of legacy configuration fields', async () => {
+  it('mixed reload keeps root lock-set branches separate from canonical standalone rows', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
     mocks.loadWicketData.mockResolvedValue({
       orderId: 42,
       productRowId: 7,
       modelId: '1',
+      lockSetId: 9,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет изготовитель',
       lockComponentIds: '[999]',
       doorCloserId: 998,
     })
@@ -139,7 +142,15 @@ describe('WicketWizardPage mobile summary', () => {
     await flushPromises()
 
     const calc = useCalculation()
+    expect(calc.lockSetId.value).toBe(9)
+    expect(calc.isThereLock.value).toBe(1)
+    expect(calc.isThereLockName.value).toBe('Есть')
+    expect(calc.providesLock.value).toBe('Предоставляет заказчик')
+    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
     expect(calc.lockComponentIds.value).toEqual([11])
+    expect(calc.getAccessorySelections().lockComponents).toEqual([
+      { role: 'lock_component', materialItemId: 11, providedByManufacturer: true, installedByManufacturer: false },
+    ])
     expect(calc.addons.value.doorCloser).toMatchObject({
       itemId: 31,
       provided: 'Предоставляет заказчик',
@@ -147,13 +158,15 @@ describe('WicketWizardPage mobile summary', () => {
     })
   })
 
-  it('retains the selected lock set while applying the saved wicket configuration', async () => {
+  it('set-only reload derives presence and branches from the saved wicket root', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
     mocks.loadWicketData.mockResolvedValue({
       orderId: 42,
       productRowId: 7,
       modelId: '1',
       lockSetId: 9,
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет заказчик',
       reachedStep: 'page1',
       visitedPages: ['page1'],
     })
@@ -161,7 +174,13 @@ describe('WicketWizardPage mobile summary', () => {
     mountPage()
     await flushPromises()
 
-    expect(useCalculation().lockSetId.value).toBe(9)
+    const calc = useCalculation()
+    expect(calc.lockSetId.value).toBe(9)
+    expect(calc.isThereLock.value).toBe(1)
+    expect(calc.isThereLockName.value).toBe('Есть')
+    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
+    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+    expect(calc.getAccessorySelections().lockComponents).toEqual([])
   })
 
   it('shows a reload-required modal for a lock conflict in the open product row', async () => {

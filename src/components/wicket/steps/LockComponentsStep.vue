@@ -9,18 +9,21 @@ const calc = useCalculation()
 
 const items = ref<MaterialItemDto[]>([])
 const selectedIds = ref<number[]>([])
+const provided = computed<string>({
+  get: () => calc.lockComponentsProvided.value,
+  set: value => { calc.lockComponentsProvided.value = value },
+})
 const installed = computed<string>({
-  get: () => calc.lockInstaller.value === 'Выполняет изготовитель'
-    ? 'Устанавливает изготовитель'
-    : 'Устанавливает заказчик',
-  set: value => {
-    calc.lockInstaller.value = value === 'Устанавливает изготовитель'
-      ? 'Выполняет изготовитель'
-      : 'Выполняет заказчик'
-  },
+  get: () => calc.lockComponentsInstalled.value,
+  set: value => { calc.lockComponentsInstalled.value = value },
 })
 const loading = ref(false)
 let isRestoringSelection = false
+
+const providedOptions = [
+  { value: 'Предоставляет изготовитель', label: 'Предоставляет изготовитель' },
+  { value: 'Предоставляет заказчик', label: 'Предоставляет заказчик' },
+]
 
 const installedOptions = [
   { value: 'Устанавливает изготовитель', label: 'Устанавливает изготовитель' },
@@ -101,12 +104,15 @@ async function save() {
   calc.lockComponentIds.value = [...selectedIds.value]
   calc.lockComponentsInstalled.value = installed.value
   calc.replaceAccessorySelectionIds('lock_component', selectedIds.value, {
-    providedByManufacturer: calc.providesLock.value === 'Предоставляет изготовитель',
+    providedByManufacturer: provided.value === 'Предоставляет изготовитель',
     installedByManufacturer: installed.value === 'Устанавливает изготовитель',
   })
+  calc.setAccessoryGroupProvided('lock_component', provided.value === 'Предоставляет изготовитель')
+  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
 
   calc.updateOrCreateBlock('Комплектующие замка', [
     { name: 'Комплектующие', value: marking || 'Не выбрано' },
+    { name: 'Предоставляет', value: provided.value },
     { name: 'Устанавливает', value: installed.value },
   ])
 
@@ -130,6 +136,12 @@ async function save() {
 
 watch(selectedIds, () => { if (!isRestoringSelection) void save() }, { deep: true })
 
+function changeProvided(): void {
+  if (isRestoringSelection) return
+  calc.setAccessoryGroupProvided('lock_component', provided.value === 'Предоставляет изготовитель')
+  void save()
+}
+
 function changeInstalled(): void {
   if (isRestoringSelection) return
   calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
@@ -152,6 +164,12 @@ onMounted(async () => {
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Комплектующие замка</span>
       <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+    </div>
+
+    <div class="option-grid">
+      <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
+        <input v-model="provided" type="radio" :value="opt.value" class="sr-only" @change="changeProvided" />
+        <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
     </div>
 
     <div class="option-grid">

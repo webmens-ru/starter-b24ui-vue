@@ -57,6 +57,8 @@ describe('LockType', () => {
     ]
     calc.setAccessorySelections('lock_component', existingStandaloneSelections)
     calc.lockComponentIds.value = [88]
+    calc.providesLock.value = 'Предоставляет заказчик'
+    calc.lockInstaller.value = 'Выполняет изготовитель'
 
     const wrapper = mount(LockType, {
       global: { stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'] },
@@ -67,6 +69,11 @@ describe('LockType', () => {
     await flushPromises()
 
     expect(calc.lockSetId.value).toBe(7)
+    expect(apiMocks.saveWicketData).toHaveBeenCalledWith(expect.objectContaining({
+      lockSetId: 7,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет изготовитель',
+    }))
     expect(calc.lockComponentIds.value).toEqual([88])
     expect(calc.getAccessorySelections().lockComponents).toEqual(existingStandaloneSelections)
     expect(apiMocks.saveWicketAccessoryComposition).toHaveBeenCalledWith(expect.objectContaining({

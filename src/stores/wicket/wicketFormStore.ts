@@ -112,16 +112,8 @@ const isThereLockName = ref<string>('Есть')
 const isThereLock     = ref<number>(1)
 const providesLock      = ref<string>('Предоставляет изготовитель')
 const lockInstaller     = ref<string>('Выполняет изготовитель')
-const lockComponentsInstalled = computed<string>({
-  get: () => lockInstaller.value === 'Выполняет изготовитель'
-    ? 'Устанавливает изготовитель'
-    : 'Устанавливает заказчик',
-  set: value => {
-    lockInstaller.value = value === 'Устанавливает изготовитель'
-      ? 'Выполняет изготовитель'
-      : 'Выполняет заказчик'
-  },
-})
+const lockComponentsProvided = ref<string>('Предоставляет изготовитель')
+const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
 const isThereCable     = ref<string>('Изготовитель устанавливает')
 
 // Поля шага "Проем"
@@ -270,6 +262,7 @@ const fieldsFilled = ref<number>(0)
     lockPenColor.value = ''
     lockPenColorId.value = null
     lockComponentIds.value = []
+    lockComponentsProvided.value = 'Предоставляет изготовитель'
     lockComponentsInstalled.value = 'Устанавливает изготовитель'
     isThereLockName.value = 'Есть'
     isThereLock.value = 1
@@ -398,14 +391,12 @@ const fieldsFilled = ref<number>(0)
     }
     lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
     const hasLockComponents = lockSelections.length > 0
-    providesLock.value = !hasLockComponents || lockSelections.some(selection => selection.providedByManufacturer)
+    lockComponentsProvided.value = !hasLockComponents || lockSelections.some(selection => selection.providedByManufacturer)
       ? 'Предоставляет изготовитель'
       : 'Предоставляет заказчик'
-    lockInstaller.value = !hasLockComponents || lockSelections.some(selection => selection.installedByManufacturer)
-      ? 'Выполняет изготовитель'
-      : 'Выполняет заказчик'
-    isThereLock.value = lockSelections.length > 0 ? 1 : 0
-    isThereLockName.value = lockSelections.length > 0 ? 'Есть' : 'Нет'
+    lockComponentsInstalled.value = !hasLockComponents || lockSelections.some(selection => selection.installedByManufacturer)
+      ? 'Устанавливает изготовитель'
+      : 'Устанавливает заказчик'
     applyAddonSelections('skud', skudSelections)
     applyAddonSelections('doorCloser', doorCloserSelections)
     applyAddonSelections('bumper', bumperSelections)
@@ -649,6 +640,7 @@ const fieldsFilled = ref<number>(0)
       lockPenColor,
       lockPenColorId,
     lockComponentIds,
+    lockComponentsProvided,
     lockComponentsInstalled,
       isThereLockName,
       isThereLock,
@@ -728,6 +720,8 @@ const fieldsFilled = ref<number>(0)
       })
     }
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    isThereLock.value = lockSetId.value == null ? 0 : 1
+    isThereLockName.value = isThereLock.value === 1 ? 'Есть' : 'Нет'
     if (import.meta.env.DEV && modelIdForLoad === '2') {
       console.info('[type2-drawing] Pinia after loadFromApi', {
         idFacade: idFacade.value,
@@ -1033,6 +1027,7 @@ const fieldsFilled = ref<number>(0)
     lockPenColor,
     lockPenColorId,
     lockComponentIds,
+    lockComponentsProvided,
     lockComponentsInstalled,
     isThereLockName,
     isThereLock,

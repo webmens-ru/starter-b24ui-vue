@@ -151,9 +151,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(payload.materialYardGlob).toBe('Профлист')
   })
 
-  it('IsTherelock сохраняет isThereCable отдельно без legacy accessory полей', async () => {
+  it('IsTherelock сохраняет root-комплект и его provider/installer вместе с кабелем', async () => {
     calc.isThereLock.value = 1
     calc.isThereLockName.value = 'Есть'
+    calc.lockSetId.value = 7
+    calc.providesLock.value = 'Предоставляет заказчик'
+    calc.lockInstaller.value = 'Выполняет заказчик'
     calc.lockPenColorId.value = 7
 
     const wrapper = mount(IsTherelock, {
@@ -173,13 +176,26 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).toHaveBeenCalledTimes(1)
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload).toMatchObject({ orderId: 42, productRowId: 7, modelId: '1', isThereCable: 'Изготовитель не устанавливает' })
-    for (const key of ['isThereLock', 'isThereLockName', 'providesLock', 'lockInstaller', 'lockSetId', 'lockComponentIds', 'lockComponentsInstalled']) {
+    expect(payload).toMatchObject({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      lockSetId: 7,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет заказчик',
+      isThereCable: 'Изготовитель не устанавливает',
+    })
+    for (const key of ['isThereLock', 'isThereLockName', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
     }
   })
 
-  it('IsTherelock round-trips customer-owned installation GET → UI → unchanged POST', async () => {
+  it('IsTherelock берёт provider/installer из root, а не из standalone composition', async () => {
+    calc.loadFromApi({
+      lockSetId: 7,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет заказчик',
+    })
     calc.applyAccessoryComposition({
       lockVersion: 1,
       lockComponents: [{ materialItemId: 701, relationRole: 'lock_component_installation' }] as never,
@@ -194,13 +210,17 @@ describe('saveWicketData — данные передаются на бэк', () 
     vi.mocked(saveWicketAccessoryComposition).mockClear()
 
     expect(wrapper.find('input[value="Предоставляет заказчик"]:checked').exists()).toBe(true)
-    expect(wrapper.find('input[value="Выполняет изготовитель"]:checked').exists()).toBe(true)
-    await wrapper.find('input[value="Предоставляет заказчик"]').trigger('change')
+    expect(wrapper.find('input[value="Выполняет заказчик"]:checked').exists()).toBe(true)
+    await wrapper.find('input[value="Предоставляет изготовитель"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
-    const payload = compositionCalls[compositionCalls.length - 1]?.[0]
-    expect(payload?.lockComponents).toEqual([
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
+      lockSetId: 7,
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет заказчик',
+    })
+    expect(calc.getAccessorySelections().lockComponents).toEqual([
       { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
     ])
   })
@@ -224,6 +244,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(calc.providesLock.value).toBe('Предоставляет заказчик')
     expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    const rootPayload = vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]
+    expect(rootPayload).toMatchObject({
+      lockSetId: null,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет изготовитель',
+    })
     lockPresence.unmount()
 
     const lockType = mount(LockType, {
@@ -241,6 +267,48 @@ describe('saveWicketData — данные передаются на бэк', () 
     const compositionCalls = vi.mocked(saveWicketAccessoryComposition).mock.calls
     const payload = compositionCalls[compositionCalls.length - 1]?.[0]
     expect(payload?.lockComponents).toEqual([])
+    expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
+      lockSetId: 7,
+      providesLock: 'Предоставляет заказчик',
+      lockInstaller: 'Выполняет изготовитель',
+    })
+  })
+
+  it('IsTherelock очищает существующий root-комплект без удаления standalone child rows', async () => {
+    calc.lockSetId.value = 7
+    calc.isThereLock.value = 1
+    calc.isThereLockName.value = 'Есть'
+    calc.providesLock.value = 'Предоставляет заказчик'
+    calc.lockInstaller.value = 'Выполняет заказчик'
+    calc.setAccessorySelections('lock_component', [{
+      role: 'lock_component',
+      materialItemId: 701,
+      providedByManufacturer: true,
+      installedByManufacturer: false,
+    }])
+
+    const wrapper = mount(IsTherelock, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await new Promise(r => setTimeout(r, 100))
+    vi.mocked(saveWicketData).mockClear()
+    vi.mocked(saveWicketAccessoryComposition).mockClear()
+
+    await wrapper.find('input[value="Нет"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+
+    expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
+      lockSetId: null,
+      providesLock: null,
+      lockInstaller: null,
+    })
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    expect(calc.getAccessorySelections().lockComponents).toEqual([{
+      role: 'lock_component',
+      materialItemId: 701,
+      providedByManufacturer: true,
+      installedByManufacturer: false,
+    }])
   })
 
   it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
@@ -270,8 +338,17 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(saveWicketData).toHaveBeenCalled()
     const saveCalls = vi.mocked(saveWicketData).mock.calls
     const payload = saveCalls[saveCalls.length - 1]?.[0]
-    expect(payload).toMatchObject({ orderId: 42, productRowId: 7, modelId: '2', lockPenId: 1, lockPenColorId: 1 })
-    for (const key of ['lockSetId', 'typeLock', 'lockComponentIds', 'lockComponentsInstalled']) {
+    expect(payload).toMatchObject({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '2',
+      lockSetId: 7,
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет изготовитель',
+      lockPenId: 1,
+      lockPenColorId: 1,
+    })
+    for (const key of ['typeLock', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
     }
   })
