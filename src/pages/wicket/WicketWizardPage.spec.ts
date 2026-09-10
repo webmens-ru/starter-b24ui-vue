@@ -147,6 +147,23 @@ describe('WicketWizardPage mobile summary', () => {
     })
   })
 
+  it('retains the selected lock set while applying the saved wicket configuration', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      lockSetId: 9,
+      reachedStep: 'page1',
+      visitedPages: ['page1'],
+    })
+
+    mountPage()
+    await flushPromises()
+
+    expect(useCalculation().lockSetId.value).toBe(9)
+  })
+
   it('shows a reload-required modal for a lock conflict in the open product row', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
     const wrapper = mountPage()

@@ -34,7 +34,6 @@ export const WICKET_LEGACY_ACCESSORY_KEYS = new Set([
   'isThereLockName',
   'providesLock',
   'lockInstaller',
-  'lockSetId',
   'lockComponentIds',
   'lockComponentsInstalled',
   'isThereDoorCloser',
