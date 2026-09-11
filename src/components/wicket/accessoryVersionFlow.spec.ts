@@ -295,19 +295,26 @@ describe('wicket root/accessory version flow', () => {
     expect(calculated.priceRetail).toBe(expectedPrice)
   })
 
-  it('clears an existing root set and handle before immediate and reloaded calculations', async () => {
+  it('replaces stale handle IDs with a colored lock set without posting its internal components', async () => {
     const context = { orderId: 42, productRowId: 74, modelId: '1' }
     let serverLockVersion = 20
     let compositionWrites = 0
     const serverWicket: Record<string, unknown> = {
       ...context,
-      lockSetId: 7,
+      lockSetId: null,
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет изготовитель',
       lockPenId: 3,
       lockPenColorId: 5,
     }
-    let standaloneRows = [{ materialItemId: 701, relationRole: 'lock_component' }]
+    const standaloneRows = [{ materialItemId: 900, relationRole: 'lock_component_installation' }]
+    const existingStandaloneRows = [{
+      role: 'lock_component' as const,
+      materialItemId: 900,
+      providedByManufacturer: false,
+      installedByManufacturer: true,
+    }]
+    const internalSetComponentIds = [701, 702]
     let rootSavePayload: Record<string, unknown> | null = null
     const calculatedPrices: string[] = []
 
@@ -317,6 +324,33 @@ describe('wicket root/accessory version flow', () => {
       }
       if (url === '/api/wicket/accessory-composition') {
         return { data: { data: { ...emptyComposition(serverLockVersion), lockComponents: standaloneRows } } }
+      }
+      if (url === '/api/dict/lock/get-list') {
+        return {
+          data: {
+            data: {
+              items: [
+                {
+                  id: 7,
+                  marking: 'Комплект механический чёрный',
+                  imageUrls: [],
+                  materialItemIds: internalSetComponentIds,
+                  components: [
+                    { id: 701, name: 'Корпус чёрный', imageUrls: [] },
+                    { id: 702, name: 'Ответная планка', imageUrls: [] },
+                  ],
+                },
+                {
+                  id: 8,
+                  marking: 'Комплект механический белый',
+                  imageUrls: [],
+                  materialItemIds: [801],
+                  components: [{ id: 801, name: 'Корпус белый', imageUrls: [] }],
+                },
+              ],
+            },
+          },
+        }
       }
       throw new Error(`Unexpected GET ${url}`)
     })
@@ -329,15 +363,20 @@ describe('wicket root/accessory version flow', () => {
         }
       } else if (url === '/api/wicket/accessory-composition') {
         compositionWrites += 1
-        standaloneRows = Array.isArray(payload.lockComponents)
-          ? payload.lockComponents.map(row => ({
-              materialItemId: Number((row as Record<string, unknown>).materialItemId),
-              relationRole: 'lock_component',
-            }))
+        const postedIds = Array.isArray(payload.lockComponents)
+          ? payload.lockComponents.map(row => Number((row as Record<string, unknown>).materialItemId))
           : []
+        expect(postedIds.some(id => internalSetComponentIds.includes(id))).toBe(false)
+        throw new Error('The lock-set selection must not write accessory composition')
       } else if (url === '/api/order/calculate') {
-        expect(serverWicket.lockSetId).toBeNull()
-        const price = serverWicket.lockPenId == null ? '0.00' : '125.00'
+        expect(serverWicket).toMatchObject({
+          lockSetId: 7,
+          lockPenId: null,
+          lockPenColorId: null,
+        })
+        const productPrice = serverWicket.providesLock === 'Предоставляет изготовитель' ? 500 : 0
+        const installPrice = serverWicket.lockInstaller === 'Выполняет изготовитель' ? 90 : 0
+        const price = `${productPrice + installPrice}.00`
         calculatedPrices.push(price)
         serverLockVersion += 1
         return { data: { data: { priceDealer: price, priceRetail: price, lockVersion: serverLockVersion } } }
@@ -355,38 +394,40 @@ describe('wicket root/accessory version flow', () => {
     const initial = await loadCoherentWicketState(context)
     calc.applyAccessoryComposition(initial.accessoryComposition)
     calc.loadFromApi(initial.wicketData)
-    calc.priceRetail.value = 100
-    const wrapper = mount(IsTherelock, mountOptions())
-    await flushPromises()
+    expect(calc.lockPenId.value).toBe(3)
+    expect(calc.lockPenColorId.value).toBe(5)
+    expect(calc.getAccessorySelections().lockComponents).toEqual(existingStandaloneRows)
+    const wrapper = mount(LockType, mountOptions())
+    await vi.waitFor(() => expect(wrapper.find('input[type="radio"][value="7"]').exists()).toBe(true))
 
-    await wrapper.find('input[value="Нет"]').setValue()
-    await vi.waitFor(() => expect(serverWicket.lockSetId).toBeNull())
-    await vi.waitFor(() => expect(calculatedPrices).toHaveLength(1))
+    await wrapper.find('input[type="radio"][value="7"]').setValue()
+    await vi.waitFor(() => expect(serverWicket.lockSetId).toBe(7))
     expect(rootSavePayload).toMatchObject({
-      lockSetId: null,
-      providesLock: null,
-      lockInstaller: null,
+      lockSetId: 7,
+      providesLock: 'Предоставляет изготовитель',
+      lockInstaller: 'Выполняет изготовитель',
       lockPenId: null,
       lockPenColorId: null,
     })
-    expect(calculatedPrices).toEqual(['0.00'])
+    expect(serverWicket).toMatchObject({
+      lockSetId: 7,
+      lockPenId: null,
+      lockPenColorId: null,
+    })
 
     calc.reset()
     const reloaded = await loadCoherentWicketState(context)
     calc.applyAccessoryComposition(reloaded.accessoryComposition)
     calc.loadFromApi(reloaded.wicketData)
     expect(compositionWrites).toBe(0)
-    expect(calc.isThereLock.value).toBe(0)
+    expect(calc.lockSetId.value).toBe(7)
+    expect(calc.isThereLock.value).toBe(1)
     expect(calc.lockPenId.value).toBeNull()
     expect(calc.lockPenColorId.value).toBeNull()
-    expect(calc.getAccessorySelections().lockComponents).toEqual([{
-      role: 'lock_component',
-      materialItemId: 701,
-      providedByManufacturer: true,
-      installedByManufacturer: false,
-    }])
-    await expect(recalculate(context)).resolves.toMatchObject({ priceRetail: '0.00' })
-    expect(calculatedPrices).toEqual(['0.00', '0.00'])
+    expect(calc.getAccessorySelections().lockComponents).toEqual(existingStandaloneRows)
+    const calculated = await recalculate(context)
+    expect(calculated.priceRetail).toBe('590.00')
+    expect(calculatedPrices).toEqual(['590.00'])
     wrapper.unmount()
   })
 
