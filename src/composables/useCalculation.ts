@@ -4,6 +4,7 @@ import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
 import type { ProductRowContext, WicketSavePayload } from '../app/api/wicket.types'
 import type { WicketAccessoryCompositionPayload } from '../app/api/wicket.types'
 import { saveWicketAccessoryComposition as persistWicketAccessoryComposition } from '../app/api/wicket'
+import { canonicalizeWicketRootSavePayload } from '../app/api/wicketRootSavePayload'
 
 export type { CalcBlock } from '../stores/wicket/types'
 
@@ -62,7 +63,7 @@ export function useCalculation() {
           materialSupplierYard: form.materialSupplierYard,
         }
 
-    return {
+    return canonicalizeWicketRootSavePayload({
       ...getBaseSavePayload(),
       ...supplierPayload,
       providesMaterial: form.providesMaterial,
@@ -134,7 +135,7 @@ export function useCalculation() {
       clientAddress: form.clientAddress,
       clientComment: form.clientComment,
       countryCode: form.countryCode,
-    }
+    })
   }
 
   function getAccessoryCompositionPayload(): WicketAccessoryCompositionPayload {
@@ -174,6 +175,7 @@ export function useCalculation() {
     getFullSavePayload,
     getAccessoryCompositionPayload,
     getAccessorySelections: form.getAccessorySelections,
+    rebuildLockSummaryBlock: form.rebuildLockSummaryBlock,
     saveAccessoryComposition,
     applyAccessoryComposition: form.applyAccessoryComposition,
     replaceAccessorySelectionIds: form.replaceAccessorySelectionIds,

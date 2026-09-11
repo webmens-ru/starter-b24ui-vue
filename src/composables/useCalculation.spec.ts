@@ -290,10 +290,8 @@ describe('useCalculation', () => {
       expect(calc.lockComponentsInstalled.value).toBe('Устанавливает изготовитель')
     })
 
-    it('из get-data восстанавливает root-комплект и ручки, но не legacy-состав фурнитуры', () => {
+    it('из get-data восстанавливает root-комплект и дополнительную ручку, но не сохраняет legacy-ручку комплекта', () => {
       const retainedKeys = [
-        'lockPenId',
-        'lockPenColorId',
         'isTherePen',
         'additionalPenId',
         'penProvided',
@@ -334,6 +332,7 @@ describe('useCalculation', () => {
       expect(Object.fromEntries(retainedKeys.map(key => [key, savedPayload[key]]))).toEqual(
         Object.fromEntries(retainedKeys.map(key => [key, furniturePayload[key]])),
       )
+      expect(savedPayload).toMatchObject({ lockPenId: null, lockPenColorId: null })
       expect(savedPayload).toMatchObject({
         lockSetId: 101,
         providesLock: 'Предоставляет заказчик',
@@ -597,8 +596,8 @@ describe('useCalculation', () => {
         orderId: 42,
         modelId: '2',
         reachedStep: 'page12',
-        lockPenId: 3,
-        lockPenColorId: 5,
+        lockPenId: null,
+        lockPenColorId: null,
         lockSetId: 7,
         providesLock: 'Предоставляет заказчик',
         lockInstaller: 'Выполняет изготовитель',

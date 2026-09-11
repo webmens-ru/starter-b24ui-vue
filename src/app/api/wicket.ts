@@ -1,5 +1,6 @@
 import api from '.'
 import { isPositiveSafeInteger } from '../positiveDecimalId'
+import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 import {
   forgetWicketProductRowLockVersion,
   initializeWicketProductRowLockVersion,
@@ -410,15 +411,19 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 }
 
 export async function saveWicketData(payload: WicketSavePayload): Promise<WicketRootMutationResponse> {
-  assertProductRowContext(payload)
-  if (isMock) return mockSaveWicketData(payload)
+  const canonicalPayload = canonicalizeWicketRootSavePayload(payload)
+  assertProductRowContext(canonicalPayload)
+  if (isMock) return mockSaveWicketData(canonicalPayload)
   const context = {
-    orderId: payload.orderId,
-    productRowId: payload.productRowId,
-    modelId: payload.modelId,
+    orderId: canonicalPayload.orderId,
+    productRowId: canonicalPayload.productRowId,
+    modelId: canonicalPayload.modelId,
   }
   return runWicketProductRowLockMutation(context, async lockVersion => {
-    const { data } = await api.post(`/api/wicket/type${payload.modelId}/data`, { ...payload, lockVersion })
+    const { data } = await api.post(`/api/wicket/type${canonicalPayload.modelId}/data`, {
+      ...canonicalPayload,
+      lockVersion,
+    })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
     notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
     return { lockVersion: data.data.lockVersion }

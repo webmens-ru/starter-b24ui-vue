@@ -31,16 +31,7 @@ function syncSelectionToCalc() {
 }
 
 function updateLockBlock() {
-  const block = calc.data.value.find(b => b.blockName === 'Замок')
-  const params: { name: string; value: string }[] = [
-    { name: 'Тип замка', value: (calc.typeLock.value || lockItems.value.find(l => l.id === calc.lockSetId.value)?.marking) ?? '' },
-  ]
-  if (block) {
-    block.params = params
-  } else {
-    calc.updateOrCreateBlock('Замок', params)
-  }
-  document.dispatchEvent(new Event('dataUpdated'))
+  calc.rebuildLockSummaryBlock()
 }
 
 async function loadLocks() {
@@ -121,9 +112,15 @@ onMounted(async () => {
   isRestoringSelection = true
   await loadLocks()
   const savedLockSetId = inferSavedLockSetId()
-  if (savedLockSetId != null && lockItems.value.some(l => l.id === savedLockSetId)) {
+  const savedLock = lockItems.value.find(lock => lock.id === savedLockSetId)
+  if (savedLock) {
     calc.lockSetId.value = savedLockSetId
     selectedLockId.value = savedLockSetId
+    calc.typeLock.value = savedLock.marking
+    calc.lockPenId.value = null
+    calc.lockPenColorId.value = null
+    calc.lockPenColor.value = ''
+    updateLockBlock()
   }
   await nextTick()
   isRestoringSelection = false

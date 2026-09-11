@@ -75,12 +75,53 @@ describe('product row API', () => {
     expect(api.post).toHaveBeenNthCalledWith(1, '/api/wicket/type1/data', {
       ...context,
       widthProyema: 900,
+      lockPenId: null,
+      lockPenColorId: null,
       lockVersion: 4,
     })
     expect(api.post).toHaveBeenNthCalledWith(2, '/api/order/calculate', {
       ...context,
       companyId: undefined,
       lockVersion: 5,
+    })
+  })
+
+  it('clears legacy lock-handle IDs on every root save without changing the selected set or additional handle', async () => {
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    api.get.mockResolvedValueOnce({
+      data: {
+        data: {
+          ...context,
+          lockVersion: 4,
+          lockSetId: 7,
+          lockPenId: 3,
+          lockPenColorId: 5,
+        },
+      },
+    })
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+
+    const loaded = await loadWicketData(context)
+    await saveWicketData({
+      ...context,
+      lockSetId: Number(loaded.lockSetId),
+      providesLock: 'Предоставляет заказчик',
+      lockPenId: loaded.lockPenId,
+      lockPenColorId: loaded.lockPenColorId,
+      additionalPenId: 9,
+      penColorId: 6,
+    })
+
+    expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/data', {
+      ...context,
+      lockSetId: 7,
+      providesLock: 'Предоставляет заказчик',
+      lockPenId: null,
+      lockPenColorId: null,
+      additionalPenId: 9,
+      penColorId: 6,
+      lockVersion: 4,
     })
   })
 
@@ -135,6 +176,8 @@ describe('product row API', () => {
     expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/data', {
       ...context,
       widthProyema: 900,
+      lockPenId: null,
+      lockPenColorId: null,
       lockVersion: 5,
     })
   })
@@ -209,6 +252,8 @@ describe('product row API', () => {
     expect(api.post).toHaveBeenNthCalledWith(2, '/api/wicket/type1/data', {
       ...context,
       widthProyema: 1000,
+      lockPenId: null,
+      lockPenColorId: null,
       lockVersion: 4,
     })
   })

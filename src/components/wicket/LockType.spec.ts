@@ -99,6 +99,40 @@ describe('LockType', () => {
     expect(emptyWrapper.text()).toContain('Состав комплекта не указан')
   })
 
+  it('reconciles a loaded set from the catalog and refreshes only its summary without saving', async () => {
+    calc.loadFromApi({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '2',
+      lockSetId: 7,
+      typeLock: 'Устаревшее имя комплекта',
+      lockPenId: 3,
+      lockPenColor: 'Старый цвет ручки',
+      lockPenColorId: 5,
+    })
+    const wrapper = mountLockType()
+
+    await flushPromises()
+
+    expect(wrapper.find('input[type="radio"][value="7"]:checked').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Корпус чёрный')
+    expect(wrapper.text()).toContain('Ответная планка')
+    expect(calc.typeLock.value).toBe(lockSet7.marking)
+    expect(calc.lockPenId.value).toBeNull()
+    expect(calc.lockPenColorId.value).toBeNull()
+    expect(calc.lockPenColor.value).toBe('')
+    expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
+      name: 'Тип замка',
+      value: lockSet7.marking,
+    })
+    expect(calc.data.value.flatMap(block => block.params)).not.toContainEqual({
+      name: 'Цвет ручки',
+      value: 'Старый цвет ручки',
+    })
+    expect(apiMocks.saveWicketData).not.toHaveBeenCalled()
+    expect(apiMocks.recalculate).not.toHaveBeenCalled()
+  })
+
   it('restores the previous set and its composition without recalculation when save is rejected', async () => {
     calc.lockSetId.value = 7
     calc.typeLock.value = lockSet7.marking

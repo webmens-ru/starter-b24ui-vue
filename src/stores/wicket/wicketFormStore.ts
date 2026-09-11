@@ -204,6 +204,23 @@ const fieldsFilled = ref<number>(0)
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
+  function buildLockSummaryParams(): CalcBlock['params'] {
+    const params: CalcBlock['params'] = [
+      { name: 'Замок есть/нет', value: isThereLockName.value },
+    ]
+    if (isThereLock.value === 1) {
+      params.push({ name: 'Замок предоставляет', value: providesLock.value })
+      params.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
+      params.push({ name: 'Кабель для э/м замка', value: isThereCable.value })
+      params.push({ name: 'Тип замка', value: typeLock.value || '' })
+    }
+    return params
+  }
+
+  function rebuildLockSummaryBlock(): void {
+    updateOrCreateBlock('Замок', buildLockSummaryParams())
+  }
+
   function removeAllBlocksExcept(allowedBlockNames: string[]) {
     data.value = data.value.filter(b => allowedBlockNames.includes(b.blockName))
     document.dispatchEvent(new Event('dataUpdated'))
@@ -899,19 +916,7 @@ const fieldsFilled = ref<number>(0)
     }
 
     // Замок
-    const lockParams: CalcBlock['params'] = [
-      { name: 'Замок есть/нет', value: isThereLockName.value },
-    ]
-    if (isThereLock.value === 1) {
-      lockParams.push({ name: 'Замок предоставляет', value: providesLock.value })
-      lockParams.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
-      lockParams.push({ name: 'Кабель для э/м замка', value: isThereCable.value })
-      lockParams.push({ name: 'Тип замка', value: typeLock.value || '' })
-      if (lockPenId.value != null) {
-        lockParams.push({ name: 'Цвет ручки', value: lockPenColor.value })
-      }
-    }
-    blocks.push({ blockName: 'Замок', params: lockParams })
+    blocks.push({ blockName: 'Замок', params: buildLockSummaryParams() })
 
     // Дополнительная ручка (скоба)
     const penParams: CalcBlock['params'] = [
@@ -1094,6 +1099,7 @@ const fieldsFilled = ref<number>(0)
     fieldsFilled,
     isFillSectionIncomplete,
     updateOrCreateBlock,
+    rebuildLockSummaryBlock,
     removeAllBlocksExcept,
     updatePriceBlock,
     loadFromApi,
