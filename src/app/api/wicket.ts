@@ -481,6 +481,13 @@ export interface LockSetListItem {
   id: number
   marking: string
   imageUrls: string[]
+  components: LockSetComponentListItem[]
+}
+
+export interface LockSetComponentListItem {
+  id: number
+  name: string
+  imageUrls: string[]
 }
 
 /** Список комплектов замка с картинками — для выбора карточкой. */

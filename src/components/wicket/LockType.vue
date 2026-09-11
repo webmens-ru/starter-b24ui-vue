@@ -1,16 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { getLocks, getPensByLock, saveWicketData, recalculate } from '../../app/api/wicket'
+import { getLocks, saveWicketData, recalculate } from '../../app/api/wicket'
 import type { LockSetListItem } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
-
-interface PenItem {
-  id: number
-  marking: string
-  colors: { id: number; name: string }[]
-  imageUrls?: string[]
-}
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -20,35 +13,21 @@ const emit = defineEmits<{
 const calc = useCalculation()
 
 const lockItems = ref<LockSetListItem[]>([])
-const penItems = ref<PenItem[]>([])
 const loading = ref(true)
-const loadingPens = ref(false)
 /** Выбранный комплект замка (id из get-list) */
 const selectedLockId = ref<number | null>(null)
-const selectedPenId = ref<number | null>(null)
-const selectedColor = ref<number | null>(null)
 let isRestoringSelection = false
-const selectedColorModel = computed<number | undefined>({
-  get: () => selectedColor.value ?? undefined,
-  set: value => { selectedColor.value = value ?? null },
-})
 
-/** Цвета для выпадающего списка — из выбранной ручки */
-const colorSelectItems = computed(() => {
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors ?? []
-  return colors.map(c => ({ id: c.id, label: c.name }))
-})
+const selectedLock = computed(() =>
+  lockItems.value.find(lock => lock.id === selectedLockId.value) ?? null,
+)
 
 function syncSelectionToCalc() {
-  const lock = lockItems.value.find(l => l.id === selectedLockId.value)
   calc.lockSetId.value = selectedLockId.value
-  calc.typeLock.value = lock?.marking ?? ''
-  calc.lockPenId.value = selectedPenId.value
-  calc.lockPenColorId.value = selectedColor.value
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colorObj = pen?.colors?.find(c => c.id === selectedColor.value)
-  calc.lockPenColor.value = colorObj?.name ?? ''
+  calc.typeLock.value = selectedLock.value?.marking ?? ''
+  calc.lockPenId.value = null
+  calc.lockPenColorId.value = null
+  calc.lockPenColor.value = ''
 }
 
 function updateLockBlock() {
@@ -56,13 +35,6 @@ function updateLockBlock() {
   const params: { name: string; value: string }[] = [
     { name: 'Тип замка', value: (calc.typeLock.value || lockItems.value.find(l => l.id === calc.lockSetId.value)?.marking) ?? '' },
   ]
-  if (calc.lockPenId.value != null) {
-    const pen = penItems.value.find(p => p.id === calc.lockPenId.value)
-    if (pen) params.push({ name: 'Ручка', value: pen.marking })
-  }
-  if (calc.lockPenColor.value) {
-    params.push({ name: 'Цвет ручки', value: calc.lockPenColor.value })
-  }
   if (block) {
     block.params = params
   } else {
@@ -84,102 +56,10 @@ async function loadLocks() {
   }
 }
 
-async function loadPensForLock(lockSetId: number | null): Promise<boolean> {
-  if (!lockSetId) {
-    penItems.value = []
-    selectedPenId.value = null
-    return true
-  }
-  loadingPens.value = true
-  try {
-    const res = await getPensByLock(lockSetId)
-    penItems.value = res.items
-    if (res.items.length > 0 && !res.items.some(p => p.id === selectedPenId.value)) {
-      selectedPenId.value = res.items[0].id
-    } else if (res.items.length === 0) {
-      selectedPenId.value = null
-    }
-    return true
-  } catch (e) {
-    console.warn('getPensByLock:', e)
-    penItems.value = []
-    selectedPenId.value = null
-    return false
-  } finally {
-    loadingPens.value = false
-  }
-}
-
-watch(selectedLockId, async (id) => {
+watch(selectedLockId, async () => {
   if (isRestoringSelection) return
-  const previousPenItems = penItems.value
-  isRestoringSelection = true
-  try {
-    await loadPensForLock(id)
-    if (penItems.value.length === 0) {
-      selectedPenId.value = null
-      selectedColor.value = null
-    } else if (!selectedPenId.value || !penItems.value.some(p => p.id === selectedPenId.value)) {
-      selectedPenId.value = penItems.value[0].id
-    }
-    const pen = penItems.value.find(p => p.id === selectedPenId.value)
-    const colors = pen?.colors ?? []
-    if (!colors.some(c => c.id === selectedColor.value)) {
-      selectedColor.value = colors[0]?.id ?? null
-    }
-    await nextTick()
-  } finally {
-    isRestoringSelection = false
-  }
-  await save(previousPenItems)
-})
-
-watch(selectedPenId, async (id) => {
-  if (isRestoringSelection) return
-  isRestoringSelection = true
-  const pen = penItems.value.find(p => p.id === id)
-  const colors = pen?.colors ?? []
-  if (!colors.some(c => c.id === selectedColor.value)) {
-    selectedColor.value = colors[0]?.id ?? null
-  }
-  await nextTick()
-  isRestoringSelection = false
   await save()
 })
-
-watch(selectedColor, () => {
-  if (isRestoringSelection) return
-  void save()
-})
-
-function applySavedSelection() {
-  if (!lockItems.value.length) return
-  const savedLockSetId = calc.lockSetId.value
-  const lockMatch = lockItems.value.find(l => l.id === savedLockSetId)
-  if (!lockMatch) {
-    selectedLockId.value = null
-    selectedPenId.value = null
-    selectedColor.value = null
-    return
-  }
-  selectedLockId.value = lockMatch.id
-
-  const savedPenId = calc.lockPenId.value
-  if (savedPenId != null && penItems.value.some(p => p.id === savedPenId)) {
-    selectedPenId.value = savedPenId
-  } else if (penItems.value.length > 0) {
-    selectedPenId.value = penItems.value[0].id
-  }
-
-  const savedColorId = calc.lockPenColorId.value
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors ?? []
-  if (savedColorId != null && colors.some(c => c.id === savedColorId)) {
-    selectedColor.value = savedColorId
-  } else if (colors.length) {
-    selectedColor.value = colors[0].id
-  }
-}
 
 function inferSavedLockSetId(): number | null {
   if (calc.lockSetId.value != null && lockItems.value.some(lock => lock.id === calc.lockSetId.value)) {
@@ -188,13 +68,10 @@ function inferSavedLockSetId(): number | null {
   return null
 }
 
-async function save(previousPenItems = penItems.value) {
+async function save() {
   const previous = {
     lockSetId: calc.lockSetId.value,
     typeLock: calc.typeLock.value,
-    lockPenId: calc.lockPenId.value,
-    lockPenColorId: calc.lockPenColorId.value,
-    lockPenColor: calc.lockPenColor.value,
   }
   syncSelectionToCalc()
   updateLockBlock()
@@ -213,14 +90,7 @@ async function save(previousPenItems = penItems.value) {
     try {
       calc.lockSetId.value = previous.lockSetId
       calc.typeLock.value = previous.typeLock
-      calc.lockPenId.value = previous.lockPenId
-      calc.lockPenColorId.value = previous.lockPenColorId
-      calc.lockPenColor.value = previous.lockPenColor
       selectedLockId.value = previous.lockSetId
-      const rollbackReloaded = await loadPensForLock(previous.lockSetId)
-      if (!rollbackReloaded) penItems.value = previousPenItems
-      selectedPenId.value = previous.lockPenId
-      selectedColor.value = previous.lockPenColorId
       await nextTick()
       updateLockBlock()
     } finally {
@@ -251,14 +121,10 @@ onMounted(async () => {
   isRestoringSelection = true
   await loadLocks()
   const savedLockSetId = inferSavedLockSetId()
-  selectedPenId.value = calc.lockPenId.value
-  selectedColor.value = calc.lockPenColorId.value
   if (savedLockSetId != null && lockItems.value.some(l => l.id === savedLockSetId)) {
     calc.lockSetId.value = savedLockSetId
     selectedLockId.value = savedLockSetId
   }
-  await loadPensForLock(selectedLockId.value)
-  applySavedSelection()
   await nextTick()
   isRestoringSelection = false
 })
@@ -302,50 +168,21 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 2. Выбор ручки (после выбора комплекта замка) — карточки по аналогии с сеткой -->
-    <div v-if="selectedLockId != null">
-      <h2 class="text-lg font-semibold mb-2 text-center">Ручка</h2>
-      <div v-if="loadingPens" class="px-2 py-4 text-sm text-gray-400 text-center">Загрузка...</div>
-      <div v-else-if="penItems.length" class="pen-cards-row">
-        <label
-          v-for="pen in penItems"
-          :key="pen.id"
-          class="lock-viewer-card pen-card"
-        >
-          <input
-            v-model="selectedPenId"
-            type="radio"
-            :value="pen.id"
-            class="sr-only"
+    <section v-if="selectedLock" aria-label="Состав комплекта">
+      <h2>Состав комплекта</h2>
+      <div v-if="selectedLock.components?.length">
+        <article v-for="component in selectedLock.components ?? []" :key="component.id">
+          <h3>{{ component.name }}</h3>
+          <ImageViewer
+            v-if="component.imageUrls.length"
+            :title="component.name"
+            :images="component.imageUrls"
+            image-height="140px"
           />
-          <div class="card-content">
-            <ImageViewer
-              v-if="pen.imageUrls?.length"
-              :title="pen.marking"
-              :images="pen.imageUrls"
-              image-height="100px"
-            />
-            <div v-else class="pen-placeholder" aria-hidden="true" />
-            <span class="block text-sm font-semibold text-center mt-2">{{ pen.marking }}</span>
-          </div>
-        </label>
+        </article>
       </div>
-      <div v-else class="px-2 py-4 text-sm text-gray-500 text-center">Нет доступных ручек для выбранного замка</div>
-    </div>
-
-    <!-- 3. Выбор цвета (после выбора ручки) — выпадающий список из цветов выбранной ручки -->
-    <div v-if="selectedPenId" class="flex flex-col gap-2 items-start w-full">
-      <h2 class="text-lg font-semibold mb-2">Цвет ручки</h2>
-      <div class="select-full-width w-full">
-        <B24SelectMenu
-          v-model="selectedColorModel"
-          value-key="id"
-          :items="colorSelectItems"
-          placeholder="Выберите цвет"
-          class="w-full"
-        />
-      </div>
-    </div>
+      <p v-else>Состав комплекта не указан</p>
+    </section>
 
   </div>
 </template>
@@ -392,38 +229,6 @@ onMounted(async () => {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   background: #eff6ff;
-}
-
-/* Карточки ручек — сетка как у типа замка, чтобы одна карточка не была узкой */
-.pen-cards-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px 24px;
-  padding: 4px;
-  width: 100%;
-  min-width: 0;
-}
-
-@media (min-width: 900px) {
-  .pen-cards-row {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    max-width: 1424px;
-    margin: 0 auto;
-  }
-}
-
-.pen-placeholder {
-  width: 100%;
-  height: 100px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.pen-card.card-selected {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-  background: #eff6ff !important;
 }
 
 .lock-card {

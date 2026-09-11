@@ -40,8 +40,10 @@ vi.mock('../../app/api/wicket', () => ({
   getProfnastilTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
   getLocks: vi.fn().mockResolvedValue({
     items: [
-      { id: 1, marking: 'Первый замок', imageUrls: [] },
-      { id: 7, marking: 'Сохранённый замок', imageUrls: [] },
+      { id: 1, marking: 'Первый замок', imageUrls: [], components: [] },
+      { id: 7, marking: 'Сохранённый замок', imageUrls: [], components: [
+        { id: 701, name: 'Сохранённый корпус', imageUrls: [] },
+      ] },
     ],
   }),
   getPensByLock: vi.fn().mockResolvedValue({
@@ -335,11 +337,9 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(recalculate).not.toHaveBeenCalled()
   })
 
-  it('LockType при редактировании не перетирает сохранённую ручку замка первой из списка', async () => {
+  it('LockType сохраняет выбранный комплект и очищает legacy-поля ручки', async () => {
     calc.modelId.value = '2'
-    calc.lockSetId.value = 7
-    calc.lockPenId.value = 3
-    calc.lockPenColorId.value = 5
+    calc.lockSetId.value = null
 
     const wrapper = mount(LockType, {
       global: {
@@ -352,10 +352,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).not.toHaveBeenCalled()
-    const penRadios = wrapper.findAll('input[type="radio"]')
-    const matchingPenRadios = penRadios.filter(input => Number((input.element as HTMLInputElement).value) === 1)
-    const firstPen = matchingPenRadios[matchingPenRadios.length - 1]
-    await firstPen?.setValue()
+    await wrapper.find('input[type="radio"][value="7"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
@@ -369,8 +366,8 @@ describe('saveWicketData — данные передаются на бэк', () 
       lockSetId: 7,
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет изготовитель',
-      lockPenId: 1,
-      lockPenColorId: 1,
+      lockPenId: null,
+      lockPenColorId: null,
     })
     for (const key of ['typeLock', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
