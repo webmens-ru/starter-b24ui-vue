@@ -315,6 +315,10 @@ describe('wicket root/accessory version flow', () => {
       installedByManufacturer: true,
     }]
     const internalSetComponentIds = [701, 702]
+    const lockSetPrices = new Map([
+      [7, { product: 500, installation: 90 }],
+      [8, { product: 325, installation: 65 }],
+    ])
     let rootSavePayload: Record<string, unknown> | null = null
     const calculatedPrices: string[] = []
 
@@ -374,9 +378,13 @@ describe('wicket root/accessory version flow', () => {
           lockPenId: null,
           lockPenColorId: null,
         })
-        const productPrice = serverWicket.providesLock === 'Предоставляет изготовитель' ? 500 : 0
-        const installPrice = serverWicket.lockInstaller === 'Выполняет изготовитель' ? 90 : 0
-        const price = `${productPrice + installPrice}.00`
+        expect(serverWicket).toMatchObject({
+          providesLock: 'Предоставляет изготовитель',
+          lockInstaller: 'Выполняет изготовитель',
+        })
+        const lockSetPrice = lockSetPrices.get(Number(serverWicket.lockSetId))
+        expect(lockSetPrice).toBeDefined()
+        const price = `${lockSetPrice!.product + lockSetPrice!.installation}.00`
         calculatedPrices.push(price)
         serverLockVersion += 1
         return { data: { data: { priceDealer: price, priceRetail: price, lockVersion: serverLockVersion } } }
