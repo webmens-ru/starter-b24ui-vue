@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { useCalculation } from '../../composables/useCalculation'
+import { useWicketLockCatalogStore } from '../../stores/wicket/wicketLockCatalogStore'
 import {
   getWicketAccessoryComposition,
   getMaterialItems,
@@ -29,6 +30,7 @@ const props = defineProps<{
 }>()
 
 const calc: WicketCalculationApi = useCalculation()
+const lockCatalog = useWicketLockCatalogStore()
 provide(WICKET_CALCULATION_KEY, calc)
 provide(WICKET_ROUTE_KEY, props.route)
 
@@ -104,15 +106,28 @@ async function initCalculation(): Promise<void> {
     const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
     if (!context) return
-    const [availability, coherentState] = await Promise.all([
+    const [availability, coherentState, lockItems] = await Promise.all([
       fetchAddonAvailability(Number(context.modelId)),
       loadCoherentWicketState(context),
+      lockCatalog.load(Number(context.modelId)).catch(error => {
+        console.warn('getLocks:', error)
+        return []
+      }),
     ])
     if (!isCurrentInitialization(generation)) return
     calc.addonItems.value = availability.items
     calc.availableSections.value = availability.sections
     calc.applyAccessoryComposition(coherentState.accessoryComposition)
-    loadFromApi(coherentState.wicketData)
+    const selectedLock = lockItems.find(lock => lock.id === coherentState.wicketData.lockSetId)
+    loadFromApi(selectedLock
+      ? {
+          ...coherentState.wicketData,
+          typeLock: selectedLock.marking,
+          lockPenId: null,
+          lockPenColorId: null,
+          lockPenColor: '',
+        }
+      : coherentState.wicketData)
     calc.orderId.value = context.orderId
     calc.productRowId.value = context.productRowId
     calc.modelId.value = context.modelId

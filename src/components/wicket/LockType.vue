@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { getLocks, saveWicketData, recalculate } from '../../app/api/wicket'
+import { saveWicketData, recalculate } from '../../app/api/wicket'
 import type { LockSetListItem } from '../../app/api/wicket'
+import { useWicketLockCatalogStore } from '../../stores/wicket/wicketLockCatalogStore'
 import ImageViewer from './ImageViewer.vue'
 
 const emit = defineEmits<{
@@ -11,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const lockCatalog = useWicketLockCatalogStore()
 
 const lockItems = ref<LockSetListItem[]>([])
 const loading = ref(true)
@@ -37,8 +39,7 @@ function updateLockBlock() {
 async function loadLocks() {
   loading.value = true
   try {
-    const res = await getLocks(Number(calc.modelId.value))
-    lockItems.value = res.items
+    lockItems.value = await lockCatalog.load(Number(calc.modelId.value))
   } catch (e) {
     console.warn('getLocks:', e)
     lockItems.value = []

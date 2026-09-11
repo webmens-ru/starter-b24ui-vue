@@ -91,12 +91,28 @@ describe('LockType', () => {
       items: [{ ...lockSet7, components: [] }, lockSet8],
     })
     wrapper.unmount()
+    setActivePinia(createPinia())
+    calc = useCalculation()
+    calc.modelId.value = '2'
+    calc.number.value = 42
+    calc.productRowId.value = 7
     const emptyWrapper = mountLockType()
     await flushPromises()
     await emptyWrapper.find('input[type="radio"][value="7"]').setValue()
     await flushPromises()
 
     expect(emptyWrapper.text()).toContain('Состав комплекта не указан')
+  })
+
+  it('reuses a successfully loaded catalog when the lock step mounts again', async () => {
+    const firstWrapper = mountLockType()
+    await flushPromises()
+    firstWrapper.unmount()
+
+    mountLockType()
+    await flushPromises()
+
+    expect(apiMocks.getLocks).toHaveBeenCalledTimes(1)
   })
 
   it('reconciles a loaded set from the catalog and refreshes only its summary without saving', async () => {

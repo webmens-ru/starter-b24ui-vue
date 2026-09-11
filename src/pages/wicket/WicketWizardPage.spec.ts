@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   loadWicketData: vi.fn(),
   getWicketAccessoryComposition: vi.fn(),
   getMaterialItems: vi.fn(),
+  getLocks: vi.fn(),
+  saveWicketData: vi.fn(),
+  recalculate: vi.fn(),
   listProductRows: vi.fn(),
   onWicketProductRowLockConflict: vi.fn(),
   navigateToProductRows: vi.fn(),
@@ -38,6 +41,9 @@ vi.mock('../../app/api/wicket', () => ({
     }),
   }),
   getMaterialItems: mocks.getMaterialItems,
+  getLocks: mocks.getLocks,
+  saveWicketData: mocks.saveWicketData,
+  recalculate: mocks.recalculate,
   onWicketProductRowLockConflict: mocks.onWicketProductRowLockConflict,
 }))
 
@@ -53,9 +59,9 @@ const wicketRoute: WicketRouteDefinition = {
   prev: () => null,
 }
 
-function mountPage() {
+function mountPage(stepComponents: Record<string, ReturnType<typeof defineComponent>> = { page1: EmptyStep }) {
   return shallowMount(WicketWizardPage, {
-    props: { stepComponents: { page1: EmptyStep }, route: wicketRoute },
+    props: { stepComponents, route: wicketRoute },
     global: {
       stubs: {
         App: { template: '<div><slot /></div>' },
@@ -91,6 +97,7 @@ describe('WicketWizardPage mobile summary', () => {
       orderTotals: { priceRetail: 0, priceDealer: 0 },
     })
     mocks.getMaterialItems.mockResolvedValue([])
+    mocks.getLocks.mockResolvedValue({ items: [] })
     Reflect.deleteProperty(window, '_PARAMS_')
   })
 
@@ -181,6 +188,71 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
     expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
     expect(calc.getAccessorySelections().lockComponents).toEqual([])
+  })
+
+  it('reconciles a priced page12 reload with the selected lock-set marking before showing its summary', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      lockSetId: 9,
+      lockPenId: 81,
+      lockPenColorId: 82,
+      lockPenColor: 'Старый цвет',
+      priceRetail: '19978.49',
+      activePage: 'page12',
+      reachedStep: 'page12',
+      visitedPages: ['page1', 'page_lock_type', 'page12'],
+    })
+    mocks.getLocks.mockResolvedValue({
+      items: [{
+        id: 9,
+        marking: 'Комплект из каталога',
+        imageUrls: [],
+        components: [{ id: 91, name: 'Корпус замка', imageUrls: [] }],
+      }],
+    })
+
+    mountPage({ page1: EmptyStep, page12: defineComponent({ template: '<div>Итого</div>' }) })
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.activePage.value).toBe('page12')
+    expect(calc.typeLock.value).toBe('Комплект из каталога')
+    expect(calc.lockPenId.value).toBeNull()
+    expect(calc.lockPenColorId.value).toBeNull()
+    expect(calc.lockPenColor.value).toBe('')
+    expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
+      name: 'Тип замка',
+      value: 'Комплект из каталога',
+    })
+    expect(calc.data.value.flatMap(block => block.params)).not.toContainEqual({
+      name: 'Цвет ручки',
+      value: 'Старый цвет',
+    })
+    expect(mocks.getLocks).toHaveBeenCalledTimes(1)
+    expect(mocks.saveWicketData).not.toHaveBeenCalled()
+    expect(mocks.recalculate).not.toHaveBeenCalled()
+  })
+
+  it('keeps the wicket load usable when the lock-set catalog is temporarily unavailable', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      reachedStep: 'page1',
+      visitedPages: ['page1'],
+      widthProyema: '910',
+    })
+    mocks.getLocks.mockRejectedValue(new Error('catalog unavailable'))
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(useCalculation().widthProyema.value).toBe('910')
+    expect(wrapper.html()).not.toContain('catalog unavailable')
   })
 
   it('shows a reload-required modal for a lock conflict in the open product row', async () => {
