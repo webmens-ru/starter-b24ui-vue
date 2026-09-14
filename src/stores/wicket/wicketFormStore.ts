@@ -757,14 +757,16 @@ const fieldsFilled = ref<number>(0)
       (priceRetail.value !== null && priceRetail.value !== '' && String(priceRetail.value).trim() !== '')
       || (apiData.priceRetail !== null && apiData.priceRetail !== undefined && String(apiData.priceRetail).trim() !== '')
 
-    let active = apiActive
+    const computedProgress = computeProgressFromState(apiData)
+    let active = RETIRED_STANDALONE_PAGE_IDS.has(apiActive)
+      ? computedProgress.activePage
+      : apiActive
     if (hasPrice) {
       active = laterWizardStep(active, 'page12')
     } else if (apiVisited.length === 0) {
-      active = computeProgressFromState(apiData).activePage
+      active = computedProgress.activePage
     }
 
-    const computedProgress = computeProgressFromState(apiData)
     const shouldStartFromFirstPage = modelIdForLoad === '2'
     w.activePage.value = shouldStartFromFirstPage ? 'page1' : active
     w.visitedPages.value =

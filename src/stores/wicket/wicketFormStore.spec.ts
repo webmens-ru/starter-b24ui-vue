@@ -250,4 +250,35 @@ describe('wicketFormStore accessory composition', () => {
       'page_lock_type',
     ])
   })
+
+  it('falls back from a retired legacy active page without changing valid active-page restoration', () => {
+    const store = useWicketFormStore()
+    const wizard = useWicketWizardStore()
+    const retiredPages = [
+      'page_lock_components',
+      'page_door_closer',
+      'page_bumper',
+      'page_skud',
+    ]
+
+    store.loadFromApi({
+      modelId: '1',
+      activePage: 'page_door_closer',
+      visitedPages: ['page1', 'page7', 'page_lock_components', 'page10', 'page_door_closer'],
+    })
+
+    expect(wizard.activePage).toBe('page7')
+    expect(wizard.visitedPages).toEqual(['page1', 'page7', 'page10'])
+    for (const page of retiredPages) {
+      expect(wizard.visitedPages).not.toContain(page)
+    }
+
+    store.loadFromApi({
+      modelId: '1',
+      activePage: 'page11',
+      visitedPages: ['page1', 'page7', 'page10', 'page11'],
+    })
+
+    expect(wizard.activePage).toBe('page11')
+  })
 })
