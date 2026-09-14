@@ -47,6 +47,19 @@ describe('ProductRowTableRows', () => {
     expect(unit.get('[data-price-kind="final-retail-unit"]').classes()).toContain('text-gray-500')
   })
 
+  it('hides saved prices until the product row calculation is actual', async () => {
+    const wrapper = mountRows(makeProductRow({ isActual: false }))
+    expect(wrapper.findAll('[data-price-kind]')).toHaveLength(0)
+    expect(wrapper.get('[data-label="Цена за единицу"]').text()).toContain('Требуется расчёт')
+    expect(wrapper.get('[data-label="Сумма"]').text()).toContain('Требуется расчёт')
+    expect(wrapper.text()).not.toMatch(/720|900|1[\s ]?440|1[\s ]?800/)
+
+    await wrapper.get('[aria-label="Подробнее о товарной позиции 7"]').trigger('click')
+    const details = wrapper.get('[data-product-row-details]')
+    expect(details.text()).toContain('Требуется расчёт')
+    expect(details.text()).not.toMatch(/720|800|900|1[\s ]?000|1[\s ]?440|1[\s ]?800/)
+  })
+
   it('renders status as a badge and deadline as separate secondary text', () => {
     const wrapper = mountRows()
     expect(wrapper.get('[data-product-row-status]').attributes('data-status-badge')).toBe('')

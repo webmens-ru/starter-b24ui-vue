@@ -56,6 +56,16 @@ watch(() => [
 })
 
 const statusName = computed(() => props.productRow.status.name || props.productRow.status.code || 'Без статуса')
+const hasUnitPrice = computed(() => props.productRow.finalDealerUnitPrice !== null || props.productRow.finalRetailUnitPrice !== null)
+const hasTotalPrice = computed(() => props.productRow.dealerTotalPrice !== null || props.productRow.retailTotalPrice !== null)
+const hasAnyPrice = computed(() => [
+  props.productRow.baseRetailUnitPrice,
+  props.productRow.baseDealerUnitPrice,
+  props.productRow.finalRetailUnitPrice,
+  props.productRow.finalDealerUnitPrice,
+  props.productRow.retailTotalPrice,
+  props.productRow.dealerTotalPrice,
+].some(price => price !== null))
 
 const adjustmentLabel = computed(() => {
   if (props.productRow.adjustmentType === null || props.productRow.adjustmentValue === null || props.productRow.adjustmentUnit === null) {
@@ -144,33 +154,41 @@ function emitDeadline(): void {
       <div role="cell" data-label="Цена за единицу" class="min-w-0 text-right tabular-nums max-lg:text-left">
         <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Цена за единицу</span>
         <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
-          <div>
-            <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)" data-price-kind="final-dealer-unit" class="font-semibold">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
-            <span v-else data-price-redacted>Недоступно</span>
-          </div>
-          <div
-            v-if="formatOrderPrice(productRow.finalRetailUnitPrice)"
-            data-price-kind="final-retail-unit"
-            class="mt-1 text-xs font-normal text-gray-500"
-          >
-            Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
-          </div>
+          <span v-if="!hasUnitPrice" data-price-redacted>Недоступно</span>
+          <span v-else-if="!productRow.isActual" data-price-stale>Требуется расчёт</span>
+          <template v-else>
+            <div>
+              <span v-if="formatOrderPrice(productRow.finalDealerUnitPrice)" data-price-kind="final-dealer-unit" class="font-semibold">{{ formatOrderPrice(productRow.finalDealerUnitPrice) }}</span>
+              <span v-else data-price-redacted>Недоступно</span>
+            </div>
+            <div
+              v-if="formatOrderPrice(productRow.finalRetailUnitPrice)"
+              data-price-kind="final-retail-unit"
+              class="mt-1 text-xs font-normal text-gray-500"
+            >
+              Розница: {{ formatOrderPrice(productRow.finalRetailUnitPrice) }}
+            </div>
+          </template>
         </div>
       </div>
       <div role="cell" data-label="Сумма" class="min-w-0 text-right tabular-nums max-lg:text-left">
         <span data-mobile-cell-label class="block text-xs font-medium uppercase tracking-wide text-gray-500">Сумма</span>
         <div data-mobile-cell-value class="mt-2 block w-full min-w-0">
-          <div>
-            <span v-if="formatOrderPrice(productRow.dealerTotalPrice)" data-price-kind="dealer-total" class="font-semibold">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
-            <span v-else data-price-redacted>Недоступно</span>
-          </div>
-          <div
-            v-if="formatOrderPrice(productRow.retailTotalPrice)"
-            data-price-kind="retail-total"
-            class="mt-1 text-xs font-normal text-gray-500"
-          >
-            Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
-          </div>
+          <span v-if="!hasTotalPrice" data-price-redacted>Недоступно</span>
+          <span v-else-if="!productRow.isActual" data-price-stale>Требуется расчёт</span>
+          <template v-else>
+            <div>
+              <span v-if="formatOrderPrice(productRow.dealerTotalPrice)" data-price-kind="dealer-total" class="font-semibold">{{ formatOrderPrice(productRow.dealerTotalPrice) }}</span>
+              <span v-else data-price-redacted>Недоступно</span>
+            </div>
+            <div
+              v-if="formatOrderPrice(productRow.retailTotalPrice)"
+              data-price-kind="retail-total"
+              class="mt-1 text-xs font-normal text-gray-500"
+            >
+              Розница: {{ formatOrderPrice(productRow.retailTotalPrice) }}
+            </div>
+          </template>
         </div>
       </div>
       <div role="cell" data-label="Статус" class="min-w-0 text-sm text-gray-700">
@@ -237,7 +255,10 @@ function emitDeadline(): void {
     </div>
 
     <div v-if="detailsOpen" :id="`product-row-details-${productRow.id}`" data-product-row-details class="bg-gray-50 px-5 py-5">
-        <section aria-label="Цены и коммерческие условия" class="grid gap-4 lg:grid-cols-3">
+      <div v-if="!productRow.isActual && hasAnyPrice" data-price-stale class="text-sm font-medium text-gray-600">
+        Требуется расчёт
+      </div>
+      <section v-else aria-label="Цены и коммерческие условия" class="grid gap-4 lg:grid-cols-3">
           <section>
             <h3 class="mb-2 text-sm font-semibold text-gray-700">Базовая цена за единицу</h3>
             <dl class="space-y-1 text-sm">
