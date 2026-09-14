@@ -445,7 +445,7 @@ describe('useCalculation', () => {
         .toBeLessThan(calc.visitedPages.value.indexOf('page5'))
     })
 
-    it('для type2 при редактировании не блокирует вложенные шаги замка из старого visitedPages', () => {
+    it('для type2 отбрасывает retired page_lock_components, сохраняя доступ к валидному шагу замка', () => {
       calc.applyAccessoryComposition({
         lockVersion: 2,
         lockComponents: [{ materialItemId: 2, relationRole: 'lock_component' }],
@@ -456,9 +456,9 @@ describe('useCalculation', () => {
         modelId: '2',
         visitedPages: [
           'page1', 'page2', 'page5', 'page3', 'page6',
-          'page7', 'page9', 'page10', 'page11', 'page12',
+          'page7', 'page9', 'page_lock_type', 'page_lock_components', 'page10', 'page11', 'page12',
         ],
-        activePage: 'page12',
+        activePage: 'page_lock_components',
         providesMaterial: 'Предоставляет изготовитель',
         providesPaint: 'Предоставляет изготовитель',
         doesPaintingFrame: 'Выполняет изготовитель',
@@ -480,12 +480,12 @@ describe('useCalculation', () => {
       })
 
       expect(calc.activePage.value).toBe('page1')
+      expect(calc.activePage.value).not.toBe('page_lock_components')
       expect(calc.isPageAccessible('page_lock_type')).toBe(true)
-      expect(calc.isPageAccessible('page_lock_components')).toBe(true)
+      expect(calc.isPageAccessible('page_lock_components')).toBe(false)
+      expect(calc.visitedPages.value).not.toContain('page_lock_components')
       expect(calc.visitedPages.value.indexOf('page9'))
         .toBeLessThan(calc.visitedPages.value.indexOf('page_lock_type'))
-      expect(calc.visitedPages.value.indexOf('page_lock_type'))
-        .toBeLessThan(calc.visitedPages.value.indexOf('page_lock_components'))
     })
 
     it('при сохранённом page11 и уже рассчитанной цене открывает page12', () => {
