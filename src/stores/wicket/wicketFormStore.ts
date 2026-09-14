@@ -11,6 +11,13 @@ import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
 
+const RETIRED_STANDALONE_PAGE_IDS = new Set([
+  'page_lock_components',
+  'page_door_closer',
+  'page_bumper',
+  'page_skud',
+])
+
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
@@ -740,7 +747,7 @@ const fieldsFilled = ref<number>(0)
 
     // Прогресс мастера: reachedStep из API; при уже рассчитанной цене — последний шаг page12.
     const apiVisited = Array.isArray(apiData.visitedPages)
-      ? (apiData.visitedPages as string[])
+      ? (apiData.visitedPages as string[]).filter(page => !RETIRED_STANDALONE_PAGE_IDS.has(page))
       : []
     const apiActive =
       typeof apiData.activePage === 'string' && apiData.activePage

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { WicketAccessoryCompositionResponse } from '../../app/api/wicket.types'
 import { useWicketFormStore } from './wicketFormStore'
+import { useWicketWizardStore } from './wicketWizardStore'
 
 function composition(): WicketAccessoryCompositionResponse {
   const row = (materialItemId: number, relationRole: string) => ({
@@ -213,5 +214,40 @@ describe('wicketFormStore accessory composition', () => {
     for (const blockName of standaloneBlockNames) {
       expect(store.data.map(block => block.blockName)).not.toContain(blockName)
     }
+  })
+
+  it('drops only retired standalone pages while restoring legacy progress', () => {
+    const store = useWicketFormStore()
+    const wizard = useWicketWizardStore()
+
+    store.loadFromApi({
+      modelId: '1',
+      activePage: 'page11',
+      visitedPages: [
+        'page1',
+        'page7',
+        'page_lock_type',
+        'page_lock_components',
+        'page10',
+        'page_door_closer',
+        'page_bumper',
+        'page_skud',
+        'page11',
+      ],
+    })
+
+    expect(wizard.activePage).toBe('page11')
+    expect(wizard.visitedPages).toEqual([
+      'page1',
+      'page7',
+      'page2',
+      'page3',
+      'page5',
+      'page6',
+      'page9',
+      'page10',
+      'page11',
+      'page_lock_type',
+    ])
   })
 })
