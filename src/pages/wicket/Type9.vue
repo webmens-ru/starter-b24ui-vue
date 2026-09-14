@@ -14,10 +14,6 @@ import LockType from '../../components/wicket/LockType.vue'
 import Pen from '../../components/wicket/Pen.vue'
 import Client from '../../components/wicket/Client.vue'
 import End from '../../components/wicket/End.vue'
-import DoorCloserStep from '../../components/wicket/steps/DoorCloserStep.vue'
-import BumperStep from '../../components/wicket/steps/BumperStep.vue'
-import SkudStep from '../../components/wicket/steps/SkudStep.vue'
-import LockComponentsStep from '../../components/wicket/steps/LockComponentsStep.vue'
 import { type9Route } from './type9Route'
 
 const stepComponents: Record<string, Component> = {
@@ -30,11 +26,7 @@ const stepComponents: Record<string, Component> = {
   page7: RazmeryProyema,
   page9: IsTherelock,
   page_lock_type: LockType,
-  page_lock_components: LockComponentsStep,
   page10: Pen,
-  page_door_closer: DoorCloserStep,
-  page_bumper: BumperStep,
-  page_skud: SkudStep,
   page11: Client,
   page12: End,
 }

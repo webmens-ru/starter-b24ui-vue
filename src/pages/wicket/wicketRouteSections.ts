@@ -1,4 +1,3 @@
-import type { WicketSharedNavState } from './wicketNavTypes'
 import type { WicketRouteSection } from './wicketRoute'
 
 const ok = () => ({ valid: true, errors: [] })
@@ -113,24 +112,8 @@ export function lockSection(): WicketRouteSection {
   return result
 }
 
-export function lockComponentsSection(): WicketRouteSection {
-  const result = section('page_lock_components', 'Комплектующие замка', 'lock-components')
-  result.visible = state => state.isThereLock === 1
-  return result
-}
-
 export function penSection(): WicketRouteSection {
   return section('page10', 'Дополнительная ручка', 'pen')
-}
-
-export function addonSection(
-  page: 'page_door_closer' | 'page_bumper' | 'page_skud',
-  label: string,
-  url: string,
-): WicketRouteSection {
-  const result = section(page, label, url)
-  result.visible = (state: WicketSharedNavState) => state.availableSections.includes(page)
-  return result
 }
 
 export function clientSection(): WicketRouteSection {
@@ -147,11 +130,7 @@ export function standardTailSections(): WicketRouteSection[] {
     shieldSection(),
     canvasSection(),
     lockSection(),
-    lockComponentsSection(),
     penSection(),
-    addonSection('page_door_closer', 'Доводчик', 'door-closer'),
-    addonSection('page_bumper', 'Отбойник', 'bumper'),
-    addonSection('page_skud', 'СКУД', 'skud'),
     clientSection(),
     calculateSection(),
   ]

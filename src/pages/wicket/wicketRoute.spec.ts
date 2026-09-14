@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute, type WicketRouteSection } from './wicketRoute'
+import { standardTailSections } from './wicketRouteSections'
 
 const state: WicketSharedNavState = {
   modelId: '3',
@@ -53,5 +54,24 @@ describe('defineWicketRoute', () => {
 
     expect(route.next('page9', state)).toBe('page10')
     expect(route.menu(state).map(item => item.page)).toEqual(['page9', 'page10'])
+  })
+
+  it('исключает самостоятельные аксессуары из стандартного хвоста калитки', () => {
+    const route = defineWicketRoute(standardTailSections())
+    const menuPages = route.menu(state).map(item => item.page)
+
+    expect(menuPages).not.toEqual(expect.arrayContaining([
+      'page_lock_components',
+      'page_door_closer',
+      'page_bumper',
+      'page_skud',
+    ]))
+    expect(menuPages).toEqual(expect.arrayContaining(['page9', 'page10']))
+    expect(route.next('page9', { ...state, isThereLock: 0 })).toBe('page10')
+    const stateWithLock = { ...state, isThereLock: 1 }
+    expect(route.next('page_lock_type', stateWithLock)).toBe('page10')
+    expect(route.prev('page10', stateWithLock)).toBe('page_lock_type')
+    expect(route.next('page10', state)).toBe('page11')
+    expect(route.prev('page11', state)).toBe('page10')
   })
 })

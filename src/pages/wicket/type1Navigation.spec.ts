@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getNextPage, getPrevPage, type Type1NavState } from './type1Route'
+import { getNextPage, getPrevPage, type Type1NavState, type1Route } from './type1Route'
 
 function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
   return {
@@ -79,11 +79,8 @@ describe('type1Navigation', () => {
       it('page5 → page3', () => {
         expect(getNextPage('page5', state())).toBe('page3')
       })
-      it('page_lock_type → page_lock_components', () => {
-        expect(getNextPage('page_lock_type', state())).toBe('page_lock_components')
-      })
-      it('page_lock_components → page10', () => {
-        expect(getNextPage('page_lock_components', state())).toBe('page10')
+      it('page_lock_type → page10', () => {
+        expect(getNextPage('page_lock_type', state())).toBe('page10')
       })
       it('page12 → null', () => {
         expect(getNextPage('page12', state())).toBeNull()
@@ -133,18 +130,15 @@ describe('type1Navigation', () => {
       })
     })
 
-    describe('page10 / page_lock_components → page_lock_type / page9', () => {
-      it('page_lock_components → page_lock_type', () => {
-        expect(getPrevPage('page_lock_components', state())).toBe('page_lock_type')
-      })
+    describe('page10 → page_lock_type / page9', () => {
       it('page_lock_type → page9', () => {
         expect(getPrevPage('page_lock_type', state())).toBe('page9')
       })
-      it('page10, замок есть + изготовитель → page_lock_components', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_components')
+      it('page10, замок есть + изготовитель → page_lock_type', () => {
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
       })
-      it('page10, замок есть + заказчик → page9 (пропуск page_lock_type)', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_components')
+      it('page10, замок есть + заказчик → page_lock_type', () => {
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
       })
       it('page10, замок нет → page9', () => {
         expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')
@@ -161,18 +155,22 @@ describe('type1Navigation', () => {
     })
   })
 
-  describe('furniture-разделы (динамическая видимость)', () => {
-    it('page10 → первый доступный addon (все доступны)', () => {
-      expect(getNextPage('page10', state())).toBe('page_door_closer')
-    })
-    it('page10 → page11 (client), когда addon-разделов нет', () => {
-      expect(getNextPage('page10', state({ availableSections: [] }))).toBe('page11')
-    })
-    it('page10 → page_bumper, когда доступен только bumper', () => {
-      expect(getNextPage('page10', state({ availableSections: ['page_bumper'] }))).toBe('page_bumper')
-    })
-    it('page11 (client).prev → последний доступный addon', () => {
-      expect(getPrevPage('page11', state({ availableSections: ['page_skud'] }))).toBe('page_skud')
+  describe('хвост мастера без самостоятельных аксессуаров', () => {
+    it('оставляет замок и ручку, но исключает самостоятельные аксессуары', () => {
+      const menuPages = type1Route.menu(state()).map(item => item.page)
+
+      expect(menuPages).not.toEqual(expect.arrayContaining([
+        'page_lock_components',
+        'page_door_closer',
+        'page_bumper',
+        'page_skud',
+      ]))
+      expect(menuPages).toEqual(expect.arrayContaining(['page9', 'page10']))
+      expect(getNextPage('page9', state({ isThereLock: 0 }))).toBe('page10')
+      expect(getNextPage('page_lock_type', state())).toBe('page10')
+      expect(getPrevPage('page10', state())).toBe('page_lock_type')
+      expect(getNextPage('page10', state())).toBe('page11')
+      expect(getPrevPage('page11', state())).toBe('page10')
     })
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getNextPage, getPrevPage, type Type5NavState } from './type5Route'
+import { getNextPage, getPrevPage, type Type5NavState, type5Route } from './type5Route'
 
 function state(overrides: Partial<Type5NavState> = {}): Type5NavState {
   return {
@@ -59,8 +59,8 @@ describe('type5Navigation', () => {
       it('page5 → page3', () => {
         expect(getNextPage('page5', state())).toBe('page3')
       })
-      it('page_lock_type → page_lock_components → page10', () => {
-        expect(getNextPage('page_lock_type', state())).toBe('page_lock_components')
+      it('page_lock_type → page10', () => {
+        expect(getNextPage('page_lock_type', state())).toBe('page10')
       })
       it('page12 → null', () => {
         expect(getNextPage('page12', state())).toBeNull()
@@ -98,10 +98,10 @@ describe('type5Navigation', () => {
         expect(getPrevPage('page_lock_type', state())).toBe('page9')
       })
       it('page10, замок есть + изготовитель → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_components')
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
       })
-      it('page10, замок есть + заказчик → page9 (пропуск page_lock_type)', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_components')
+      it('page10, замок есть + заказчик → page_lock_type', () => {
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
       })
       it('page10, замок нет → page9', () => {
         expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')
@@ -116,5 +116,19 @@ describe('type5Navigation', () => {
         expect(getPrevPage('page1', state())).toBeNull()
       })
     })
+  })
+
+  it('исключает самостоятельные аксессуары из меню и переходов', () => {
+    const menuPages = type5Route.menu(state()).map(item => item.page)
+
+    expect(menuPages).not.toEqual(expect.arrayContaining([
+      'page_lock_components', 'page_door_closer', 'page_bumper', 'page_skud',
+    ]))
+    expect(menuPages).toEqual(expect.arrayContaining(['page9', 'page10']))
+    expect(getNextPage('page9', state({ isThereLock: 0 }))).toBe('page10')
+    expect(getNextPage('page_lock_type', state())).toBe('page10')
+    expect(getPrevPage('page10', state())).toBe('page_lock_type')
+    expect(getNextPage('page10', state())).toBe('page11')
+    expect(getPrevPage('page11', state())).toBe('page10')
   })
 })
