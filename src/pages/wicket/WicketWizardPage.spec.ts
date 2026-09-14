@@ -110,18 +110,33 @@ describe('WicketWizardPage mobile summary', () => {
     )
   })
 
-  it('loads strict product row context from the URL without creating another order or configuration', async () => {
+  it('loads legacy accessory composition without fetching standalone catalogs or showing them in the summary', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.getWicketAccessoryComposition.mockResolvedValue({
+      lockVersion: 3,
+      lockComponents: [{ materialItemId: 11, relationRole: 'lock_component' }],
+      doorClosers: [{ materialItemId: 31, relationRole: 'door_closer' }],
+      bumpers: [{ materialItemId: 41, relationRole: 'bumper' }],
+      skud: [{ materialItemId: 21, relationRole: 'skud' }],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
 
     mountPage()
     await flushPromises()
 
     expect(mocks.loadWicketData).toHaveBeenCalledWith({ orderId: 42, productRowId: 7, modelId: '1' })
     expect(mocks.getWicketAccessoryComposition).toHaveBeenCalledWith({ orderId: 42, productRowId: 7 })
-    expect(mocks.getMaterialItems).toHaveBeenCalledTimes(3)
-    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'door_closer', productType: 'wicket', modelId: 1 })
-    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'bumper', productType: 'wicket', modelId: 1 })
-    expect(mocks.getMaterialItems).toHaveBeenCalledWith({ typeCode: 'skud', productType: 'wicket', modelId: 1 })
+    expect(mocks.getMaterialItems).not.toHaveBeenCalled()
+    const calc = useCalculation()
+    const standaloneBlockNames = [
+      'Комплектующие замка',
+      'Доводчик',
+      'Отбойник',
+      'СКУД',
+    ]
+    for (const blockName of standaloneBlockNames) {
+      expect(calc.data.value.map(block => block.blockName)).not.toContain(blockName)
+    }
   })
 
   it('mixed reload keeps root lock-set branches separate from canonical standalone rows', async () => {

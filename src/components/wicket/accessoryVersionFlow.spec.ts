@@ -295,6 +295,67 @@ describe('wicket root/accessory version flow', () => {
     expect(calculated.priceRetail).toBe(expectedPrice)
   })
 
+  it('preserves legacy accessory selections through a root save and recalculation without posting composition', async () => {
+    const context = { orderId: 42, productRowId: 76, modelId: '1' }
+    let serverLockVersion = 40
+    const existingSelections = {
+      lockComponents: [{ role: 'lock_component' as const, materialItemId: 11, providedByManufacturer: true, installedByManufacturer: false }],
+      skud: [{ role: 'skud' as const, materialItemId: 21, providedByManufacturer: true, installedByManufacturer: true }],
+      doorClosers: [{ role: 'door_closer' as const, materialItemId: 31, providedByManufacturer: true, installedByManufacturer: true }],
+      bumpers: [{ role: 'bumper' as const, materialItemId: 41, providedByManufacturer: true, installedByManufacturer: false }],
+    }
+
+    api.get.mockImplementation(async (url: string) => {
+      if (url === '/api/wicket/type1/get-data') {
+        return { data: { data: { ...context, lockVersion: serverLockVersion } } }
+      }
+      if (url === '/api/wicket/accessory-composition') {
+        return {
+          data: {
+            data: {
+              ...emptyComposition(serverLockVersion),
+              lockComponents: [{ materialItemId: 11, relationRole: 'lock_component' }],
+              skud: [
+                { materialItemId: 21, relationRole: 'skud_installation' },
+                { materialItemId: 21, relationRole: 'skud' },
+              ],
+              doorClosers: [
+                { materialItemId: 31, relationRole: 'door_closer' },
+                { materialItemId: 31, relationRole: 'door_closer_installation' },
+              ],
+              bumpers: [{ materialItemId: 41, relationRole: 'bumper' }],
+            },
+          },
+        }
+      }
+      throw new Error(`Unexpected GET ${url}`)
+    })
+    api.post.mockImplementation(async (url: string) => {
+      if (url === '/api/wicket/type1/data' || url === '/api/order/calculate') {
+        serverLockVersion += 1
+        return { data: { data: { priceDealer: '100.00', priceRetail: '100.00', lockVersion: serverLockVersion } } }
+      }
+      throw new Error(`Unexpected POST ${url}`)
+    })
+
+    const calc = useCalculation()
+    calc.orderId.value = context.orderId
+    calc.productRowId.value = context.productRowId
+    calc.modelId.value = context.modelId
+    const initial = await loadCoherentWicketState(context)
+    calc.applyAccessoryComposition(initial.accessoryComposition)
+    calc.loadFromApi(initial.wicketData)
+
+    await saveWicketData(calc.getFullSavePayload())
+    await recalculate(context)
+
+    expect(api.post).not.toHaveBeenCalledWith(
+      '/api/wicket/accessory-composition',
+      expect.anything(),
+    )
+    expect(calc.getAccessorySelections()).toEqual(existingSelections)
+  })
+
   it('replaces stale handle IDs with a colored lock set without posting its internal components', async () => {
     const context = { orderId: 42, productRowId: 74, modelId: '1' }
     let serverLockVersion = 20

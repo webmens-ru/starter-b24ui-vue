@@ -173,4 +173,45 @@ describe('wicketFormStore accessory composition', () => {
       bumpers: [{ role: 'bumper', materialItemId: 41, providedByManufacturer: false, installedByManufacturer: true }],
     })
   })
+
+  it('keeps legacy accessory selections while rebuilding a summary without standalone accessory blocks', () => {
+    const store = useWicketFormStore()
+    const source = composition()
+    source.bumpers = [{
+      ...source.doorClosers[0],
+      materialItemId: 41,
+      productType: 'material',
+      rowKind: 'material',
+      relationRole: 'bumper',
+    }]
+
+    store.applyAccessoryComposition(source)
+    store.loadFromApi({ modelId: '1' })
+
+    expect(store.getAccessorySelections()).toEqual({
+      lockComponents: [
+        { role: 'lock_component', materialItemId: 11, providedByManufacturer: true, installedByManufacturer: true },
+        { role: 'lock_component', materialItemId: 12, providedByManufacturer: true, installedByManufacturer: false },
+      ],
+      skud: [
+        { role: 'skud', materialItemId: 21, providedByManufacturer: true, installedByManufacturer: false },
+        { role: 'skud', materialItemId: 22, providedByManufacturer: false, installedByManufacturer: true },
+      ],
+      doorClosers: [
+        { role: 'door_closer', materialItemId: 31, providedByManufacturer: true, installedByManufacturer: false },
+      ],
+      bumpers: [
+        { role: 'bumper', materialItemId: 41, providedByManufacturer: true, installedByManufacturer: false },
+      ],
+    })
+    const standaloneBlockNames = [
+      'Комплектующие замка',
+      'Доводчик',
+      'Отбойник',
+      'СКУД',
+    ]
+    for (const blockName of standaloneBlockNames) {
+      expect(store.data.map(block => block.blockName)).not.toContain(blockName)
+    }
+  })
 })

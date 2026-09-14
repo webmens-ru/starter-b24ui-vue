@@ -7,7 +7,6 @@ import { useCalculation } from '../../composables/useCalculation'
 import { useWicketLockCatalogStore } from '../../stores/wicket/wicketLockCatalogStore'
 import {
   getWicketAccessoryComposition,
-  getMaterialItems,
   loadCoherentWicketState,
   onWicketProductRowLockConflict,
 } from '../../app/api/wicket'
@@ -106,8 +105,7 @@ async function initCalculation(): Promise<void> {
     const context = await resolveProductRowContext()
     if (!isCurrentInitialization(generation)) return
     if (!context) return
-    const [availability, coherentState, lockItems] = await Promise.all([
-      fetchAddonAvailability(Number(context.modelId)),
+    const [coherentState, lockItems] = await Promise.all([
       loadCoherentWicketState(context),
       lockCatalog.load(Number(context.modelId)).catch(error => {
         console.warn('getLocks:', error)
@@ -115,8 +113,8 @@ async function initCalculation(): Promise<void> {
       }),
     ])
     if (!isCurrentInitialization(generation)) return
-    calc.addonItems.value = availability.items
-    calc.availableSections.value = availability.sections
+    calc.addonItems.value = { doorCloser: [], bumper: [], skud: [] }
+    calc.availableSections.value = []
     calc.applyAccessoryComposition(coherentState.accessoryComposition)
     const selectedLock = lockItems.find(lock => lock.id === coherentState.wicketData.lockSetId)
     loadFromApi(selectedLock
@@ -190,31 +188,6 @@ watch(isMobile, (mobile) => {
   menuOpen.value = false
   showSummary.value = !mobile
 })
-
-type AddonKey = 'doorCloser' | 'bumper' | 'skud'
-type AddonItem = Awaited<ReturnType<typeof getMaterialItems>>[number]
-
-async function fetchAddonAvailability(modelId: number): Promise<{
-  items: Record<AddonKey, AddonItem[]>
-  sections: string[]
-}> {
-  const map: Array<[AddonKey, 'door_closer' | 'bumper' | 'skud', string]> = [
-    ['doorCloser', 'door_closer', 'page_door_closer'],
-    ['bumper', 'bumper', 'page_bumper'],
-    ['skud', 'skud', 'page_skud'],
-  ]
-  const items: Record<AddonKey, AddonItem[]> = { doorCloser: [], bumper: [], skud: [] }
-  const sections: string[] = []
-  await Promise.all(map.map(async ([key, typeCode, page]) => {
-    try {
-      const result = await getMaterialItems({ typeCode, productType: 'wicket', modelId })
-      items[key] = result
-      if (result.length) sections.push(page)
-    } catch (e) { console.warn('getMaterialItems', typeCode, e) }
-  }))
-
-  return { items, sections }
-}
 
 const sectionState = computed(() => ({
   modelId: String(calc.modelId.value ?? ''),

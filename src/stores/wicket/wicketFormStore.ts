@@ -506,7 +506,6 @@ const fieldsFilled = ref<number>(0)
    */
   function computeProgressFromState(apiData?: Record<string, unknown>): { visitedPages: string[]; activePage: string } {
     const modelId = String(apiData?.modelId ?? useWicketWizardStore().modelId ?? '')
-    const addonPages = ['page_door_closer', 'page_bumper', 'page_skud'].filter(page => availableSections.value.includes(page))
     const stepOrder = modelId === '2'
       ? [
           'page1',
@@ -518,9 +517,7 @@ const fieldsFilled = ref<number>(0)
           'page6',
           'page9',
           'page_lock_type',
-          'page_lock_components',
           'page10',
-          ...addonPages,
           'page11',
           'page12',
         ]
@@ -566,20 +563,8 @@ const fieldsFilled = ref<number>(0)
         case 'page_lock_type':
           completed = isThereLock.value !== 1 || lockComponentIds.value.length > 0
           break
-        case 'page_lock_components':
-          completed = isThereLock.value !== 1 || lockComponentIds.value.length > 0
-          break
         case 'page10':
           completed = isTherePen.value !== null
-          break
-        case 'page_door_closer':
-          completed = addons.value.doorCloser.isThere !== null
-          break
-        case 'page_bumper':
-          completed = addons.value.bumper.isThere !== null
-          break
-        case 'page_skud':
-          completed = addons.value.skud.isThere !== null
           break
         case 'page11': {
           const snap = apiData?.client_snapshot
@@ -933,30 +918,6 @@ const fieldsFilled = ref<number>(0)
       }
     }
     blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
-
-    // Доводчик / Отбойник / СКУД
-    for (const [key, label] of [['doorCloser', 'Доводчик'], ['bumper', 'Отбойник'], ['skud', 'СКУД']] as const) {
-      const ad = addons.value[key]
-      const p: CalcBlock['params'] = [{ name: label, value: ad.isThere === 1 ? 'Будет' : 'Не будет' }]
-      if (ad.isThere === 1) {
-        p.push({ name: 'Предоставляет', value: ad.provided })
-        p.push({ name: 'Устанавливает', value: ad.installed })
-        if (ad.provided === 'Предоставляет изготовитель') {
-          if (key === 'skud' && ad.itemIds.length > 0) {
-            const skudItems = addonItems.value.skud
-            const selectedMarkings = ad.itemIds
-              .map(id => skudItems.find(i => i.id === id)?.name)
-              .filter(Boolean)
-            if (selectedMarkings.length > 0) {
-              p.push({ name: 'Модели', value: selectedMarkings.join(', ') })
-            }
-          } else if (ad.itemId != null && ad.marking) {
-            p.push({ name: 'Модель', value: ad.marking })
-          }
-        }
-      }
-      blocks.push({ blockName: label, params: p })
-    }
 
     // Клиент
     blocks.push({
