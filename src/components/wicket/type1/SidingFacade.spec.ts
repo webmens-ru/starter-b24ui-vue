@@ -153,10 +153,17 @@ describe('SidingFacade', () => {
     await wrapper.get('[data-testid="appearance-color"]').setValue('8')
     await flushPromises()
 
+    const calc = useCalculation()
+    calc.updatePriceBlock('900.00', '1200.00')
+    apiMocks.recalculate.mockResolvedValue({ priceDealer: '975.00', priceRetail: '1300.00' })
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.recalculate.mockClear()
+
     await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
     await flushPromises()
 
-    const calc = useCalculation()
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
     expect(calc.manufacturerFacadeId.value).toBeNull()
     expect(calc.materialSupplierFacade.value).toBe('')
     expect(calc.colorFacadeId.value).toBeNull()
@@ -175,6 +182,57 @@ describe('SidingFacade', () => {
 
     await wrapper.get('[data-label="Далее"]').trigger('click')
     expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it('recalculates once after a successful facade appearance save and refreshes the stored price', async () => {
+    const calc = useCalculation()
+    calc.idFacade.value = 7
+    calc.materialFacade.value = 'Бревно'
+    calc.formFacade.value = 'Гладкая'
+    calc.typeOfCoatingFacade.value = 'Глянец'
+    calc.updatePriceBlock('900.00', '1200.00')
+    apiMocks.recalculate.mockResolvedValue({ priceDealer: '1125.00', priceRetail: '1500.00' })
+
+    const wrapper = mountFacade()
+    await flushPromises()
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.recalculate.mockClear()
+
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await flushPromises()
+
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
+    expect(apiMocks.saveWicketData.mock.invocationCallOrder[0])
+      .toBeLessThan(apiMocks.recalculate.mock.invocationCallOrder[0]!)
+    expect(calc.priceDealer.value).toBe('1125.00')
+    expect(calc.priceRetail.value).toBe('1500.00')
+    expect(calc.data.value.find(block => block.blockName === 'Цена')?.params).toEqual([
+      { name: 'Дилерская цена', value: '1125.00' },
+      { name: 'Рек. розн. цена', value: '1500.00' },
+    ])
+  })
+
+  it('does not recalculate when a facade appearance save fails', async () => {
+    const calc = useCalculation()
+    calc.idFacade.value = 7
+    calc.materialFacade.value = 'Бревно'
+    calc.formFacade.value = 'Гладкая'
+    calc.typeOfCoatingFacade.value = 'Глянец'
+    calc.updatePriceBlock('900.00', '1200.00')
+
+    const wrapper = mountFacade()
+    await flushPromises()
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('rejected'))
+    apiMocks.recalculate.mockClear()
+
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await flushPromises()
+
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).not.toHaveBeenCalled()
+    expect(calc.priceRetail.value).toBe('1200.00')
   })
 
   it('restores a saved product row independently from its appearance', async () => {

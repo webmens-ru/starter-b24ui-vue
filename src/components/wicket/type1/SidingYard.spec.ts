@@ -153,10 +153,17 @@ describe('SidingYard', () => {
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
+    const calc = useCalculation()
+    calc.updatePriceBlock('900.00', '1200.00')
+    apiMocks.recalculate.mockResolvedValue({ priceDealer: '975.00', priceRetail: '1300.00' })
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.recalculate.mockClear()
+
     await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
     await flushPromises()
 
-    const calc = useCalculation()
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
     expect(calc.manufacturerYardId.value).toBeNull()
     expect(calc.materialSupplierYard.value).toBe('')
     expect(calc.colorYardId.value).toBeNull()
@@ -165,6 +172,57 @@ describe('SidingYard', () => {
     expect(calc.colorYardImage.value).toBe('')
     expect(calc.manufacturerFacadeId.value).toBe(30)
     expect(calc.colorFacadeId.value).toBe(80)
+  })
+
+  it('recalculates once after a successful yard appearance save and refreshes the stored price', async () => {
+    const calc = useCalculation()
+    calc.idYard.value = 17
+    calc.materialYard.value = 'Бревно'
+    calc.formYard.value = 'Гладкая'
+    calc.typeOfCoatingYard.value = 'Глянец'
+    calc.updatePriceBlock('900.00', '1200.00')
+    apiMocks.recalculate.mockResolvedValue({ priceDealer: '1200.00', priceRetail: '1600.00' })
+
+    const wrapper = mountYard()
+    await flushPromises()
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.recalculate.mockClear()
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await flushPromises()
+
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
+    expect(apiMocks.saveWicketData.mock.invocationCallOrder[0])
+      .toBeLessThan(apiMocks.recalculate.mock.invocationCallOrder[0]!)
+    expect(calc.priceDealer.value).toBe('1200.00')
+    expect(calc.priceRetail.value).toBe('1600.00')
+    expect(calc.data.value.find(block => block.blockName === 'Цена')?.params).toEqual([
+      { name: 'Дилерская цена', value: '1200.00' },
+      { name: 'Рек. розн. цена', value: '1600.00' },
+    ])
+  })
+
+  it('does not recalculate when a yard appearance save fails', async () => {
+    const calc = useCalculation()
+    calc.idYard.value = 17
+    calc.materialYard.value = 'Бревно'
+    calc.formYard.value = 'Гладкая'
+    calc.typeOfCoatingYard.value = 'Глянец'
+    calc.updatePriceBlock('900.00', '1200.00')
+
+    const wrapper = mountYard()
+    await flushPromises()
+    apiMocks.saveWicketData.mockClear()
+    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('rejected'))
+    apiMocks.recalculate.mockClear()
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await flushPromises()
+
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
+    expect(apiMocks.recalculate).not.toHaveBeenCalled()
+    expect(calc.priceRetail.value).toBe('1200.00')
   })
 
   it('matches a restored string product ID to the numeric table row', async () => {

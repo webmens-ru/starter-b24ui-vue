@@ -94,7 +94,7 @@ function restoreFromCalc(): SidingRow | null {
 }
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
-async function save(row: SidingRow) {
+async function save(row: SidingRow): Promise<boolean> {
   calc.idYard.value                = row.id
   calc.materialYard.value          = row.material
   calc.formYard.value              = row.form
@@ -124,8 +124,10 @@ async function save(row: SidingRow) {
       typeOfCoatingYard:     row.typeOfCoating,
       colorYard:               calc.colorYard.value,
     })
+    return true
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
+    return false
   }
 }
 
@@ -150,8 +152,7 @@ async function selectRow(row: SidingRow) {
   const productChanged = !selectedRow.value || String(selectedRow.value.id) !== String(row.id)
   if (productChanged) calc.resetYardFilling()
   selectedRow.value = row
-  await save(row)
-  await doRecalculate()
+  if (await save(row)) await doRecalculate()
 }
 
 function deselectRow() {
@@ -161,7 +162,7 @@ function deselectRow() {
 
 async function saveAppearance() {
   if (!selectedRow.value) return
-  await save(selectedRow.value)
+  if (await save(selectedRow.value)) await doRecalculate()
 }
 
 function isSelected(row: SidingRow) {
