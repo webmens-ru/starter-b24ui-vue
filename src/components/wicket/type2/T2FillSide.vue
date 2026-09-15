@@ -16,36 +16,16 @@ const fillSideOptions = [
 ]
 
 const materialOptions = [
+  { label: 'Сайдинг', value: 'Сайдинг' },
   { label: 'Профлист', value: 'Профлист' },
 ]
 
 function clearFacadeSelection() {
-  calc.idFacade.value = ''
-  calc.manufacturerFacadeId.value = null
-  calc.colorFacadeId.value = null
-  calc.materialFacade.value = ''
-  calc.formFacade.value = ''
-  calc.thicknessFacade.value = ''
-  calc.typeOfCoatingFacade.value = ''
-  calc.colorFacade.value = ''
-  calc.colorFacadeHex.value = ''
-  calc.colorFacadeImage.value = ''
-  calc.coatingFacadeHex.value = ''
-  calc.coatingFacadeImage.value = ''
-  calc.reliefFacadeImage.value = ''
-  calc.colorFacadeReverseHex.value = ''
-  calc.colorFacadeReverseImage.value = ''
+  calc.resetFacadeFilling()
 }
 
 function clearYardSelection() {
-  calc.idYard.value = ''
-  calc.manufacturerYardId.value = null
-  calc.colorYardId.value = null
-  calc.materialYard.value = ''
-  calc.formYard.value = ''
-  calc.thicknessYard.value = ''
-  calc.typeOfCoatingYard.value = ''
-  calc.colorYard.value = ''
+  calc.resetYardFilling()
 }
 
 function onFillSideChange() {
@@ -88,17 +68,21 @@ async function save() {
     fillSide:                calc.fillSide.value,
     materialFacadeGlob:     calc.materialFacadeGlob.value,
     materialYardGlob:       calc.materialYardGlob.value,
-    formFacade:              null,
-    thicknessFacade:         null,
-    typeOfCoatingFacade:   null,
-    colorFacade:             null,
+    idFacade:                calc.idFacade.value || null,
+    materialFacade:          calc.materialFacade.value || null,
+    formFacade:              calc.formFacade.value || null,
+    thicknessFacade:         calc.thicknessFacade.value || null,
+    typeOfCoatingFacade:     calc.typeOfCoatingFacade.value || null,
+    colorFacade:             calc.colorFacade.value || null,
     priceFacade:             null,
     deliveryTimeFacade:     null,
     inStockFacade:          null,
-    formYard:                null,
-    thicknessYard:           null,
-    typeOfCoatingYard:     null,
-    colorYard:               null,
+    idYard:                  calc.idYard.value || null,
+    materialYard:            calc.materialYard.value || null,
+    formYard:                calc.formYard.value || null,
+    thicknessYard:           calc.thicknessYard.value || null,
+    typeOfCoatingYard:       calc.typeOfCoatingYard.value || null,
+    colorYard:               calc.colorYard.value || null,
     priceYard:               null,
     deliveryTimeYard:       null,
     inStockYard:            null,

@@ -1,14 +1,220 @@
-import {flushPromises,mount} from '@vue/test-utils'
-import {createPinia,setActivePinia} from 'pinia'
-import {beforeEach,describe,expect,it,vi} from 'vitest'
-import type {SidingRow} from '../../../app/api/wicket'
-import {useCalculation} from '../../../composables/useCalculation'
+import { defineComponent } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SidingRow } from '../../../app/api/wicket'
+import { useCalculation } from '../../../composables/useCalculation'
 import SidingFacade from './SidingFacade.vue'
 
-const rows:SidingRow[]=[]
-vi.mock('../../../app/api/wicket',async(importOriginal)=>{const actual=await importOriginal<typeof import('../../../app/api/wicket')>();return{...actual,getSidingTable:vi.fn(async()=>({table:rows,pagination:{page:1,pageSize:100,totalCount:rows.length,pageCount:1}})),saveWicketData:vi.fn(async()=>undefined),recalculate:vi.fn()}})
+const apiMocks = vi.hoisted(() => ({
+  getSidingTable: vi.fn(),
+  getFillingAppearanceOptions: vi.fn(),
+  saveWicketData: vi.fn(),
+  recalculate: vi.fn(),
+}))
 
-describe('SidingFacade appearance state',()=>{
- beforeEach(()=>{rows.splice(0);setActivePinia(createPinia());const calc=useCalculation();calc.reset();calc.modelId.value='1'})
- it('переносит HEX и текстуру выбранного сайдинга в чертёж',async()=>{rows.push({id:7,company:'Кровельный центр',material:'Сайдинг «Бревно»',form:'Гладкая',typeOfCoating:'Глянец',color:'RAL 1014',colorHex:'#D6C29C',colorImage:'/uploads/colors/ral1014.webp'});const wrapper=mount(SidingFacade,{global:{stubs:{B24Button:true,B24Modal:true,FilterDropdown:true}}});await flushPromises();await wrapper.get('tbody input[type="checkbox"]').setValue(true);const calc=useCalculation();expect(calc.colorFacadeHex.value).toBe('#D6C29C');expect(calc.colorFacadeImage.value).toBe('/uploads/colors/ral1014.webp')})
+vi.mock('../../../app/api/wicket', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../app/api/wicket')>(),
+  getSidingTable: apiMocks.getSidingTable,
+  getFillingAppearanceOptions: apiMocks.getFillingAppearanceOptions,
+  saveWicketData: apiMocks.saveWicketData,
+  recalculate: apiMocks.recalculate,
+}))
+
+const SelectMenuStub = defineComponent({
+  name: 'B24SelectMenu',
+  props: ['modelValue', 'items'],
+  emits: ['update:modelValue'],
+  template: `
+    <select :value="modelValue ?? ''" @change="$emit('update:modelValue', $event.target.value)">
+      <option value="">Не выбран</option>
+      <option v-for="item in items" :key="item.id" :value="item.id">{{ item.label }}</option>
+    </select>
+  `,
+})
+
+const FilterDropdownStub = defineComponent({
+  name: 'FilterDropdown',
+  props: ['label'],
+  template: '<button class="filter-stub">{{ label }}</button>',
+})
+
+const ButtonStub = defineComponent({
+  name: 'B24Button',
+  props: ['label'],
+  emits: ['click'],
+  template: '<button :data-label="label" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+})
+
+const rows: SidingRow[] = [
+  {
+    id: 7,
+    material: 'Бревно',
+    form: 'Гладкая',
+    typeOfCoating: 'Глянец',
+    coatingHex: '#AABBCC',
+    coatingImage: '/coatings/gloss.webp',
+    reliefImage: '/reliefs/log.webp',
+  },
+  {
+    id: 11,
+    material: 'Корабельная доска',
+    form: 'Трапеция',
+    typeOfCoating: 'Матовый',
+  },
+]
+
+function mountFacade() {
+  return mount(SidingFacade, {
+    global: {
+      stubs: {
+        B24Button: ButtonStub,
+        Button: ButtonStub,
+        B24Modal: true,
+        Modal: true,
+        B24SelectMenu: SelectMenuStub,
+        SelectMenu: SelectMenuStub,
+        FilterDropdown: FilterDropdownStub,
+      },
+    },
+  })
+}
+
+describe('SidingFacade', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    const calc = useCalculation()
+    calc.reset()
+    calc.orderId.value = 42
+    calc.productRowId.value = 70
+    calc.modelId.value = '1'
+    calc.materialFacadeGlob.value = 'Сайдинг'
+    apiMocks.getSidingTable.mockReset()
+    apiMocks.getSidingTable.mockResolvedValue({
+      table: rows,
+      pagination: { page: 1, pageSize: 100, totalCount: rows.length, pageCount: 1 },
+    })
+    apiMocks.getFillingAppearanceOptions.mockReset()
+    apiMocks.getFillingAppearanceOptions.mockResolvedValue({
+      manufacturers: [{ id: 3, name: 'Фасад-Профиль' }],
+      colors: [{ id: 8, name: 'RAL 8017', hex: '#442F29', image: '/colors/8017.webp' }],
+    })
+    apiMocks.saveWicketData.mockReset()
+    apiMocks.saveWicketData.mockResolvedValue({ lockVersion: 1 })
+    apiMocks.recalculate.mockReset()
+  })
+
+  it('combines a product-only siding row with optional facade appearance in the save payload', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+
+    expect(wrapper.findAll('.filter-stub').map(item => item.text())).toEqual([
+      'Материал',
+      'Форма',
+      'Тип покрытия',
+    ])
+    expect(wrapper.findAll('thead th').map(item => item.text())).toEqual([
+      'Выбрать',
+      'Материал',
+      'Форма',
+      'Тип покрытия',
+    ])
+
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    await flushPromises()
+
+    const payload = apiMocks.saveWicketData.mock.calls[apiMocks.saveWicketData.mock.calls.length - 1]?.[0]
+    expect(payload).toMatchObject({
+      idFacade: 7,
+      manufacturerFacadeId: 3,
+      colorFacadeId: 8,
+      materialFacade: 'Бревно',
+      formFacade: 'Гладкая',
+      typeOfCoatingFacade: 'Глянец',
+      materialSupplierFacade: 'Фасад-Профиль',
+      colorFacade: 'RAL 8017',
+    })
+    const calc = useCalculation()
+    expect(calc.colorFacadeHex.value).toBe('#442F29')
+    expect(calc.colorFacadeImage.value).toBe('/colors/8017.webp')
+  })
+
+  it('clears stale facade appearance when the product changes and still allows product-only continuation', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    await flushPromises()
+
+    await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.manufacturerFacadeId.value).toBeNull()
+    expect(calc.materialSupplierFacade.value).toBe('')
+    expect(calc.colorFacadeId.value).toBeNull()
+    expect(calc.colorFacade.value).toBe('')
+    expect(calc.colorFacadeHex.value).toBe('')
+    expect(calc.colorFacadeImage.value).toBe('')
+    const payload = apiMocks.saveWicketData.mock.calls[apiMocks.saveWicketData.mock.calls.length - 1]?.[0]
+    expect(payload).toMatchObject({
+      idFacade: 11,
+      manufacturerFacadeId: null,
+      colorFacadeId: null,
+      materialFacade: 'Корабельная доска',
+      formFacade: 'Трапеция',
+      typeOfCoatingFacade: 'Матовый',
+    })
+
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it('restores a saved product row independently from its appearance', async () => {
+    const calc = useCalculation()
+    calc.idFacade.value = 41
+    calc.materialFacade.value = 'Сохранённое бревно'
+    calc.formFacade.value = 'Сохранённая форма'
+    calc.typeOfCoatingFacade.value = 'Сохранённое покрытие'
+    calc.manufacturerFacadeId.value = 3
+    calc.materialSupplierFacade.value = 'Фасад-Профиль'
+    calc.colorFacadeId.value = 8
+    calc.colorFacade.value = 'RAL 8017'
+    apiMocks.getSidingTable.mockResolvedValue({
+      table: [],
+      pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 },
+    })
+
+    const wrapper = mountFacade()
+    await flushPromises()
+
+    expect(wrapper.get('tbody').text()).toContain('Сохранённое бревно')
+    expect(wrapper.get('tbody').text()).toContain('Сохранённая форма')
+    expect(wrapper.get('tbody').text()).not.toContain('Фасад-Профиль')
+    expect(wrapper.get('tbody').text()).not.toContain('RAL 8017')
+    expect(calc.manufacturerFacadeId.value).toBe(3)
+    expect(calc.colorFacadeId.value).toBe(8)
+  })
+
+  it('matches a restored string product ID to the numeric table row', async () => {
+    const calc = useCalculation()
+    calc.idFacade.value = '7'
+    calc.materialFacade.value = 'Бревно'
+    calc.formFacade.value = 'Гладкая'
+    calc.typeOfCoatingFacade.value = 'Глянец'
+
+    const wrapper = mountFacade()
+    await flushPromises()
+
+    const renderedRows = wrapper.findAll('tbody tr')
+    expect(renderedRows).toHaveLength(2)
+    expect((renderedRows[0]!.get('input').element as HTMLInputElement).checked).toBe(true)
+  })
 })

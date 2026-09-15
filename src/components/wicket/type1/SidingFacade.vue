@@ -3,6 +3,7 @@ import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getSidingTable, saveWicketData, recalculate, type SidingRow, type SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
+import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
@@ -27,11 +28,9 @@ function openModal(msg: string, title = 'Внимание') {
 const sidingFilterDataUrl = computed(() => wicketSidingFilterDataUrl(calc.modelId.value))
 
 const filters = reactive({
-  companies:      [] as string[],
   materials:      [] as string[],
   form:           [] as string[],
   typeOfCoating:  [] as string[],
-  colors:         [] as string[],
 })
 
 // ─── Таблица ─────────────────────────────────────────────────────────────────
@@ -85,13 +84,9 @@ function restoreFromCalc(): SidingRow | null {
   if (!calc.idFacade.value) return null
   return {
     id:            calc.idFacade.value,
-    company:       calc.materialSupplierFacade.value,
     material:      calc.materialFacade.value,
     form:          calc.formFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
-    color:         calc.colorFacade.value,
-    colorHex:      calc.colorFacadeHex.value,
-    colorImage:    calc.colorFacadeImage.value,
     coatingHex:    calc.coatingFacadeHex.value,
     coatingImage:  calc.coatingFacadeImage.value,
     reliefImage:   calc.reliefFacadeImage.value,
@@ -100,38 +95,34 @@ function restoreFromCalc(): SidingRow | null {
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow) {
-  // Синхронизируем calc-поля
   calc.idFacade.value                = row.id
-  calc.materialSupplierFacade.value = row.company
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = row.form
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
-  calc.colorFacade.value             = row.color
-  calc.colorFacadeHex.value          = row.colorHex ?? ''
-  calc.colorFacadeImage.value        = row.colorImage ?? ''
   calc.coatingFacadeHex.value        = row.coatingHex ?? ''
   calc.coatingFacadeImage.value      = row.coatingImage ?? ''
   calc.reliefFacadeImage.value       = row.reliefImage ?? ''
 
-  // Блок данных
   calc.updateOrCreateBlock('Заполнение (фасад)', [
-    { name: 'Производитель материала', value: row.company },
+    { name: 'Производитель материала', value: calc.materialSupplierFacade.value },
     { name: 'Материал',                value: row.material },
     { name: 'Форма',                   value: row.form },
     { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: row.color },
+    { name: 'Цвет',                    value: calc.colorFacade.value },
   ])
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       idFacade:                 row.id,
+      manufacturerFacadeId:     calc.manufacturerFacadeId.value,
+      colorFacadeId:            calc.colorFacadeId.value,
       materialFacadeGlob:       calc.materialFacadeGlob.value,
-      materialSupplierFacade:  row.company,
+      materialSupplierFacade:  calc.materialSupplierFacade.value,
       materialFacade:           row.material,
       formFacade:               row.form,
       typeOfCoatingFacade:    row.typeOfCoating,
-      colorFacade:              row.color,
+      colorFacade:              calc.colorFacade.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -156,6 +147,8 @@ async function doRecalculate() {
 
 // ─── Выбор строки ────────────────────────────────────────────────────────────
 async function selectRow(row: SidingRow) {
+  const productChanged = !selectedRow.value || String(selectedRow.value.id) !== String(row.id)
+  if (productChanged) calc.resetFacadeFilling()
   selectedRow.value = row
   await save(row)
   await doRecalculate()
@@ -163,16 +156,17 @@ async function selectRow(row: SidingRow) {
 
 function deselectRow() {
   selectedRow.value = null
-  calc.idFacade.value = ''
-  calc.colorFacadeHex.value = ''
-  calc.colorFacadeImage.value = ''
-  calc.coatingFacadeHex.value = ''
-  calc.coatingFacadeImage.value = ''
-  calc.reliefFacadeImage.value = ''
+  calc.resetFacadeFilling()
+}
+
+async function saveAppearance() {
+  if (!selectedRow.value) return
+  await save(selectedRow.value)
 }
 
 function isSelected(row: SidingRow) {
-  return selectedRow.value?.id === row.id
+  return selectedRow.value !== null
+    && String(selectedRow.value.id) === String(row.id)
 }
 
 // ─── Навигация ────────────────────────────────────────────────────────────────
@@ -215,12 +209,6 @@ onMounted(async () => {
     <!-- Фильтры -->
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <FilterDropdown
-        label="Производитель материала"
-        :url="sidingFilterDataUrl"
-        data-key="company"
-        v-model="filters.companies"
-      />
-      <FilterDropdown
         label="Материал"
         :url="sidingFilterDataUrl"
         data-key="material"
@@ -238,12 +226,6 @@ onMounted(async () => {
         data-key="typeOfCoating"
         v-model="filters.typeOfCoating"
       />
-      <FilterDropdown
-        label="Цвет"
-        :url="sidingFilterDataUrl"
-        data-key="color"
-        v-model="filters.colors"
-      />
     </div>
 
     <!-- Таблица -->
@@ -252,21 +234,19 @@ onMounted(async () => {
         <thead class="sticky top-0 z-[9] bg-gray-100">
           <tr>
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Производитель материала</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Форма</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Цвет</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <!-- Сохранённая строка (если не попала в отфильтрованный список) -->
           <tr
-            v-if="selectedRow && !rows.find(r => r.id === selectedRow!.id)"
+            v-if="selectedRow && !rows.some(isSelected)"
             class="bg-blue-100"
           >
             <td class="border border-gray-300 px-2 py-1 text-center">
@@ -277,11 +257,9 @@ onMounted(async () => {
                 @change="deselectRow"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.form }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
           </tr>
 
           <tr
@@ -297,15 +275,13 @@ onMounted(async () => {
                 @change="isSelected(row) ? deselectRow() : selectRow(row)"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.form }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>
@@ -343,6 +319,14 @@ onMounted(async () => {
         >»</button>
       </div>
     </div>
+
+    <FillingAppearanceFields
+      v-if="selectedRow"
+      :model-id="calc.modelId.value"
+      material-group="Сайдинг"
+      side="facade"
+      @change="saveAppearance"
+    />
 
   </div>
 </template>
