@@ -3,6 +3,7 @@ import type {
   ColorShieldItem,
   RecalculateResponse,
   FilterOptions,
+  FillingAppearanceOptions,
   SidingFilters,
   SidingRow,
   ProfnastilFilters,
@@ -13,7 +14,9 @@ import type {
 
 // ─── Таблица сайдинга (реальные данные) ──────────────────────────────────────
 
-const SIDING_ROWS: SidingRow[] = [
+type LegacySidingFixture = SidingRow & { company: string; color: string }
+
+const SIDING_ROWS: LegacySidingFixture[] = [
   { id: 1,   company: 'Кровельный центр', material: 'Сайдинг «Бревно»',              form: 'Гладкая',   typeOfCoating: 'Глянец',       color: 'RAL 1014',            priceM2: 850, deliveryTime: '7',  inStock: 'да' },
   { id: 2,   company: 'Кровельный центр', material: 'Сайдинг «Бревно»',              form: 'Гладкая',   typeOfCoating: 'Глянец',       color: 'RAL 1015',            priceM2: 800, deliveryTime: '7',  inStock: 'да' },
   { id: 3,   company: 'Кровельный центр', material: 'Сайдинг «Бревно»',              form: 'Гладкая',   typeOfCoating: 'Глянец',       color: 'RAL 3005',            priceM2: 800, deliveryTime: '7',  inStock: 'да' },
@@ -234,16 +237,10 @@ function unique(key: keyof SidingRow) {
     .map(v => ({ id: v, name: v }))
 }
 
-const FILTER_COMPANY: FilterOptions = {
-  company: unique('company'),
-}
-
 const FILTER_SIDING: FilterOptions = {
-  ...FILTER_COMPANY,
   material:      unique('material'),
   form:          unique('form'),
   typeOfCoating: unique('typeOfCoating'),
-  color:         unique('color'),
 }
 
 export async function mockGetFilterOptions(url: string, _type?: string): Promise<FilterOptions> {
@@ -253,27 +250,47 @@ export async function mockGetFilterOptions(url: string, _type?: string): Promise
   return FILTER_MAIN
 }
 
-const SIDING_COLOR_HEX:Record<string,string>={
-  'RAL 1014':'#DED09F','RAL 1015':'#E6D2B5','RAL 2004':'#E25303','RAL 3003':'#861A22','RAL 3005':'#59191F',
-  'RAL 5005':'#1E2460','RAL 5021':'#007577','RAL 6002':'#2D572C','RAL 6005':'#0E4438','RAL 6020':'#37422F',
-  'RAL 7004':'#999A9F','RAL 7005':'#6D7270','RAL 7024':'#45494E','RAL 7035':'#CBD0CC','RAL 8004':'#8F4E35',
-  'RAL 8017':'#442F29','RAL 8019':'#3D3635','RAL 9002':'#D7D5CB','RAL 9003':'#F4F4F4','RAL 9005':'#0A0A0A','RAL 9006':'#A5A5A5',
-}
-
 export async function mockGetSidingTable(filters: SidingFilters, page = 1): Promise<{ table: SidingRow[]; pagination: { page: number; pageSize: number; totalCount: number; pageCount: number } }> {
   await delay(200)
   let rows = [...SIDING_ROWS]
-  if (filters.companies.length)     rows = rows.filter(r => filters.companies.includes(String(r.company)))
   if (filters.materials.length)     rows = rows.filter(r => filters.materials.includes(String(r.material)))
   if (filters.form.length)          rows = rows.filter(r => filters.form.includes(String(r.form)))
   if (filters.typeOfCoating.length) rows = rows.filter(r => filters.typeOfCoating.includes(String(r.typeOfCoating)))
-  if (filters.colors.length)        rows = rows.filter(r => filters.colors.includes(String(r.color)))
   const pageSize   = 100
   const totalCount = rows.length
   const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage   = Math.min(Math.max(1, page), pageCount)
-  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize).map(row=>({...row,colorHex:SIDING_COLOR_HEX[row.color]}))
+  const table      = rows.slice((safePage - 1) * pageSize, safePage * pageSize).map(row => ({
+    id: row.id,
+    material: row.material,
+    form: row.form,
+    typeOfCoating: row.typeOfCoating,
+    coatingHex: row.coatingHex,
+    coatingImage: row.coatingImage,
+    reliefImage: row.reliefImage,
+    priceM2: row.priceM2,
+    deliveryTime: row.deliveryTime,
+    inStock: row.inStock,
+  }))
   return { table, pagination: { page: safePage, pageSize, totalCount, pageCount } }
+}
+
+export async function mockGetFillingAppearanceOptions(
+  materialGroup: string,
+): Promise<FillingAppearanceOptions> {
+  await delay(150)
+  const isSiding = materialGroup === 'Сайдинг'
+  return {
+    manufacturers: isSiding
+      ? [{ id: 1, name: 'Кровельный центр' }]
+      : [{ id: 2, name: 'Металл Профиль' }],
+    colors: isSiding
+      ? [
+          { id: 1, name: 'RAL 8017', hex: '#442F29', image: null },
+          { id: 2, name: 'RAL 9003', hex: '#F4F4F4', image: null },
+        ]
+      : [{ id: 3, name: 'RAL 7016', hex: '#383E42', image: null }],
+  }
 }
 
 // ─── Таблица профлиста (моковые данные) ──────────────────────────────────────

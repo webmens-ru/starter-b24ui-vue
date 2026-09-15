@@ -115,23 +115,22 @@ export interface FilterOptions {
   [key: string]: FilterOptionItem[]
 }
 
+export interface FillingAppearanceOptions {
+  manufacturers: Array<{ id: number; name: string }>
+  colors: Array<{ id: number; name: string; hex: string | null; image: string | null }>
+}
+
 export interface SidingFilters {
-  companies: string[]
   materials: string[]
   form: string[]
   typeOfCoating: string[]
-  colors: string[]
 }
 
 export interface SidingRow {
   id: string | number
-  company: string
   material: string
   form: string
   typeOfCoating: string
-  color: string
-  colorHex?: string | null
-  colorImage?: string | null
   coatingHex?: string | null
   coatingImage?: string | null
   reliefImage?: string | null

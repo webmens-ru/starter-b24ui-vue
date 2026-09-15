@@ -14,6 +14,7 @@ import {
   mockRecalculate,
   mockGetFilterOptions,
   mockGetSidingTable,
+  mockGetFillingAppearanceOptions,
   mockGetProfnastilTable,
   mockGetAssortmentStolb,
   mockGetPolozhenieJumper,
@@ -36,6 +37,7 @@ import type {
   ColorShieldItem,
   FilterOptionItem,
   FilterOptions,
+  FillingAppearanceOptions,
   SidingFilters,
   SidingRow,
   SidingPagination,
@@ -77,6 +79,7 @@ export type {
   ColorShieldItem,
   FilterOptionItem,
   FilterOptions,
+  FillingAppearanceOptions,
   SidingFilters,
   SidingRow,
   SidingPagination,
@@ -259,6 +262,18 @@ export async function getSidingTable(
 ): Promise<SidingTableResponse> {
   if (isMock) return mockGetSidingTable(filters, page)
   const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-siding`, { ...filters, page })
+  return data.data
+}
+
+export async function getFillingAppearanceOptions(
+  modelId: string | number,
+  materialGroup: string,
+): Promise<FillingAppearanceOptions> {
+  if (isMock) return mockGetFillingAppearanceOptions(materialGroup)
+  const { data } = await api.post(
+    `/api/wicket/type${modelId}/get-filling-appearance-options`,
+    { materialGroup },
+  )
   return data.data
 }
 

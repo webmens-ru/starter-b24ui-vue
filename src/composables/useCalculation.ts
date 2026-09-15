@@ -27,6 +27,10 @@ export function useCalculation() {
     modelId: string
     reachedStep: string
     visitedPages: string
+    manufacturerFacadeId: string | number | null
+    colorFacadeId: string | number | null
+    manufacturerYardId: string | number | null
+    colorYardId: string | number | null
   } {
     const orderId = wizard.orderId
     const productRowId = wizard.productRowId
@@ -47,6 +51,10 @@ export function useCalculation() {
       modelId,
       reachedStep: wizard.activePage,
       visitedPages: JSON.stringify(wizard.visitedPages),
+      manufacturerFacadeId: form.manufacturerFacadeId,
+      colorFacadeId: form.colorFacadeId,
+      manufacturerYardId: form.manufacturerYardId,
+      colorYardId: form.colorYardId,
     }
   }
 
@@ -184,6 +192,8 @@ export function useCalculation() {
     setAccessoryGroupInstalled: form.setAccessoryGroupInstalled,
     clearAccessorySelections: form.clearAccessorySelections,
     loadFromApi: form.loadFromApi,
+    resetFacadeFilling: form.resetFacadeFilling,
+    resetYardFilling: form.resetYardFilling,
     reset,
     updateOrCreateBlock: form.updateOrCreateBlock,
     removeAllBlocksExcept: form.removeAllBlocksExcept,

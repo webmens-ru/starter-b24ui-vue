@@ -54,6 +54,21 @@ describe('wicket accessory composition API', () => {
     vi.resetModules()
   })
 
+  it('loads filling appearance options for the selected material group', async () => {
+    const response = {
+      manufacturers: [{ id: 3, name: 'Металл Профиль' }],
+      colors: [{ id: 8, name: 'RAL 8017', hex: '#442F29', image: null }],
+    }
+    api.post.mockResolvedValueOnce({ data: { data: response } })
+    const { getFillingAppearanceOptions } = await import('./wicket')
+
+    await expect(getFillingAppearanceOptions(1, 'Сайдинг')).resolves.toEqual(response)
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/wicket/type1/get-filling-appearance-options',
+      { materialGroup: 'Сайдинг' },
+    )
+  })
+
   it('loads the canonical composition from the exact endpoint', async () => {
     const response = {
       lockVersion: 3,

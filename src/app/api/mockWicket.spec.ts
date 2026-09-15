@@ -1,6 +1,31 @@
-import {describe,expect,it} from 'vitest'
-import {mockGetSidingTable} from './mockWicket'
+import { describe, expect, it } from 'vitest'
+import { mockGetFillingAppearanceOptions, mockGetSidingTable } from './mockWicket'
 
-describe('mockGetSidingTable',()=>{
- it('возвращает визуальный цвет сайдинга как реальный API',async()=>{const result=await mockGetSidingTable({companies:[],materials:['Сайдинг «Бревно»'],form:[],typeOfCoating:[],colors:['RAL 1015']});expect(result.table[0].colorHex).toBe('#E6D2B5')})
+describe('mock wicket filling API', () => {
+  it('возвращает строки сайдинга без данных внешнего вида', async () => {
+    const result = await mockGetSidingTable({
+      materials: ['Сайдинг «Бревно»'],
+      form: [],
+      typeOfCoating: [],
+    })
+
+    expect(result.table[0]).not.toHaveProperty('company')
+    expect(result.table[0]).not.toHaveProperty('color')
+  })
+
+  it('возвращает справочники внешнего вида отдельно от строк сайдинга', async () => {
+    await expect(mockGetFillingAppearanceOptions('Сайдинг')).resolves.toEqual({
+      manufacturers: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number), name: expect.any(String) }),
+      ]),
+      colors: expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(Number),
+          name: expect.any(String),
+          hex: expect.toSatisfy((value: unknown) => value === null || typeof value === 'string'),
+          image: expect.toSatisfy((value: unknown) => value === null || typeof value === 'string'),
+        }),
+      ]),
+    })
+  })
 })

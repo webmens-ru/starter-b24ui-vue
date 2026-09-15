@@ -233,6 +233,45 @@ const fieldsFilled = ref<number>(0)
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
+  function resetFacadeFilling(): void {
+    idFacade.value = ''
+    manufacturerFacadeId.value = null
+    colorFacadeId.value = null
+    materialSupplierFacade.value = ''
+    materialFacade.value = ''
+    formFacade.value = ''
+    thicknessFacade.value = ''
+    typeOfCoatingFacade.value = ''
+    colorFacade.value = ''
+    colorFacadeHex.value = ''
+    colorFacadeImage.value = ''
+    coatingFacadeHex.value = ''
+    coatingFacadeImage.value = ''
+    reliefFacadeImage.value = ''
+    colorFacadeReverseHex.value = ''
+    colorFacadeReverseImage.value = ''
+    gapId.value = null
+    gapName.value = null
+    numberOfSticks.value = null
+  }
+
+  function resetYardFilling(): void {
+    idYard.value = ''
+    manufacturerYardId.value = null
+    colorYardId.value = null
+    materialSupplierYard.value = ''
+    materialYard.value = ''
+    formYard.value = ''
+    thicknessYard.value = ''
+    typeOfCoatingYard.value = ''
+    colorYard.value = ''
+    colorYardHex.value = ''
+    colorYardImage.value = ''
+    coatingYardHex.value = ''
+    coatingYardImage.value = ''
+    reliefYardImage.value = ''
+  }
+
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
     data.value = []
@@ -315,39 +354,8 @@ const fieldsFilled = ref<number>(0)
     netWidthProviderTop.value = 'executor'
     netWidthProviderLower.value = 'executor'
     netWidthProviderSide.value = 'executor'
-    idFacade.value = ''
-    manufacturerFacadeId.value = null
-    colorFacadeId.value = null
-    materialSupplierFacade.value = ''
-    materialFacade.value = ''
-    formFacade.value = ''
-    thicknessFacade.value = ''
-    typeOfCoatingFacade.value = ''
-    colorFacade.value = ''
-    colorFacadeHex.value = ''
-    colorFacadeImage.value = ''
-    coatingFacadeHex.value = ''
-    coatingFacadeImage.value = ''
-    reliefFacadeImage.value = ''
-    colorFacadeReverseHex.value = ''
-    gapId.value = null
-    gapName.value = null
-    numberOfSticks.value = null
-    colorFacadeReverseImage.value = ''
-    idYard.value = ''
-    manufacturerYardId.value = null
-    colorYardId.value = null
-    materialSupplierYard.value = ''
-    materialYard.value = ''
-    formYard.value = ''
-    thicknessYard.value = ''
-    typeOfCoatingYard.value = ''
-    colorYard.value = ''
-    colorYardHex.value = ''
-    colorYardImage.value = ''
-    coatingYardHex.value = ''
-    coatingYardImage.value = ''
-    reliefYardImage.value = ''
+    resetFacadeFilling()
+    resetYardFilling()
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
@@ -729,6 +737,16 @@ const fieldsFilled = ref<number>(0)
       })
     }
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    for (const key of [
+      'manufacturerFacadeId',
+      'colorFacadeId',
+      'manufacturerYardId',
+      'colorYardId',
+    ] as const) {
+      if (apiData[key] === null || apiData[key] === '') {
+        refMap[key].value = null
+      }
+    }
     isThereLock.value = lockSetId.value == null ? 0 : 1
     isThereLockName.value = isThereLock.value === 1 ? 'Есть' : 'Нет'
     if (import.meta.env.DEV && modelIdForLoad === '2') {
@@ -1073,6 +1091,8 @@ const fieldsFilled = ref<number>(0)
     removeAllBlocksExcept,
     updatePriceBlock,
     loadFromApi,
+    resetFacadeFilling,
+    resetYardFilling,
     resetFormFields,
     addons,
     addonItems,

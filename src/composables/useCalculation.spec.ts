@@ -41,6 +41,114 @@ describe('useCalculation', () => {
       expect(calc.colorYardId.value).toBe(8)
     })
 
+    it('восстанавливает отсутствующие ID внешнего вида как null', () => {
+      calc.loadFromApi({
+        manufacturerFacadeId: null,
+        manufacturerYardId: null,
+        colorFacadeId: null,
+        colorYardId: null,
+      })
+
+      expect(calc.manufacturerFacadeId.value).toBeNull()
+      expect(calc.manufacturerYardId.value).toBeNull()
+      expect(calc.colorFacadeId.value).toBeNull()
+      expect(calc.colorYardId.value).toBeNull()
+    })
+
+    it('сохраняет разные ID внешнего вида фасада и двора в базовом payload', () => {
+      calc.manufacturerFacadeId.value = 3
+      calc.colorFacadeId.value = 7
+      calc.manufacturerYardId.value = 4
+      calc.colorYardId.value = 8
+
+      expect(calc.getBaseSavePayload()).toMatchObject({
+        manufacturerFacadeId: 3,
+        colorFacadeId: 7,
+        manufacturerYardId: 4,
+        colorYardId: 8,
+      })
+    })
+
+    it('сброс фасада очищает всю его выборку и не меняет двор', () => {
+      calc.idFacade.value = 10
+      calc.manufacturerFacadeId.value = 3
+      calc.colorFacadeId.value = 7
+      calc.materialSupplierFacade.value = 'Фасадный производитель'
+      calc.materialFacade.value = 'Бревно'
+      calc.formFacade.value = 'Гладкая'
+      calc.typeOfCoatingFacade.value = 'Глянец'
+      calc.colorFacade.value = 'RAL 8017'
+      calc.colorFacadeHex.value = '#442F29'
+      calc.colorFacadeImage.value = '/facade.jpg'
+      calc.idYard.value = 20
+      calc.manufacturerYardId.value = 4
+      calc.colorYardId.value = 8
+      calc.materialSupplierYard.value = 'Дворовый производитель'
+      calc.colorYard.value = 'RAL 9003'
+      calc.colorYardHex.value = '#F4F4F4'
+      calc.colorYardImage.value = '/yard.jpg'
+
+      calc.resetFacadeFilling()
+
+      expect(calc.idFacade.value).toBe('')
+      expect(calc.manufacturerFacadeId.value).toBeNull()
+      expect(calc.colorFacadeId.value).toBeNull()
+      expect(calc.materialSupplierFacade.value).toBe('')
+      expect(calc.materialFacade.value).toBe('')
+      expect(calc.formFacade.value).toBe('')
+      expect(calc.typeOfCoatingFacade.value).toBe('')
+      expect(calc.colorFacade.value).toBe('')
+      expect(calc.colorFacadeHex.value).toBe('')
+      expect(calc.colorFacadeImage.value).toBe('')
+      expect(calc.idYard.value).toBe(20)
+      expect(calc.manufacturerYardId.value).toBe(4)
+      expect(calc.colorYardId.value).toBe(8)
+      expect(calc.materialSupplierYard.value).toBe('Дворовый производитель')
+      expect(calc.colorYard.value).toBe('RAL 9003')
+      expect(calc.colorYardHex.value).toBe('#F4F4F4')
+      expect(calc.colorYardImage.value).toBe('/yard.jpg')
+    })
+
+    it('сброс двора очищает всю его выборку и не меняет фасад', () => {
+      calc.idFacade.value = 10
+      calc.manufacturerFacadeId.value = 3
+      calc.colorFacadeId.value = 7
+      calc.materialSupplierFacade.value = 'Фасадный производитель'
+      calc.colorFacade.value = 'RAL 8017'
+      calc.colorFacadeHex.value = '#442F29'
+      calc.colorFacadeImage.value = '/facade.jpg'
+      calc.idYard.value = 20
+      calc.manufacturerYardId.value = 4
+      calc.colorYardId.value = 8
+      calc.materialSupplierYard.value = 'Дворовый производитель'
+      calc.materialYard.value = 'Корабельная доска'
+      calc.formYard.value = 'Гладкая'
+      calc.typeOfCoatingYard.value = 'Матовый'
+      calc.colorYard.value = 'RAL 9003'
+      calc.colorYardHex.value = '#F4F4F4'
+      calc.colorYardImage.value = '/yard.jpg'
+
+      calc.resetYardFilling()
+
+      expect(calc.idYard.value).toBe('')
+      expect(calc.manufacturerYardId.value).toBeNull()
+      expect(calc.colorYardId.value).toBeNull()
+      expect(calc.materialSupplierYard.value).toBe('')
+      expect(calc.materialYard.value).toBe('')
+      expect(calc.formYard.value).toBe('')
+      expect(calc.typeOfCoatingYard.value).toBe('')
+      expect(calc.colorYard.value).toBe('')
+      expect(calc.colorYardHex.value).toBe('')
+      expect(calc.colorYardImage.value).toBe('')
+      expect(calc.idFacade.value).toBe(10)
+      expect(calc.manufacturerFacadeId.value).toBe(3)
+      expect(calc.colorFacadeId.value).toBe(7)
+      expect(calc.materialSupplierFacade.value).toBe('Фасадный производитель')
+      expect(calc.colorFacade.value).toBe('RAL 8017')
+      expect(calc.colorFacadeHex.value).toBe('#442F29')
+      expect(calc.colorFacadeImage.value).toBe('/facade.jpg')
+    })
+
     const fullApiData: Record<string, unknown> = {
       orderId: 42,
       productRowId: 7,
@@ -553,6 +661,10 @@ describe('useCalculation', () => {
         modelId: '1',
         reachedStep: 'page5',
         visitedPages: JSON.stringify(calc.visitedPages.value),
+        manufacturerFacadeId: null,
+        colorFacadeId: null,
+        manufacturerYardId: null,
+        colorYardId: null,
       })
       expect(JSON.parse(payload.visitedPages)).toContain('page5')
     })
