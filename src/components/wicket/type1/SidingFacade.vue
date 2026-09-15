@@ -5,9 +5,8 @@ import { getSidingTable, saveWicketData, recalculate, type SidingRow, type Sidin
 import FilterDropdown from './FilterDropdown.vue'
 import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import {
-  captureFillingAppearance,
+  createFillingAppearanceSaveCoordinator,
   restoreFillingAppearance,
-  type FillingAppearanceSnapshot,
 } from '../shared/fillingAppearanceState'
 import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -44,10 +43,9 @@ const selectedRow  = ref<SidingRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
-const appearanceSaving = ref(false)
-const appearanceSaveFailed = ref(false)
-let persistedAppearance = captureFillingAppearance(calc, 'facade')
-let failedAppearance: FillingAppearanceSnapshot | null = null
+const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'facade')
+const appearanceSaving = appearanceSave.saving
+const appearanceSaveFailed = appearanceSave.failed
 
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
@@ -79,9 +77,10 @@ watch(() => calc.idFacade.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
+    const attempt = appearanceSave.beginRevision()
     selectedRow.value = saved
     try {
-      if (await save(saved)) persistedAppearance = captureFillingAppearance(calc, 'facade')
+      if (await save(saved)) appearanceSave.recordSuccess(attempt)
     } catch (e) {
       console.warn('saveWicketData при восстановлении:', e)
     }
@@ -164,46 +163,39 @@ async function doRecalculate() {
 async function selectRow(row: SidingRow) {
   const productChanged = !selectedRow.value || String(selectedRow.value.id) !== String(row.id)
   if (productChanged) calc.resetFacadeFilling()
-  appearanceSaveFailed.value = false
-  failedAppearance = null
+  const attempt = appearanceSave.beginRevision()
   selectedRow.value = row
   if (await save(row)) {
-    persistedAppearance = captureFillingAppearance(calc, 'facade')
-    await doRecalculate()
+    if (appearanceSave.recordSuccess(attempt)) await doRecalculate()
   }
 }
 
 function deselectRow() {
   selectedRow.value = null
   calc.resetFacadeFilling()
-  persistedAppearance = captureFillingAppearance(calc, 'facade')
-  appearanceSaveFailed.value = false
-  failedAppearance = null
+  appearanceSave.resetToCurrent()
 }
 
 async function saveAppearance() {
   if (!selectedRow.value) return
-  const attemptedAppearance = captureFillingAppearance(calc, 'facade')
-  appearanceSaving.value = true
-  appearanceSaveFailed.value = false
+  const attempt = appearanceSave.beginSave()
   try {
     if (await save(selectedRow.value)) {
-      persistedAppearance = attemptedAppearance
-      failedAppearance = null
-      await doRecalculate()
+      if (appearanceSave.recordSuccess(attempt)) {
+        updateSummary(selectedRow.value)
+        await doRecalculate()
+      }
       return
     }
 
-    restoreFillingAppearance(calc, 'facade', persistedAppearance)
-    updateSummary(selectedRow.value)
-    failedAppearance = attemptedAppearance
-    appearanceSaveFailed.value = true
+    if (appearanceSave.recordFailure(attempt)) updateSummary(selectedRow.value)
   } finally {
-    appearanceSaving.value = false
+    appearanceSave.finishSave()
   }
 }
 
 async function retryAppearanceSave(): Promise<void> {
+  const failedAppearance = appearanceSave.getFailedSnapshot()
   if (failedAppearance === null) return
   restoreFillingAppearance(calc, 'facade', failedAppearance)
   await saveAppearance()

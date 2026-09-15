@@ -94,6 +94,7 @@ describe('SidingYard', () => {
       colors: [
         { id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' },
         { id: 10, name: 'RAL 7016', hex: '#383E42', image: '/colors/7016.webp' },
+        { id: 11, name: 'RAL 7024', hex: '#45494E', image: '/colors/7024.webp' },
       ],
     })
     apiMocks.saveWicketData.mockReset()
@@ -264,6 +265,60 @@ describe('SidingYard', () => {
     expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
     await wrapper.get('[data-label="Далее"]').trigger('click')
     expect(wrapper.emitted('next')).toBeUndefined()
+  })
+
+  it('keeps the newest yard appearance while an earlier overlapping save rejects', async () => {
+    const calc = useCalculation()
+    calc.idYard.value = 17
+    calc.materialYard.value = 'Бревно'
+    calc.formYard.value = 'Гладкая'
+    calc.typeOfCoatingYard.value = 'Глянец'
+    calc.manufacturerYardId.value = 4
+    calc.materialSupplierYard.value = 'Двор-Профиль'
+    calc.colorYardId.value = 9
+    calc.colorYard.value = 'RAL 9003'
+    calc.colorYardHex.value = '#F4F4F4'
+    calc.colorYardImage.value = '/colors/9003.webp'
+
+    const wrapper = mountYard()
+    await flushPromises()
+    apiMocks.saveWicketData.mockClear()
+    let rejectFirst!: (reason: unknown) => void
+    let resolveSecond!: (value: { lockVersion: number }) => void
+    apiMocks.saveWicketData
+      .mockImplementationOnce(() => new Promise((_resolve, reject) => {
+        rejectFirst = reject
+      }))
+      .mockImplementationOnce(() => new Promise(resolve => {
+        resolveSecond = resolve
+      }))
+
+    const color = wrapper.get('[data-testid="appearance-color"]')
+    await color.setValue('10')
+    await wrapper.vm.$nextTick()
+    await color.setValue('11')
+    await wrapper.vm.$nextTick()
+
+    expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(2)
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+
+    rejectFirst(new Error('first save rejected'))
+    await flushPromises()
+
+    expect(calc.colorYardId.value).toBe(11)
+    expect(calc.colorYard.value).toBe('RAL 7024')
+    expect(calc.colorYardImage.value).toBe('/colors/7024.webp')
+    expect(wrapper.find('[data-testid="appearance-save-error"]').exists()).toBe(false)
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+
+    resolveSecond({ lockVersion: 3 })
+    await flushPromises()
+
+    expect(calc.colorYardId.value).toBe(11)
+    expect(calc.colorYard.value).toBe('RAL 7024')
+    expect(calc.colorYardImage.value).toBe('/colors/7024.webp')
+    expect(wrapper.find('[data-testid="appearance-save-error"]').exists()).toBe(false)
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('matches a restored string product ID to the numeric table row', async () => {
