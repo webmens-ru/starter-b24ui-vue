@@ -4,6 +4,11 @@ import { useCalculation } from '../../../composables/useCalculation'
 import { getSidingTable, saveWicketData, recalculate, type SidingRow, type SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
+import {
+  captureFillingAppearance,
+  restoreFillingAppearance,
+  type FillingAppearanceSnapshot,
+} from '../shared/fillingAppearanceState'
 import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
@@ -39,6 +44,10 @@ const selectedRow  = ref<SidingRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
+const appearanceSaving = ref(false)
+const appearanceSaveFailed = ref(false)
+let persistedAppearance = captureFillingAppearance(calc, 'yard')
+let failedAppearance: FillingAppearanceSnapshot | null = null
 
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
@@ -72,7 +81,7 @@ watch(() => calc.idYard.value, async (val) => {
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
     try {
-      await save(saved)
+      if (await save(saved)) persistedAppearance = captureFillingAppearance(calc, 'yard')
     } catch (e) {
       console.warn('saveWicketData при восстановлении:', e)
     }
@@ -103,13 +112,7 @@ async function save(row: SidingRow): Promise<boolean> {
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (двор)', [
-    { name: 'Производитель материала', value: calc.materialSupplierYard.value },
-    { name: 'Материал',                value: row.material },
-    { name: 'Форма',                   value: row.form },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: calc.colorYard.value },
-  ])
+  updateSummary(row)
 
   try {
     await saveWicketData({
@@ -129,6 +132,16 @@ async function save(row: SidingRow): Promise<boolean> {
     console.warn('saveWicketData недоступен:', e)
     return false
   }
+}
+
+function updateSummary(row: SidingRow): void {
+  calc.updateOrCreateBlock('Заполнение (двор)', [
+    { name: 'Производитель материала', value: calc.materialSupplierYard.value },
+    { name: 'Материал',                value: row.material },
+    { name: 'Форма',                   value: row.form },
+    { name: 'Тип покрытия',            value: row.typeOfCoating },
+    { name: 'Цвет',                    value: calc.colorYard.value },
+  ])
 }
 
 async function doRecalculate() {
@@ -151,18 +164,49 @@ async function doRecalculate() {
 async function selectRow(row: SidingRow) {
   const productChanged = !selectedRow.value || String(selectedRow.value.id) !== String(row.id)
   if (productChanged) calc.resetYardFilling()
+  appearanceSaveFailed.value = false
+  failedAppearance = null
   selectedRow.value = row
-  if (await save(row)) await doRecalculate()
+  if (await save(row)) {
+    persistedAppearance = captureFillingAppearance(calc, 'yard')
+    await doRecalculate()
+  }
 }
 
 function deselectRow() {
   selectedRow.value = null
   calc.resetYardFilling()
+  persistedAppearance = captureFillingAppearance(calc, 'yard')
+  appearanceSaveFailed.value = false
+  failedAppearance = null
 }
 
 async function saveAppearance() {
   if (!selectedRow.value) return
-  if (await save(selectedRow.value)) await doRecalculate()
+  const attemptedAppearance = captureFillingAppearance(calc, 'yard')
+  appearanceSaving.value = true
+  appearanceSaveFailed.value = false
+  try {
+    if (await save(selectedRow.value)) {
+      persistedAppearance = attemptedAppearance
+      failedAppearance = null
+      await doRecalculate()
+      return
+    }
+
+    restoreFillingAppearance(calc, 'yard', persistedAppearance)
+    updateSummary(selectedRow.value)
+    failedAppearance = attemptedAppearance
+    appearanceSaveFailed.value = true
+  } finally {
+    appearanceSaving.value = false
+  }
+}
+
+async function retryAppearanceSave(): Promise<void> {
+  if (failedAppearance === null) return
+  restoreFillingAppearance(calc, 'yard', failedAppearance)
+  await saveAppearance()
 }
 
 function isSelected(row: SidingRow) {
@@ -172,6 +216,10 @@ function isSelected(row: SidingRow) {
 
 // ─── Навигация ────────────────────────────────────────────────────────────────
 function onContinue() {
+  if (appearanceSaving.value || appearanceSaveFailed.value) {
+    openModal('Сначала повторите сохранение оформления.')
+    return
+  }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
     return
@@ -207,7 +255,12 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
-      <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
+      <B24Button
+        label="Далее"
+        color="air-secondary"
+        :disabled="appearanceSaving || appearanceSaveFailed"
+        @click="onContinue"
+      />
     </div>
 
     <!-- Фильтры -->
@@ -331,6 +384,23 @@ onMounted(async () => {
       side="yard"
       @change="saveAppearance"
     />
+
+    <div
+      v-if="appearanceSaveFailed"
+      data-testid="appearance-save-error"
+      class="flex items-center justify-between gap-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+    >
+      <span>Не удалось сохранить оформление. Повторите попытку.</span>
+      <button
+        data-testid="appearance-save-retry"
+        type="button"
+        class="rounded border border-red-400 bg-white px-3 py-1 disabled:opacity-50"
+        :disabled="appearanceSaving"
+        @click="retryAppearanceSave"
+      >
+        Повторить
+      </button>
+    </div>
 
   </div>
 </template>

@@ -41,9 +41,9 @@ const FilterDropdownStub = defineComponent({
 
 const ButtonStub = defineComponent({
   name: 'B24Button',
-  props: ['label'],
+  props: ['label', 'disabled'],
   emits: ['click'],
-  template: '<button :data-label="label" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+  template: '<button :data-label="label" :disabled="disabled" @click="$emit(\'click\')">{{ label }}<slot /></button>',
 })
 
 const rows: SidingRow[] = [
@@ -96,8 +96,14 @@ describe('SidingFacade', () => {
     })
     apiMocks.getFillingAppearanceOptions.mockReset()
     apiMocks.getFillingAppearanceOptions.mockResolvedValue({
-      manufacturers: [{ id: 3, name: 'Фасад-Профиль' }],
-      colors: [{ id: 8, name: 'RAL 8017', hex: '#442F29', image: '/colors/8017.webp' }],
+      manufacturers: [
+        { id: 3, name: 'Фасад-Профиль' },
+        { id: 4, name: 'Новый фасад-профиль' },
+      ],
+      colors: [
+        { id: 8, name: 'RAL 8017', hex: '#442F29', image: '/colors/8017.webp' },
+        { id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' },
+      ],
     })
     apiMocks.saveWicketData.mockReset()
     apiMocks.saveWicketData.mockResolvedValue({ lockVersion: 1 })
@@ -213,26 +219,67 @@ describe('SidingFacade', () => {
     ])
   })
 
-  it('does not recalculate when a facade appearance save fails', async () => {
+  it('rolls back facade appearance and blocks navigation until a rejected 422 save is retried', async () => {
     const calc = useCalculation()
     calc.idFacade.value = 7
     calc.materialFacade.value = 'Бревно'
     calc.formFacade.value = 'Гладкая'
     calc.typeOfCoatingFacade.value = 'Глянец'
+    calc.manufacturerFacadeId.value = 3
+    calc.materialSupplierFacade.value = 'Фасад-Профиль'
+    calc.colorFacadeId.value = 8
+    calc.colorFacade.value = 'RAL 8017'
+    calc.colorFacadeHex.value = '#442F29'
+    calc.colorFacadeImage.value = '/colors/8017.webp'
     calc.updatePriceBlock('900.00', '1200.00')
 
     const wrapper = mountFacade()
     await flushPromises()
     apiMocks.saveWicketData.mockClear()
-    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('rejected'))
     apiMocks.recalculate.mockClear()
+    let rejectSave!: (reason: unknown) => void
+    apiMocks.saveWicketData.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectSave = reject
+    }))
 
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await wrapper.vm.$nextTick()
+
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+    rejectSave({ response: { status: 422 } })
     await flushPromises()
 
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
     expect(apiMocks.recalculate).not.toHaveBeenCalled()
     expect(calc.priceRetail.value).toBe('1200.00')
+    expect({
+      manufacturerId: calc.manufacturerFacadeId.value,
+      manufacturer: calc.materialSupplierFacade.value,
+      colorId: calc.colorFacadeId.value,
+      color: calc.colorFacade.value,
+      colorHex: calc.colorFacadeHex.value,
+      colorImage: calc.colorFacadeImage.value,
+    }).toEqual({
+      manufacturerId: 3,
+      manufacturer: 'Фасад-Профиль',
+      colorId: 8,
+      color: 'RAL 8017',
+      colorHex: '#442F29',
+      colorImage: '/colors/8017.webp',
+    })
+    expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    apiMocks.saveWicketData.mockResolvedValueOnce({ lockVersion: 2 })
+    apiMocks.recalculate.mockResolvedValueOnce({ priceDealer: '950.00', priceRetail: '1250.00' })
+    await wrapper.get('[data-testid="appearance-save-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(calc.colorFacadeId.value).toBe(9)
+    expect(calc.colorFacade.value).toBe('RAL 9003')
+    expect(wrapper.find('[data-testid="appearance-save-error"]').exists()).toBe(false)
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('restores a saved product row independently from its appearance', async () => {

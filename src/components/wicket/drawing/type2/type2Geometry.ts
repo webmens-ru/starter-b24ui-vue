@@ -19,6 +19,8 @@ export interface Type2DrawingSource {
   colorFacadeImage?: unknown
   colorFacadeReverseHex?: unknown
   colorFacadeReverseImage?: unknown
+  colorYardHex?: unknown
+  colorYardImage?: unknown
   raspolozheniyePolotna?: unknown
   colorShieldHex?: unknown
   sideGrilleNetImage?: unknown
@@ -68,6 +70,11 @@ export interface Type2DrawingGeometry {
     image: string
     reverseColor: string
     reverseImage: string
+    direction: 'horizontal' | 'vertical'
+  }
+  yardFill: {
+    color: string
+    image: string
     direction: 'horizontal' | 'vertical'
   }
   frameColor: string
@@ -312,6 +319,11 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
       image: text(source.colorFacadeImage),
       reverseColor: fillColor(source.colorFacadeReverseHex || '#D7D5C6'),
       reverseImage: text(source.colorFacadeReverseImage),
+      direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
+    },
+    yardFill: {
+      color: fillColor(source.colorYardHex),
+      image: text(source.colorYardImage),
       direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
     },
     frameColor: frameColorHex(source.colorShieldHex),

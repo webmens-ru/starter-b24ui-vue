@@ -127,7 +127,7 @@ describe('Type 2 siding flow', () => {
     })
   })
 
-  it('offers siding and resets both sides symmetrically when the facade material changes', async () => {
+  it('offers siding and preserves an independently configured yard when the facade material changes', async () => {
     const calc = useCalculation()
     calc.fillSide.value = 'Две стороны'
     calc.materialFacadeGlob.value = 'Профлист'
@@ -164,7 +164,7 @@ describe('Type 2 siding flow', () => {
     await flushPromises()
 
     expect(calc.materialFacadeGlob.value).toBe('Сайдинг')
-    expect(calc.materialYardGlob.value).toBe('Сайдинг')
+    expect(calc.materialYardGlob.value).toBe('Профлист')
     expect({
       id: calc.idFacade.value,
       manufacturerId: calc.manufacturerFacadeId.value,
@@ -200,28 +200,28 @@ describe('Type 2 siding flow', () => {
       coatingImage: calc.coatingYardImage.value,
       reliefImage: calc.reliefYardImage.value,
     }).toEqual({
-      id: '',
-      manufacturerId: null,
-      colorId: null,
-      manufacturer: '',
-      color: '',
-      colorHex: '',
-      colorImage: '',
-      coatingHex: '',
-      coatingImage: '',
-      reliefImage: '',
+      id: 2,
+      manufacturerId: 4,
+      colorId: 9,
+      manufacturer: 'Старый двор',
+      color: 'Старый цвет двора',
+      colorHex: '#333333',
+      colorImage: '/old-yard.webp',
+      coatingHex: '#444444',
+      coatingImage: '/old-yard-coating.webp',
+      reliefImage: '/old-yard-relief.webp',
     })
 
     const payload = apiMocks.saveWicketData.mock.calls[apiMocks.saveWicketData.mock.calls.length - 1]?.[0]
     expect(payload).toMatchObject({
       idFacade: null,
       materialFacade: null,
-      idYard: null,
-      materialYard: null,
+      idYard: 2,
       manufacturerFacadeId: null,
       colorFacadeId: null,
-      manufacturerYardId: null,
-      colorYardId: null,
+      manufacturerYardId: 4,
+      colorYardId: 9,
+      materialYardGlob: 'Профлист',
     })
   })
 

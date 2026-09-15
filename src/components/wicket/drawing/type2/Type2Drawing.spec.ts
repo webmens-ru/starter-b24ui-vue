@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const calc = {
   widthProyema: ref('1000'),
@@ -18,6 +18,8 @@ const calc = {
   peremichkaSortamentName: ref(''),
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
+  materialYardGlob: ref<string | null>(null),
+  materialYard: ref(''),
   colorFacade: ref('RAL 7016'),
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
@@ -25,6 +27,12 @@ const calc = {
   coatingFacadeImage: ref(''),
   colorFacadeReverseHex: ref('#D7D5C6'),
   colorFacadeReverseImage: ref(''),
+  colorYard: ref(''),
+  colorYardHex: ref(''),
+  colorYardImage: ref(''),
+  coatingYardHex: ref(''),
+  coatingYardImage: ref(''),
+  reliefYardImage: ref(''),
   fillSide: ref('Одна сторона'),
   colorShieldHex: ref(''),
   sideGrilleNetImage: ref(''),
@@ -40,6 +48,35 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  afterEach(() => {
+    calc.widthProyema.value = '1000'
+    calc.heightProyema.value = '2000'
+    calc.stolbName.value = 'Труба 50×50×2'
+    calc.openingOptionName.value = 'Наружу / Левая'
+    calc.shieldType.value = 'Тип_1'
+    calc.materialFacadeGlob.value = 'Профлист'
+    calc.materialFacade.value = 'С-8'
+    calc.colorFacade.value = 'RAL 7016'
+    calc.colorFacadeHex.value = '#704214'
+    calc.colorFacadeImage.value = ''
+    calc.coatingFacadeHex.value = ''
+    calc.coatingFacadeImage.value = ''
+    calc.colorFacadeReverseHex.value = '#D7D5C6'
+    calc.colorFacadeReverseImage.value = ''
+    calc.materialYardGlob.value = null
+    calc.materialYard.value = ''
+    calc.colorYard.value = ''
+    calc.colorYardHex.value = ''
+    calc.colorYardImage.value = ''
+    calc.coatingYardHex.value = ''
+    calc.coatingYardImage.value = ''
+    calc.reliefYardImage.value = ''
+    calc.fillSide.value = 'Одна сторона'
+    calc.colorShieldHex.value = ''
+    calc.sideGrilleNetImage.value = ''
+    calc.lowerGrilleNetImage.value = ''
+    calc.upperGrilleNetImage.value = ''
+  })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
     const wrapper = mount(Type2Drawing)
     const svg = wrapper.get('[data-testid="type2-drawing-svg"]')
@@ -284,6 +321,64 @@ describe('Type2Drawing', () => {
     expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
   })
 
+  it('рисует сайдинг второго типа через общий renderer заполнения', () => {
+    calc.materialFacadeGlob.value = 'Сайдинг'
+    calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.colorFacadeHex.value = '#704214'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="type2-drawing-fill"]')).toBeTruthy()
+    expect(wrapper.get('[data-testid="filling-log-siding"]')).toBeTruthy()
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#704214')
+
+    calc.materialFacadeGlob.value = 'Профлист'
+    calc.materialFacade.value = 'С-8'
+  })
+
+  it('показывает независимые материалы и оформление фасада и двора', async () => {
+    calc.fillSide.value = 'Две стороны'
+    calc.materialFacadeGlob.value = 'Сайдинг'
+    calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.colorFacadeHex.value = '#704214'
+    calc.colorFacadeImage.value = '/uploads/colors/facade.webp'
+    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYard.value = 'Профнастил МП-10'
+    calc.colorYard.value = 'RAL 7016'
+    calc.colorYardHex.value = '#383E42'
+    calc.colorYardImage.value = '/uploads/colors/yard.webp'
+    calc.coatingYardHex.value = '#ABCDEF'
+    calc.coatingYardImage.value = '/uploads/coatings/yard.webp'
+    calc.reliefYardImage.value = '/uploads/reliefs/yard.svg'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="filling-log-siding"]')).toBeTruthy()
+    expect(wrapper.get('[data-testid="filling-texture"]')).toBeTruthy()
+    expect(wrapper.findAll('pattern image').map(image => image.attributes('href')))
+      .toContain('/uploads/colors/facade.webp')
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+
+    expect(wrapper.get('[data-testid="filling-mp10"]')).toBeTruthy()
+    const yardImages = wrapper.findAll('pattern image').map(image => image.attributes('href'))
+    expect(yardImages).toContain('/uploads/colors/yard.webp')
+    expect(yardImages).toContain('/uploads/coatings/yard.webp')
+    expect(yardImages).toContain('/uploads/reliefs/yard.svg')
+    expect(yardImages).not.toContain('/uploads/colors/facade.webp')
+
+    calc.fillSide.value = 'Одна сторона'
+    calc.materialFacadeGlob.value = 'Профлист'
+    calc.materialFacade.value = 'С-8'
+    calc.colorFacadeImage.value = ''
+    calc.materialYardGlob.value = null
+    calc.materialYard.value = ''
+    calc.colorYard.value = ''
+    calc.colorYardHex.value = ''
+    calc.colorYardImage.value = ''
+    calc.coatingYardHex.value = ''
+    calc.coatingYardImage.value = ''
+    calc.reliefYardImage.value = ''
+  })
+
   it('накладывает плиточную текстуру только на область заполнения', async () => {
     calc.colorFacadeImage.value = '/uploads/colors/wood.webp'
     const wrapper = mount(Type2Drawing)
@@ -347,12 +442,18 @@ describe('Type2Drawing', () => {
 
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/reverse.webp')
 
+    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYard.value = 'С-8'
+    calc.colorYardImage.value = '/uploads/colors/yard.webp'
     calc.fillSide.value = 'Две стороны'
     await wrapper.vm.$nextTick()
-    expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
+    expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/yard.webp')
 
     calc.colorFacadeImage.value = ''
     calc.colorFacadeReverseImage.value = ''
+    calc.materialYardGlob.value = null
+    calc.materialYard.value = ''
+    calc.colorYardImage.value = ''
     calc.fillSide.value = 'Одна сторона'
   })
 })

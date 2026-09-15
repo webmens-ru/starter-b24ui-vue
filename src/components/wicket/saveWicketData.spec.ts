@@ -3,7 +3,7 @@
  * Проверяем, что компоненты вызывают saveWicketData с корректным payload.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
@@ -151,6 +151,140 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
     expect(payload.materialYardGlob).toBe('Профлист')
+  })
+
+  it('FillSide сбрасывает все поля двора при переходе с сайдинга на профлист', async () => {
+    calc.fillSide.value = 'Две стороны'
+    calc.materialFacadeGlob.value = 'Сайдинг'
+    calc.materialYardGlob.value = 'Сайдинг'
+    calc.idYard.value = 17
+    calc.materialYard.value = 'Бревно'
+    calc.formYard.value = 'Гладкая'
+    calc.thicknessYard.value = '0.45'
+    calc.typeOfCoatingYard.value = 'Глянец'
+    calc.manufacturerYardId.value = 4
+    calc.materialSupplierYard.value = 'Двор-Профиль'
+    calc.colorYardId.value = 9
+    calc.colorYard.value = 'RAL 9003'
+
+    const wrapper = mount(FillSide, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    await wrapper.get('input[value="Профлист"]').setValue(true)
+    await flushPromises()
+
+    expect(calc.materialYardGlob.value).toBe('Профлист')
+    expect({
+      id: calc.idYard.value,
+      manufacturerId: calc.manufacturerYardId.value,
+      colorId: calc.colorYardId.value,
+      material: calc.materialYard.value,
+      manufacturer: calc.materialSupplierYard.value,
+      color: calc.colorYard.value,
+    }).toEqual({
+      id: '',
+      manufacturerId: null,
+      colorId: null,
+      material: '',
+      manufacturer: '',
+      color: '',
+    })
+    expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
+      materialYardGlob: 'Профлист',
+      idYard: null,
+      manufacturerYardId: null,
+      colorYardId: null,
+      materialYard: null,
+    })
+  })
+
+  it('FillSide сохраняет явные null после перехода с двух сторон на одну', async () => {
+    calc.fillSide.value = 'Две стороны'
+    calc.materialYardGlob.value = 'Сайдинг'
+    calc.idYard.value = 17
+    calc.materialYard.value = 'Бревно'
+    calc.manufacturerYardId.value = 4
+    calc.colorYardId.value = 9
+
+    const wrapper = mount(FillSide, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    await wrapper.get('input[value="Одна сторона"]').setValue(true)
+    await flushPromises()
+
+    expect(calc.materialYardGlob.value).toBeNull()
+    expect(calc.idYard.value).toBe('')
+    expect(calc.manufacturerYardId.value).toBeNull()
+    expect(calc.colorYardId.value).toBeNull()
+    expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
+      fillSide: 'Одна сторона',
+      materialYardGlob: null,
+      idYard: null,
+      manufacturerYardId: null,
+      colorYardId: null,
+      materialYard: null,
+    })
+  })
+
+  it('FillSide не изменяет настроенный двор при выборе материала фасада', async () => {
+    calc.fillSide.value = 'Две стороны'
+    calc.materialFacadeGlob.value = ''
+    calc.materialYardGlob.value = 'Профлист'
+    calc.idYard.value = 27
+    calc.materialYard.value = 'МП-10'
+    calc.formYard.value = 'Трапеция'
+    calc.thicknessYard.value = '0.5'
+    calc.typeOfCoatingYard.value = 'Полиэстер'
+    calc.manufacturerYardId.value = 14
+    calc.materialSupplierYard.value = 'Сохранённый двор'
+    calc.colorYardId.value = 19
+    calc.colorYard.value = 'RAL 7016'
+
+    const wrapper = mount(FillSide, {
+      global: { plugins: [testRouter], stubs: ['B24Button'] },
+    })
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    await wrapper.get('input[value="Сайдинг"]').setValue(true)
+    await flushPromises()
+
+    expect({
+      materialGroup: calc.materialYardGlob.value,
+      id: calc.idYard.value,
+      material: calc.materialYard.value,
+      form: calc.formYard.value,
+      thickness: calc.thicknessYard.value,
+      coating: calc.typeOfCoatingYard.value,
+      manufacturerId: calc.manufacturerYardId.value,
+      manufacturer: calc.materialSupplierYard.value,
+      colorId: calc.colorYardId.value,
+      color: calc.colorYard.value,
+    }).toEqual({
+      materialGroup: 'Профлист',
+      id: 27,
+      material: 'МП-10',
+      form: 'Трапеция',
+      thickness: '0.5',
+      coating: 'Полиэстер',
+      manufacturerId: 14,
+      manufacturer: 'Сохранённый двор',
+      colorId: 19,
+      color: 'RAL 7016',
+    })
+    expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
+      materialFacadeGlob: 'Сайдинг',
+      materialYardGlob: 'Профлист',
+      idYard: 27,
+      manufacturerYardId: 14,
+      colorYardId: 19,
+    })
   })
 
   it('IsTherelock сохраняет root-комплект и его provider/installer вместе с кабелем', async () => {

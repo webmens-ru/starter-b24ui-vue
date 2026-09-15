@@ -215,4 +215,49 @@ describe('FillingAppearanceFields', () => {
       image: '/colors/profnastil.webp',
     })
   })
+
+  it('keeps the newer B options when an overlapping A request completes last', async () => {
+    const profnastilOptions = {
+      manufacturers: [{ id: 13, name: 'Профнастил-Профиль' }],
+      colors: [{ id: 18, name: 'RAL 7016', hex: '#383E42', image: '/colors/profnastil.webp' }],
+    }
+    let resolveSiding!: (value: typeof sidingOptions) => void
+    let resolveProfnastil!: (value: typeof profnastilOptions) => void
+    apiMocks.getFillingAppearanceOptions.mockImplementation((_modelId, materialGroup) => (
+      new Promise(resolve => {
+        if (materialGroup === 'Сайдинг') {
+          resolveSiding = resolve as (value: typeof sidingOptions) => void
+        } else {
+          resolveProfnastil = resolve as (value: typeof profnastilOptions) => void
+        }
+      })
+    ))
+    const calc = useCalculation()
+    calc.manufacturerFacadeId.value = 13
+    calc.materialSupplierFacade.value = 'Профнастил-Профиль'
+    calc.colorFacadeId.value = 18
+    calc.colorFacade.value = 'RAL 7016'
+    calc.colorFacadeHex.value = '#383E42'
+    calc.colorFacadeImage.value = '/colors/profnastil.webp'
+
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await wrapper.setProps({ materialGroup: 'Профлист' })
+    resolveProfnastil(profnastilOptions)
+    await flushPromises()
+    resolveSiding(sidingOptions)
+    await flushPromises()
+
+    expect(apiMocks.getFillingAppearanceOptions.mock.calls).toEqual([
+      [1, 'Сайдинг'],
+      [1, 'Профлист'],
+    ])
+    expect(wrapper.get('[data-testid="appearance-manufacturer"]').text()).toContain('Профнастил-Профиль')
+    expect(wrapper.get('[data-testid="appearance-manufacturer"]').text()).not.toContain('Фасад-Профиль')
+    expect(calc.manufacturerFacadeId.value).toBe(13)
+    expect(calc.colorFacadeId.value).toBe(18)
+    expect(calc.colorFacadeImage.value).toBe('/colors/profnastil.webp')
+  })
 })

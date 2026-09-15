@@ -39,6 +39,13 @@ const FilterDropdownStub = defineComponent({
   template: '<button class="filter-stub">{{ label }}</button>',
 })
 
+const ButtonStub = defineComponent({
+  name: 'B24Button',
+  props: ['label', 'disabled'],
+  emits: ['click'],
+  template: '<button :data-label="label" :disabled="disabled" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+})
+
 const rows: SidingRow[] = [
   { id: 17, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
   { id: 21, material: 'Доска', form: 'Накатка', typeOfCoating: 'Матовый' },
@@ -48,8 +55,8 @@ function mountYard() {
   return mount(SidingYard, {
     global: {
       stubs: {
-        B24Button: true,
-        Button: true,
+        B24Button: ButtonStub,
+        Button: ButtonStub,
         B24Modal: true,
         Modal: true,
         B24SelectMenu: SelectMenuStub,
@@ -84,7 +91,10 @@ describe('SidingYard', () => {
     apiMocks.getFillingAppearanceOptions.mockReset()
     apiMocks.getFillingAppearanceOptions.mockResolvedValue({
       manufacturers: [{ id: 4, name: 'Двор-Профиль' }],
-      colors: [{ id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' }],
+      colors: [
+        { id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' },
+        { id: 10, name: 'RAL 7016', hex: '#383E42', image: '/colors/7016.webp' },
+      ],
     })
     apiMocks.saveWicketData.mockReset()
     apiMocks.saveWicketData.mockResolvedValue({ lockVersion: 1 })
@@ -203,26 +213,57 @@ describe('SidingYard', () => {
     ])
   })
 
-  it('does not recalculate when a yard appearance save fails', async () => {
+  it('rolls back yard appearance and blocks navigation after a network save rejection', async () => {
     const calc = useCalculation()
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
     calc.formYard.value = 'Гладкая'
     calc.typeOfCoatingYard.value = 'Глянец'
+    calc.manufacturerYardId.value = 4
+    calc.materialSupplierYard.value = 'Двор-Профиль'
+    calc.colorYardId.value = 9
+    calc.colorYard.value = 'RAL 9003'
+    calc.colorYardHex.value = '#F4F4F4'
+    calc.colorYardImage.value = '/colors/9003.webp'
     calc.updatePriceBlock('900.00', '1200.00')
 
     const wrapper = mountYard()
     await flushPromises()
     apiMocks.saveWicketData.mockClear()
-    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('rejected'))
     apiMocks.recalculate.mockClear()
+    let rejectSave!: (reason: unknown) => void
+    apiMocks.saveWicketData.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectSave = reject
+    }))
 
-    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('10')
+    await wrapper.vm.$nextTick()
+
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+    rejectSave(new Error('network unavailable'))
     await flushPromises()
 
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
     expect(apiMocks.recalculate).not.toHaveBeenCalled()
     expect(calc.priceRetail.value).toBe('1200.00')
+    expect({
+      manufacturerId: calc.manufacturerYardId.value,
+      manufacturer: calc.materialSupplierYard.value,
+      colorId: calc.colorYardId.value,
+      color: calc.colorYard.value,
+      colorHex: calc.colorYardHex.value,
+      colorImage: calc.colorYardImage.value,
+    }).toEqual({
+      manufacturerId: 4,
+      manufacturer: 'Двор-Профиль',
+      colorId: 9,
+      color: 'RAL 9003',
+      colorHex: '#F4F4F4',
+      colorImage: '/colors/9003.webp',
+    })
+    expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
   })
 
   it('matches a restored string product ID to the numeric table row', async () => {

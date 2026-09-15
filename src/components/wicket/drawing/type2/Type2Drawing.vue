@@ -41,6 +41,8 @@ const geometry = computed(() => computeType2Geometry({
   colorFacadeImage: calc.colorFacadeImage.value,
   colorFacadeReverseHex: calc.colorFacadeReverseHex?.value,
   colorFacadeReverseImage: calc.colorFacadeReverseImage?.value,
+  colorYardHex: calc.colorYardHex?.value,
+  colorYardImage: calc.colorYardImage?.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
   colorShieldHex: calc.colorShieldHex.value,
   sideGrilleNetImage: calc.sideGrilleNetImage?.value,
@@ -75,27 +77,41 @@ if (import.meta.env.DEV) {
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
 const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
+const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
+const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 'Две стороны')
+const activeMaterialGroup = computed(() => yardTwoSides.value
+  ? (calc.materialYardGlob.value ?? '')
+  : (calc.materialFacadeGlob.value ?? ''))
+const activeMaterialName = computed(() => yardTwoSides.value
+  ? (calc.materialYard.value ?? '')
+  : (calc.materialFacade.value ?? ''))
+const activeDirection = computed(() => yardTwoSides.value
+  ? geometry.value.yardFill.direction
+  : geometry.value.fill.direction)
 const displayedFrameColor = computed(() => realisticColors.value
   ? geometry.value.frameColor
   : SCHEMATIC_FRAME_COLOR)
 const displayedFillColor = computed(() => realisticColors.value
-  ? (viewedFromYard.value && calc.fillSide.value === 'Одна сторона'
-      ? geometry.value.fill.reverseColor
-      : geometry.value.fill.color)
+  ? (yardTwoSides.value
+      ? geometry.value.yardFill.color
+      : reverseFacade.value
+        ? geometry.value.fill.reverseColor
+        : geometry.value.fill.color)
   : SCHEMATIC_FILL_COLOR)
 const displayedFillImage = computed(() => {
   if (!realisticColors.value) return ''
-  return viewedFromYard.value && calc.fillSide.value === 'Одна сторона'
-    ? geometry.value.fill.reverseImage
-    : geometry.value.fill.image
+  if (yardTwoSides.value) return geometry.value.yardFill.image
+  return reverseFacade.value ? geometry.value.fill.reverseImage : geometry.value.fill.image
 })
-const displayedCoatingColor = computed(() => realisticColors.value && !(viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
-  ? (calc.coatingFacadeHex?.value ?? '')
+const displayedCoatingColor = computed(() => realisticColors.value && !reverseFacade.value
+  ? (yardTwoSides.value ? (calc.coatingYardHex?.value ?? '') : (calc.coatingFacadeHex?.value ?? ''))
   : '')
-const displayedCoatingImage = computed(() => realisticColors.value && !(viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
-  ? (calc.coatingFacadeImage?.value ?? '')
+const displayedCoatingImage = computed(() => realisticColors.value && !reverseFacade.value
+  ? (yardTwoSides.value ? (calc.coatingYardImage?.value ?? '') : (calc.coatingFacadeImage?.value ?? ''))
   : '')
-const displayedReliefImage = computed(() => calc.reliefFacadeImage?.value ?? '')
+const displayedReliefImage = computed(() => yardTwoSides.value
+  ? (calc.reliefYardImage?.value ?? '')
+  : (calc.reliefFacadeImage?.value ?? ''))
 const netImageWidthToHeight = ref(1)
 const netTileHeight = computed(() => Math.max(1, geometry.value.netArea.width * netImageWidthToHeight.value))
 const netTileWidth = computed(() => Math.max(1, geometry.value.netArea.height * netImageWidthToHeight.value))
@@ -332,14 +348,14 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
       <!-- Со двора профлист находится за каркасом -->
       <g
-        v-if="viewedFromYard && showFill && geometry.fill.material === 'c8'"
+        v-if="viewedFromYard && !yardTwoSides && showFill"
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="calc.materialFacadeGlob.value"
-          :material-name="calc.materialFacade.value"
-          :direction="geometry.fill.direction"
+          :material-group="activeMaterialGroup"
+          :material-name="activeMaterialName"
+          :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
           :coating-color="displayedCoatingColor"
@@ -507,14 +523,14 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
       <!-- С улицы профлист находится перед каркасом -->
       <g
-        v-if="!viewedFromYard && showFill && geometry.fill.material === 'c8'"
+        v-if="(!viewedFromYard || yardTwoSides) && showFill"
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="calc.materialFacadeGlob.value"
-          :material-name="calc.materialFacade.value"
-          :direction="geometry.fill.direction"
+          :material-group="activeMaterialGroup"
+          :material-name="activeMaterialName"
+          :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
           :coating-color="displayedCoatingColor"

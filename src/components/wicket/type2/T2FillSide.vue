@@ -32,7 +32,7 @@ function onFillSideChange() {
   if (calc.fillSide.value === 'Одна сторона') {
     calc.materialYardGlob.value = null
     clearYardSelection()
-  } else {
+  } else if (!calc.materialYardGlob.value) {
     calc.materialYardGlob.value = calc.materialFacadeGlob.value
     clearYardSelection()
   }
@@ -41,10 +41,6 @@ function onFillSideChange() {
 
 function onMaterialFacadeChange() {
   clearFacadeSelection()
-  if (calc.fillSide.value === 'Две стороны') {
-    calc.materialYardGlob.value = calc.materialFacadeGlob.value
-    clearYardSelection()
-  }
   save()
 }
 
