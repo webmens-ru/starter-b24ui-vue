@@ -123,14 +123,12 @@ async function loadOptions(): Promise<void> {
 
 function onManufacturerChange(value: SelectValue): void {
   const selected = options.value.manufacturers.find(item => sameValue(item.id, value))
-  setManufacturer(selected)
-  emit('change')
+  if (setManufacturer(selected)) emit('change')
 }
 
 function onColorChange(value: SelectValue): void {
   const selected = options.value.colors.find(item => sameValue(item.id, value))
-  setColor(selected)
-  emit('change')
+  if (setColor(selected)) emit('change')
 }
 
 watch(

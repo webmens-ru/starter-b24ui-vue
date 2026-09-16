@@ -137,6 +137,19 @@ describe('FillingAppearanceFields', () => {
     })
   })
 
+  it('does not emit a save when the select repeats the current empty values', async () => {
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('')
+
+    expect(wrapper.emitted('change')).toBeUndefined()
+  })
+
   it('clears invalid facade IDs after a material-group reload without choosing a fallback', async () => {
     apiMocks.getFillingAppearanceOptions.mockImplementation(async (_modelId, materialGroup) => (
       materialGroup === 'Сайдинг'
