@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { defineComponent, nextTick } from 'vue'
+import { defineComponent, nextTick, ref } from 'vue'
 import { describe, expect, it } from 'vitest'
 
 import type { ProductRowSummary } from '../../app/api/productRows'
@@ -125,24 +125,36 @@ describe('ProductRowActionsMenu', () => {
 
   it('keeps the delete confirmation open after a native bubbling click', async () => {
     const row = makeProductRow()
-    const wrapper = await openAttachedMenu(row)
-
-    let documentClickSeen = false
-    const observeDocumentClick = (): void => {
-      documentClickSeen = true
-    }
-    document.addEventListener('click', observeDocumentClick)
+    const wrapper = mount(
+      defineComponent({
+        components: { ProductRowActionsMenu },
+        setup: () => {
+          const visible = ref(true)
+          const handleHostClick = (event: MouseEvent): void => {
+            if ((event.target as HTMLElement).getAttribute('aria-label') === `Удалить товарную позицию ${row.id}`) {
+              visible.value = false
+            }
+          }
+          return { row, visible, handleHostClick }
+        },
+        template: `
+          <div @click="handleHostClick">
+            <ProductRowActionsMenu v-if="visible" :product-row="row" :can-move-up="true" :can-move-down="true" />
+          </div>
+        `,
+      }),
+      { attachTo: document.body },
+    )
 
     try {
+      await wrapper.get(`[aria-label="Действия товарной позиции ${row.id}"]`).trigger('click')
       const deleteAction = wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`)
       deleteAction.element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       await nextTick()
 
       expect(wrapper.get('[role="alertdialog"]').text()).toContain('Удалить товарную позицию?')
-      expect(wrapper.emitted('delete')).toBeUndefined()
-      expect(documentClickSeen).toBe(false)
+      expect(wrapper.findComponent(ProductRowActionsMenu).emitted('delete')).toBeUndefined()
     } finally {
-      document.removeEventListener('click', observeDocumentClick)
       wrapper.unmount()
     }
   })
