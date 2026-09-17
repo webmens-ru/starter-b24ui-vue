@@ -123,6 +123,30 @@ describe('ProductRowActionsMenu', () => {
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
   })
 
+  it('keeps the delete confirmation open after a native bubbling click', async () => {
+    const row = makeProductRow()
+    const wrapper = await openAttachedMenu(row)
+
+    let documentClickSeen = false
+    const observeDocumentClick = (): void => {
+      documentClickSeen = true
+    }
+    document.addEventListener('click', observeDocumentClick)
+
+    try {
+      const deleteAction = wrapper.get(`[aria-label="Удалить товарную позицию ${row.id}"]`)
+      deleteAction.element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await nextTick()
+
+      expect(wrapper.get('[role="alertdialog"]').text()).toContain('Удалить товарную позицию?')
+      expect(wrapper.emitted('delete')).toBeUndefined()
+      expect(documentClickSeen).toBe(false)
+    } finally {
+      document.removeEventListener('click', observeDocumentClick)
+      wrapper.unmount()
+    }
+  })
+
   it('moves focus into the announced delete confirmation and restores the delete action on cancel', async () => {
     const row = makeProductRow()
     const wrapper = await openAttachedMenu(row)

@@ -340,7 +340,7 @@ onBeforeUnmount(() => {
             class="block w-full rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
             :aria-label="`Удалить товарную позицию ${productRow.id}`"
             :disabled="disabled"
-            @click="requestDelete"
+            @click.stop="requestDelete"
           >
             Удалить
           </button>
