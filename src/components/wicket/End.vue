@@ -152,8 +152,6 @@ async function handleCalculate() {
     if (!isCurrentAction(generation)) return
     applyActualSavedPrices(result.priceRetail, result.priceDealer, Math.floor(Date.now() / 1000))
     await persistWizardProgress()
-    if (!isCurrentAction(generation)) return
-    goToProductRows()
   } catch (e) {
     if (!isCurrentAction(generation)) return
     console.error('finalCalculate:', e)

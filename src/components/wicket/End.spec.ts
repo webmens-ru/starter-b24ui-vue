@@ -52,7 +52,7 @@ describe('End order composition navigation', () => {
     mocks.deleteCalculation.mockResolvedValue(undefined)
   })
 
-  it('returns to product rows after a successful calculation save', async () => {
+  it('shows calculated prices and stays on the calculation step after a successful calculation', async () => {
     const wrapper = mount(End, {
       global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
     })
@@ -66,6 +66,19 @@ describe('End order composition navigation', () => {
       productRowId: 7,
       modelId: '1',
     }))
+    expect(wrapper.text()).toContain('1000.00 ₽')
+    expect(wrapper.text()).toContain('800.00 ₽')
+    expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
+  })
+
+  it('returns to product rows only when the user clicks «К заказу»', async () => {
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('К заказу'))!.trigger('click')
+
     expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
   })
 
