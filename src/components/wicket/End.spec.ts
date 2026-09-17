@@ -57,6 +57,7 @@ describe('End order composition navigation', () => {
       global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
     })
     await flushPromises()
+    const savesAfterMount = mocks.saveWicketData.mock.calls.length
 
     await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click')
     await flushPromises()
@@ -68,6 +69,31 @@ describe('End order composition navigation', () => {
     }))
     expect(wrapper.text()).toContain('1000.00 ₽')
     expect(wrapper.text()).toContain('800.00 ₽')
+    expect(mocks.saveWicketData).toHaveBeenCalledTimes(savesAfterMount + 1)
+    expect(mocks.saveWicketData.mock.calls[mocks.saveWicketData.mock.calls.length - 1]?.[0]).toEqual(expect.objectContaining({
+      reachedStep: 'page12',
+    }))
+    expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
+  })
+
+  it('updates calculated prices when the user recalculates on the same step', async () => {
+    mocks.finalCalculate
+      .mockResolvedValueOnce({ priceRetail: '1000.00', priceDealer: '800.00' })
+      .mockResolvedValueOnce({ priceRetail: '1200.00', priceDealer: '950.00' })
+    const wrapper = mount(End, {
+      global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },
+    })
+    await flushPromises()
+    const calculateButton = wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!
+
+    await calculateButton.trigger('click')
+    await flushPromises()
+    await calculateButton.trigger('click')
+    await flushPromises()
+
+    expect(mocks.finalCalculate).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('1200.00 ₽')
+    expect(wrapper.text()).toContain('950.00 ₽')
     expect(mocks.navigateToProductRows).not.toHaveBeenCalled()
   })
 
