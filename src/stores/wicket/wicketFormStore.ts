@@ -46,17 +46,6 @@ const peremichkaPolozheniyeName = ref<string>('')
 const assortmentJumperId        = ref<string | number | null>(null)
 const peremichkaSortamentName   = ref<string | null>(null)
 
-// Поля шага "Клиент"
-const calculationName  = ref<string>('')
-const clientName       = ref<string>('')
-const clientLastName  = ref<string>('')
-const clientSurname    = ref<string>('')
-const clientPhone      = ref<string>('')
-const clientEmail      = ref<string>('')
-const clientAddress    = ref<string>('')
-const clientComment    = ref<string>('')
-const countryCode      = ref<string>('+7')
-
 // Поля шага "Ручка" (дополнительная ручка / скоба)
 const isTherePenName   = ref<string>('Не будет')
 const isTherePen       = ref<number>(0)
@@ -295,15 +284,6 @@ const fieldsFilled = ref<number>(0)
     peremichkaPolozheniyeName.value = ''
     assortmentJumperId.value = null
     peremichkaSortamentName.value = null
-    calculationName.value = ''
-    clientName.value = ''
-    clientLastName.value = ''
-    clientSurname.value = ''
-    clientPhone.value = ''
-    clientEmail.value = ''
-    clientAddress.value = ''
-    clientComment.value = ''
-    countryCode.value = '+7'
     isTherePenName.value = 'Не будет'
     isTherePen.value = 0
     penProvided.value = 'Предоставляет изготовитель'
@@ -581,13 +561,10 @@ const fieldsFilled = ref<number>(0)
         case 'page10':
           completed = isTherePen.value !== null
           break
-        case 'page11': {
-          const snap = apiData?.client_snapshot
-          const hasSnapshot = snap != null && String(snap).trim() !== ''
-          const hasClient = notEmpty(clientName.value) || notEmpty(clientPhone.value) || notEmpty(clientEmail.value) || notEmpty(clientAddress.value)
-          completed = hasSnapshot || hasClient
+        case 'page11':
+          // Данные клиента теперь принадлежат заказу, а не конфигурации калитки.
+          completed = true
           break
-        }
         case 'page12':
           completed = notEmpty(priceRetail.value)
           break
@@ -633,15 +610,6 @@ const fieldsFilled = ref<number>(0)
       peremichkaPolozheniyeName,
       assortmentJumperId,
       peremichkaSortamentName,
-      calculationName,
-      clientName,
-      clientLastName,
-      clientSurname,
-      clientPhone,
-      clientEmail,
-      clientAddress,
-      clientComment,
-      countryCode,
       isTherePenName,
       isTherePen,
       penProvided,
@@ -946,21 +914,6 @@ const fieldsFilled = ref<number>(0)
     }
     blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
-    // Клиент
-    blocks.push({
-      blockName: 'Клиент',
-      params: [
-        { name: 'Название расчета', value: calculationName.value },
-        { name: 'Имя', value: clientName.value },
-        { name: 'Фамилия', value: clientLastName.value },
-        { name: 'Отчество', value: clientSurname.value },
-        { name: 'Телефон', value: clientPhone.value },
-        { name: 'Эл. почта', value: clientEmail.value },
-        { name: 'Адрес', value: clientAddress.value },
-        { name: 'Комментарий', value: clientComment.value },
-      ],
-    })
-
     // Цена
     if (priceDealer.value || priceRetail.value) {
       blocks.push({
@@ -996,15 +949,6 @@ const fieldsFilled = ref<number>(0)
     peremichkaPolozheniyeName,
     assortmentJumperId,
     peremichkaSortamentName,
-    calculationName,
-    clientName,
-    clientLastName,
-    clientSurname,
-    clientPhone,
-    clientEmail,
-    clientAddress,
-    clientComment,
-    countryCode,
     isTherePenName,
     isTherePen,
     penProvided,

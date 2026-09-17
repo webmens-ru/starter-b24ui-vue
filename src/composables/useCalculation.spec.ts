@@ -172,15 +172,6 @@ describe('useCalculation', () => {
       peremichkaPolozheniyeName: 'Перемычка над створкой',
       assortmentJumperId: 11,
       peremichkaSortamentName: '40/40/2',
-      calculationName: 'Тест расчёта',
-      clientName: 'Иван',
-      clientLastName: 'Петров',
-      clientSurname: 'Сергеевич',
-      clientPhone: '+7 (999) 111-22-33',
-      clientEmail: 'ivan@test.ru',
-      clientAddress: 'Москва, ул. Пушкина, 1',
-      clientComment: 'Позвонить',
-      countryCode: '+7',
       isTherePen: 1,
       isTherePenName: 'Будет',
       penProvided: 'Предоставляет заказчик',
@@ -250,8 +241,6 @@ describe('useCalculation', () => {
       expect(calc.hasStolby.value).toBe(1)
       expect(calc.openingOptionId.value).toBe(2)
       expect(calc.assortmentJumperId.value).toBe(11)
-      expect(calc.clientName.value).toBe('Иван')
-      expect(calc.clientPhone.value).toBe('+7 (999) 111-22-33')
       expect(calc.isTherePen.value).toBe(1)
       expect(calc.isThereLock.value).toBe(0)
       expect(calc.isThereLockName.value).toBe('Нет')
@@ -273,6 +262,16 @@ describe('useCalculation', () => {
       expect(calc.colorFacadeReverseImage.value).toBe('/uploads/colors/reverse.jpg')
       expect(calc.idYard.value).toBe(12)
       expect(calc.priceRetail.value).toBe('18500')
+    })
+
+    it('игнорирует legacy-ключи клиента из API', () => {
+      calc.loadFromApi({
+        clientName: 'Legacy',
+        calculationName: 'Legacy',
+      } as never)
+
+      expect('clientName' in calc).toBe(false)
+      expect('calculationName' in calc).toBe(false)
     })
 
     it('отправляет канонический ID сортамента перемычки', () => {
@@ -583,7 +582,6 @@ describe('useCalculation', () => {
         lockComponentIds: '[2]',
         lockComponentsInstalled: 'Устанавливает изготовитель',
         isTherePen: 0,
-        clientName: 'Иван',
         priceRetail: '1000',
       })
 
@@ -614,7 +612,6 @@ describe('useCalculation', () => {
         heightProyema: '2000',
         isThereLock: 1,
         isTherePen: 0,
-        clientName: 'Иван',
       })
 
       expect(calc.activePage.value).toBe('page12')
@@ -630,7 +627,6 @@ describe('useCalculation', () => {
         materialFacadeGlob: 'Сайдинг',
         materialYardGlob: 'Профлист',
         isThereLock: 1,
-        clientName: 'Тест',
       })
 
       const blockNames = calc.data.value.map(b => b.blockName)
@@ -639,7 +635,7 @@ describe('useCalculation', () => {
       expect(blockNames).toContain('Заполнение')
       expect(blockNames).toContain('Столбы / вариант открытия / перемычка')
       expect(blockNames).toContain('Замок')
-      expect(blockNames).toContain('Клиент')
+      expect(blockNames).not.toContain('Клиент')
 
       const fillBlock = calc.data.value.find(b => b.blockName === 'Заполнение')
       expect(fillBlock?.params.map(p => p.name)).toContain('Материал заполнения (двор)')
@@ -830,7 +826,6 @@ describe('useCalculation', () => {
   describe('reset', () => {
     it('сбрасывает все поля к дефолтным значениям', () => {
       calc.number.value = '123'
-      calc.clientName.value = 'Иван'
       calc.fillSide.value = 'Две стороны'
       calc.colorFacadeHex.value = '#704214'
       calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
@@ -838,7 +833,6 @@ describe('useCalculation', () => {
       calc.reset()
 
       expect(calc.number.value).toBe('')
-      expect(calc.clientName.value).toBe('')
       expect(calc.fillSide.value).toBe('Одна сторона')
       expect(calc.colorFacadeHex.value).toBe('')
       expect(calc.colorFacadeImage.value).toBe('')

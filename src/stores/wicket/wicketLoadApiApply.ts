@@ -49,6 +49,19 @@ export const WICKET_LEGACY_ACCESSORY_KEYS = new Set([
   'skudInstalled',
 ])
 
+/** Клиент принадлежит заказу; старые поля в ответе калитки намеренно игнорируются. */
+export const WICKET_LEGACY_CLIENT_KEYS = new Set([
+  'calculationName',
+  'clientName',
+  'clientLastName',
+  'clientSurname',
+  'clientPhone',
+  'clientEmail',
+  'clientAddress',
+  'clientComment',
+  'countryCode',
+])
+
 const WICKET_NET_PROVIDER_KEYS = new Set([
   'netWidthProviderTop',
   'netWidthProviderLower',
@@ -93,7 +106,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   additionalPenColor: '',
   additionalPenMarking: '',
   colorShieldHex: '',
-  countryCode: '+7',
 }
 
 type RefLike = { value: unknown }
@@ -147,7 +159,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
-    if (WICKET_LEGACY_ACCESSORY_KEYS.has(key)) continue
+    if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
   }
 }

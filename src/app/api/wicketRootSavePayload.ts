@@ -4,8 +4,21 @@ import type { WicketSavePayload } from './wicket.types'
 export function canonicalizeWicketRootSavePayload(
   payload: WicketSavePayload,
 ): WicketSavePayload {
+  const {
+    calculationName: _calculationName,
+    clientName: _clientName,
+    clientLastName: _clientLastName,
+    clientSurname: _clientSurname,
+    clientPhone: _clientPhone,
+    clientEmail: _clientEmail,
+    clientAddress: _clientAddress,
+    clientComment: _clientComment,
+    countryCode: _countryCode,
+    ...canonicalPayload
+  } = payload
+
   return {
-    ...payload,
+    ...canonicalPayload,
     lockPenId: null,
     lockPenColorId: null,
   }

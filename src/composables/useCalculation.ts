@@ -134,15 +134,6 @@ export function useCalculation() {
       thicknessYard: form.thicknessYard,
       typeOfCoatingYard: form.typeOfCoatingYard,
       colorYard: form.colorYard,
-      calculationName: form.calculationName,
-      clientName: form.clientName,
-      clientLastName: form.clientLastName,
-      clientSurname: form.clientSurname,
-      clientPhone: form.clientPhone,
-      clientEmail: form.clientEmail,
-      clientAddress: form.clientAddress,
-      clientComment: form.clientComment,
-      countryCode: form.countryCode,
     })
   }
 

@@ -6,6 +6,15 @@ export interface WicketSavePayload extends ProductRowContext {
   lockSetId?: number | null
   providesLock?: string | null
   lockInstaller?: string | null
+  calculationName?: never
+  clientName?: never
+  clientLastName?: never
+  clientSurname?: never
+  clientPhone?: never
+  clientEmail?: never
+  clientAddress?: never
+  clientComment?: never
+  countryCode?: never
   [key: string]: unknown
 }
 
