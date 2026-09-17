@@ -216,7 +216,7 @@ describe('wicketFormStore accessory composition', () => {
     }
   })
 
-  it('drops only retired standalone pages while restoring legacy progress', () => {
+  it('удаляет самостоятельные шаги и заменяет шаг клиента расчётом при восстановлении', () => {
     const store = useWicketFormStore()
     const wizard = useWicketWizardStore()
 
@@ -236,7 +236,7 @@ describe('wicketFormStore accessory composition', () => {
       ],
     })
 
-    expect(wizard.activePage).toBe('page11')
+    expect(wizard.activePage).toBe('page12')
     expect(wizard.visitedPages).toEqual([
       'page1',
       'page7',
@@ -246,7 +246,7 @@ describe('wicketFormStore accessory composition', () => {
       'page6',
       'page9',
       'page10',
-      'page11',
+      'page12',
       'page_lock_type',
     ])
   })
@@ -275,10 +275,45 @@ describe('wicketFormStore accessory composition', () => {
 
     store.loadFromApi({
       modelId: '1',
-      activePage: 'page11',
-      visitedPages: ['page1', 'page7', 'page10', 'page11'],
+      activePage: 'page10',
+      visitedPages: ['page1', 'page7', 'page10'],
     })
 
-    expect(wizard.activePage).toBe('page11')
+    expect(wizard.activePage).toBe('page10')
+  })
+
+  it.each(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])(
+    'тип %s: заменяет сохранённый page11 расчётом даже без списка посещённых шагов',
+    modelId => {
+      const store = useWicketFormStore()
+      const wizard = useWicketWizardStore()
+
+      store.loadFromApi({ modelId, activePage: 'page11', visitedPages: [] })
+
+      expect(wizard.activePage).toBe('page12')
+      expect(wizard.visitedPages).toContain('page12')
+      expect(wizard.isPageAccessible('page11')).toBe(false)
+    },
+  )
+
+  it.each(['1', '2'])('тип %s: восстановление полного расчёта не создаёт шаг клиента', modelId => {
+    const store = useWicketFormStore()
+    const wizard = useWicketWizardStore()
+
+    store.loadFromApi({
+      modelId,
+      widthProyema: '1000',
+      heightProyema: '2000',
+      fillSide: 'Одна сторона',
+      idFacade: 5,
+      shieldType: 'Тип_1',
+      openingOptionId: 1,
+      raspolozheniyePolotna: 'Вертикально',
+      isTherePen: 0,
+      priceRetail: '1000',
+    })
+
+    expect(wizard.visitedPages).toContain('page12')
+    expect(wizard.isPageAccessible('page11')).toBe(false)
   })
 })

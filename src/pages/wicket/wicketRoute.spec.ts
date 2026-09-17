@@ -71,7 +71,8 @@ describe('defineWicketRoute', () => {
     const stateWithLock = { ...state, isThereLock: 1 }
     expect(route.next('page_lock_type', stateWithLock)).toBe('page10')
     expect(route.prev('page10', stateWithLock)).toBe('page_lock_type')
-    expect(route.next('page10', state)).toBe('page11')
-    expect(route.prev('page11', state)).toBe('page10')
+    expect(route.next('page10', state)).toBe('page12')
+    expect(route.prev('page12', state)).toBe('page10')
+    expect(menuPages).not.toContain('page11')
   })
 })

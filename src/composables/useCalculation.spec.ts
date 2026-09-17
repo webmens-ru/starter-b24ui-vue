@@ -504,12 +504,13 @@ describe('useCalculation', () => {
       const allPages = [
         'page1', 'page2', 'page2_facade_siding', 'page2_facade_profnastil',
         'page2_yard_siding', 'page2_yard_profnastil', 'page5', 'page3', 'page6',
-        'page7', 'page9', 'page_lock_type', 'page10', 'page11', 'page12',
+        'page7', 'page9', 'page_lock_type', 'page10', 'page12',
       ]
 
       for (const page of allPages) {
         expect(calc.isPageAccessible(page)).toBe(true)
       }
+      expect(calc.isPageAccessible('page11')).toBe(false)
     })
 
     it('при редактировании пустого заказа — доступны только достигнутые этапы', () => {

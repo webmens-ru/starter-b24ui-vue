@@ -100,7 +100,7 @@ async function loadSavedPriceIfActual(): Promise<void> {
   }
 }
 
-/** Сохраняет reachedStep / visitedPages в wicket_type* (иначе при reopen остаётся page11). */
+/** Сохраняет reachedStep / visitedPages, чтобы при повторном открытии восстановить шаг расчёта. */
 async function persistWizardProgress(): Promise<void> {
   try {
     await saveWicketData(calc.getFullSavePayload())

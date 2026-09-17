@@ -18,6 +18,10 @@ const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_skud',
 ])
 
+const RETIRED_WICKET_PAGES: Record<string, string> = {
+  page11: 'page12',
+}
+
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
@@ -513,10 +517,9 @@ const fieldsFilled = ref<number>(0)
           'page9',
           'page_lock_type',
           'page10',
-          'page11',
           'page12',
         ]
-      : ['page1', 'page7', 'page2', 'page3', 'page5', 'page6', 'page9', 'page10', 'page11', 'page12']
+      : ['page1', 'page7', 'page2', 'page3', 'page5', 'page6', 'page9', 'page10', 'page12']
     const visited: string[] = []
     let active = 'page1'
 
@@ -560,10 +563,6 @@ const fieldsFilled = ref<number>(0)
           break
         case 'page10':
           completed = isTherePen.value !== null
-          break
-        case 'page11':
-          // Данные клиента теперь принадлежат заказу, а не конфигурации калитки.
-          completed = true
           break
         case 'page12':
           completed = notEmpty(priceRetail.value)
@@ -733,12 +732,16 @@ const fieldsFilled = ref<number>(0)
 
     // Прогресс мастера: reachedStep из API; при уже рассчитанной цене — последний шаг page12.
     const apiVisited = Array.isArray(apiData.visitedPages)
-      ? (apiData.visitedPages as string[]).filter(page => !RETIRED_STANDALONE_PAGE_IDS.has(page))
+      ? (apiData.visitedPages as string[])
+          .map(page => RETIRED_WICKET_PAGES[page] ?? page)
+          .filter(page => !RETIRED_STANDALONE_PAGE_IDS.has(page))
       : []
-    const apiActive =
+    const savedActive =
       typeof apiData.activePage === 'string' && apiData.activePage
         ? apiData.activePage
         : 'page1'
+    const replacementPage = RETIRED_WICKET_PAGES[savedActive]
+    const apiActive = replacementPage ?? savedActive
     const hasPrice =
       (priceRetail.value !== null && priceRetail.value !== '' && String(priceRetail.value).trim() !== '')
       || (apiData.priceRetail !== null && apiData.priceRetail !== undefined && String(apiData.priceRetail).trim() !== '')
@@ -749,14 +752,14 @@ const fieldsFilled = ref<number>(0)
       : apiActive
     if (hasPrice) {
       active = laterWizardStep(active, 'page12')
-    } else if (apiVisited.length === 0) {
+    } else if (apiVisited.length === 0 && !replacementPage) {
       active = computedProgress.activePage
     }
 
-    const shouldStartFromFirstPage = modelIdForLoad === '2'
+    const shouldStartFromFirstPage = modelIdForLoad === '2' && !replacementPage
     w.activePage.value = shouldStartFromFirstPage ? 'page1' : active
     w.visitedPages.value =
-      apiVisited.length > 0
+      apiVisited.length > 0 || replacementPage
         ? mergeVisitedPages(visitedPagesUpTo(active, apiVisited), computedProgress.visitedPages)
         : computedProgress.visitedPages
 

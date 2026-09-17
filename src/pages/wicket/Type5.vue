@@ -13,7 +13,6 @@ import RazmeryProyema from '../../components/wicket/RazmeryProyema.vue'
 import IsTherelock from '../../components/wicket/IsTherelock.vue'
 import LockType from '../../components/wicket/LockType.vue'
 import Pen from '../../components/wicket/Pen.vue'
-import Client from '../../components/wicket/Client.vue'
 import End from '../../components/wicket/End.vue'
 import { type5Route } from './type5Route'
 
@@ -29,7 +28,6 @@ const stepComponents: Record<string, Component> = {
   page9: IsTherelock,
   page_lock_type: LockType,
   page10: Pen,
-  page11: Client,
   page12: End,
 }
 </script>

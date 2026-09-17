@@ -116,10 +116,6 @@ export function penSection(): WicketRouteSection {
   return section('page10', 'Дополнительная ручка', 'pen')
 }
 
-export function clientSection(): WicketRouteSection {
-  return section('page11', 'Клиент', 'client')
-}
-
 export function calculateSection(): WicketRouteSection {
   return section('page12', 'Рассчитать', 'end')
 }
@@ -131,7 +127,6 @@ export function standardTailSections(): WicketRouteSection[] {
     canvasSection(),
     lockSection(),
     penSection(),
-    clientSection(),
     calculateSection(),
   ]
 }
