@@ -258,10 +258,33 @@ describe('ProductRowsPage', () => {
     expect(
       wrapper.findAll('div').some(node => node.classes().includes('h-[calc(100vh-50px)]')),
     ).toBe(false)
-    wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]')
+    const embeddedActions = wrapper.get('[data-product-row-add-actions]')
+    expect(embeddedActions.classes()).toContain('gap-2')
+
+    const addProductButton = wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]')
+    const addMaterialButton = wrapper.get('[aria-label="Добавить материал в заказ 42"]')
+    expect(addProductButton.classes()).toContain('rounded')
+    expect(addMaterialButton.classes()).toContain('rounded')
+    expect(addProductButton.classes()).not.toContain('rounded-lg')
+    expect(addMaterialButton.classes()).not.toContain('rounded-lg')
     expect(wrapper.findAll('[data-product-row]')).toHaveLength(2)
     expect(wrapper.get('[data-order-total="retail"]').text()).toMatch(/1\s*800/)
     expect(wrapper.get('[data-order-total="dealer"]').text()).toMatch(/1\s*440/)
+  })
+
+  it('renders separated rounded add buttons in the standalone header', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const headerActions = wrapper.get('[data-product-row-add-actions]')
+    expect(headerActions.classes()).toContain('gap-2')
+
+    const addProductButton = wrapper.get('[aria-label="Добавить товарную позицию в заказ 42"]')
+    const addMaterialButton = wrapper.get('[aria-label="Добавить материал в заказ 42"]')
+    expect(addProductButton.classes()).toContain('rounded')
+    expect(addMaterialButton.classes()).toContain('rounded')
+    expect(addProductButton.classes()).not.toContain('rounded-lg')
+    expect(addMaterialButton.classes()).not.toContain('rounded-lg')
   })
 
   it.each(['', ' ', '0', '-1', '1.5', '1e2', '0x2a', '042', '9007199254740992'])(

@@ -584,38 +584,43 @@ watch(orderIdParam, () => {
             <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">Заказ №{{ orderIdParam }}</h1>
             <p class="text-sm text-gray-500">Товарные позиции заказа</p>
           </div>
-          <button
+          <div
             v-if="result?.orderWorkflow.canCreateProductRow"
-            ref="addProductButton"
-            type="button"
-            class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
-            @click="addProduct"
+            data-product-row-add-actions
+            class="flex gap-2"
           >
-            Добавить товарную позицию
-          </button>
-          <button
-            v-if="result?.orderWorkflow.canCreateProductRow"
-            ref="addMaterialButton"
-            type="button"
-            class="rounded-lg border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            :aria-label="`Добавить материал в заказ ${orderIdParam}`"
-            @click="openAddMaterial"
-          >
-            Добавить материал
-          </button>
+            <button
+              ref="addProductButton"
+              type="button"
+              class="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
+              @click="addProduct"
+            >
+              Добавить товарную позицию
+            </button>
+            <button
+              ref="addMaterialButton"
+              type="button"
+              class="rounded border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              :aria-label="`Добавить материал в заказ ${orderIdParam}`"
+              @click="openAddMaterial"
+            >
+              Добавить материал
+            </button>
+          </div>
         </header>
 
         <main ref="pageMain" tabindex="-1" :class="embeddedInOrderCard ? 'p-4' : 'flex-1 overflow-y-auto p-4'">
           <div class="mx-auto flex w-full max-w-[1152px] flex-col gap-4">
             <div
               v-if="embeddedInOrderCard && result?.orderWorkflow.canCreateProductRow"
-              class="flex justify-end"
+              data-product-row-add-actions
+              class="flex justify-end gap-2"
             >
               <button
                 type="button"
                 ref="addProductButton"
-                class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                class="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
                 @click="addProduct"
               >
@@ -624,7 +629,7 @@ watch(orderIdParam, () => {
               <button
                 type="button"
                 ref="addMaterialButton"
-                class="rounded-lg border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                class="rounded border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :aria-label="`Добавить материал в заказ ${orderIdParam}`"
                 @click="openAddMaterial"
               >
