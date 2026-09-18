@@ -592,7 +592,7 @@ watch(orderIdParam, () => {
             <button
               ref="addProductButton"
               type="button"
-              class="rounded-[4px] bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="!rounded-[4px] bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
               @click="addProduct"
             >
@@ -601,7 +601,7 @@ watch(orderIdParam, () => {
             <button
               ref="addMaterialButton"
               type="button"
-              class="rounded-[4px] border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="!rounded-[4px] border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               :aria-label="`Добавить материал в заказ ${orderIdParam}`"
               @click="openAddMaterial"
             >
@@ -620,7 +620,7 @@ watch(orderIdParam, () => {
               <button
                 type="button"
                 ref="addProductButton"
-                class="rounded-[4px] bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                class="!rounded-[4px] bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :aria-label="`Добавить товарную позицию в заказ ${orderIdParam}`"
                 @click="addProduct"
               >
@@ -629,7 +629,7 @@ watch(orderIdParam, () => {
               <button
                 type="button"
                 ref="addMaterialButton"
-                class="rounded-[4px] border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                class="!rounded-[4px] border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :aria-label="`Добавить материал в заказ ${orderIdParam}`"
                 @click="openAddMaterial"
               >
