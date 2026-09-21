@@ -73,6 +73,12 @@ describe('ProductRowActionsMenu', () => {
     expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
     expect(action.attributes('target')).toBe('_blank')
     expect(action.attributes('rel')).toBe('noopener noreferrer')
+    expect(action.classes()).toEqual(expect.arrayContaining([
+      'text-gray-900',
+      'no-underline',
+      'visited:text-gray-900',
+      'hover:text-gray-900',
+    ]))
 
     action.element.addEventListener('click', event => event.preventDefault())
     await action.trigger('click')
