@@ -1,17 +1,19 @@
 @import "tailwindcss";
 @import "@bitrix24/b24ui-nuxt";
 
-#app {
-  font-family: inherit;
-}
+@layer base {
+  #app {
+    font-family: inherit;
+  }
 
-:where(
-  #app button,
-  #app input,
-  #app select,
-  #app textarea
-) {
-  font: inherit;
+  :where(
+    #app button,
+    #app input,
+    #app select,
+    #app textarea
+  ) {
+    font: inherit;
+  }
 }
 
 /* B24SelectMenu на всю ширину */
