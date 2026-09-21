@@ -2,6 +2,7 @@ declare global {
   type TPlacementParams = {
     orderCardEmbedded?: boolean;
     productRowCreateUrl?: string;
+    productRowCostDetailsUrlTemplate?: string;
     productRowUpdateUrlTemplate?: string;
     returnUrl?: string;
     [index: string]: unknown;

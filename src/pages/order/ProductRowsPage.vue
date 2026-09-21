@@ -130,6 +130,28 @@ function navigateTop(url: string): void {
   window.top?.location.assign(url)
 }
 
+function costDetailsUrl(productRowId: number): string | undefined {
+  if (!Number.isSafeInteger(productRowId) || productRowId <= 0) return undefined
+  const template = window._PARAMS_?.placementOptions?.params?.productRowCostDetailsUrlTemplate
+  if (typeof template !== 'string' || (template.match(/\{productRowId\}/g) ?? []).length !== 1) return undefined
+  if (!template.startsWith('/') || template.startsWith('//') || template.startsWith('/\\')) return undefined
+
+  const url = template.replace('{productRowId}', String(productRowId))
+  const parsed = new URL(url, window.location.origin)
+  if (
+    parsed.origin !== window.location.origin
+    || parsed.searchParams.get('order_id') !== String(orderId.value)
+    || parsed.searchParams.get('productRowId') !== String(productRowId)
+  ) return undefined
+
+  return url
+}
+
+function openCostDetails(productRow: ProductRowSummary): void {
+  const url = costDetailsUrl(productRow.id)
+  if (url) navigateTop(url)
+}
+
 function configurationNavigationError(): void {
   errorMessage.value = 'Ссылка на конфигуратор недоступна'
 }
@@ -702,10 +724,12 @@ watch(orderIdParam, () => {
                   :product-row="row.productRow"
                   :disabled="staleView || busyProductRowIds.has(row.productRow.id)"
                   :reorder-disabled="staleView || reorderBusy"
+                  :cost-details-url="costDetailsUrl(row.productRow.id)"
                   :can-move-up="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) > 0"
                   :can-move-down="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) < groupedProductRows.roots.length - 1"
                   @edit="editProductRow"
                   @copy="copyProductRowAction"
+                  @open-cost-details="openCostDetails"
                   @update-quantity="updateQuantity"
                   @update-adjustment="updateAdjustment"
                   @update-deadline="updateDeadline"

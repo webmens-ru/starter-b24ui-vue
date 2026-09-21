@@ -19,7 +19,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean } = {}) {
+function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string } = {}) {
   return mount(ProductRowTableRows, { props: { productRow, canMoveUp: false, canMoveDown: false, ...props } })
 }
 
@@ -147,12 +147,17 @@ describe('ProductRowTableRows', () => {
       allowedActions: ['product_row.edit_configuration', 'product_row.change_quantity', 'product_row.calculate', 'product_row.copy', 'product_row.delete', 'product_row.transition', 'product_row.reorder'],
       availableTransitions: ['cancelled'],
     })
-    const wrapper = mountRows(productRow, { canMoveUp: true, canMoveDown: true })
+    const wrapper = mountRows(productRow, {
+      canMoveUp: true,
+      canMoveDown: true,
+      costDetailsUrl: '/order-cost-details?order_id=42&productRowId=7',
+    })
     await wrapper.get('[aria-label="Количество товарной позиции 7"]').setValue('3')
     await wrapper.get('[aria-label="Количество товарной позиции 7"]').trigger('change')
     await openActions(wrapper); await wrapper.get('[aria-label="Редактировать товарную позицию 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
+    await openActions(wrapper); await wrapper.get('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
     expect(wrapper.emitted('delete')).toBeUndefined()
     await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 7"]').trigger('click')
@@ -162,6 +167,7 @@ describe('ProductRowTableRows', () => {
     expect(wrapper.emitted('edit')?.[0]).toEqual([productRow])
     expect(wrapper.emitted('recalculate')?.[0]).toEqual([productRow])
     expect(wrapper.emitted('copy')?.[0]).toEqual([productRow])
+    expect(wrapper.emitted('openCostDetails')?.[0]).toEqual([productRow])
     expect(wrapper.emitted('delete')?.[0]).toEqual([productRow])
     expect(wrapper.emitted('transition')?.[0]).toEqual([productRow, 'cancelled'])
     expect(wrapper.emitted('move')?.[0]).toEqual([productRow, 1])

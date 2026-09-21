@@ -7,6 +7,7 @@ const props = withDefaults(defineProps<{
   productRow: ProductRowSummary
   disabled?: boolean
   reorderDisabled?: boolean
+  costDetailsUrl?: string
   canMoveUp: boolean
   canMoveDown: boolean
 }>(), {
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   delete: []
   transition: [toStatus: string]
   move: [direction: -1 | 1]
+  openCostDetails: []
 }>()
 
 const open = ref(false)
@@ -144,6 +146,12 @@ function select(event: 'edit' | 'recalculate' | 'copy'): void {
       emit('copy')
       break
   }
+  close()
+}
+
+function selectCostDetails(): void {
+  if (props.disabled) return
+  emit('openCostDetails')
   close()
 }
 
@@ -279,6 +287,18 @@ onBeforeUnmount(() => {
           @click="select('copy')"
         >
           Копировать
+        </button>
+        <button
+          v-if="costDetailsUrl"
+          type="button"
+          role="menuitem"
+          tabindex="-1"
+          class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :aria-label="`Открыть детализацию стоимости товарной позиции ${productRow.id}`"
+          :disabled="disabled"
+          @click="selectCostDetails"
+        >
+          Открыть детализацию стоимости
         </button>
 
         <template v-if="isAllowed('product_row.transition')">
