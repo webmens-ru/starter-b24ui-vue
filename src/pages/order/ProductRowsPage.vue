@@ -138,10 +138,14 @@ function costDetailsUrl(productRowId: number): string | undefined {
 
   const url = template.replace('{productRowId}', String(productRowId))
   const parsed = new URL(url, window.location.origin)
+  const orderIds = parsed.searchParams.getAll('order_id')
+  const productRowIds = parsed.searchParams.getAll('productRowId')
   if (
     parsed.origin !== window.location.origin
-    || parsed.searchParams.get('order_id') !== String(orderId.value)
-    || parsed.searchParams.get('productRowId') !== String(productRowId)
+    || orderIds.length !== 1
+    || orderIds[0] !== String(orderId.value)
+    || productRowIds.length !== 1
+    || productRowIds[0] !== String(productRowId)
   ) return undefined
 
   return url
