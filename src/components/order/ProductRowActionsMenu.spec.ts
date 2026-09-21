@@ -43,7 +43,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-async function openMenu(row = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string } = {}) {
+async function openMenu(row = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string } = {}) {
   const wrapper = mount(ProductRowActionsMenu, {
     props: { productRow: row, canMoveUp: true, canMoveDown: true, ...props },
   })
@@ -61,6 +61,20 @@ async function openAttachedMenu(row = makeProductRow()) {
 }
 
 describe('ProductRowActionsMenu', () => {
+  it('shows the PDF action only when the page provides a validated URL', async () => {
+    const row = makeProductRow()
+    const hidden = await openMenu(row)
+    expect(hidden.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+
+    const visible = await openMenu(row, {
+      pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',
+    })
+    const action = visible.get('[aria-label="Сформировать PDF товарной позиции 7"]')
+    expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
+    expect(action.attributes('target')).toBe('_blank')
+    expect(action.attributes('rel')).toBe('noopener noreferrer')
+  })
+
   it('shows the cost details action only when the server provides its URL', async () => {
     const row = makeProductRow()
     const hidden = await openMenu(row)

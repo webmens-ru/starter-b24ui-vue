@@ -19,7 +19,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string } = {}) {
+function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string } = {}) {
   return mount(ProductRowTableRows, { props: { productRow, canMoveUp: false, canMoveDown: false, ...props } })
 }
 
@@ -28,6 +28,16 @@ async function openActions(wrapper: ReturnType<typeof mountRows>, id = 7): Promi
 }
 
 describe('ProductRowTableRows', () => {
+  it('forwards the page-provided PDF URL to the actions menu', async () => {
+    const wrapper = mountRows(makeProductRow(), {
+      pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',
+    })
+    await openActions(wrapper)
+
+    expect(wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]').attributes('href'))
+      .toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
+  })
+
   it('renders one spacious aligned card with six labelled cells', () => {
     const wrapper = mountRows()
     const card = wrapper.get('[data-product-row="7"][role="rowgroup"]')

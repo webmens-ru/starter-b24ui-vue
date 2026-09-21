@@ -156,6 +156,45 @@ function costDetailsUrl(productRowId: number): string | undefined {
   return url
 }
 
+function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
+  if (productRow.productType !== 'wicket' || !Number.isSafeInteger(productRow.id) || productRow.id <= 0) return undefined
+  if (typeof productRow.modelId !== 'string' || !/^[1-9]\d*$/.test(productRow.modelId)) return undefined
+
+  const template = window._PARAMS_?.placementOptions?.params?.productRowPdfUrlTemplate
+  if (
+    typeof template !== 'string'
+    || (template.match(/\{productRowId\}/g) ?? []).length !== 1
+    || (template.match(/\{modelId\}/g) ?? []).length !== 1
+    || !template.startsWith('/')
+    || template.startsWith('//')
+    || template.startsWith('/\\')
+  ) return undefined
+
+  const url = template
+    .replace('{productRowId}', String(productRow.id))
+    .replace('{modelId}', productRow.modelId)
+  let parsed: URL
+  try {
+    parsed = new URL(url, window.location.origin)
+  } catch {
+    return undefined
+  }
+  const orderIds = parsed.searchParams.getAll('order_id')
+  const productRowIds = parsed.searchParams.getAll('productRowId')
+  const modelIds = parsed.searchParams.getAll('model_id')
+  if (
+    parsed.origin !== window.location.origin
+    || orderIds.length !== 1
+    || orderIds[0] !== String(orderId.value)
+    || productRowIds.length !== 1
+    || productRowIds[0] !== String(productRow.id)
+    || modelIds.length !== 1
+    || modelIds[0] !== productRow.modelId
+  ) return undefined
+
+  return url
+}
+
 function openCostDetails(productRow: ProductRowSummary): void {
   const url = costDetailsUrl(productRow.id)
   if (url) navigateTop(url)
@@ -734,6 +773,7 @@ watch(orderIdParam, () => {
                   :disabled="staleView || busyProductRowIds.has(row.productRow.id)"
                   :reorder-disabled="staleView || reorderBusy"
                   :cost-details-url="costDetailsUrl(row.productRow.id)"
+                  :pdf-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowPdfUrl(row.productRow)"
                   :can-move-up="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) > 0"
                   :can-move-down="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) < groupedProductRows.roots.length - 1"
                   @edit="editProductRow"

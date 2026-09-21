@@ -605,6 +605,55 @@ describe('ProductRowsPage', () => {
     )
   })
 
+  it('renders a PDF action with both template markers replaced for wicket rows', async () => {
+    mocks.listProductRows.mockResolvedValue(makeOrderResponse([
+      makeProductRow(7, { modelId: '3' }),
+      second,
+    ]))
+    const wrapper = mountPage({
+      placementParams: {
+        productRowPdfUrlTemplate: '/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}',
+      },
+    })
+    await flushPromises()
+
+    await openProductRowActions(wrapper, 7)
+    const action = wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]')
+    expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
+    expect(action.attributes('target')).toBe('_blank')
+  })
+
+  it.each([
+    ['/pdf-for-production?order_id=42&productRowId={productRowId}'],
+    ['/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}&duplicate={modelId}'],
+    ['/pdf-for-production?order_id=42&productRowId={productRowId}&productRowId={productRowId}&model_id={modelId}'],
+    ['https://example.test/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}'],
+    ['/pdf-for-production?order_id=41&productRowId={productRowId}&model_id={modelId}'],
+    ['/pdf-for-production?order_id=42&productRowId=8&resolved={productRowId}&model_id={modelId}'],
+    ['/pdf-for-production?order_id=42&productRowId={productRowId}&model_id=8&resolved={modelId}'],
+  ])('hides an invalid PDF template: %s', async (template) => {
+    const wrapper = mountPage({ placementParams: { productRowPdfUrlTemplate: template } })
+    await flushPromises()
+
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+  })
+
+  it('hides the PDF action for non-wicket rows', async () => {
+    mocks.listProductRows.mockResolvedValue(makeOrderResponse([
+      makeProductRow(7, { productType: 'material' }),
+    ]))
+    const wrapper = mountPage({
+      placementParams: {
+        productRowPdfUrlTemplate: '/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}',
+      },
+    })
+    await flushPromises()
+
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+  })
+
   it.each([
     ['/order-cost-details?order_id=42&productRowId=7'],
     ['/order-cost-details?order_id=41&productRowId={productRowId}'],

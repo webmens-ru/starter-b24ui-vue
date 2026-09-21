@@ -3,6 +3,7 @@ declare global {
     orderCardEmbedded?: boolean;
     productRowCreateUrl?: string;
     productRowCostDetailsUrlTemplate?: string;
+    productRowPdfUrlTemplate?: string;
     productRowUpdateUrlTemplate?: string;
     returnUrl?: string;
     [index: string]: unknown;
