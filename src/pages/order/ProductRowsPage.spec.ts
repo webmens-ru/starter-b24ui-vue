@@ -835,16 +835,22 @@ describe('ProductRowsPage', () => {
         orderTotals: initial.orderTotals,
         orderWorkflow: initial.orderWorkflow,
       })
-    const wrapper = mountPage()
+    const wrapper = mountPage({
+      placementParams: {
+        productRowPdfUrlTemplate: '/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}',
+      },
+    })
     await flushPromises()
 
     await openProductRowActions(wrapper, 7)
+    expect(wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]')).toBeTruthy()
     await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Действие выполнено, но состав заказа не удалось обновить')
     expect(wrapper.get('[aria-label="Повторить загрузку состава заказа"]').attributes('disabled')).toBeUndefined()
     expectProductRowActionsDisabled(wrapper, 7, true)
+    expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
 
     await wrapper.get('[aria-label="Повторить загрузку состава заказа"]').trigger('click')
     await flushPromises()

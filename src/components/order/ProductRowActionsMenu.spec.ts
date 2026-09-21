@@ -73,6 +73,10 @@ describe('ProductRowActionsMenu', () => {
     expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
     expect(action.attributes('target')).toBe('_blank')
     expect(action.attributes('rel')).toBe('noopener noreferrer')
+
+    action.element.addEventListener('click', event => event.preventDefault())
+    await action.trigger('click')
+    expect(visible.find('[role="menu"]').exists()).toBe(false)
   })
 
   it('shows the cost details action only when the server provides its URL', async () => {
