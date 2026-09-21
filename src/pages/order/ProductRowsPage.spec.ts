@@ -610,6 +610,7 @@ describe('ProductRowsPage', () => {
     ['/order-cost-details?order_id=41&productRowId={productRowId}'],
     ['/order-cost-details?order_id=42&order_id=41&productRowId={productRowId}'],
     ['/order-cost-details?order_id=42&productRowId={productRowId}&productRowId=8'],
+    ['/\n/[?order_id=42&productRowId={productRowId}'],
     ['https://example.test/order-cost-details?order_id=42&productRowId={productRowId}'],
     ['//example.test/order-cost-details?order_id=42&productRowId={productRowId}'],
   ])('hides an invalid cost details template: %s', async (template) => {

@@ -137,7 +137,12 @@ function costDetailsUrl(productRowId: number): string | undefined {
   if (!template.startsWith('/') || template.startsWith('//') || template.startsWith('/\\')) return undefined
 
   const url = template.replace('{productRowId}', String(productRowId))
-  const parsed = new URL(url, window.location.origin)
+  let parsed: URL
+  try {
+    parsed = new URL(url, window.location.origin)
+  } catch {
+    return undefined
+  }
   const orderIds = parsed.searchParams.getAll('order_id')
   const productRowIds = parsed.searchParams.getAll('productRowId')
   if (
