@@ -52,24 +52,24 @@ describe('Type1Drawing', () => {
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
   })
 
-  it('рисует две части позиции 6 и вертикальное усиление', () => {
-    const previousWidth = c.widthProyema.value
+  it('рисует одну вертикальную позицию 6 для горизонтального заполнения', () => {
+    const previousHeight = c.heightProyema.value
     const previousOrientation = c.raspolozheniyePolotna.value
 
     try {
-      c.widthProyema.value = '754'
+      c.heightProyema.value = '670'
       c.raspolozheniyePolotna.value = 'Горизонтально'
       const wrapper = mount(Type1Drawing)
 
-      expect(wrapper.findAll('[data-testid="type1-lock-pipe"]')).toHaveLength(2)
-      expect(wrapper.get('[data-testid="type1-filling-reinforcement"]').attributes()).toMatchObject({
-        x: '354',
+      expect(wrapper.findAll('[data-testid="type1-lock-pipe"]')).toHaveLength(1)
+      expect(wrapper.get('[data-testid="type1-lock-pipe"]').attributes()).toMatchObject({
+        x: '477',
         y: '80',
         width: '40',
-        height: '1790',
+        height: '460',
       })
     } finally {
-      c.widthProyema.value = previousWidth
+      c.heightProyema.value = previousHeight
       c.raspolozheniyePolotna.value = previousOrientation
     }
   })
