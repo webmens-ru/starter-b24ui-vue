@@ -589,6 +589,38 @@ describe('ProductRowsPage', () => {
     expect(mocks.push).not.toHaveBeenCalled()
   })
 
+  it('shows the server-owned cost details action and navigates the top window', async () => {
+    const wrapper = mountPage({
+      placementParams: {
+        productRowCostDetailsUrlTemplate: '/order-cost-details?order_id=42&productRowId={productRowId}',
+      },
+    })
+    await flushPromises()
+
+    await openProductRowActions(wrapper, 7)
+    await wrapper.get('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').trigger('click')
+
+    expect(mocks.navigateTop).toHaveBeenCalledWith(
+      '/order-cost-details?order_id=42&productRowId=7',
+    )
+  })
+
+  it.each([
+    ['/order-cost-details?order_id=42&productRowId=7'],
+    ['/order-cost-details?order_id=41&productRowId={productRowId}'],
+    ['/order-cost-details?order_id=42&order_id=41&productRowId={productRowId}'],
+    ['/order-cost-details?order_id=42&productRowId={productRowId}&productRowId=8'],
+    ['/\n/[?order_id=42&productRowId={productRowId}'],
+    ['https://example.test/order-cost-details?order_id=42&productRowId={productRowId}'],
+    ['//example.test/order-cost-details?order_id=42&productRowId={productRowId}'],
+  ])('hides an invalid cost details template: %s', async (template) => {
+    const wrapper = mountPage({ placementParams: { productRowCostDetailsUrlTemplate: template } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+
+    expect(wrapper.find('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').exists()).toBe(false)
+  })
+
   it.each([
     ['missing create URL', { productRowCreateUrl: undefined }, '[aria-label="Добавить товарную позицию в заказ 42"]'],
     [

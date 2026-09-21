@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<{
   productRow: ProductRowSummary
   disabled?: boolean
   reorderDisabled?: boolean
+  costDetailsUrl?: string
   canMoveUp: boolean
   canMoveDown: boolean
 }>(), {
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (event: 'edit', productRow: ProductRowSummary): void
   (event: 'copy', productRow: ProductRowSummary): void
+  (event: 'openCostDetails', productRow: ProductRowSummary): void
   (event: 'updateQuantity', productRow: ProductRowSummary, quantity: number): void
   (event: 'updateAdjustment', productRow: ProductRowSummary, adjustment: {
     adjustmentType: 'none' | 'discount' | 'markup'
@@ -212,11 +214,13 @@ function emitDeadline(): void {
             :product-row="productRow"
             :disabled="disabled"
             :reorder-disabled="reorderDisabled"
+            :cost-details-url="costDetailsUrl"
             :can-move-up="canMoveUp"
             :can-move-down="canMoveDown"
             @edit="emit('edit', productRow)"
             @recalculate="emit('recalculate', productRow)"
             @copy="emit('copy', productRow)"
+            @open-cost-details="emit('openCostDetails', productRow)"
             @delete="emit('delete', productRow)"
             @transition="status => emit('transition', productRow, status)"
             @move="direction => emit('move', productRow, direction)"
