@@ -44,4 +44,12 @@ describe('filling thickness presentation contract', () => {
     expect(template).toContain('{{ row.thickness }}')
     expect(template).toContain(`colspan="${columnCount}"`)
   })
+
+  it('sends the selected coating as the profnastil table filter', () => {
+    const types = readFileSync(resolve(__dirname, '../../app/api/wicket.types.ts'), 'utf8')
+    const mock = readFileSync(resolve(__dirname, '../../app/api/mockWicket.ts'), 'utf8')
+
+    expect(types).toMatch(/interface ProfnastilFilters[\s\S]*?typeOfCoating:\s*string\[\]/)
+    expect(mock).toContain('filters.typeOfCoating.includes(r.typeOfCoating)')
+  })
 })

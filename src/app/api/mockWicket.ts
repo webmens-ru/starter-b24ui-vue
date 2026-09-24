@@ -387,7 +387,7 @@ export async function mockGetProfnastilTable(filters: ProfnastilFilters, page = 
   await delay(200)
   let rows = [...PROFNASTIL_ROWS]
   if (filters.materials.length) rows = rows.filter(r => filters.materials.includes(String(r.material)))
-  if (filters.thickness.length) rows = rows.filter(r => filters.thickness.includes(String(r.thickness)))
+  if (filters.typeOfCoating.length) rows = rows.filter(r => filters.typeOfCoating.includes(r.typeOfCoating))
   const pageSize   = 100
   const totalCount = rows.length
   const pageCount  = Math.max(1, Math.ceil(totalCount / pageSize))

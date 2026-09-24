@@ -162,7 +162,7 @@ export interface SidingTableResponse {
 
 export interface ProfnastilFilters {
   materials:  string[]
-  thickness:  string[]
+  typeOfCoating: string[]
 }
 
 export interface ProfnastilRow {
