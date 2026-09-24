@@ -73,7 +73,7 @@ describe('ProductRowActionsMenu', () => {
     expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
     expect(action.attributes('target')).toBe('_blank')
     expect(action.attributes('rel')).toBe('noopener noreferrer')
-    expect(action.classes()).toContain('product-row-actions-menu__pdf')
+    expect(action.classes()).toContain('product-row-actions-menu__document-link')
     action.element.addEventListener('click', event => event.preventDefault())
     await action.trigger('click')
     expect(visible.find('[role="menu"]').exists()).toBe(false)
@@ -99,6 +99,7 @@ describe('ProductRowActionsMenu', () => {
     expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html')
     expect(action.attributes('target')).toBe('_blank')
     expect(action.attributes('rel')).toBe('noopener noreferrer')
+    expect(action.classes()).toContain('product-row-actions-menu__document-link')
   })
 
   it('shows the cost details action only when the server provides its URL', async () => {

@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
           rel="noopener noreferrer"
           role="menuitem"
           tabindex="-1"
-          class="product-row-actions-menu__pdf block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          class="product-row-actions-menu__document-link block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           :aria-label="`Сформировать PDF товарной позиции ${productRow.id}`"
           @click="closeWithoutRestoringFocus"
         >
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
           rel="noopener noreferrer"
           role="menuitem"
           tabindex="-1"
-          class="product-row-actions-menu__html block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          class="product-row-actions-menu__document-link block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           :aria-label="`Сформировать HTML товарной позиции ${productRow.id}`"
           @click="closeWithoutRestoringFocus"
         >
@@ -426,10 +426,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.product-row-actions-menu__pdf,
-.product-row-actions-menu__pdf:visited,
-.product-row-actions-menu__pdf:hover,
-.product-row-actions-menu__pdf:focus {
+.product-row-actions-menu__document-link,
+.product-row-actions-menu__document-link:visited,
+.product-row-actions-menu__document-link:hover,
+.product-row-actions-menu__document-link:focus {
   color: inherit;
   font-size: inherit;
   text-decoration: none;
