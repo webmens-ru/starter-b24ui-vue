@@ -15,6 +15,33 @@ const base = {
 }
 
 describe('buildType3Geometry', () => {
+  it('сдвигает створку и столбы ниже верхней перемычки', () => {
+    const geometry = buildType3Geometry({
+      heightProyema: '2000',
+      clearanceProyema: '50',
+      hasStolby: 1,
+      peremichkaPolozheniyeName: 'Над калиткой',
+      peremichkaSortamentName: '60/60/2',
+    })
+
+    expect(geometry.gate).toMatchObject({ y: 65, height: 1885 })
+    expect(geometry.posts.left).toMatchObject({ y: 65, height: 1935 })
+    expect(geometry.extraRail).toMatchObject({ y: 0, height: 60, placement: 'above' })
+  })
+
+  it('располагает заднюю перемычку сверху, а не посередине', () => {
+    const geometry = buildType3Geometry({
+      heightProyema: '2000',
+      clearanceProyema: '50',
+      hasStolby: 1,
+      peremichkaPolozheniyeName: 'За калиткой',
+      peremichkaSortamentName: '60/60/2',
+    })
+
+    expect(geometry.gate).toMatchObject({ y: 0, height: 1950 })
+    expect(geometry.extraRail).toMatchObject({ y: 0, height: 60, placement: 'behind' })
+  })
+
   it('uses 1000/2000/50 as the initial opening before dimensions are filled', () => {
     const geometry = buildType3Geometry({
       widthProyema: '',
@@ -41,6 +68,10 @@ describe('buildType3Geometry', () => {
   it('shows posts only when they are selected', () => {
     expect(buildType3Geometry(base).posts.visible).toBe(true)
     expect(buildType3Geometry({ ...base, hasStolby: 0 }).posts.visible).toBe(false)
+  })
+
+  it('keeps a single-dimension post profile when parsing jumper dimensions', () => {
+    expect(buildType3Geometry({ ...base, stolbName: '100' }).posts.left.width).toBe(100)
   })
 
   it.each([

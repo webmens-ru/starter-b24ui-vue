@@ -82,17 +82,38 @@ describe('computeType2Geometry', () => {
     ['Труба 50×80×3', 80],
   ])('берёт видимую высоту перемычки из маркировки %s', (peremichkaSortamentName, expectedHeight) => {
     const geometry = computeType2Geometry({
-      peremichkaPolozheniyeName: 'Над калиткой',
+      peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName,
     })
 
     expect(geometry.extraRail.height).toBe(expectedHeight)
-    expect(geometry.drawing).toEqual({ width: 1000, height: 2000 })
-    expect(geometry.opening).toEqual({ x: 0, y: 0, width: 1000, height: 2000 })
-    expect(geometry.gate).toEqual({ x: 54, y: 0, width: 886, height: 1950 })
-    expect(geometry.posts.left).toEqual({ x: 0, y: 0, width: 50, height: 2000 })
-    expect(geometry.posts.right).toEqual({ x: 950, y: 0, width: 50, height: 2000 })
-    expect(geometry.extraRail).toMatchObject({ x: 0, y: 0, width: 1000, visible: true, placement: 'above' })
+    expect(geometry.extraRail).toMatchObject({ x: 0, y: 0, width: 1000, visible: true, placement: 'behind' })
+  })
+
+  it('сдвигает створку и столбы ниже верхней перемычки', () => {
+    const geometry = computeType2Geometry({
+      heightProyema: '2000',
+      clearanceProyema: '50',
+      peremichkaPolozheniyeName: 'Над калиткой',
+      peremichkaSortamentName: '60/60/2',
+    })
+
+    expect(geometry.gate).toMatchObject({ y: 65, height: 1885 })
+    expect(geometry.posts.left).toMatchObject({ y: 65, height: 1935 })
+    expect(geometry.extraRail).toMatchObject({ y: 0, height: 60, placement: 'above' })
+  })
+
+  it('сохраняет вертикальную геометрию для задней перемычки', () => {
+    const geometry = computeType2Geometry({
+      heightProyema: '2000',
+      clearanceProyema: '50',
+      peremichkaPolozheniyeName: 'За калиткой',
+      peremichkaSortamentName: '60/60/2',
+    })
+
+    expect(geometry.gate.y).toBe(0)
+    expect(geometry.gate.height).toBe(1950)
+    expect(geometry.extraRail.y).toBe(0)
   })
 
   it('uses only a valid explicit HEX and falls back safely', () => {

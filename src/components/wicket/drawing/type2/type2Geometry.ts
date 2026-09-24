@@ -1,3 +1,5 @@
+import { computeJumperGeometry } from '../jumperGeometry'
+
 export interface Type2DrawingSource {
   widthProyema?: unknown
   heightProyema?: unknown
@@ -155,18 +157,21 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)
   const grilleSide: 'hinge' | 'lock' = /замк/i.test(text(source.grilleLocation)) ? 'lock' : 'hinge'
 
-  const extraRailName = text(source.peremichkaPolozheniyeName)
-  const extraRailVisible = extraRailName !== '' && !/без/i.test(extraRailName)
-  const extraRailPlacement: 'above' | 'behind' = /за/i.test(extraRailName) ? 'behind' : 'above'
   const extraRailSize = type2VisibleProfileSize(source.peremichkaSortamentName, 60)
+  const vertical = computeJumperGeometry({
+    openingHeight,
+    bottomClearance: clearance,
+    hasPosts,
+    jumperName: source.peremichkaPolozheniyeName,
+    jumperHeight: extraRailSize,
+  })
 
   const gateZoneX = hasPosts ? postWidth : 0
   const gateZoneWidth = Math.max(0, openingWidth - (hasPosts ? 2 * postWidth : 0))
   const gateWidth = Math.max(0, gateZoneWidth - GAP_HINGE_SIDE - GAP_LOCK_SIDE)
   const gateX = gateZoneX + (hingeSide === 'left' ? GAP_HINGE_SIDE : GAP_LOCK_SIDE)
-  const gateHeight = Math.max(0, openingHeight - clearance)
-  const gate = safeRect(gateX, 0, gateWidth, gateHeight)
-  const gateZone = safeRect(gateZoneX, 0, gateZoneWidth, gateHeight)
+  const gate = safeRect(gateX, vertical.gateY, gateWidth, vertical.gateHeight)
+  const gateZone = safeRect(gateZoneX, vertical.gateY, gateZoneWidth, vertical.gateHeight)
 
   const gateInner = safeRect(
     gate.x + RAIL_SIZE,
@@ -292,8 +297,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     gate,
     posts: {
       visible: hasPosts,
-      left: safeRect(0, 0, postWidth, openingHeight),
-      right: safeRect(openingWidth - postWidth, 0, postWidth, openingHeight),
+      left: safeRect(0, vertical.postY, postWidth, vertical.postHeight),
+      right: safeRect(openingWidth - postWidth, vertical.postY, postWidth, vertical.postHeight),
     },
     subtype: gateSubtype,
     hingeSide,
@@ -307,9 +312,9 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     innerFrame,
     rails: { lowerSubtype, upperSubtype, verticalSubtype, centerFill },
     extraRail: {
-      ...safeRect(0, 0, openingWidth, extraRailSize),
-      visible: extraRailVisible,
-      placement: extraRailPlacement,
+      ...safeRect(0, vertical.railY, openingWidth, extraRailSize),
+      visible: vertical.visible,
+      placement: vertical.placement,
     },
     hinges,
     strip,

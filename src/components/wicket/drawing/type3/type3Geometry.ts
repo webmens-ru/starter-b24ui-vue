@@ -1,3 +1,5 @@
+import { computeJumperGeometry } from '../jumperGeometry'
+
 export interface Type3DrawingSource {
   widthProyema?: unknown
   heightProyema?: unknown
@@ -13,6 +15,7 @@ export interface Type3DrawingSource {
   thicknessFacade?: unknown
   raspolozheniyePolotna?: unknown
   peremichkaPolozheniyeName?: unknown
+  peremichkaSortamentName?: unknown
   colorShieldHex?: unknown
   colorFacadeHex?: unknown
   colorFacadeImage?: unknown
@@ -34,7 +37,7 @@ export interface Type3Geometry {
   facadePickets: Type3Rect[]
   yardPickets: Type3Rect[]
   rails: { lower: VisibleRect; upper: VisibleRect; vertical: VisibleRect }
-  extraRail: VisibleRect
+  extraRail: VisibleRect & { placement: 'above' | 'behind' }
   frameColor: string
   facade: { color: string; image: string }
   yard: { color: string; image: string; visible: boolean }
@@ -51,9 +54,15 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function profileSize(value: unknown): number {
-  const match = text(value).match(/(\d+(?:[.,]\d+)?)/)
-  return numberValue(match?.[1]?.replace(',', '.'), 80, 20, 200)
+function profileSize(value: unknown, fallback = 80): number {
+  const source = text(value)
+  const match = source.match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
+  if (!match) {
+    return numberValue(source.match(/(\d+(?:[.,]\d+)?)/)?.[1]?.replace(',', '.'), fallback, 20, 200)
+  }
+  const first = numberValue(match?.[1]?.replace(',', '.'), fallback, 20, 200)
+  const second = numberValue(match?.[2]?.replace(',', '.'), fallback, 20, 200)
+  return first === 50 ? second : first
 }
 
 function rect(x: number, y: number, width: number, height: number): Type3Rect {
@@ -66,7 +75,15 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
   const postsVisible = Number(source.hasStolby) === 1
   const postSize = postsVisible ? profileSize(source.stolbName) : 0
-  const gate = rect(postSize + 4, 0, width - postSize * 2 - 14, height - clearance)
+  const extraRailSize = profileSize(source.peremichkaSortamentName, 60)
+  const verticalGeometry = computeJumperGeometry({
+    openingHeight: height,
+    bottomClearance: clearance,
+    hasPosts: postsVisible,
+    jumperName: source.peremichkaPolozheniyeName,
+    jumperHeight: extraRailSize,
+  })
+  const gate = rect(postSize + 4, verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
@@ -103,8 +120,8 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     gate,
     posts: {
       visible: postsVisible,
-      left: rect(0, 0, postSize, height),
-      right: rect(width - postSize, 0, postSize, height),
+      left: rect(0, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
+      right: rect(width - postSize, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
     },
     frame: [
       rect(gate.x, gate.y, gate.width, rail),
@@ -119,8 +136,9 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     yardPickets: text(source.fillSide) === 'Две стороны' ? facadePickets : [],
     rails: { lower, upper, vertical },
     extraRail: {
-      ...rect(0, /над/i.test(text(source.peremichkaPolozheniyeName)) ? 0 : height / 2, width, rail),
-      visible: text(source.peremichkaPolozheniyeName) !== '',
+      ...rect(0, verticalGeometry.railY, width, extraRailSize),
+      visible: verticalGeometry.visible,
+      placement: verticalGeometry.placement,
     },
     frameColor: text(source.colorShieldHex) || '#66686c',
     facade: { color: text(source.colorFacadeHex) || '#8b7355', image: text(source.colorFacadeImage) },

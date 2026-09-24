@@ -1,3 +1,5 @@
+import { computeJumperGeometry } from '../jumperGeometry'
+
 export interface Rect { x:number; y:number; width:number; height:number }
 interface VisibleRect extends Rect { visible:boolean }
 export interface Type1Source extends Record<string, unknown> {}
@@ -30,8 +32,8 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
  const ow=n(s.widthProyema,1000,300,10000),oh=n(s.heightProyema,2000,500,5000),clear=n(s.clearanceProyema,50,0,500)
  const has=s.hasStolby===undefined||Number(s.hasStolby)!==0,pw=size(s.stolbName,50),right=/правая/i.test(t(s.openingOptionName))
  const sub=`type${t(s.shieldType).match(/[1-4]/)?.[0]??'1'}`,lowerH=n(s.heightLowerPart,300,0,1000),upperH=n(s.heightTopPart,300,0,1000),sideW=n(s.widthSidePart,300,20,3000)
- const extra=t(s.peremichkaPolozheniyeName),extraVisible=extra!==''&&!/без/i.test(extra),placement:'above'|'behind'=/за/i.test(extra)?'behind':'above',extraSize=size(s.peremichkaSortamentName,60)
- const drawingHeight=oh,gateY=0,gateHeight=Math.max(0,oh-clear),postHeight=Math.max(0,oh)
+ const extraSize=size(s.peremichkaSortamentName,60),verticalGeometry=computeJumperGeometry({openingHeight:oh,bottomClearance:clear,hasPosts:has,jumperName:s.peremichkaPolozheniyeName,jumperHeight:extraSize})
+ const drawingHeight=oh,gateY=verticalGeometry.gateY,gateHeight=verticalGeometry.gateHeight,postHeight=verticalGeometry.postHeight
  const zx=has?pw:0,zw=ow-(has?pw*2:0),gw=Math.max(0,zw-14),gx=zx+(right?10:4),gate=rect(gx,gateY,gw,gateHeight),gateZone=rect(zx,gateY,zw,gateHeight)
  const gi=rect(gate.x+R,gate.y+R,gate.width-R*2,gate.height-R*2),base=rect(gi.x+I,gi.y+I,gi.width-I*2,gi.height-I*2)
  const ly=Math.max(gi.y,gate.y+gate.height-R-lowerH-S),lower={...rect(gi.x,ly,gi.width,S),visible:sub==='type2'||sub==='type3'}
@@ -50,5 +52,5 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
     :rect(fill.x+I,fill.y+(fill.height-C)/2,fill.width-I*2,C)]
   :[]
  const hinges=[gate.y+100,gate.y+gate.height-250].flatMap(y=>[rect(hx,y,16,75),rect(hx,y+75,16,75)]),sx=right?gate.x-25:gate.x+gate.width-15,strip=[14,12,14].map((w,i,a)=>rect(sx+a.slice(0,i).reduce((q,z)=>q+z,0),gate.y,w,gate.height))
-return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,0,pw,postHeight),right:rect(ow-pw,0,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},lockPipes,fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,0,ow,extraSize),visible:extraVisible,placement},hinges,strip,fill:{color:color(s.colorFacadeHex,''),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},yardFill:{color:color(s.colorYardHex,''),image:t(s.colorYardImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},netImage:sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:sub==='type3'?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
+return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,verticalGeometry.postY,pw,postHeight),right:rect(ow-pw,verticalGeometry.postY,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},lockPipes,fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,verticalGeometry.railY,ow,extraSize),visible:verticalGeometry.visible,placement:verticalGeometry.placement},hinges,strip,fill:{color:color(s.colorFacadeHex,''),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},yardFill:{color:color(s.colorYardHex,''),image:t(s.colorYardImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},netImage:sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:sub==='type3'?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
 }

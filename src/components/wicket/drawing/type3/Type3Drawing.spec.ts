@@ -55,4 +55,17 @@ describe('Type3Drawing', () => {
 
     expect(wrapper.get('[data-testid="type3-pickets"]').attributes('fill')).toBe('#bfdbfe')
   })
+
+  it('передаёт выбранный профиль перемычки в геометрию', () => {
+    const store = useWicketFormStore()
+    store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.peremichkaSortamentName = '80/80/3'
+
+    const wrapper = mount(Type3Drawing)
+
+    expect(wrapper.get('[data-testid="type3-extra-rail"]').attributes()).toMatchObject({
+      y: '0',
+      height: '80',
+    })
+  })
 })

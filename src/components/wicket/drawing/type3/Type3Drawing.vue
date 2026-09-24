@@ -33,6 +33,7 @@ const geometry = computed(() => buildType3Geometry({
   thicknessFacade: calc.thicknessFacade.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
   peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
+  peremichkaSortamentName: calc.peremichkaSortamentName.value,
   colorShieldHex: calc.colorShieldHex.value,
   colorFacadeHex: calc.colorFacadeHex.value,
   colorFacadeImage: calc.colorFacadeImage.value,
@@ -91,7 +92,7 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
         <rect v-if="geometry.rails.lower.visible" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
-        <rect v-if="geometry.extraRail.visible" v-bind="geometry.extraRail" />
+        <rect v-if="geometry.extraRail.visible" data-testid="type3-extra-rail" v-bind="geometry.extraRail" />
       </g>
       <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
         <rect
