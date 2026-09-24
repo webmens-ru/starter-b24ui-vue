@@ -5,14 +5,17 @@ import { describe, expect, it } from 'vitest'
 const components = [
   ['type1/ProfnastilFacade.vue', 3],
   ['type1/ProfnastilYard.vue', 3],
-  ['type5/T5SpFacade.vue', 7],
-  ['type5/T5SpYard.vue', 7],
-  ['type6/T6ZhalyuziFacade.vue', 6],
-  ['type7/T7SpFacade.vue', 7],
-  ['type8/T8SheetFacade.vue', 7],
   ['type9/T9ProfnastilFacade.vue', 3],
   ['type10/T10ProfnastilFacade.vue', 3],
   ['type11/T11ProfnastilFacade.vue', 3],
+] as const
+
+const nonProfnastilComponents = [
+  ['type5/T5SpFacade.vue', 8],
+  ['type5/T5SpYard.vue', 8],
+  ['type6/T6ZhalyuziFacade.vue', 7],
+  ['type7/T7SpFacade.vue', 8],
+  ['type8/T8SheetFacade.vue', 8],
 ] as const
 
 describe('filling thickness presentation contract', () => {
@@ -28,5 +31,17 @@ describe('filling thickness presentation contract', () => {
     expect(template).toContain(`colspan="${columnCount}"`)
 
     expect(source).toMatch(/calc\.thickness(?:Facade|Yard)\.value\s*=\s*String\(row\.thickness\)/)
+  })
+
+  it.each(nonProfnastilComponents)('%s keeps its thickness filter and column', (file, columnCount) => {
+    const source = readFileSync(resolve(__dirname, file), 'utf8')
+    const template = source.slice(source.indexOf('<template>') + '<template>'.length, source.lastIndexOf('</template>'))
+
+    expect(source).toContain('thickness:')
+    expect(template).toMatch(/label="Толщина листа"[\s\S]*?data-key="thickness"[\s\S]*?v-model="filters\.thickness"/)
+    expect(template).toContain('>Толщина листа</th>')
+    expect(template).toContain('{{ selectedRow.thickness }}')
+    expect(template).toContain('{{ row.thickness }}')
+    expect(template).toContain(`colspan="${columnCount}"`)
   })
 })

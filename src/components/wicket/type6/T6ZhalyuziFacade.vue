@@ -27,6 +27,7 @@ const zhalyuziFilterDataUrl = computed(() => wicketZhalyuziFilterDataUrl(calc.mo
 const filters = reactive({
   companies:     [] as string[],
   materials:     [] as string[],
+  thickness:     [] as string[],
   typeOfCoating: [] as string[],
   colors:        [] as string[],
 })
@@ -198,6 +199,12 @@ onMounted(async () => {
         v-model="filters.materials"
       />
       <T6FilterDropdown
+        label="Толщина листа"
+        :url="zhalyuziFilterDataUrl"
+        data-key="thickness"
+        v-model="filters.thickness"
+      />
+      <T6FilterDropdown
         label="Тип покрытия"
         :url="zhalyuziFilterDataUrl"
         data-key="typeOfCoating"
@@ -218,6 +225,7 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Производитель материала</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">Толщина листа</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Цвет</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Цена</th>
@@ -225,7 +233,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="7" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -237,6 +245,7 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
@@ -257,13 +266,14 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ row.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="7" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>
