@@ -322,6 +322,7 @@ describe('Type2Drawing', () => {
     const background = wrapper.get('[data-testid="type2-drawing-jumper-background"]')
 
     expect(background.attributes('stroke-dasharray')).toBe('12 8')
+    expect(background.attributes('fill')).toBe('none')
     expect(html.indexOf('type2-drawing-jumper-background')).toBeLessThan(html.indexOf('type2-drawing-frame'))
 
     await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
@@ -329,8 +330,12 @@ describe('Type2Drawing', () => {
     const foreground = wrapper.get('[data-testid="type2-drawing-jumper-foreground"]')
 
     expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+    expect(foreground.attributes('fill')).toBe('#66686c')
     expect(yardHtml.indexOf('type2-drawing-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type2-drawing-frame'))
     expect(yardHtml.indexOf('type2-drawing-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type2-drawing-fill'))
+
+    await wrapper.get('[data-testid="type2-drawing-color-schematic"]').setValue(true)
+    expect(wrapper.get('[data-testid="type2-drawing-jumper-foreground"]').attributes('fill')).toBe('#d1d5db')
   })
 
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {

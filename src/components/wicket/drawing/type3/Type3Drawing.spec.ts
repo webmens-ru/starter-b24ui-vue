@@ -79,6 +79,7 @@ describe('Type3Drawing', () => {
     const background = wrapper.get('[data-testid="type3-jumper-background"]')
 
     expect(background.attributes('stroke-dasharray')).toBe('12 8')
+    expect(background.attributes('fill')).toBe('none')
     expect(html.indexOf('type3-jumper-background')).toBeLessThan(html.indexOf('type3-frame'))
 
     await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue(true)
@@ -86,8 +87,12 @@ describe('Type3Drawing', () => {
     const foreground = wrapper.get('[data-testid="type3-jumper-foreground"]')
 
     expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+    expect(foreground.attributes('fill')).toBe('#66686c')
     expect(yardHtml.indexOf('type3-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type3-frame'))
     expect(yardHtml.indexOf('type3-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type3-pickets'))
+
+    await wrapper.get('[data-testid="type3-drawing-color-schematic"]').setValue(true)
+    expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes('fill')).toBe('#d1d5db')
   })
 
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {

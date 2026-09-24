@@ -554,7 +554,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         :y="geometry.extraRail.y"
         :width="geometry.extraRail.width"
         :height="geometry.extraRail.height"
-        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
+        :fill="displayedFrameColor"
         stroke="#000"
         stroke-width="1"
         vector-effect="non-scaling-stroke"

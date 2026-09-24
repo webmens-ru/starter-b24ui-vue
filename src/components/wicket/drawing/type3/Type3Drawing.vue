@@ -125,7 +125,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         :y="geometry.extraRail.y"
         :width="geometry.extraRail.width"
         :height="geometry.extraRail.height"
-        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
+        :fill="displayedFrameColor"
         stroke="#20242a"
         stroke-width="1"
       />

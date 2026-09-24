@@ -188,6 +188,7 @@ describe('Type1Drawing', () => {
       const background = wrapper.get('[data-testid="type1-jumper-background"]')
 
       expect(background.attributes('stroke-dasharray')).toBe('12 8')
+      expect(background.attributes('fill')).toBe('none')
       expect(html.indexOf('type1-jumper-background')).toBeLessThan(html.indexOf('type1-frame'))
 
       await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
@@ -195,8 +196,12 @@ describe('Type1Drawing', () => {
       const foreground = wrapper.get('[data-testid="type1-jumper-foreground"]')
 
       expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+      expect(foreground.attributes('fill')).toBe('#66686c')
       expect(yardHtml.indexOf('type1-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type1-frame'))
       expect(yardHtml.indexOf('type1-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type1-fill'))
+
+      await wrapper.get('input[value="schematic"]').setValue(true)
+      expect(wrapper.get('[data-testid="type1-jumper-foreground"]').attributes('fill')).toBe('#d1d5db')
     } finally {
       c.peremichkaPolozheniyeName.value = previousPlacement
       c.peremichkaSortamentName.value = previousProfile
