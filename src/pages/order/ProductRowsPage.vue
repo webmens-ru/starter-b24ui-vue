@@ -195,6 +195,16 @@ function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
   return url
 }
 
+function productRowHtmlUrl(productRow: ProductRowSummary): string | undefined {
+  const pdfUrl = productRowPdfUrl(productRow)
+  if (!pdfUrl) return undefined
+
+  const parsed = new URL(pdfUrl, window.location.origin)
+  parsed.searchParams.set('format', 'html')
+
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`
+}
+
 function openCostDetails(productRow: ProductRowSummary): void {
   const url = costDetailsUrl(productRow.id)
   if (url) navigateTop(url)
@@ -774,6 +784,7 @@ watch(orderIdParam, () => {
                   :reorder-disabled="staleView || reorderBusy"
                   :cost-details-url="costDetailsUrl(row.productRow.id)"
                   :pdf-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowPdfUrl(row.productRow)"
+                  :html-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowHtmlUrl(row.productRow)"
                   :can-move-up="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) > 0"
                   :can-move-down="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) < groupedProductRows.roots.length - 1"
                   @edit="editProductRow"

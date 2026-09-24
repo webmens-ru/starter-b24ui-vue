@@ -621,6 +621,9 @@ describe('ProductRowsPage', () => {
     const action = wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]')
     expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
     expect(action.attributes('target')).toBe('_blank')
+    const htmlAction = wrapper.get('[aria-label="Сформировать HTML товарной позиции 7"]')
+    expect(htmlAction.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html')
+    expect(htmlAction.attributes('target')).toBe('_blank')
   })
 
   it.each([
@@ -637,6 +640,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 7)
     expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Сформировать HTML товарной позиции 7"]').exists()).toBe(false)
   })
 
   it('hides the PDF action for non-wicket rows', async () => {
@@ -652,6 +656,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 7)
     expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Сформировать HTML товарной позиции 7"]').exists()).toBe(false)
   })
 
   it.each([
@@ -844,6 +849,7 @@ describe('ProductRowsPage', () => {
 
     await openProductRowActions(wrapper, 7)
     expect(wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]')).toBeTruthy()
+    expect(wrapper.get('[aria-label="Сформировать HTML товарной позиции 7"]')).toBeTruthy()
     await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
     await flushPromises()
 
@@ -851,6 +857,7 @@ describe('ProductRowsPage', () => {
     expect(wrapper.get('[aria-label="Повторить загрузку состава заказа"]').attributes('disabled')).toBeUndefined()
     expectProductRowActionsDisabled(wrapper, 7, true)
     expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Сформировать HTML товарной позиции 7"]').exists()).toBe(false)
 
     await wrapper.get('[aria-label="Повторить загрузку состава заказа"]').trigger('click')
     await flushPromises()
