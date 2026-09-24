@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getProfnastilTable, saveWicketData, recalculate, type ProfnastilRow, type SidingPagination } from '../../../app/api/wicket'
+import {
+  getProfnastilTable,
+  getProfnastilColors,
+  saveWicketData,
+  recalculate,
+  type ProfnastilRow,
+  type ProfnastilColorOption,
+  type SidingPagination,
+} from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -26,7 +34,7 @@ const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(cal
 
 const filters = reactive({
   materials: [] as string[],
-  thickness: [] as string[],
+  typeOfCoating: [] as string[],
 })
 
 const rows         = ref<ProfnastilRow[]>([])
@@ -34,6 +42,18 @@ const selectedRow  = ref<ProfnastilRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
+
+const colors       = ref<ProfnastilColorOption[]>([])
+const colorLoading = ref(false)
+const selectedColorId = ref<number | null>(null)
+
+const selectedColor = computed<ProfnastilColorOption | undefined>(() =>
+  colors.value.find((c) => c.id === selectedColorId.value),
+)
+
+const colorSelectItems = computed(() =>
+  colors.value.map((c) => ({ id: c.id, label: c.name })),
+)
 
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
@@ -50,6 +70,19 @@ async function loadTable(page = currentPage.value) {
   }
 }
 
+async function loadColors() {
+  colorLoading.value = true
+  try {
+    const result = await getProfnastilColors(calc.modelId.value)
+    colors.value = result.colors
+  } catch (e) {
+    console.warn('getProfnastilColors недоступен:', e)
+    colors.value = []
+  } finally {
+    colorLoading.value = false
+  }
+}
+
 function goToPage(page: number) {
   if (page < 1 || page > pagination.value.pageCount) return
   loadTable(page)
@@ -60,31 +93,39 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
-// Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.idYard.value, async (val) => {
-  if (!val) return
-  const saved = restoreFromCalc()
-  if (saved && !selectedRow.value) {
-    selectedRow.value = saved
-    try {
-      await save(saved)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
-  }
-}, { immediate: true })
+function clearColor() {
+  selectedColorId.value = null
+  calc.colorYardId.value    = null
+  calc.colorYard.value      = ''
+  calc.colorYardHex.value   = ''
+  calc.colorYardImage.value = ''
+}
 
-function restoreFromCalc(): ProfnastilRow | null {
-  if (!calc.idYard.value) return null
-  return {
-    id:            calc.idYard.value,
-    material:      calc.materialYard.value,
-    thickness:     calc.thicknessYard.value,
-    typeOfCoating: calc.typeOfCoatingYard.value,
-    coatingHex:    calc.coatingYardHex.value,
-    coatingImage:  calc.coatingYardImage.value,
-    reliefImage:   calc.reliefYardImage.value,
+function applySelectedColor() {
+  const color = selectedColor.value
+  if (color) {
+    calc.colorYardId.value    = color.id
+    calc.colorYard.value      = color.name
+    calc.colorYardHex.value   = color.hex ?? ''
+    calc.colorYardImage.value = color.image ?? ''
+  } else {
+    calc.colorYardId.value    = null
+    calc.colorYard.value      = ''
+    calc.colorYardHex.value   = ''
+    calc.colorYardImage.value = ''
   }
+}
+
+function buildSummaryParams() {
+  const params: { name: string; value: string }[] = [
+    { name: 'Материал',      value: selectedRow.value?.material ?? '' },
+    { name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
+    { name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
+  ]
+  if (calc.colorYard.value) {
+    params.push({ name: 'Цвет', value: calc.colorYard.value })
+  }
+  return params
 }
 
 async function save(row: ProfnastilRow) {
@@ -93,30 +134,49 @@ async function save(row: ProfnastilRow) {
   calc.formYard.value              = ''
   calc.thicknessYard.value         = String(row.thickness)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.colorYard.value             = ''
-  calc.colorYardHex.value          = ''
-  calc.colorYardImage.value        = ''
   calc.coatingYardHex.value        = row.coatingHex ?? ''
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (двор)', [
-    { name: 'Материал',                value: row.material },
-    { name: 'Толщина листа',           value: String(row.thickness) },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-  ])
+  calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      idYard:                row.id,
-      materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
-      materialYard:           row.material,
-      thicknessYard:         String(row.thickness),
-      typeOfCoatingYard:   row.typeOfCoating,
+      idYard:                  row.id,
+      materialYardGlob:       calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
+      materialYard:             row.material,
+      thicknessYard:           String(row.thickness),
+      typeOfCoatingYard:     row.typeOfCoating,
+      colorYardId:             calc.colorYardId.value,
+      colorYard:               calc.colorYard.value,
+      colorYardHex:            calc.colorYardHex.value,
+      colorYardImage:          calc.colorYardImage.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
+  }
+}
+
+async function saveColor() {
+  applySelectedColor()
+  calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+
+  try {
+    await saveWicketData({
+      ...calc.getBaseSavePayload(),
+      idYard:                  calc.idYard.value || null,
+      materialYardGlob:       calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
+      materialYard:             calc.materialYard.value,
+      thicknessYard:           calc.thicknessYard.value,
+      typeOfCoatingYard:     calc.typeOfCoatingYard.value,
+      colorYardId:             calc.colorYardId.value,
+      colorYard:               calc.colorYard.value,
+      colorYardHex:            calc.colorYardHex.value,
+      colorYardImage:          calc.colorYardImage.value,
+    })
+  } catch (e) {
+    console.warn('saveWicketData (цвет) недоступен:', e)
   }
 }
 
@@ -138,16 +198,18 @@ async function doRecalculate() {
 
 async function selectRow(row: ProfnastilRow) {
   selectedRow.value = row
+  clearColor()
   await save(row)
   await doRecalculate()
 }
 
 function deselectRow() {
   selectedRow.value = null
+  clearColor()
   calc.idYard.value = ''
-  calc.colorYard.value = ''
-  calc.colorYardHex.value = ''
-  calc.colorYardImage.value = ''
+  calc.materialYard.value = ''
+  calc.thicknessYard.value = ''
+  calc.typeOfCoatingYard.value = ''
   calc.coatingYardHex.value = ''
   calc.coatingYardImage.value = ''
   calc.reliefYardImage.value = ''
@@ -162,13 +224,49 @@ function onContinue() {
     openModal('Вы не заполнили этот блок!')
     return
   }
+  if (colors.value.length > 0 && selectedColorId.value === null) {
+    openModal('Вы не выбрали цвет!')
+    return
+  }
   emit('next')
 }
 
+function restoreFromCalc(): ProfnastilRow | null {
+  if (!calc.idYard.value) return null
+  if (calc.colorYardId.value) {
+    selectedColorId.value = Number(calc.colorYardId.value)
+  }
+  return {
+    id:            calc.idYard.value,
+    material:      calc.materialYard.value,
+    thickness:     calc.thicknessYard.value,
+    typeOfCoating: calc.typeOfCoatingYard.value,
+    coatingHex:    calc.coatingYardHex.value,
+    coatingImage:  calc.coatingYardImage.value,
+    reliefImage:   calc.reliefYardImage.value,
+  }
+}
+
+watch(() => calc.idYard.value, async (val) => {
+  if (!val) return
+  const saved = restoreFromCalc()
+  if (saved && !selectedRow.value) {
+    selectedRow.value = saved
+    try {
+      await save(saved)
+    } catch (e) {
+      console.warn('saveWicketData при восстановлении:', e)
+    }
+  }
+}, { immediate: true })
+
 onMounted(async () => {
-  calc.setActivePage('page2_yard_profnastil')
-  // Восстановление из calc — через watch(id_yard) с immediate: true
+  const page = calc.materialYardGlob.value === 'Профлист'
+    ? 'page2_yard_profnastil'
+    : 'page2_yard_siding'
+  calc.setActivePage(page)
   await loadTable()
+  await loadColors()
 })
 </script>
 
@@ -199,10 +297,10 @@ onMounted(async () => {
         v-model="filters.materials"
       />
       <FilterDropdown
-        label="Толщина листа"
+        label="Тип покрытия"
         :url="profnastilFilterDataUrl"
-        data-key="thickness"
-        v-model="filters.thickness"
+        data-key="typeOfCoating"
+        v-model="filters.typeOfCoating"
       />
     </div>
 
@@ -212,13 +310,12 @@ onMounted(async () => {
           <tr>
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Толщина листа</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="3" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -229,7 +326,6 @@ onMounted(async () => {
               <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
           </tr>
 
@@ -247,12 +343,11 @@ onMounted(async () => {
               />
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="3" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>
@@ -272,6 +367,20 @@ onMounted(async () => {
         <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.page + 1)">›</button>
         <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.pageCount)">»</button>
       </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="font-semibold">Цвет</label>
+      <B24SelectMenu
+        :model-value="selectedColorId ?? undefined"
+        value-key="id"
+        :items="colorSelectItems"
+        placeholder="Выберите цвет"
+        :disabled="!selectedRow || colorLoading"
+        class="w-full"
+        @update:model-value="(id) => { selectedColorId = id ?? null; saveColor() }"
+      />
+      <span v-if="colorLoading" class="text-xs text-gray-400">Загрузка цветов...</span>
     </div>
 
   </div>

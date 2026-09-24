@@ -26,7 +26,7 @@ const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(cal
 
 const filters = reactive({
   materials: [] as string[],
-  thickness: [] as string[],
+  typeOfCoating: [] as string[],
 })
 
 const rows         = ref<ProfnastilRow[]>([])
@@ -184,10 +184,10 @@ onMounted(async () => {
         v-model="filters.materials"
       />
       <T9FilterDropdown
-        label="Толщина листа"
+        label="Тип покрытия"
         :url="profnastilFilterDataUrl"
-        data-key="thickness"
-        v-model="filters.thickness"
+        data-key="typeOfCoating"
+        v-model="filters.typeOfCoating"
       />
     </div>
 
@@ -197,13 +197,12 @@ onMounted(async () => {
           <tr>
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Толщина листа</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="3" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -214,7 +213,6 @@ onMounted(async () => {
               <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
           </tr>
 
@@ -232,12 +230,11 @@ onMounted(async () => {
               />
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.thickness }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="3" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

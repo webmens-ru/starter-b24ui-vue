@@ -9,6 +9,7 @@ import type {
   ProfnastilFilters,
   ProfnastilRow,
   ProfnastilTableResponse,
+  ProfnastilColorOption,
   WicketRootMutationResponse,
 } from './wicket.types'
 
@@ -403,6 +404,17 @@ export async function mockGetProfnastilTable(filters: ProfnastilFilters, page = 
 export async function mockGetProfnastilFilterOptions(): Promise<FilterOptions> {
   await delay(150)
   return PROFNASTIL_FILTER
+}
+
+export async function mockGetProfnastilColors(): Promise<{ colors: ProfnastilColorOption[] }> {
+  await delay(150)
+  return {
+    colors: [
+      { id: 1, name: 'RAL 1014', hex: '#D6C29C', image: null },
+      { id: 2, name: 'RAL 8017', hex: '#44322D', image: null },
+      { id: 3, name: 'Printech Дерево', hex: null, image: '/uploads/colors/printech-wood.webp' },
+    ],
+  }
 }
 
 // ─── Моки столбы / перемычка ─────────────────────────────────────────────────

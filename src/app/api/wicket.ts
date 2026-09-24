@@ -16,6 +16,7 @@ import {
   mockGetSidingTable,
   mockGetFillingAppearanceOptions,
   mockGetProfnastilTable,
+  mockGetProfnastilColors,
   mockGetAssortmentStolb,
   mockGetPolozhenieJumper,
   mockGetAssortmentJumper,
@@ -46,6 +47,7 @@ import type {
   ProfnastilRow,
   ProfnastilTableResponse,
   ProfnastilFormOptions,
+  ProfnastilColorOption,
   ZhalyuziFilters,
   ZhalyuziRow,
   ZhalyuziTableResponse,
@@ -88,6 +90,7 @@ export type {
   ProfnastilRow,
   ProfnastilTableResponse,
   ProfnastilFormOptions,
+  ProfnastilColorOption,
   ZhalyuziFilters,
   ZhalyuziRow,
   ZhalyuziTableResponse,
@@ -293,6 +296,14 @@ export async function getProfnastilTable(
     pageCount:  1,
   }
   return { table, pagination }
+}
+
+export async function getProfnastilColors(
+  modelId: string | number,
+): Promise<{ colors: ProfnastilColorOption[] }> {
+  if (isMock) return mockGetProfnastilColors()
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-profnastil-colors`)
+  return data.data
 }
 
 export async function getType2ProfnastilFormOptions(
