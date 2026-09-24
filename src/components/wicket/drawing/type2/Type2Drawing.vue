@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
 
 const calc = useCalculation()
@@ -125,6 +126,10 @@ const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
 const viewTransform = computed(() => viewedFromYard.value
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
   : undefined)
+const jumperPresentation = computed(() => resolveJumperPresentation(
+  geometry.value.extraRail.placement,
+  viewSide.value,
+))
 
 watch(
   () => geometry.value.netImage,
@@ -194,6 +199,20 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         stroke="#d9dde5"
         stroke-width="1"
         stroke-dasharray="12 8"
+        vector-effect="non-scaling-stroke"
+      />
+
+      <rect
+        v-if="geometry.extraRail.visible && jumperPresentation.layer === 'background'"
+        data-testid="type2-drawing-jumper-background"
+        :x="geometry.extraRail.x"
+        :y="geometry.extraRail.y"
+        :width="geometry.extraRail.width"
+        :height="geometry.extraRail.height"
+        fill="none"
+        stroke="#000"
+        stroke-width="1"
+        :stroke-dasharray="jumperPresentation.dashed ? '12 8' : undefined"
         vector-effect="non-scaling-stroke"
       />
 
@@ -507,20 +526,6 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         />
       </g>
 
-      <!-- Перемычка -->
-      <rect
-        v-if="geometry.extraRail.visible"
-        :x="geometry.extraRail.x"
-        :y="geometry.extraRail.y"
-        :width="geometry.extraRail.width"
-        :height="geometry.extraRail.height"
-        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
-        stroke="#000"
-        stroke-width="1"
-        :stroke-dasharray="geometry.extraRail.placement === 'behind' ? '12 8' : undefined"
-        vector-effect="non-scaling-stroke"
-      />
-
       <!-- С улицы профлист находится перед каркасом -->
       <g
         v-if="(!viewedFromYard || yardTwoSides) && showFill"
@@ -540,6 +545,20 @@ const bottomRailPath = computed(() => buildBottomRailPath({
           :id-prefix="`type2-${instanceId}-street`"
         />
       </g>
+
+      <!-- Перемычка переднего плана -->
+      <rect
+        v-if="geometry.extraRail.visible && jumperPresentation.layer === 'foreground'"
+        data-testid="type2-drawing-jumper-foreground"
+        :x="geometry.extraRail.x"
+        :y="geometry.extraRail.y"
+        :width="geometry.extraRail.width"
+        :height="geometry.extraRail.height"
+        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
+        stroke="#000"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+      />
 
       </g>
     </svg>

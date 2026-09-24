@@ -173,4 +173,54 @@ describe('Type1Drawing', () => {
     c.fillSide.value = 'Одна сторона'
     c.materialYard.value = 'С-8'
   })
+
+  it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
+    const previousPlacement = c.peremichkaPolozheniyeName.value
+    const previousProfile = c.peremichkaSortamentName.value
+    const previousFillSide = c.fillSide.value
+    c.peremichkaPolozheniyeName.value = 'За калиткой'
+    c.peremichkaSortamentName.value = '60/60/2'
+    c.fillSide.value = 'Две стороны'
+
+    try {
+      const wrapper = mount(Type1Drawing)
+      const html = wrapper.html()
+      const background = wrapper.get('[data-testid="type1-jumper-background"]')
+
+      expect(background.attributes('stroke-dasharray')).toBe('12 8')
+      expect(html.indexOf('type1-jumper-background')).toBeLessThan(html.indexOf('type1-frame'))
+
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
+      const yardHtml = wrapper.html()
+      const foreground = wrapper.get('[data-testid="type1-jumper-foreground"]')
+
+      expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+      expect(yardHtml.indexOf('type1-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type1-frame'))
+      expect(yardHtml.indexOf('type1-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type1-fill'))
+    } finally {
+      c.peremichkaPolozheniyeName.value = previousPlacement
+      c.peremichkaSortamentName.value = previousProfile
+      c.fillSide.value = previousFillSide
+    }
+  })
+
+  it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
+    const previousPlacement = c.peremichkaPolozheniyeName.value
+    const previousProfile = c.peremichkaSortamentName.value
+    c.peremichkaPolozheniyeName.value = 'Над калиткой'
+    c.peremichkaSortamentName.value = '60/60/2'
+
+    try {
+      const wrapper = mount(Type1Drawing)
+      expect(wrapper.get('[data-testid="type1-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+      expect(wrapper.find('[data-testid="type1-jumper-background"]').exists()).toBe(false)
+
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
+      expect(wrapper.get('[data-testid="type1-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+      expect(wrapper.find('[data-testid="type1-jumper-background"]').exists()).toBe(false)
+    } finally {
+      c.peremichkaPolozheniyeName.value = previousPlacement
+      c.peremichkaSortamentName.value = previousProfile
+    }
+  })
 })

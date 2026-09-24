@@ -63,9 +63,44 @@ describe('Type3Drawing', () => {
 
     const wrapper = mount(Type3Drawing)
 
-    expect(wrapper.get('[data-testid="type3-extra-rail"]').attributes()).toMatchObject({
+    expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes()).toMatchObject({
       y: '0',
       height: '80',
     })
+  })
+
+  it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
+    const store = useWicketFormStore()
+    store.peremichkaPolozheniyeName = 'За калиткой'
+    store.peremichkaSortamentName = '60/60/2'
+    store.fillSide = 'Две стороны'
+    const wrapper = mount(Type3Drawing)
+    const html = wrapper.html()
+    const background = wrapper.get('[data-testid="type3-jumper-background"]')
+
+    expect(background.attributes('stroke-dasharray')).toBe('12 8')
+    expect(html.indexOf('type3-jumper-background')).toBeLessThan(html.indexOf('type3-frame'))
+
+    await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue(true)
+    const yardHtml = wrapper.html()
+    const foreground = wrapper.get('[data-testid="type3-jumper-foreground"]')
+
+    expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+    expect(yardHtml.indexOf('type3-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type3-frame'))
+    expect(yardHtml.indexOf('type3-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type3-pickets'))
+  })
+
+  it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
+    const store = useWicketFormStore()
+    store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.peremichkaSortamentName = '60/60/2'
+    const wrapper = mount(Type3Drawing)
+
+    expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+    expect(wrapper.find('[data-testid="type3-jumper-background"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue(true)
+    expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+    expect(wrapper.find('[data-testid="type3-jumper-background"]').exists()).toBe(false)
   })
 })

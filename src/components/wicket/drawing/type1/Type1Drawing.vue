@@ -5,6 +5,7 @@ let idSeed=0
 import {computed,ref,watch} from 'vue'
 import {useCalculation} from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import {resolveJumperPresentation} from '../jumperGeometry'
 import {bottomPath,computeType1Geometry,topPath} from './type1Geometry'
 const id=idSeed++,calc=useCalculation(),showFill=ref(true),colors=ref<'realistic'|'schematic'>('realistic'),side=ref<'street'|'yard'>('street')
 const g=computed(()=>computeType1Geometry({widthProyema:calc.widthProyema.value,heightProyema:calc.heightProyema.value,clearanceProyema:calc.clearanceProyema.value,hasStolby:calc.hasStolby.value,stolbName:calc.stolbName.value,openingOptionName:calc.openingOptionName.value,shieldType:calc.shieldType.value,heightLowerPart:calc.heightLowerPart.value,heightTopPart:calc.heightTopPart.value,widthSidePart:calc.widthSidePart.value,grilleLocation:calc.grilleLocation.value,peremichkaPolozheniyeName:calc.peremichkaPolozheniyeName.value,peremichkaSortamentName:calc.peremichkaSortamentName.value,colorFacadeHex:calc.colorFacadeHex.value,colorFacadeImage:calc.colorFacadeImage.value,colorFacadeReverseHex:calc.colorFacadeReverseHex?.value,colorFacadeReverseImage:calc.colorFacadeReverseImage?.value,colorYardHex:calc.colorYardHex?.value,colorYardImage:calc.colorYardImage?.value,raspolozheniyePolotna:calc.raspolozheniyePolotna.value,colorShieldHex:calc.colorShieldHex.value,sideGrilleNetImage:calc.sideGrilleNetImage?.value,lowerGrilleNetImage:calc.lowerGrilleNetImage?.value,upperGrilleNetImage:calc.upperGrilleNetImage?.value}))
@@ -21,6 +22,7 @@ const coatingImage=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(
 const reliefImage=computed(()=>yardTwoSides.value?(calc.reliefYardImage?.value??''):(calc.reliefFacadeImage?.value??''))
 const inward=computed(()=>/внутрь/i.test(String(calc.openingOptionName.value??''))),behind=computed(()=>inward.value!==yard.value)
 const transform=computed(()=>yard.value?`translate(${g.value.drawing.width} 0) scale(-1 1)`:undefined)
+const jumperPresentation=computed(()=>resolveJumperPresentation(g.value.extraRail.placement,side.value))
 const top=computed(()=>topPath({x:g.value.gate.x,y:g.value.gate.y,width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
 const bottom=computed(()=>bottomPath({x:g.value.gate.x,y:g.value.gate.y+Math.max(0,g.value.gate.height-60),width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
 const netRatio=ref(1),upperRatio=ref(1)
@@ -31,7 +33,9 @@ const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),ne
 <template><div class="flex flex-col gap-3">
  <svg data-testid="type1-drawing-svg" class="block h-auto max-h-[650px] w-full" :viewBox="`0 0 ${g.drawing.width} ${g.drawing.height}`" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Чертёж калитки типа 1">
   <g :transform="transform">
-   <rect v-bind="g.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" vector-effect="non-scaling-stroke"/><rect v-bind="g.gateZone" fill="rgba(37,99,235,.08)"/>
+   <rect v-bind="g.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" vector-effect="non-scaling-stroke"/>
+   <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='background'" data-testid="type1-jumper-background" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" fill="none" stroke="#000" :stroke-dasharray="jumperPresentation.dashed?'12 8':undefined"/>
+   <rect v-bind="g.gateZone" fill="rgba(37,99,235,.08)"/>
    <g v-if="behind" data-testid="type1-hinges" fill="#e8b923" stroke="#000"><rect v-for="(r,i) in g.hinges" :key="`bh${i}`" v-bind="r"/></g>
    <defs v-if="g.netArea.visible&&g.netImage">
     <pattern v-if="g.subtype==='type4'" :id="`t1-side-${id}`" patternUnits="userSpaceOnUse" :x="g.netArea.x" :y="g.netArea.y" :width="g.netArea.width" :height="netTileH"><image data-testid="type1-drawing-side-net-image" :href="g.netImage" :x="-netTileH/2" :y="-g.netArea.width/2" :width="netTileH" :height="g.netArea.width" :transform="`translate(${g.netArea.width/2} ${netTileH/2}) rotate(90)`" preserveAspectRatio="xMidYMid meet"/></pattern>
@@ -49,8 +53,8 @@ const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),ne
    <g v-if="g.posts.visible" :fill="frameColor" stroke="#000" stroke-width="2"><rect v-bind="g.posts.left"/><rect v-bind="g.posts.right"/></g>
    <g v-if="!behind" data-testid="type1-hinges" fill="#e8b923" stroke="#000"><rect v-for="(r,i) in g.hinges" :key="`fh${i}`" v-bind="r"/></g>
    <g v-if="!yard" data-testid="type1-strip" :fill="frameColor" stroke="#000"><rect v-for="(r,i) in g.strip" :key="`fs${i}`" v-bind="r"/></g>
-   <rect v-if="g.extraRail.visible" v-bind="g.extraRail" :fill="g.extraRail.placement==='above'?frameColor:'none'" stroke="#000" :stroke-dasharray="g.extraRail.placement==='behind'?'12 8':undefined"/>
    <g v-if="(!yard||yardTwoSides)&&showFill" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :material-group="activeMaterialGroup" :material-name="activeMaterialName" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
+   <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='foreground'" data-testid="type1-jumper-foreground" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" :fill="g.extraRail.placement==='above'?frameColor:'none'" stroke="#000"/>
   </g>
  </svg>
  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-(--ui-color-text-secondary)"><label><input v-model="showFill" type="checkbox"> Показывать заполнение</label><fieldset class="flex gap-3"><legend class="sr-only">Цвета</legend><span>Цвета:</span><label><input v-model="colors" type="radio" value="realistic"> Реалистичные</label><label><input v-model="colors" type="radio" value="schematic"> Схематичные</label></fieldset><fieldset class="flex gap-3"><legend class="sr-only">Вид</legend><span>Вид:</span><label><input v-model="side" data-testid="type1-view-street" type="radio" value="street"> С улицы</label><label><input v-model="side" data-testid="type1-view-yard" type="radio" value="yard"> Со двора</label></fieldset></div>

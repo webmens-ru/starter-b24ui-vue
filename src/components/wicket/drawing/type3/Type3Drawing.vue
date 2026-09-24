@@ -8,6 +8,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 import { computed, ref } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
+import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildType3Geometry } from './type3Geometry'
 
 const calc = useCalculation()
@@ -63,6 +64,10 @@ const picketFill = computed(() => !realisticColors.value
   ? `url(#${activePatternId.value})`
   : viewedFill.value.color)
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
+const jumperPresentation = computed(() => resolveJumperPresentation(
+  geometry.value.extraRail.placement,
+  viewSide.value,
+))
 </script>
 
 <template>
@@ -83,16 +88,27 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
       </defs>
 
       <rect v-bind="geometry.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" />
+      <rect
+        v-if="geometry.extraRail.visible && jumperPresentation.layer === 'background'"
+        data-testid="type3-jumper-background"
+        :x="geometry.extraRail.x"
+        :y="geometry.extraRail.y"
+        :width="geometry.extraRail.width"
+        :height="geometry.extraRail.height"
+        fill="none"
+        stroke="#20242a"
+        stroke-width="1"
+        :stroke-dasharray="jumperPresentation.dashed ? '12 8' : undefined"
+      />
       <g v-if="geometry.posts.visible" data-testid="type3-posts" fill="#59606b">
         <rect v-bind="geometry.posts.left" />
         <rect v-bind="geometry.posts.right" />
       </g>
-      <g :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
+      <g data-testid="type3-frame" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
         <rect v-for="(part, index) in geometry.frame" :key="`frame-${index}`" v-bind="part" />
         <rect v-if="geometry.rails.lower.visible" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
-        <rect v-if="geometry.extraRail.visible" data-testid="type3-extra-rail" v-bind="geometry.extraRail" />
       </g>
       <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
         <rect
@@ -102,6 +118,17 @@ const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.v
           v-bind="picket"
         />
       </g>
+      <rect
+        v-if="geometry.extraRail.visible && jumperPresentation.layer === 'foreground'"
+        data-testid="type3-jumper-foreground"
+        :x="geometry.extraRail.x"
+        :y="geometry.extraRail.y"
+        :width="geometry.extraRail.width"
+        :height="geometry.extraRail.height"
+        :fill="geometry.extraRail.placement === 'above' ? displayedFrameColor : 'none'"
+        stroke="#20242a"
+        stroke-width="1"
+      />
     </svg>
 
     <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-(--ui-color-text-secondary)">

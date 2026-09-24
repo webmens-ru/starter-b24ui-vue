@@ -76,6 +76,8 @@ describe('Type2Drawing', () => {
     calc.sideGrilleNetImage.value = ''
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
+    calc.peremichkaPolozheniyeName.value = 'Без перемычки'
+    calc.peremichkaSortamentName.value = ''
   })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
     const wrapper = mount(Type2Drawing)
@@ -309,6 +311,39 @@ describe('Type2Drawing', () => {
       .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
     expect(wrapper.html().indexOf('data-testid="type2-drawing-strip"'))
       .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
+  })
+
+  it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
+    calc.peremichkaPolozheniyeName.value = 'За калиткой'
+    calc.peremichkaSortamentName.value = '60/60/2'
+    calc.fillSide.value = 'Две стороны'
+    const wrapper = mount(Type2Drawing)
+    const html = wrapper.html()
+    const background = wrapper.get('[data-testid="type2-drawing-jumper-background"]')
+
+    expect(background.attributes('stroke-dasharray')).toBe('12 8')
+    expect(html.indexOf('type2-drawing-jumper-background')).toBeLessThan(html.indexOf('type2-drawing-frame'))
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+    const yardHtml = wrapper.html()
+    const foreground = wrapper.get('[data-testid="type2-drawing-jumper-foreground"]')
+
+    expect(foreground.attributes('stroke-dasharray')).toBeUndefined()
+    expect(yardHtml.indexOf('type2-drawing-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type2-drawing-frame'))
+    expect(yardHtml.indexOf('type2-drawing-jumper-foreground')).toBeGreaterThan(yardHtml.indexOf('type2-drawing-fill'))
+  })
+
+  it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
+    calc.peremichkaPolozheniyeName.value = 'Над калиткой'
+    calc.peremichkaSortamentName.value = '60/60/2'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.get('[data-testid="type2-drawing-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+    expect(wrapper.find('[data-testid="type2-drawing-jumper-background"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+    expect(wrapper.get('[data-testid="type2-drawing-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
+    expect(wrapper.find('[data-testid="type2-drawing-jumper-background"]').exists()).toBe(false)
   })
 
   it('рисует покрытие второго типа через общий renderer заполнения', () => {
