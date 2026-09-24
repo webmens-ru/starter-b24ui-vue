@@ -43,7 +43,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-async function openMenu(row = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string } = {}) {
+async function openMenu(row = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string; htmlUrl?: string } = {}) {
   const wrapper = mount(ProductRowActionsMenu, {
     props: { productRow: row, canMoveUp: true, canMoveDown: true, ...props },
   })
@@ -77,6 +77,28 @@ describe('ProductRowActionsMenu', () => {
     action.element.addEventListener('click', event => event.preventDefault())
     await action.trigger('click')
     expect(visible.find('[role="menu"]').exists()).toBe(false)
+  })
+
+  it('shows the HTML action beside PDF only when the page provides its URL', async () => {
+    const row = makeProductRow()
+    const hidden = await openMenu(row, {
+      pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',
+    })
+    expect(hidden.find('[aria-label="Сформировать HTML товарной позиции 7"]').exists()).toBe(false)
+
+    const visible = await openMenu(row, {
+      pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',
+      htmlUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html',
+    })
+    const actions = visible.findAll('[role="menuitem"]')
+    const pdfIndex = actions.findIndex(action => action.attributes('aria-label') === 'Сформировать PDF товарной позиции 7')
+    const htmlIndex = actions.findIndex(action => action.attributes('aria-label') === 'Сформировать HTML товарной позиции 7')
+    const action = visible.get('[aria-label="Сформировать HTML товарной позиции 7"]')
+
+    expect(htmlIndex).toBe(pdfIndex + 1)
+    expect(action.attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html')
+    expect(action.attributes('target')).toBe('_blank')
+    expect(action.attributes('rel')).toBe('noopener noreferrer')
   })
 
   it('shows the cost details action only when the server provides its URL', async () => {

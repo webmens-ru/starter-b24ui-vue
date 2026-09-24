@@ -19,7 +19,7 @@ function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowS
   }
 }
 
-function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string } = {}) {
+function mountRows(productRow = makeProductRow(), props: { disabled?: boolean; reorderDisabled?: boolean; canMoveUp?: boolean; canMoveDown?: boolean; costDetailsUrl?: string; pdfUrl?: string; htmlUrl?: string } = {}) {
   return mount(ProductRowTableRows, { props: { productRow, canMoveUp: false, canMoveDown: false, ...props } })
 }
 
@@ -36,6 +36,17 @@ describe('ProductRowTableRows', () => {
 
     expect(wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]').attributes('href'))
       .toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3')
+  })
+
+  it('forwards the page-provided HTML URL to the actions menu', async () => {
+    const wrapper = mountRows(makeProductRow(), {
+      pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',
+      htmlUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html',
+    })
+    await openActions(wrapper)
+
+    expect(wrapper.get('[aria-label="Сформировать HTML товарной позиции 7"]').attributes('href'))
+      .toBe('/pdf-for-production?order_id=42&productRowId=7&model_id=3&format=html')
   })
 
   it('renders one spacious aligned card with six labelled cells', () => {

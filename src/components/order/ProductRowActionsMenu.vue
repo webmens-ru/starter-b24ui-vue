@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<{
   reorderDisabled?: boolean
   costDetailsUrl?: string
   pdfUrl?: string
+  htmlUrl?: string
   canMoveUp: boolean
   canMoveDown: boolean
 }>(), {
@@ -313,6 +314,19 @@ onBeforeUnmount(() => {
           @click="closeWithoutRestoringFocus"
         >
           Сформировать PDF
+        </a>
+        <a
+          v-if="htmlUrl"
+          :href="htmlUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          role="menuitem"
+          tabindex="-1"
+          class="product-row-actions-menu__html block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :aria-label="`Сформировать HTML товарной позиции ${productRow.id}`"
+          @click="closeWithoutRestoringFocus"
+        >
+          Сформировать HTML
         </a>
 
         <template v-if="isAllowed('product_row.transition')">
