@@ -182,7 +182,6 @@ describe('useCalculation', () => {
       isThereLockName: 'Нет',
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет изготовитель',
-      isThereCable: 'Изготовитель устанавливает',
       widthProyema: '1100',
       heightProyema: '2100',
       clearanceProyema: '30',

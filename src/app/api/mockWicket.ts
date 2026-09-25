@@ -677,7 +677,6 @@ export async function mockLoadWicketData(
     isThereLockName: 'Есть',
     providesLock: 'Предоставляет изготовитель',
     lockInstaller: 'Выполняет изготовитель',
-    isThereCable: 'Изготовитель устанавливает',
     typeLock: 'Тип_1',
     widthProyema: '1000',
     heightProyema: '2000',

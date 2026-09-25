@@ -287,7 +287,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     })
   })
 
-  it('IsTherelock сохраняет root-комплект и его provider/installer вместе с кабелем', async () => {
+  it('IsTherelock сохраняет root-комплект при изменении исполнителя врезки без параметра кабеля', async () => {
     calc.isThereLock.value = 1
     calc.isThereLockName.value = 'Есть'
     calc.lockSetId.value = 7
@@ -306,7 +306,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).not.toHaveBeenCalled()
-    await wrapper.find('input[value="Изготовитель не устанавливает"]').setValue()
+    await wrapper.find('input[value="Выполняет изготовитель"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
@@ -318,9 +318,10 @@ describe('saveWicketData — данные передаются на бэк', () 
       modelId: '1',
       lockSetId: 7,
       providesLock: 'Предоставляет заказчик',
-      lockInstaller: 'Выполняет заказчик',
-      isThereCable: 'Изготовитель не устанавливает',
+      lockInstaller: 'Выполняет изготовитель',
     })
+    expect(payload).not.toHaveProperty('isThereCable')
+    expect(wrapper.text()).not.toContain('Кабель для э/м замка')
     for (const key of ['isThereLock', 'isThereLockName', 'lockComponentIds', 'lockComponentsInstalled']) {
       expect(payload).not.toHaveProperty(key)
     }

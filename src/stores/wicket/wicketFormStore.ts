@@ -114,7 +114,6 @@ const providesLock      = ref<string>('Предоставляет изготов
 const lockInstaller     = ref<string>('Выполняет изготовитель')
 const lockComponentsProvided = ref<string>('Предоставляет изготовитель')
 const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
-const isThereCable     = ref<string>('Изготовитель устанавливает')
 
 // Поля шага "Проем"
 const widthProyema      = ref<string>('')
@@ -211,7 +210,6 @@ const fieldsFilled = ref<number>(0)
     if (isThereLock.value === 1) {
       params.push({ name: 'Замок предоставляет', value: providesLock.value })
       params.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
-      params.push({ name: 'Кабель для э/м замка', value: isThereCable.value })
       params.push({ name: 'Тип замка', value: typeLock.value || '' })
     }
     return params
@@ -315,7 +313,6 @@ const fieldsFilled = ref<number>(0)
     isThereLock.value = 1
     providesLock.value = 'Предоставляет изготовитель'
     lockInstaller.value = 'Выполняет изготовитель'
-    isThereCable.value = 'Изготовитель устанавливает'
     widthProyema.value = ''
     heightProyema.value = ''
     clearanceProyema.value = ''
@@ -630,7 +627,6 @@ const fieldsFilled = ref<number>(0)
       isThereLock,
       providesLock,
       lockInstaller,
-      isThereCable,
       widthProyema,
       heightProyema,
       clearanceProyema,
@@ -973,7 +969,6 @@ const fieldsFilled = ref<number>(0)
     isThereLock,
     providesLock,
     lockInstaller,
-    isThereCable,
     widthProyema,
     heightProyema,
     clearanceProyema,

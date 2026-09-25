@@ -91,7 +91,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   isThereLock: 1,
   providesLock: 'Предоставляет изготовитель',
   lockInstaller: 'Выполняет изготовитель',
-  isThereCable: 'Изготовитель устанавливает',
   typeLock: 'Тип_1',
   lockSetId: null,
   lockPenColor: '',

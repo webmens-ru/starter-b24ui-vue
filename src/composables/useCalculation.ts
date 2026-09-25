@@ -103,7 +103,6 @@ export function useCalculation() {
       heightProyema: form.heightProyema,
       clearanceProyema: form.clearanceProyema,
       sostoyaniyeProyema: form.sostoyaniyeProyema,
-      isThereCable: form.isThereCable,
       lockSetId: form.lockSetId,
       providesLock: form.lockSetId == null ? null : (form.providesLock || null),
       lockInstaller: form.lockSetId == null ? null : (form.lockInstaller || null),

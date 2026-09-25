@@ -14,7 +14,6 @@ const calc = useCalculation()
 const isThereLockName  = ref<string>('Есть')
 const providesLock = ref<string>('Предоставляет изготовитель')
 const lockInstaller = ref<string>('Выполняет изготовитель')
-const isThereCable = ref<string>('Изготовитель устанавливает')
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
 
@@ -29,11 +28,6 @@ const installerOptions = [
   { value: 'Выполняет заказчик',     label: 'Врезку замка выполняет заказчик' },
 ]
 
-const cableOptions = [
-  { value: 'Изготовитель устанавливает',     label: 'Кабель для э/м замка изготовитель устанавливает' },
-  { value: 'Изготовитель не устанавливает',  label: 'Кабель для э/м замка изготовитель не устанавливает' },
-]
-
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
   calc.isThereLockName.value = isThereLockName.value
@@ -42,11 +36,9 @@ function syncCalcFields() {
   if (showLockDetails.value) {
     calc.providesLock.value = providesLock.value
     calc.lockInstaller.value = lockInstaller.value
-    calc.isThereCable.value = isThereCable.value
   } else {
     calc.providesLock.value  = ''
     calc.lockInstaller.value = ''
-    calc.isThereCable.value = ''
     calc.typeLock.value      = ''
     calc.lockSetId.value    = null
     calc.lockPenId.value    = null
@@ -62,7 +54,6 @@ function buildBlock() {
   if (showLockDetails.value) {
     params.push({ name: 'Замок предоставляет',    value: calc.providesLock.value })
     params.push({ name: 'Врезку замка выполняет', value: calc.lockInstaller.value })
-    params.push({ name: 'Кабель для э/м замка',   value: calc.isThereCable.value })
   }
   calc.updateOrCreateBlock('Замок', params)
 }
@@ -73,7 +64,6 @@ async function save() {
     isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
     lockInstaller: calc.lockInstaller.value,
-    isThereCable: calc.isThereCable.value,
     lockSetId: calc.lockSetId.value,
     typeLock: calc.typeLock.value,
     lockPenId: calc.lockPenId.value,
@@ -92,14 +82,12 @@ async function save() {
       lockInstaller: hasLockSet ? (calc.lockInstaller.value || null) : null,
       lockPenId: hasLockSet ? calc.lockPenId.value : null,
       lockPenColorId: hasLockSet ? calc.lockPenColorId.value : null,
-      isThereCable: calc.isThereCable.value || null,
     })
   } catch (e) {
     calc.isThereLockName.value = previous.isThereLockName
     calc.isThereLock.value = previous.isThereLock
     calc.providesLock.value = previous.providesLock
     calc.lockInstaller.value = previous.lockInstaller
-    calc.isThereCable.value = previous.isThereCable
     calc.lockSetId.value = previous.lockSetId
     calc.typeLock.value = previous.typeLock
     calc.lockPenId.value = previous.lockPenId
@@ -108,7 +96,6 @@ async function save() {
     isThereLockName.value = previous.isThereLockName
     providesLock.value = previous.providesLock || 'Предоставляет изготовитель'
     lockInstaller.value = previous.lockInstaller || 'Выполняет изготовитель'
-    isThereCable.value = previous.isThereCable
     buildBlock()
     console.warn('saveWicketData:', e)
     return
@@ -137,7 +124,6 @@ onMounted(() => {
   if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
   if (calc.providesLock.value)     providesLock.value = calc.providesLock.value
   if (calc.lockInstaller.value)    lockInstaller.value = calc.lockInstaller.value
-  if (calc.isThereCable.value)     isThereCable.value = calc.isThereCable.value
 
 })
 </script>
@@ -192,18 +178,6 @@ onMounted(() => {
           <div class="option-grid">
             <label v-for="opt in installerOptions" :key="opt.value" class="lock-card">
               <input v-model="lockInstaller" type="radio" :value="opt.value" class="sr-only" @change="save" />
-              <div class="card-content">
-                <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <!-- Кабель для э/м замка -->
-        <div>
-          <div class="option-grid">
-            <label v-for="opt in cableOptions" :key="opt.value" class="lock-card">
-              <input v-model="isThereCable" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>
