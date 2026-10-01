@@ -5,6 +5,7 @@ declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
 import type { ColorShieldItem } from '../../app/api/wicket'
+import { frameSubtypeCapabilities } from './frameSubtype'
 
 interface GrilleNetItem {
   id: number
@@ -43,10 +44,6 @@ const colorShieldId = ref<string | number>('')
 // ─── Тип щита ────────────────────────────────────────────────────────────────
 const shieldType = ref<string>('Тип_1')
 
-const TYPES_WITH_HEIGHT_TOP   = ['Тип_3']
-const TYPES_WITH_HEIGHT_LOWER = ['Тип_2', 'Тип_3']
-const TYPES_WITH_SIDE_PART    = ['Тип_4']
-
 const providerOptions = [
   { value: 'executor', label: 'Предоставляет исполнитель' },
   { value: 'customer', label: 'Предоставляет заказчик' },
@@ -63,9 +60,10 @@ const providerTop   = ref<string>('executor')
 const providerLower = ref<string>('executor')
 const providerSide  = ref<string>('executor')
 
-const showHeightTop   = computed(() => TYPES_WITH_HEIGHT_TOP.includes(shieldType.value))
-const showHeightLower = computed(() => TYPES_WITH_HEIGHT_LOWER.includes(shieldType.value))
-const showSidePart    = computed(() => TYPES_WITH_SIDE_PART.includes(shieldType.value))
+const subtypeCapabilities = computed(() => frameSubtypeCapabilities(shieldType.value))
+const showHeightTop   = computed(() => subtypeCapabilities.value.top)
+const showHeightLower = computed(() => subtypeCapabilities.value.lower)
+const showSidePart    = computed(() => subtypeCapabilities.value.side)
 
 const isExecutorTop   = computed(() => providerTop.value === 'executor')
 const isExecutorLower = computed(() => providerLower.value === 'executor')
@@ -105,17 +103,16 @@ const panelOrientation = computed(() => {
   return id === 1 || id === 4 ? 'g' : 'v'
 })
 
-/** База URL для схем щита: /img/wicket/type{N}/… (N — modelId калитки). */
-const shieldImgBase = computed(() => {
+/** Общие схемы щита для всех моделей калитки. */
+const sharedShieldImgBase = computed(() => {
   const hostRaw = typeof window !== 'undefined' ? window._HOSTNAME_ : ''
   const host = hostRaw ? String(hostRaw).replace(/\/$/, '') : 'https://test-lk.doorhan-krd.ru'
-  const folder = `type${String(calc.modelId.value || '1')}`
-  return `${host}/img/wicket/${folder}`
+  return `${host}/img/wicket/type1`
 })
 
 const shieldOptions = computed(() => {
   const orient = panelOrientation.value
-  const base = shieldImgBase.value
+  const base = sharedShieldImgBase.value
   // z - замок, p - петля (только для Тип_4)
   const type4Suffix = grilleLocation.value === 'Возле замка' ? 'z' : 'p'
   return [
@@ -123,6 +120,7 @@ const shieldOptions = computed(() => {
     { value: 'Тип_2', label: 'Тип 2', img: `${base}/w_${orient}_1.2.png` },
     { value: 'Тип_3', label: 'Тип 3', img: `${base}/w_${orient}_1.3.png` },
     { value: 'Тип_4', label: 'Тип 4', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
+    { value: 'Тип_5', label: 'Тип 5', img: `${base}/w_${orient}_1.5.png` },
   ]
 })
 
@@ -357,9 +355,9 @@ function syncCalcFields() {
   const colorItem = colorOptions.value.find(i => String(i.id) === String(colorShieldId.value))
   calc.colorShieldName.value = colorItem?.name ?? ''
   calc.colorShieldHex.value  = colorItem?.hex ?? ''
-  calc.heightTopPart.value   = heightTopPart.value
-  calc.heightLowerPart.value = heightLowerPart.value
-  calc.widthSidePart.value   = widthSidePart.value
+  calc.heightTopPart.value   = showHeightTop.value ? heightTopPart.value : ''
+  calc.heightLowerPart.value = showHeightLower.value ? heightLowerPart.value : ''
+  calc.widthSidePart.value   = showSidePart.value ? widthSidePart.value : ''
   if (showHeightLower.value) {
     calc.assortmentHeightLowerNetId.value = assortmentHeightLowerNetId.value
     calc.assortmentSideGrilleNetId.value = null
@@ -385,9 +383,9 @@ function syncCalcFields() {
     ? heightUpperNetItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
     : ''
   calc.grilleLocation.value = grilleLocation.value
-  calc.netWidthProviderTop.value = providerTop.value
-  calc.netWidthProviderLower.value = providerLower.value
-  calc.netWidthProviderSide.value = providerSide.value
+  calc.netWidthProviderTop.value = showHeightTop.value ? providerTop.value : ''
+  calc.netWidthProviderLower.value = showHeightLower.value ? providerLower.value : ''
+  calc.netWidthProviderSide.value = showSidePart.value ? providerSide.value : ''
 }
 
 function buildBlock() {
@@ -567,15 +565,15 @@ onMounted(async () => {
   providerLower.value = savedProvLower === 'customer' || savedProvLower === 'executor' ? savedProvLower : 'executor'
   providerSide.value = savedProvSide === 'customer' || savedProvSide === 'executor' ? savedProvSide : 'executor'
   const savedTop = calc.heightTopPart.value
-  if (savedTop && savedTop !== '0' && Number(savedTop) > 0) {
+  if (showHeightTop.value && savedTop && savedTop !== '0' && Number(savedTop) > 0) {
     heightTopPart.value = String(savedTop)
   }
   const savedLower = calc.heightLowerPart.value
-  if (savedLower && savedLower !== '0' && Number(savedLower) > 0) {
+  if (showHeightLower.value && savedLower && savedLower !== '0' && Number(savedLower) > 0) {
     heightLowerPart.value = String(savedLower)
   }
   const savedSide = calc.widthSidePart.value
-  if (savedSide && savedSide !== '0' && Number(savedSide) > 0) {
+  if (showSidePart.value && savedSide && savedSide !== '0' && Number(savedSide) > 0) {
     widthSidePart.value = String(savedSide)
   }
   if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
@@ -583,9 +581,9 @@ onMounted(async () => {
 
   await loadColorShield()
   await loadNetWidths()
-  if (widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
-  if (heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
-  if (heightTopPart.value) await loadHeightUpperNetsBySize(heightTopPart.value)
+  if (showSidePart.value && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
+  if (showHeightLower.value && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
+  if (showHeightTop.value && heightTopPart.value) await loadHeightUpperNetsBySize(heightTopPart.value)
   // Восстанавливаем выбор сеток после загрузки (loadXXX сбрасывает selection)
   if (showHeightLower.value) {
     const lowerId = calc.assortmentHeightLowerNetId.value ?? calc.assortmentSideGrilleNetId.value
@@ -664,7 +662,7 @@ onMounted(async () => {
         </label>
       </div>
 
-      <!-- Высота верхней части (Тип_3) -->
+      <!-- Высота верхней части (Тип_3, Тип_5) -->
       <div v-if="showHeightTop" class="flex flex-col gap-3">
         <span class="font-semibold text-sm">Высота сетки верхней части:</span>
         <div class="provider-cards-grid">
