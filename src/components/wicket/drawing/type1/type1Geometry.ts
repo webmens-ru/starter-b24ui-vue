@@ -3,7 +3,7 @@ import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtyp
 
 export interface Rect { x:number; y:number; width:number; height:number }
 interface VisibleRect extends Rect { visible:boolean }
-export interface Type1Source extends Record<string, unknown> {}
+export type Type1Source = Record<string, unknown>
 export interface Type1Geometry {
   drawing:{width:number;height:number}; opening:Rect; gate:Rect; gateZone:Rect
   posts:{visible:boolean;left:Rect;right:Rect}; subtype:string; frame:{left:Rect;right:Rect}

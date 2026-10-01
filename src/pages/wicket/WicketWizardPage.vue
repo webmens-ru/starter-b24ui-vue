@@ -35,10 +35,10 @@ provide(WICKET_ROUTE_KEY, props.route)
 
 const { activePage, visitedPages, isPageAccessible, setActivePage, loadFromApi, reset } = calc
 
-const route = useRoute()
+const currentRoute = useRoute()
 /** modelId из пути /wicket/typeN, затем из _PARAMS_ или '1' по умолчанию. */
 const resolvedModelId = (): string => {
-  const m = route.path.match(/\/wicket\/type(\d+)$/)
+  const m = currentRoute.path.match(/\/wicket\/type(\d+)$/)
   if (m) return m[1]
   const fromParams = window._PARAMS_?.placementOptions?.modelId
   return fromParams ? String(fromParams) : '1'
@@ -58,9 +58,9 @@ function routeQueryValueKey(value: unknown): string {
   return `${typeof value}:${String(value)}`
 }
 const routeContextKey = computed(() => [
-  route.path,
-  routeQueryValueKey(route.query.orderId),
-  routeQueryValueKey(route.query.productRowId),
+  currentRoute.path,
+  routeQueryValueKey(currentRoute.query.orderId),
+  routeQueryValueKey(currentRoute.query.productRowId),
   resolvedModelId(),
 ].join('|'))
 let mounted = false
@@ -73,8 +73,8 @@ function onResize() {
   resizeTimer = setTimeout(() => { windowWidth.value = window.innerWidth }, 100)
 }
 async function resolveProductRowContext(): Promise<ProductRowContext | null> {
-  const parsedOrderId = parsePositiveDecimalId(route.query.orderId)
-  const parsedProductRowId = parsePositiveDecimalId(route.query.productRowId)
+  const parsedOrderId = parsePositiveDecimalId(currentRoute.query.orderId)
+  const parsedProductRowId = parsePositiveDecimalId(currentRoute.query.productRowId)
   const routeOrderId = parsedOrderId.kind === 'valid' ? parsedOrderId.value : null
   const routeProductRowId = parsedProductRowId.kind === 'valid' ? parsedProductRowId.value : null
 

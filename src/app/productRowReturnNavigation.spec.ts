@@ -41,6 +41,9 @@ describe('product-row return navigation', () => {
     'https://attacker.example/orders/42',
     '//attacker.example/orders/42',
     '',
+    '/dealer/\u0000orders/view',
+    '/dealer/\u001forders/view',
+    '/dealer/\u007forders/view',
     '/\\attacker.example/orders/42',
     '/\n/attacker.example/orders/42',
   ])('rejects an unsafe or malformed return URL: %s', async (returnUrl) => {

@@ -22,23 +22,38 @@ const submitted = ref(false)
 const isFacade = computed(() => props.side === 'facade')
 const profile = computed({
   get: () => String(isFacade.value ? calc.materialFacade.value : calc.materialYard.value),
-  set: value => { isFacade.value ? (calc.materialFacade.value = value) : (calc.materialYard.value = value) },
+  set: value => {
+    if (isFacade.value) calc.materialFacade.value = value
+    else calc.materialYard.value = value
+  },
 })
 const coating = computed({
   get: () => String(isFacade.value ? calc.typeOfCoatingFacade.value : calc.typeOfCoatingYard.value),
-  set: value => { isFacade.value ? (calc.typeOfCoatingFacade.value = value) : (calc.typeOfCoatingYard.value = value) },
+  set: value => {
+    if (isFacade.value) calc.typeOfCoatingFacade.value = value
+    else calc.typeOfCoatingYard.value = value
+  },
 })
 const manufacturerId = computed({
   get: () => isFacade.value ? calc.manufacturerFacadeId.value : calc.manufacturerYardId.value,
-  set: value => { isFacade.value ? (calc.manufacturerFacadeId.value = value) : (calc.manufacturerYardId.value = value) },
+  set: value => {
+    if (isFacade.value) calc.manufacturerFacadeId.value = value
+    else calc.manufacturerYardId.value = value
+  },
 })
 const colorId = computed({
   get: () => isFacade.value ? calc.colorFacadeId.value : calc.colorYardId.value,
-  set: value => { isFacade.value ? (calc.colorFacadeId.value = value) : (calc.colorYardId.value = value) },
+  set: value => {
+    if (isFacade.value) calc.colorFacadeId.value = value
+    else calc.colorYardId.value = value
+  },
 })
 const colorName = computed({
   get: () => String(isFacade.value ? calc.colorFacade.value : calc.colorYard.value),
-  set: value => { isFacade.value ? (calc.colorFacade.value = value) : (calc.colorYard.value = value) },
+  set: value => {
+    if (isFacade.value) calc.colorFacade.value = value
+    else calc.colorYard.value = value
+  },
 })
 const colorMode = computed(() => getProfnastilColorMode(coating.value))
 const colorRequired = computed(() => colorMode.value !== 'none')

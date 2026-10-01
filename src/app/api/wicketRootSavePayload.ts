@@ -16,6 +16,15 @@ export function canonicalizeWicketRootSavePayload(
     countryCode: _countryCode,
     ...canonicalPayload
   } = payload
+  void _calculationName
+  void _clientName
+  void _clientLastName
+  void _clientSurname
+  void _clientPhone
+  void _clientEmail
+  void _clientAddress
+  void _clientComment
+  void _countryCode
 
   return {
     ...canonicalPayload,

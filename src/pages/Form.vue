@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@bitrix24/b24ui-nuxt'
+import { useToast } from '@bitrix24/b24ui-nuxt/composables/useToast.js'
 import { reactive } from 'vue'
 import * as yup from 'yup'
 import api from '../app/api'
@@ -22,7 +23,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     await api.post('/send', event.data)
     toast.add({ title: 'Success', description: 'The form has been submitted.', color: 'air-primary-success' })
-  } catch (error) {
+  } catch {
     toast.add({ title: 'Ошибка', description: 'Ошибка при сабмите', color: 'air-primary-alert' })
   }
 
@@ -69,4 +70,3 @@ const showToast = () => {
   </B24Form>
   </B24App>
 </template>
-

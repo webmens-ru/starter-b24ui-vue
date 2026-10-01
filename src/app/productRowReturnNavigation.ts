@@ -8,7 +8,7 @@ function isSafeReturnUrl(value: unknown): value is string {
     || !value.startsWith('/')
     || value.startsWith('//')
     || value.startsWith('/\\')
-    || /[\\\u0000-\u001F\u007F]/.test(value)
+    || [...value].some(char => char === '\\' || char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
   ) return false
 
   try {

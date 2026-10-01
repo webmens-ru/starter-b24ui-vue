@@ -38,7 +38,8 @@ async function validateField(field: FieldName, raw: string | number) {
   try {
     await schema.validateAt(field, { [field]: val })
     errRefs[field].value = ''
-  } catch (e: any) {
+  } catch (e) {
+    if (!(e instanceof yup.ValidationError)) throw e
     errRefs[field].value = e.message
   }
 }
@@ -56,9 +57,10 @@ async function validateAll(): Promise<boolean> {
     await schema.validate(values, { abortEarly: false })
     errWidth.value = errHeight.value = errClearance.value = ''
     return true
-  } catch (e: any) {
+  } catch (e) {
+    if (!(e instanceof yup.ValidationError)) throw e
     errWidth.value = errHeight.value = errClearance.value = ''
-    for (const err of e.inner as yup.ValidationError[]) {
+    for (const err of e.inner) {
       if (err.path && err.path in errRefs) errRefs[err.path as FieldName].value = err.message
     }
     return false

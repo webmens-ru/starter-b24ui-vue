@@ -105,7 +105,7 @@ function presentationProductRow(productRow: ProductRowSummary): ProductRowSummar
   }
 }
 
-function isOrderCardEmbedded(params: TPlacementOptions['params'] | undefined): boolean {
+function isOrderCardEmbedded(params: { orderCardEmbedded?: boolean } | undefined): boolean {
   return params?.orderCardEmbedded === true
 }
 

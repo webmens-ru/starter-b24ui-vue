@@ -245,6 +245,7 @@ const FILTER_SIDING: FilterOptions = {
 }
 
 export async function mockGetFilterOptions(url: string, _type?: string): Promise<FilterOptions> {
+  void _type
   await delay(150)
   if (url.includes('get-filter-data-siding')) return FILTER_SIDING
   if (url.includes('get-filter-data-profnastil')) return PROFNASTIL_FILTER
@@ -492,6 +493,7 @@ export async function mockGetNetWidths(): Promise<{ netWidths: { id: string; nam
 export async function mockGetNetsByWidth(_sizeA: number | string): Promise<{
   items: Array<{ id: number; model: string; imageUrl: string | null; sizeA: number; sizeB: number; thickness: number; price: number }>
 }> {
+  void _sizeA
   await delay(100)
   return {
     items: [
@@ -533,6 +535,7 @@ export async function mockGetLocks(): Promise<{
 export async function mockGetPensByLock(_lockSetId: number): Promise<{
   items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
+  void _lockSetId
   await delay(80)
   const colors = [
     { id: 1, name: 'Черная' },
@@ -627,10 +630,13 @@ function delay(ms: number) {
 }
 
 export async function mockFetchWicketPage(_modelId: number | string, _url: string): Promise<string> {
+  void _modelId
+  void _url
   return ''
 }
 
 export async function mockSaveWicketData(_payload: Record<string, unknown>): Promise<WicketRootMutationResponse> {
+  void _payload
   return { lockVersion: 1 }
 }
 
@@ -650,6 +656,7 @@ export async function mockCreateOrder(): Promise<{
 export async function mockLoadWicketData(
   _orderId: number,
 ): Promise<Record<string, unknown>> {
+  void _orderId
   await delay(200)
   return {
     orderId: 42,
@@ -728,6 +735,7 @@ export async function mockRecalculate(
     model?: string
   }
 ): Promise<RecalculateResponse> {
+  void _payload
   return {
     priceDealer: 10000,
     priceRetail: 13500,

@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
-const c: any = {
+const c = {
   widthProyema: ref('1000'),
   heightProyema: ref('2000'),
   clearanceProyema: ref('50'),

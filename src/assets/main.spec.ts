@@ -11,6 +11,6 @@ describe('global frontend typography', () => {
   })
 
   it('does not reset every descendant font', () => {
-    expect(source).not.toMatch(/#app\s+\*[^\{]*\{[^}]*font(?:-family)?\s*:/s)
+    expect(source).not.toMatch(/#app\s+\*[^{]*\{[^}]*font(?:-family)?\s*:/s)
   })
 })

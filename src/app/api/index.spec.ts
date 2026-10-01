@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const requestHandlers: Array<(config: any) => any> = []
+type RequestConfig = { url?: string; baseURL?: string; headers: Record<string, string> }
+const requestHandlers: Array<(config: RequestConfig) => RequestConfig> = []
 const axiosInstance = {
   interceptors: {
     request: {
@@ -24,13 +25,13 @@ describe('api client', () => {
   beforeEach(() => {
     vi.resetModules()
     requestHandlers.length = 0
-    delete (window as any)._HOSTNAME_
-    delete (window as any)._ACCESS_TOKEN_
+    Reflect.deleteProperty(window, '_HOSTNAME_')
+    Reflect.deleteProperty(window, '_ACCESS_TOKEN_')
   })
 
   it('uses current window host even when it appears after module import', async () => {
     await import('./index')
-    ;(window as any)._HOSTNAME_ = 'https://test-lk.doorhan-krd.ru'
+    window._HOSTNAME_ = 'https://test-lk.doorhan-krd.ru'
 
     const config = requestHandlers[0]({ url: '/api/check', headers: {} })
 
