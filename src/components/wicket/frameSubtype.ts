@@ -11,7 +11,7 @@ const CAPABILITIES = Object.freeze({
 export function resolveFrameSubtype(value: unknown): FrameSubtype {
   if (typeof value !== 'string') return 'type1'
   const normalized = value.replace(/^Тип_([1-5])$/, 'type$1')
-  return normalized in CAPABILITIES ? normalized as FrameSubtype : 'type1'
+  return Object.hasOwn(CAPABILITIES, normalized) ? normalized as FrameSubtype : 'type1'
 }
 
 export function frameSubtypeCapabilities(value: unknown): { top: boolean; lower: boolean; side: boolean } {

@@ -21,4 +21,13 @@ describe('frame subtype capabilities', () => {
       expect(frameSubtypeCapabilities(value)).toEqual({ top: false, lower: false, side: false })
     },
   )
+
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'rejects inherited object key %s as a subtype', (value) => {
+      expect(resolveFrameSubtype(value)).toBe('type1')
+      const capabilities = frameSubtypeCapabilities(value)
+      expect(capabilities).toEqual({ top: false, lower: false, side: false })
+      expect(Object.getPrototypeOf(capabilities)).toBe(Object.prototype)
+    },
+  )
 })
