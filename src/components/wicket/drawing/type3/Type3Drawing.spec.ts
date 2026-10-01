@@ -1,12 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useWicketFormStore } from '../../../../stores/wicket/wicketFormStore'
 import Type3Drawing from './Type3Drawing.vue'
 
 describe('Type3Drawing', () => {
   beforeEach(() => setActivePinia(createPinia()))
+  afterEach(() => vi.unstubAllGlobals())
 
   it('рисует точное число штакетин и выбранные столбы', () => {
     const store = useWicketFormStore()
@@ -157,5 +158,40 @@ describe('Type3Drawing', () => {
     const second = mount(Type3Drawing).get('[data-testid="type3-upper-net"]').attributes('fill')
 
     expect(first).not.toBe(second)
+  })
+
+  it('sizes upper net tiles from the loaded image ratio and ignores a stale image load', async () => {
+    class NetImage {
+      static pending: NetImage[] = []
+      naturalWidth = 600
+      naturalHeight = 200
+      onload: (() => void) | null = null
+      src = ''
+
+      constructor() {
+        NetImage.pending.push(this)
+      }
+    }
+    vi.stubGlobal('Image', NetImage)
+    const store = useWicketFormStore()
+    store.shieldType = 'Тип_5'
+    store.heightTopPart = '300'
+    store.upperGrilleNetImage = '/old.png'
+    const wrapper = mount(Type3Drawing)
+    const pattern = wrapper.get('[data-testid="type3-upper-net-image"]').element.parentElement
+
+    expect(pattern?.getAttribute('width')).toBe('300')
+    store.upperGrilleNetImage = '/new.png'
+    await wrapper.vm.$nextTick()
+    expect(NetImage.pending).toHaveLength(2)
+
+    NetImage.pending[0]?.onload?.()
+    await wrapper.vm.$nextTick()
+    expect(pattern?.getAttribute('width')).toBe('300')
+
+    NetImage.pending[1]?.onload?.()
+    await wrapper.vm.$nextTick()
+    expect(pattern?.getAttribute('width')).toBe('900')
+    expect(wrapper.get('[data-testid="type3-upper-net-image"]').attributes('width')).toBe('900')
   })
 })

@@ -121,6 +121,28 @@ describe('buildType3Geometry', () => {
     expect(geometry.facadePickets[0]).toMatchObject({ y: 400, height: 500 })
   })
 
+  it.each(['Вертикально', 'Горизонтально'])('keeps Type 5 %s pickets inside the gate when the upper height exceeds available space', (direction) => {
+    const geometry = buildType3Geometry({
+      widthProyema: 600,
+      heightProyema: 1000,
+      clearanceProyema: 50,
+      shieldType: 'Тип_5',
+      heightTopPart: 900,
+      numberOfSticks: 4,
+      raspolozheniyePolotna: direction,
+    })
+
+    expect(geometry.rails.upper).toMatchObject({ y: 830, height: 50, visible: true })
+    expect(geometry.upperNetArea).toMatchObject({ y: 50, height: 780, visible: true })
+    expect(geometry.fillArea).toMatchObject({ y: 880, height: 20 })
+    expect(geometry.facadePickets).toHaveLength(4)
+    expect(geometry.facadePickets.every(picket =>
+      picket.height > 0
+      && picket.y >= 880
+      && picket.y + picket.height <= 900,
+    )).toBe(true)
+  })
+
   it('does not expose an upper net for a subtype without a top region', () => {
     const geometry = buildType3Geometry({ ...base, shieldType: 'Тип_2', upperGrilleNetImage: '/upper.png' })
 

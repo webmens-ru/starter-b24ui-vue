@@ -97,19 +97,22 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const verticalVisible = capabilities.side
   const lowerHeight = numberValue(source.heightLowerPart, 0, 0, fillArea.height)
   const upperHeight = numberValue(source.heightTopPart, 0, 0, fillArea.height)
+  const upperSectionHeight = upperVisible && !lowerVisible
+    ? Math.min(upperHeight, Math.max(0, fillArea.height - rail - inner))
+    : upperHeight
   const sideWidth = numberValue(source.widthSidePart, 0, 0, fillArea.width)
   const lower = { ...rect(fillArea.x, fillArea.y + fillArea.height - lowerHeight - rail, fillArea.width, rail), visible: lowerVisible }
-  const upper = { ...rect(fillArea.x, fillArea.y + upperHeight, fillArea.width, rail), visible: upperVisible }
+  const upper = { ...rect(fillArea.x, fillArea.y + upperSectionHeight, fillArea.width, rail), visible: upperVisible }
   const upperNetArea = {
     ...rect(fillArea.x, fillArea.y, fillArea.width, upper.y - fillArea.y),
-    visible: upperVisible && upperHeight > 0,
+    visible: upperVisible && upperSectionHeight > 0,
   }
   const vertical = { ...rect(fillArea.x + sideWidth, fillArea.y, rail, fillArea.height), visible: verticalVisible }
   const activeFill = rect(
     verticalVisible ? vertical.x + rail : fillArea.x,
     upperVisible ? upper.y + rail : fillArea.y,
     fillArea.width - (verticalVisible ? sideWidth + rail : 0),
-    fillArea.height - (upperVisible ? upperHeight + rail : 0) - (lowerVisible ? lowerHeight + rail : 0),
+    fillArea.height - (upperVisible ? upperSectionHeight + rail : 0) - (lowerVisible ? lowerHeight + rail : 0),
   )
   const count = Math.round(numberValue(source.numberOfSticks, 0, 0, 200))
   const horizontal = /горизонт/i.test(text(source.raspolozheniyePolotna))
