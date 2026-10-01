@@ -169,7 +169,30 @@ describe('computeType2Geometry', () => {
     expect(geometry.netImage).toBe('/uploads/nets/lower.webp')
   })
 
-  it('выделяет верхнюю область сетки только для подтипа 3', () => {
+  it('строит только верхнюю сетку и положительное заполнение Тип_5 при 600×1000', () => {
+    const geometry = computeType2Geometry({
+      widthProyema: 600,
+      heightProyema: 1000,
+      shieldType: 'Тип_5',
+      heightTopPart: 300,
+      upperGrilleNetImage: '/u.png',
+      lowerGrilleNetImage: '/l.png',
+    })
+
+    expect(geometry.subtype).toBe('type5')
+    expect(geometry.rails.upperSubtype.visible).toBe(true)
+    expect(geometry.rails.lowerSubtype.visible).toBe(false)
+    expect(geometry.rails.verticalSubtype.visible).toBe(false)
+    expect(geometry.upperNetArea.visible).toBe(true)
+    expect(geometry.netArea.visible).toBe(false)
+    expect(geometry.upperNetImage).toBe('/u.png')
+    expect(geometry.netImage).toBe('')
+    expect(geometry.fillArea.y).toBe(geometry.rails.upperSubtype.y + geometry.rails.upperSubtype.height)
+    expect(geometry.fillArea.width).toBeGreaterThan(0)
+    expect(geometry.fillArea.height).toBeGreaterThan(0)
+  })
+
+  it('выделяет верхнюю область сетки для подтипа 3', () => {
     const geometry = computeType2Geometry({
       shieldType: 'Тип_3',
       heightTopPart: '300',

@@ -110,6 +110,32 @@ describe('Type1Drawing', () => {
     c.upperGrilleNetImage.value = ''
   })
 
+  it('рисует только верхнюю сетку Тип_5 при 600×1000', () => {
+    const previous = { width: c.widthProyema.value, height: c.heightProyema.value, subtype: c.shieldType.value, upper: c.upperGrilleNetImage.value, lower: c.lowerGrilleNetImage.value }
+    try {
+      c.widthProyema.value = '600'
+      c.heightProyema.value = '1000'
+      c.shieldType.value = 'Тип_5'
+      c.heightTopPart.value = '300'
+      c.upperGrilleNetImage.value = '/u.png'
+      c.lowerGrilleNetImage.value = '/l.png'
+      const wrapper = mount(Type1Drawing)
+      expect(wrapper.findAll('[data-testid="type1-drawing-upper-net-image"]')).toHaveLength(1)
+      expect(wrapper.get('[data-testid="type1-drawing-upper-net-image"]').attributes('href')).toBe('/u.png')
+      expect(wrapper.findAll('[data-testid="type1-upper-net-background"]')).toHaveLength(1)
+      expect(wrapper.findAll('[data-testid="type1-upper-net"]')).toHaveLength(1)
+      expect(wrapper.find('[data-testid="type1-net"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="type1-net-background"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="type1-drawing-net-image"]').exists()).toBe(false)
+    } finally {
+      c.widthProyema.value = previous.width
+      c.heightProyema.value = previous.height
+      c.shieldType.value = previous.subtype
+      c.upperGrilleNetImage.value = previous.upper
+      c.lowerGrilleNetImage.value = previous.lower
+    }
+  })
+
   it('использует схематичные цвета для сеток и заполнения', async () => {
     c.shieldType.value = 'Тип_3'
     c.lowerGrilleNetImage.value = '/uploads/nets/lower.webp'

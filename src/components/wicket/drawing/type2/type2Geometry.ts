@@ -1,4 +1,5 @@
 import { computeJumperGeometry } from '../jumperGeometry'
+import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 
 export interface Type2DrawingSource {
   widthProyema?: unknown
@@ -41,7 +42,7 @@ interface VisibleRect extends DrawingRect {
   visible: boolean
 }
 
-export type Type2GateSubtype = 'type1' | 'type2' | 'type3' | 'type4'
+export type Type2GateSubtype = 'type1' | 'type2' | 'type3' | 'type4' | 'type5'
 
 export interface Type2DrawingGeometry {
   drawing: { width: number; height: number }
@@ -110,11 +111,6 @@ function type2VisibleProfileSize(value: unknown, fallback: number): number {
   return first === 50 ? second : first
 }
 
-function subtype(value: unknown): Type2GateSubtype {
-  const match = text(value).match(/[1-4]/)
-  return match ? `type${match[0]}` as Type2GateSubtype : 'type1'
-}
-
 function fillColor(value: unknown): string {
   const valueText = text(value)
   // Поддерживает #RRGGBB и RRGGBB (с и без решётки)
@@ -151,7 +147,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const hasPosts = source.hasStolby === undefined ? true : Number(source.hasStolby) !== 0
   const postWidth = type2VisibleProfileSize(source.stolbName, 50)
   const hingeSide: 'left' | 'right' = /правая/i.test(text(source.openingOptionName)) ? 'right' : 'left'
-  const gateSubtype = subtype(source.shieldType)
+  const gateSubtype = resolveFrameSubtype(source.shieldType)
+  const capabilities = frameSubtypeCapabilities(gateSubtype)
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)
   const upperPartHeight = numberInRange(source.heightTopPart, 300, 0, 1000)
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)
@@ -192,9 +189,11 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   )
   const lowerSubtype = {
     ...safeRect(baseFill.x - INNER_FRAME_SIZE, lowerRailY, baseFill.width + 2 * INNER_FRAME_SIZE, SUBTYPE_RAIL_SIZE),
-    visible: gateSubtype === 'type2' || gateSubtype === 'type3',
+    visible: capabilities.lower,
   }
-  const upperRailMaxY = Math.max(gateInner.y, lowerSubtype.y - SUBTYPE_RAIL_SIZE - INNER_FRAME_SIZE)
+  const upperRailMaxY = Math.max(gateInner.y, gateSubtype === 'type5'
+    ? gateInner.y + gateInner.height - SUBTYPE_RAIL_SIZE - INNER_FRAME_SIZE
+    : lowerSubtype.y - SUBTYPE_RAIL_SIZE - INNER_FRAME_SIZE)
   const upperSubtype = {
     ...safeRect(
       baseFill.x - INNER_FRAME_SIZE,
@@ -202,7 +201,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
       baseFill.width + 2 * INNER_FRAME_SIZE,
       SUBTYPE_RAIL_SIZE,
     ),
-    visible: gateSubtype === 'type3',
+    visible: capabilities.top,
   }
 
   const meshOnLeft = grilleSide === 'hinge' ? hingeSide === 'left' : hingeSide !== 'left'
@@ -213,7 +212,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     : Math.max(gateInner.x + gateInner.width - sidePartWidth - SUBTYPE_RAIL_SIZE, verticalMinX)
   const verticalSubtype = {
     ...safeRect(verticalX, gateInner.y, SUBTYPE_RAIL_SIZE, gateInner.height),
-    visible: gateSubtype === 'type4',
+    visible: capabilities.side,
   }
 
   let meshArea = baseFill
@@ -242,6 +241,15 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     meshArea = safeRect(baseFill.x, meshY, baseFill.width, lowerSubtype.y - INNER_FRAME_SIZE - meshY)
     const fillY = upperSubtype.y + upperSubtype.height
     fillArea = safeRect(gateInner.x, fillY, gateInner.width, lowerSubtype.y - fillY)
+  } else if (gateSubtype === 'type5') {
+    upperNetArea = {
+      ...safeRect(gateInner.x, gateInner.y, gateInner.width, upperSubtype.y - gateInner.y),
+      visible: true,
+    }
+    const fillY = upperSubtype.y + upperSubtype.height
+    fillArea = safeRect(gateInner.x, fillY, gateInner.width, gateInner.y + gateInner.height - fillY)
+    meshArea = safeRect(baseFill.x, fillY + INNER_FRAME_SIZE, baseFill.width,
+      gateInner.y + gateInner.height - fillY - 2 * INNER_FRAME_SIZE)
   } else if (gateSubtype === 'type4') {
     if (meshOnLeft) {
       netArea = {
@@ -304,11 +312,11 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     hingeSide,
     fillArea,
     netArea,
-    netImage: gateSubtype === 'type4'
+    netImage: gateSubtype === 'type5' ? '' : gateSubtype === 'type4'
       ? text(source.sideGrilleNetImage)
       : text(source.lowerGrilleNetImage),
     upperNetArea,
-    upperNetImage: gateSubtype === 'type3' ? text(source.upperGrilleNetImage) : '',
+    upperNetImage: capabilities.top ? text(source.upperGrilleNetImage) : '',
     innerFrame,
     rails: { lowerSubtype, upperSubtype, verticalSubtype, centerFill },
     extraRail: {

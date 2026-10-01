@@ -159,7 +159,7 @@ describe('Type2Drawing', () => {
     calc.lowerGrilleNetImage.value = ''
   })
 
-  it('замощает верхнюю сетку слева направо только для подтипа 3', async () => {
+  it('замощает верхнюю сетку слева направо для подтипа 3', async () => {
     calc.shieldType.value = 'Тип_3'
     calc.heightTopPart.value = '300'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
@@ -180,6 +180,24 @@ describe('Type2Drawing', () => {
 
     calc.shieldType.value = 'Тип_1'
     calc.upperGrilleNetImage.value = ''
+  })
+
+  it('рисует только верхнюю сетку Тип_5 при 600×1000', () => {
+    calc.widthProyema.value = '600'
+    calc.heightProyema.value = '1000'
+    calc.shieldType.value = 'Тип_5'
+    calc.heightTopPart.value = '300'
+    calc.upperGrilleNetImage.value = '/u.png'
+    calc.lowerGrilleNetImage.value = '/l.png'
+    const wrapper = mount(Type2Drawing)
+
+    expect(wrapper.findAll('[data-testid="type2-drawing-upper-net-image"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="type2-drawing-upper-net-image"]').attributes('href')).toBe('/u.png')
+    expect(wrapper.findAll('[data-testid="type2-drawing-upper-net-background"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="type2-drawing-upper-net"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="type2-drawing-net"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="type2-drawing-net-background"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="type2-drawing-net-image"]').exists()).toBe(false)
   })
 
   it.each(['Тип_2', 'Тип_4'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {

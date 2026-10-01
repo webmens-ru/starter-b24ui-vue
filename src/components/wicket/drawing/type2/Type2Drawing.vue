@@ -325,8 +325,8 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         :fill="`url(#${lowerNetPatternId})`"
       />
 
-      <!-- Верхняя сетка подтипа 3: целые плитки слева направо -->
-      <defs v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage">
+      <!-- Верхняя сетка подтипов 3 и 5: целые плитки слева направо -->
+      <defs v-if="geometry.rails.upperSubtype.visible && geometry.upperNetArea.visible && geometry.upperNetImage">
         <pattern
           :id="upperNetPatternId"
           patternUnits="userSpaceOnUse"
@@ -347,7 +347,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         </pattern>
       </defs>
       <rect
-        v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage"
+        v-if="geometry.rails.upperSubtype.visible && geometry.upperNetArea.visible && geometry.upperNetImage"
         data-testid="type2-drawing-upper-net-background"
         :x="geometry.upperNetArea.x"
         :y="geometry.upperNetArea.y"
@@ -356,7 +356,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         :fill="displayedFrameColor"
       />
       <rect
-        v-if="geometry.subtype === 'type3' && geometry.upperNetArea.visible && geometry.upperNetImage"
+        v-if="geometry.rails.upperSubtype.visible && geometry.upperNetArea.visible && geometry.upperNetImage"
         data-testid="type2-drawing-upper-net"
         :x="geometry.upperNetArea.x"
         :y="geometry.upperNetArea.y"
