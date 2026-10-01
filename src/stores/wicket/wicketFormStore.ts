@@ -10,6 +10,7 @@ import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
+import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -859,13 +860,14 @@ const fieldsFilled = ref<number>(0)
     if (colorShieldName.value) {
       shieldParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
     }
-    if (shieldType.value === 'Тип_3' && heightTopPart.value && heightTopPart.value !== '0') {
+    const shieldCapabilities = frameSubtypeCapabilities(shieldType.value)
+    if (shieldCapabilities.top && heightTopPart.value && heightTopPart.value !== '0') {
       shieldParams.push({ name: 'Высота верхней части', value: heightTopPart.value })
     }
-    if ((shieldType.value === 'Тип_2' || shieldType.value === 'Тип_3') && heightLowerPart.value && heightLowerPart.value !== '0') {
+    if (shieldCapabilities.lower && heightLowerPart.value && heightLowerPart.value !== '0') {
       shieldParams.push({ name: 'Высота нижней части', value: heightLowerPart.value })
     }
-    if (shieldType.value === 'Тип_4') {
+    if (shieldCapabilities.side) {
       if (widthSidePart.value && widthSidePart.value !== '0') {
         shieldParams.push({ name: 'Ширина боковой части', value: widthSidePart.value })
       }

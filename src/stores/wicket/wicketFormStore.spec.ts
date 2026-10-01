@@ -317,3 +317,43 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.isPageAccessible('page11')).toBe(false)
   })
 })
+
+describe('wicketFormStore restored shield summary', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  describe.each(['1', '11'])('model %s', modelId => {
+    it.each([
+      ['Тип_1', []],
+      ['Тип_2', [{ name: 'Высота нижней части', value: '200' }]],
+      ['Тип_3', [
+        { name: 'Высота верхней части', value: '300' },
+        { name: 'Высота нижней части', value: '200' },
+      ]],
+      ['Тип_4', [
+        { name: 'Ширина боковой части', value: '100' },
+        { name: 'Расположение решётки', value: 'Возле замка' },
+      ]],
+      ['Тип_5', [{ name: 'Высота верхней части', value: '300' }]],
+    ] as const)('restores %s zone summary without mounting the form', (shieldType, zones) => {
+      const store = useWicketFormStore()
+      store.loadFromApi({
+        modelId,
+        shieldType,
+        heightTopPart: '300',
+        heightLowerPart: '200',
+        widthSidePart: '100',
+        grilleLocation: 'Возле замка',
+        assortmentHeightUpperNetId: 31,
+        netWidthProviderTop: 'executor',
+        priceRetail: '1000',
+        activePage: 'page12',
+      })
+
+      const shieldSummary = store.data.find(block => block.blockName === 'Тип щита')
+      expect(shieldSummary?.params).toEqual([
+        { name: 'Тип щита', value: shieldType },
+        ...zones,
+      ])
+    })
+  })
+})
