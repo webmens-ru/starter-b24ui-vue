@@ -79,10 +79,52 @@ describe('buildType3Geometry', () => {
     ['Тип_2', true, false, false],
     ['Тип_3', true, true, false],
     ['Тип_4', false, false, true],
+    ['Тип_5', false, true, false],
   ] as const)('maps %s to its internal rails', (shieldType, lower, upper, vertical) => {
     const rails = buildType3Geometry({ ...base, shieldType }).rails
     expect(rails.lower.visible).toBe(lower)
     expect(rails.upper.visible).toBe(upper)
     expect(rails.vertical.visible).toBe(vertical)
+  })
+
+  it.each(['Тип_3', 'Тип_5'])('places the %s upper net above its rail and pickets below it', (shieldType) => {
+    const geometry = buildType3Geometry({
+      widthProyema: 600,
+      heightProyema: 1000,
+      clearanceProyema: 50,
+      shieldType,
+      heightTopPart: 300,
+      numberOfSticks: 4,
+      upperGrilleNetImage: '/upper.png',
+    })
+
+    expect(geometry.upperNetArea).toEqual({ x: 54, y: 50, width: 486, height: 300, visible: true })
+    expect(geometry.upperNetImage).toBe('/upper.png')
+    expect(geometry.facadePickets[0]?.y).toBeGreaterThanOrEqual(
+      geometry.rails.upper.y + geometry.rails.upper.height,
+    )
+  })
+
+  it('keeps Type 5 pickets down to the bottom frame without a lower rail or net', () => {
+    const geometry = buildType3Geometry({
+      widthProyema: 600,
+      heightProyema: 1000,
+      clearanceProyema: 50,
+      shieldType: 'Тип_5',
+      heightTopPart: 300,
+      heightLowerPart: 200,
+      numberOfSticks: 4,
+    })
+
+    expect(geometry.rails.lower.visible).toBe(false)
+    expect(geometry.fillArea.y + geometry.fillArea.height).toBe(900)
+    expect(geometry.facadePickets[0]).toMatchObject({ y: 400, height: 500 })
+  })
+
+  it('does not expose an upper net for a subtype without a top region', () => {
+    const geometry = buildType3Geometry({ ...base, shieldType: 'Тип_2', upperGrilleNetImage: '/upper.png' })
+
+    expect(geometry.upperNetArea.visible).toBe(false)
+    expect(geometry.upperNetImage).toBe('')
   })
 })

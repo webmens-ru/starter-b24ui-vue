@@ -108,4 +108,54 @@ describe('Type3Drawing', () => {
     expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
     expect(wrapper.find('[data-testid="type3-jumper-background"]').exists()).toBe(false)
   })
+
+  it.each(['Тип_3', 'Тип_5'])('рисует верхнюю сетку %s за рамой и сохраняет её при скрытии штакетин', async (shieldType) => {
+    const store = useWicketFormStore()
+    store.widthProyema = '600'
+    store.heightProyema = '1000'
+    store.shieldType = shieldType
+    store.heightTopPart = '300'
+    store.upperGrilleNetImage = '/upper.png'
+    store.numberOfSticks = 4
+
+    const wrapper = mount(Type3Drawing)
+    const image = wrapper.get('[data-testid="type3-upper-net-image"]')
+    const background = wrapper.get('[data-testid="type3-upper-net-background"]')
+    const net = wrapper.get('[data-testid="type3-upper-net"]')
+    const pattern = image.element.parentElement
+    const html = wrapper.html()
+
+    expect(image.attributes('href')).toBe('/upper.png')
+    expect(image.attributes('preserveAspectRatio')).toBe('xMidYMid meet')
+    expect(pattern?.getAttribute('width')).toBe(image.attributes('width'))
+    expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
+    expect(net.attributes('fill')).toMatch(/^url\(#type3-upper-net-pattern-\d+\)$/)
+    expect(background.attributes('fill')).toBe('#66686c')
+    expect(background.attributes('x')).toBe(net.attributes('x'))
+    expect(background.attributes('y')).toBe(net.attributes('y'))
+    expect(background.attributes('width')).toBe(net.attributes('width'))
+    expect(background.attributes('height')).toBe(net.attributes('height'))
+    expect(html.indexOf('data-testid="type3-upper-net-background"')).toBeLessThan(html.indexOf('data-testid="type3-upper-net"'))
+    expect(html.indexOf('data-testid="type3-upper-net"')).toBeLessThan(html.indexOf('data-testid="type3-frame"'))
+    expect(wrapper.find('[data-testid="type3-lower-rail"]').exists()).toBe(shieldType === 'Тип_3')
+
+    await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
+    expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
+    expect(wrapper.find('[data-testid="type3-upper-net"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="type3-drawing-color-schematic"]').setValue()
+    expect(wrapper.get('[data-testid="type3-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
+  })
+
+  it('uses a different upper net pattern ID for each drawing instance', () => {
+    const store = useWicketFormStore()
+    store.shieldType = 'Тип_5'
+    store.heightTopPart = '300'
+    store.upperGrilleNetImage = '/upper.png'
+
+    const first = mount(Type3Drawing).get('[data-testid="type3-upper-net"]').attributes('fill')
+    const second = mount(Type3Drawing).get('[data-testid="type3-upper-net"]').attributes('fill')
+
+    expect(first).not.toBe(second)
+  })
 })

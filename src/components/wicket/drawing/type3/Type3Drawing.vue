@@ -5,7 +5,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import { resolveJumperPresentation } from '../jumperGeometry'
@@ -18,6 +18,7 @@ const colorMode = ref<'realistic' | 'schematic'>('realistic')
 const viewSide = ref<'street' | 'yard'>('street')
 const facadePatternId = `type3-facade-${instanceId}`
 const yardPatternId = `type3-yard-${instanceId}`
+const upperNetPatternId = `type3-upper-net-pattern-${instanceId}`
 
 const geometry = computed(() => buildType3Geometry({
   widthProyema: calc.widthProyema.value,
@@ -41,7 +42,29 @@ const geometry = computed(() => buildType3Geometry({
   colorYardHex: calc.colorYardHex.value,
   colorYardImage: calc.colorYardImage.value,
   fillSide: calc.fillSide.value,
+  upperGrilleNetImage: calc.upperGrilleNetImage.value,
 }))
+
+const upperNetImageWidthToHeight = ref(1)
+const upperNetTileWidth = computed(() => Math.max(
+  1,
+  geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
+))
+watch(
+  () => geometry.value.upperNetImage,
+  (imageUrl) => {
+    upperNetImageWidthToHeight.value = 1
+    if (!imageUrl || typeof window === 'undefined') return
+
+    const image = new window.Image()
+    image.onload = () => {
+      if (geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
+      upperNetImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
+    }
+    image.src = imageUrl
+  },
+  { immediate: true },
+)
 
 const viewedFill = computed(() => viewSide.value === 'yard' && geometry.value.yard.visible
   ? geometry.value.yard
@@ -87,6 +110,27 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         </pattern>
       </defs>
 
+      <defs v-if="geometry.upperNetArea.visible && geometry.upperNetImage">
+        <pattern
+          :id="upperNetPatternId"
+          patternUnits="userSpaceOnUse"
+          :x="geometry.upperNetArea.x"
+          :y="geometry.upperNetArea.y"
+          :width="upperNetTileWidth"
+          :height="geometry.upperNetArea.height"
+        >
+          <image
+            data-testid="type3-upper-net-image"
+            :href="geometry.upperNetImage"
+            x="0"
+            y="0"
+            :width="upperNetTileWidth"
+            :height="geometry.upperNetArea.height"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </pattern>
+      </defs>
+
       <rect v-bind="geometry.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" />
       <rect
         v-if="geometry.extraRail.visible && jumperPresentation.layer === 'background'"
@@ -104,9 +148,21 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <rect v-bind="geometry.posts.left" />
         <rect v-bind="geometry.posts.right" />
       </g>
+      <rect
+        v-if="geometry.upperNetArea.visible && geometry.upperNetImage"
+        data-testid="type3-upper-net-background"
+        v-bind="geometry.upperNetArea"
+        :fill="displayedFrameColor"
+      />
+      <rect
+        v-if="geometry.upperNetArea.visible && geometry.upperNetImage"
+        data-testid="type3-upper-net"
+        v-bind="geometry.upperNetArea"
+        :fill="`url(#${upperNetPatternId})`"
+      />
       <g data-testid="type3-frame" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
         <rect v-for="(part, index) in geometry.frame" :key="`frame-${index}`" v-bind="part" />
-        <rect v-if="geometry.rails.lower.visible" v-bind="geometry.rails.lower" />
+        <rect v-if="geometry.rails.lower.visible" data-testid="type3-lower-rail" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
       </g>

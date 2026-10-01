@@ -1,3 +1,4 @@
+import { frameSubtypeCapabilities } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
 
 export interface Type3DrawingSource {
@@ -22,6 +23,7 @@ export interface Type3DrawingSource {
   colorYardHex?: unknown
   colorYardImage?: unknown
   fillSide?: unknown
+  upperGrilleNetImage?: unknown
 }
 
 export interface Type3Rect { x: number; y: number; width: number; height: number }
@@ -37,6 +39,8 @@ export interface Type3Geometry {
   facadePickets: Type3Rect[]
   yardPickets: Type3Rect[]
   rails: { lower: VisibleRect; upper: VisibleRect; vertical: VisibleRect }
+  upperNetArea: VisibleRect
+  upperNetImage: string
   extraRail: VisibleRect & { placement: 'above' | 'behind' }
   frameColor: string
   facade: { color: string; image: string }
@@ -87,15 +91,19 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
-  const shieldType = text(source.shieldType) || 'Тип_1'
-  const lowerVisible = shieldType === 'Тип_2' || shieldType === 'Тип_3'
-  const upperVisible = shieldType === 'Тип_3'
-  const verticalVisible = shieldType === 'Тип_4'
+  const capabilities = frameSubtypeCapabilities(source.shieldType)
+  const lowerVisible = capabilities.lower
+  const upperVisible = capabilities.top
+  const verticalVisible = capabilities.side
   const lowerHeight = numberValue(source.heightLowerPart, 0, 0, fillArea.height)
   const upperHeight = numberValue(source.heightTopPart, 0, 0, fillArea.height)
   const sideWidth = numberValue(source.widthSidePart, 0, 0, fillArea.width)
   const lower = { ...rect(fillArea.x, fillArea.y + fillArea.height - lowerHeight - rail, fillArea.width, rail), visible: lowerVisible }
   const upper = { ...rect(fillArea.x, fillArea.y + upperHeight, fillArea.width, rail), visible: upperVisible }
+  const upperNetArea = {
+    ...rect(fillArea.x, fillArea.y, fillArea.width, upper.y - fillArea.y),
+    visible: upperVisible && upperHeight > 0,
+  }
   const vertical = { ...rect(fillArea.x + sideWidth, fillArea.y, rail, fillArea.height), visible: verticalVisible }
   const activeFill = rect(
     verticalVisible ? vertical.x + rail : fillArea.x,
@@ -135,6 +143,8 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     facadePickets,
     yardPickets: text(source.fillSide) === 'Две стороны' ? facadePickets : [],
     rails: { lower, upper, vertical },
+    upperNetArea,
+    upperNetImage: upperVisible ? text(source.upperGrilleNetImage) : '',
     extraRail: {
       ...rect(0, verticalGeometry.railY, width, extraRailSize),
       visible: verticalGeometry.visible,
