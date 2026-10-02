@@ -47,6 +47,20 @@ describe('ShieldType top-only subtype', () => {
     vi.mocked(saveWicketData).mockClear()
   })
 
+  it('places Type 5 between Type 2 and Type 3', async () => {
+    const wrapper = mountShieldType()
+    await flushPromises()
+
+    expect(wrapper.findAll('.shield-grid input').map(input => input.attributes('value'))).toEqual([
+      'Тип_1',
+      'Тип_2',
+      'Тип_5',
+      'Тип_3',
+      'Тип_4',
+    ])
+    wrapper.unmount()
+  })
+
   it('keeps upper mesh and clears stale lower and side values on selection', async () => {
     const calc = useCalculation()
     calc.shieldType.value = 'Тип_3'
