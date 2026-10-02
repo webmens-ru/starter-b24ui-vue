@@ -58,6 +58,13 @@ describe('ShieldType top-only subtype', () => {
       'Тип_3',
       'Тип_4',
     ])
+    expect(wrapper.findAll('.shield-grid img').map(image => image.attributes('alt'))).toEqual([
+      'Без сеток',
+      'Сетка снизу',
+      'Сетка сверху',
+      'Сетка снизу и сверху',
+      'Сетка сбоку',
+    ])
     wrapper.unmount()
   })
 
@@ -82,7 +89,7 @@ describe('ShieldType top-only subtype', () => {
     expect(wrapper.text()).toContain('Высота сетки верхней части')
     expect(wrapper.text()).not.toContain('Высота сетки нижней части')
     expect(wrapper.text()).not.toContain('Ширина сетки боковой решётки')
-    expect(wrapper.get('img[alt="Тип 5"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
+    expect(wrapper.get('img[alt="Сетка сверху"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
     expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({
       shieldType: 'Тип_5',
       heightTopPart: '150',
@@ -116,7 +123,7 @@ describe('ShieldType top-only subtype', () => {
     expect(wrapper.text()).toContain('Высота сетки верхней части')
     expect(wrapper.find('#heightTopPart').exists()).toBe(true)
     expect(calc.heightTopPart.value).toBe('150')
-    expect(wrapper.get('img[alt="Тип 5"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
+    expect(wrapper.get('img[alt="Сетка сверху"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
     expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({
       shieldType: 'Тип_5',
       heightTopPart: '150',

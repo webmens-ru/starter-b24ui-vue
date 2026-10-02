@@ -116,11 +116,11 @@ const shieldOptions = computed(() => {
   // z - замок, p - петля (только для Тип_4)
   const type4Suffix = grilleLocation.value === 'Возле замка' ? 'z' : 'p'
   return [
-    { value: 'Тип_1', label: 'Тип 1', img: `${base}/w_${orient}_1.1.png` },
-    { value: 'Тип_2', label: 'Тип 2', img: `${base}/w_${orient}_1.2.png` },
-    { value: 'Тип_5', label: 'Тип 5', img: `${base}/w_${orient}_1.5.png` },
-    { value: 'Тип_3', label: 'Тип 3', img: `${base}/w_${orient}_1.3.png` },
-    { value: 'Тип_4', label: 'Тип 4', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
+    { value: 'Тип_1', label: 'Без сеток', img: `${base}/w_${orient}_1.1.png` },
+    { value: 'Тип_2', label: 'Сетка снизу', img: `${base}/w_${orient}_1.2.png` },
+    { value: 'Тип_5', label: 'Сетка сверху', img: `${base}/w_${orient}_1.5.png` },
+    { value: 'Тип_3', label: 'Сетка снизу и сверху', img: `${base}/w_${orient}_1.3.png` },
+    { value: 'Тип_4', label: 'Сетка сбоку', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
   ]
 })
 
