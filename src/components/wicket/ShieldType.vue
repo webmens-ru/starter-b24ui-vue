@@ -5,6 +5,7 @@ declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
 import type { ColorShieldItem } from '../../app/api/wicket'
+import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
 
 interface GrilleNetItem {
@@ -561,9 +562,9 @@ onMounted(async () => {
   const savedProvTop = calc.netWidthProviderTop.value
   const savedProvLower = calc.netWidthProviderLower.value
   const savedProvSide = calc.netWidthProviderSide.value
-  providerTop.value = savedProvTop === 'customer' || savedProvTop === 'executor' ? savedProvTop : 'executor'
-  providerLower.value = savedProvLower === 'customer' || savedProvLower === 'executor' ? savedProvLower : 'executor'
-  providerSide.value = savedProvSide === 'customer' || savedProvSide === 'executor' ? savedProvSide : 'executor'
+  providerTop.value = restoreShieldNetProvider(savedProvTop)
+  providerLower.value = restoreShieldNetProvider(savedProvLower)
+  providerSide.value = restoreShieldNetProvider(savedProvSide)
   const savedTop = calc.heightTopPart.value
   if (showHeightTop.value && savedTop && savedTop !== '0' && Number(savedTop) > 0) {
     heightTopPart.value = String(savedTop)
