@@ -54,7 +54,6 @@ const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
 const currentComponent = shallowRef<Component | null>(null)
 const activeStepRef = ref<WicketStepNavigationGuard | null>(null)
-const leaveGuardPending = ref(false)
 function routeQueryValueKey(value: unknown): string {
   if (value === undefined) return 'undefined'
   if (value === null) return 'null'
@@ -69,6 +68,21 @@ const routeContextKey = computed(() => [
 let mounted = false
 let initGeneration = 0
 let stopWicketLockConflict: (() => void) | undefined
+type NavigationAttempt = {
+  generation: number
+  contextKey: string
+  sourcePage: string
+  sourceStep: WicketStepNavigationGuard | null
+}
+let pendingNavigation: NavigationAttempt | null = null
+
+function isCurrentNavigationAttempt(attempt: NavigationAttempt): boolean {
+  return mounted
+    && attempt.generation === initGeneration
+    && attempt.contextKey === routeContextKey.value
+    && attempt.sourcePage === activePage.value
+    && attempt.sourceStep === activeStepRef.value
+}
 
 let resizeTimer: ReturnType<typeof setTimeout>
 function onResize() {
@@ -99,6 +113,7 @@ function isCurrentInitialization(generation: number): boolean {
 
 async function initCalculation(): Promise<void> {
   const generation = ++initGeneration
+  pendingNavigation = null
   loadPending.value = true
   loadError.value = null
   showLoadErrorModal.value = false
@@ -173,6 +188,7 @@ onMounted(() => {
 onUnmounted(() => {
   mounted = false
   initGeneration += 1
+  pendingNavigation = null
   stopWicketLockConflict?.()
   window.removeEventListener('resize', onResize)
   clearTimeout(resizeTimer)
@@ -255,15 +271,21 @@ function switchTo(page: string) {
 }
 
 async function runGuardedNavigation(navigate: () => void): Promise<boolean> {
-  if (leaveGuardPending.value) return false
-  leaveGuardPending.value = true
+  if (!mounted || (pendingNavigation && isCurrentNavigationAttempt(pendingNavigation))) return false
+  const attempt: NavigationAttempt = {
+    generation: initGeneration,
+    contextKey: routeContextKey.value,
+    sourcePage: activePage.value,
+    sourceStep: activeStepRef.value,
+  }
+  pendingNavigation = attempt
   try {
-    const allowed = await activeStepRef.value?.validateBeforeLeave?.()
-    if (allowed === false) return false
+    const allowed = await attempt.sourceStep?.validateBeforeLeave?.()
+    if (allowed === false || !isCurrentNavigationAttempt(attempt)) return false
     navigate()
     return true
   } finally {
-    leaveGuardPending.value = false
+    if (pendingNavigation === attempt) pendingNavigation = null
   }
 }
 
@@ -273,11 +295,11 @@ async function onMenuSelect(item: WicketMenuItem): Promise<void> {
     return
   }
   await runGuardedNavigation(() => switchTo(item.page))
-  menuOpen.value = false
+  if (mounted) menuOpen.value = false
 }
 
 function goNext() {
-  if (leaveGuardPending.value) return
+  if (pendingNavigation && isCurrentNavigationAttempt(pendingNavigation)) return
   const next = getNextPage(activePage.value)
   if (next) switchTo(next)
 }

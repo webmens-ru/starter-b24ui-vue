@@ -198,6 +198,102 @@ describe('WicketWizardPage guarded navigation', () => {
     stop()
   })
 
+  it('discards a pending guard from a replaced product row and allows navigation in the new row', async () => {
+    let resolveOld!: (allowed: boolean) => void
+    guard.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve }))
+      .mockResolvedValueOnce(true)
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 8,
+      modelId: '1',
+      activePage: 'page1',
+      reachedStep: 'page2',
+      visitedPages: ['page1', 'page2'],
+    })
+    mocks.route.query.productRowId = '8'
+    await vi.waitFor(() => expect(calc.productRowId.value).toBe(8))
+
+    resolveOld(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page1')
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(guard).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not mutate shared navigation state when a pending guard resolves after unmount', async () => {
+    let resolveGuard!: (allowed: boolean) => void
+    guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    wrapper.unmount()
+    calc.visitedPages.value = ['page1']
+
+    resolveGuard(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page1')
+    expect(calc.visitedPages.value).toEqual(['page1'])
+  })
+
+  it('discards a pending guard when the active step changes', async () => {
+    let resolveGuard!: (allowed: boolean) => void
+    guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    calc.setActivePage('page3')
+    resolveGuard(true)
+    await flushPromises()
+
+    expect(calc.activePage.value).toBe('page3')
+  })
+
+  it('keeps the new row navigation pending when an older guard resolves', async () => {
+    let resolveOld!: (allowed: boolean) => void
+    let resolveNew!: (allowed: boolean) => void
+    guard.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve }))
+      .mockReturnValueOnce(new Promise(resolve => { resolveNew = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 8,
+      modelId: '1',
+      activePage: 'page1',
+      reachedStep: 'page2',
+      visitedPages: ['page1', 'page2'],
+    })
+    mocks.route.query.productRowId = '8'
+    await vi.waitFor(() => expect(calc.productRowId.value).toBe(8))
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    expect(guard).toHaveBeenCalledTimes(2)
+    resolveOld(true)
+    await flushPromises()
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    expect(calc.activePage.value).toBe('page1')
+
+    resolveNew(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(guard).toHaveBeenCalledTimes(2)
+  })
+
   it('blocks Next during a pending menu guard without validating Next', async () => {
     let resolveGuard!: (allowed: boolean) => void
     guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
