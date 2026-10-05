@@ -2,26 +2,31 @@
 import { onMounted, ref } from 'vue'
 import { recalculate } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
+import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 import T2ProfnastilForm from './T2ProfnastilForm.vue'
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
 const formRef = ref<InstanceType<typeof T2ProfnastilForm> | null>(null)
 
-async function onContinue() {
-  if (!await formRef.value?.validate()) return
-  if (calc.priceRetail.value) {
-    const result = await recalculate({
-      orderId: Number(calc.number.value),
-      productRowId: calc.getCurrentProductRowContext().productRowId,
-      productType: calc.productType.value,
-      model: calc.model.value,
-      modelId: calc.modelId.value,
-    })
-    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-  }
-  emit('next')
-}
+const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
+  async () => await formRef.value?.validate() ?? true,
+  async () => {
+    if (calc.priceRetail.value) {
+      const result = await recalculate({
+        orderId: Number(calc.number.value),
+        productRowId: calc.getCurrentProductRowContext().productRowId,
+        productType: calc.productType.value,
+        model: calc.model.value,
+        modelId: calc.modelId.value,
+      })
+      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+    }
+    emit('next')
+  },
+)
+
+defineExpose({ validateBeforeLeave })
 
 onMounted(() => calc.setActivePage('page2_yard_profnastil'))
 </script>

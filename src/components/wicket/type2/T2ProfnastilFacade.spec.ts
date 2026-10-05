@@ -1,8 +1,149 @@
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent, h } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { recalculate } from '../../../app/api/wicket'
+import { useCalculation } from '../../../composables/useCalculation'
 import api from '../../../app/api/wicket.ts?raw'
 import facade from './T2ProfnastilFacade.vue?raw'
 import form from './T2ProfnastilForm.vue?raw'
 import yard from './T2ProfnastilYard.vue?raw'
+import T2ProfnastilFacade from './T2ProfnastilFacade.vue'
+import T2ProfnastilYard from './T2ProfnastilYard.vue'
+
+vi.mock('../../../app/api/wicket', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../../app/api/wicket')>()),
+  recalculate: vi.fn().mockResolvedValue({ priceDealer: 10, priceRetail: 20 }),
+}))
+
+const formValidate = vi.fn<() => Promise<boolean>>()
+const FormStub = defineComponent({
+  setup(_props, { expose }) {
+    expose({ validate: formValidate })
+    return () => h('div')
+  },
+})
+
+function mountPage(component: typeof T2ProfnastilFacade | typeof T2ProfnastilYard) {
+  return mount(component, {
+    global: {
+      stubs: {
+        T2ProfnastilForm: FormStub,
+        B24Button: { props: ['label'], template: '<button @click="$emit(\'click\')">{{ label }}</button>' },
+        Button: { props: ['label'], template: '<button @click="$emit(\'click\')">{{ label }}</button>' },
+      },
+    },
+  })
+}
+
+async function validateBeforeLeave(wrapper: VueWrapper): Promise<boolean> {
+  return await (wrapper.vm as unknown as { validateBeforeLeave: () => Promise<boolean> }).validateBeforeLeave()
+}
+
+function nextButton(wrapper: VueWrapper) {
+  const button = wrapper.findAll('button').find(candidate => candidate.text() === 'Далее')
+  if (!button) throw new Error('Кнопка «Далее» не найдена')
+  return button
+}
+
+describe('Type 2 profnastil leave guards', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    const calc = useCalculation()
+    calc.reset()
+    calc.orderId.value = 42
+    calc.number.value = 42
+    calc.productRowId.value = 7
+    calc.modelId.value = '2'
+    formValidate.mockReset()
+    vi.mocked(recalculate).mockClear()
+  })
+
+  it.each([
+    ['facade', T2ProfnastilFacade],
+    ['yard', T2ProfnastilYard],
+  ] as const)('%s rejects leave when the form rejects validation', async (_side, component) => {
+    formValidate.mockResolvedValue(false)
+    const wrapper = mountPage(component)
+
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(formValidate).toHaveBeenCalledTimes(1)
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['facade', T2ProfnastilFacade],
+    ['yard', T2ProfnastilYard],
+  ] as const)('%s saves on valid leave without recalculating', async (_side, component) => {
+    formValidate.mockResolvedValue(true)
+    const wrapper = mountPage(component)
+
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(formValidate).toHaveBeenCalledTimes(1)
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['facade', T2ProfnastilFacade],
+    ['yard', T2ProfnastilYard],
+  ] as const)('%s blocks invalid Next before recalculation', async (_side, component) => {
+    formValidate.mockResolvedValue(false)
+    const wrapper = mountPage(component)
+    useCalculation().priceRetail.value = 100
+
+    await nextButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(formValidate).toHaveBeenCalledTimes(1)
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(wrapper.emitted('next')).toBeUndefined()
+  })
+
+  it.each([
+    ['facade', T2ProfnastilFacade],
+    ['yard', T2ProfnastilYard],
+  ] as const)('%s serializes double Next and guard during the save', async (_side, component) => {
+    let finishSave!: (allowed: boolean) => void
+    formValidate.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve }))
+    const wrapper = mountPage(component)
+    const calc = useCalculation()
+    calc.priceRetail.value = 0
+
+    await nextButton(wrapper).trigger('click')
+    await nextButton(wrapper).trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(formValidate).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    finishSave(true)
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it.each([
+    ['facade', T2ProfnastilFacade],
+    ['yard', T2ProfnastilYard],
+  ] as const)('%s holds the guard through Next recalculation', async (_side, component) => {
+    formValidate.mockResolvedValue(true)
+    let finishRecalculation!: (prices: { priceDealer: number; priceRetail: number }) => void
+    vi.mocked(recalculate).mockImplementationOnce(() => new Promise(resolve => { finishRecalculation = resolve }))
+    const wrapper = mountPage(component)
+    const calc = useCalculation()
+    calc.priceRetail.value = 100
+
+    await nextButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(recalculate).toHaveBeenCalledTimes(1)
+    await nextButton(wrapper).trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(formValidate).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    finishRecalculation({ priceDealer: 10, priceRetail: 20 })
+    await flushPromises()
+    expect(recalculate).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+})
 
 describe('Type 2 profnastil pages', () => {
   it('replaces the facade table with the dependent form', () => {

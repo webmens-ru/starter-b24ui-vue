@@ -1,5 +1,5 @@
 /** Serializes navigation attempts made by a step's Next button and its parent guard. */
-export function createStepLeaveAttempt(validateAndSave: () => Promise<boolean>, emitNext: () => void): {
+export function createStepLeaveAttempt(validateAndSave: () => Promise<boolean>, emitNext: () => void | Promise<void>): {
   validateBeforeLeave: () => Promise<boolean>
   next: () => Promise<void>
 } {
@@ -10,7 +10,7 @@ export function createStepLeaveAttempt(validateAndSave: () => Promise<boolean>, 
     pending = true
     try {
       const allowed = await validateAndSave()
-      if (allowed && advance) emitNext()
+      if (allowed && advance) await emitNext()
       return allowed
     } finally {
       pending = false
