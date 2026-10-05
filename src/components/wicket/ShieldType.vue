@@ -7,6 +7,7 @@ import { getColorShield, getNetWidths, getNetsByWidth, saveWicketData, recalcula
 import type { ColorShieldItem } from '../../app/api/wicket'
 import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
+import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 interface GrilleNetItem {
   id: number
@@ -542,7 +543,7 @@ function validate(): boolean {
   return true
 }
 
-async function validateBeforeLeave(): Promise<boolean> {
+async function validateAndSave(): Promise<boolean> {
   if (!validate()) return false
   if (debounceTimer) {
     clearTimeout(debounceTimer)
@@ -552,10 +553,8 @@ async function validateBeforeLeave(): Promise<boolean> {
   return true
 }
 
-async function handleNext(): Promise<void> {
-  if (!await validateBeforeLeave()) return
-  emit('next')
-}
+const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
+const { validateBeforeLeave, next: handleNext } = leaveAttempt
 
 defineExpose({ validateBeforeLeave })
 

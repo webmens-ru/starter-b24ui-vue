@@ -149,4 +149,31 @@ describe('Pen frame color capability', () => {
     expect(await validateBeforeLeave(wrapper)).toBe(true)
     expect(saveWicketData).toHaveBeenCalledTimes(1)
   })
+
+  it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{
+      id: 8,
+      marking: 'СК-8',
+      canUseFrameColor: false,
+      colors: [{ id: 4, name: 'Белый' }],
+      imageUrls: [],
+    }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+    let finishSave!: (response: { lockVersion: number }) => void
+    vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => {
+      finishSave = resolve
+    }))
+
+    await getNextButton(wrapper).trigger('click')
+    await getNextButton(wrapper).trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    finishSave({ lockVersion: 1 })
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
 })

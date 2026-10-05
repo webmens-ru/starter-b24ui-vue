@@ -91,6 +91,30 @@ describe('ShieldType top-only subtype', () => {
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
 
+  it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'Тип_5'
+    calc.heightTopPart.value = '150'
+    calc.assortmentHeightUpperNetId.value = 31
+    const wrapper = mountShieldType()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+    let finishSave!: (response: { lockVersion: number }) => void
+    vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => {
+      finishSave = resolve
+    }))
+
+    await getNextButton(wrapper).trigger('click')
+    await getNextButton(wrapper).trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    finishSave({ lockVersion: 1 })
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
   it('places Type 5 between Type 2 and Type 3', async () => {
     const wrapper = mountShieldType()
     await flushPromises()

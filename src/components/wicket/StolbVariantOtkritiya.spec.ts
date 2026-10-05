@@ -78,4 +78,25 @@ describe('StolbVariantOtkritiya navigation', () => {
     await flushPromises()
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
+
+  it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
+    useCalculation().openingOptionId.value = 1
+    const wrapper = mountComponent()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+    let finishSave!: (response: { lockVersion: number }) => void
+    vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => {
+      finishSave = resolve
+    }))
+
+    await getNextButton(wrapper).trigger('click')
+    await getNextButton(wrapper).trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    finishSave({ lockVersion: 1 })
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
 })

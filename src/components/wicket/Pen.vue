@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getAdditionalPens, saveWicketData, recalculate } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
+import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 interface PenItem {
   id: number
@@ -195,7 +196,7 @@ function applySavedSelection() {
   }
 }
 
-async function validateBeforeLeave(): Promise<boolean> {
+async function validateAndSave(): Promise<boolean> {
   if (showDetails.value && showPenSelection.value && selectedPenId.value != null && selectedColor.value == null) {
     colorError.value = 'Для выбранной ручки не настроен доступный цвет'
     return false
@@ -205,10 +206,8 @@ async function validateBeforeLeave(): Promise<boolean> {
   return true
 }
 
-async function continueToNext(): Promise<void> {
-  if (!await validateBeforeLeave()) return
-  emit('next')
-}
+const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
+const { validateBeforeLeave, next: continueToNext } = leaveAttempt
 
 defineExpose({ validateBeforeLeave })
 

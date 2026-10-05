@@ -11,6 +11,7 @@ import {
   recalculate,
 } from '../../app/api/wicket'
 import type { SelectItem } from '../../app/api/wicket'
+import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -233,7 +234,7 @@ async function save() {
 }
 
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
-async function validateBeforeLeave(): Promise<boolean> {
+async function validateAndSave(): Promise<boolean> {
   if (openingOptionId.value === null) {
     openModal('Выберите вариант открытия')
     return false
@@ -242,10 +243,8 @@ async function validateBeforeLeave(): Promise<boolean> {
   return true
 }
 
-async function handleNext(): Promise<void> {
-  if (!await validateBeforeLeave()) return
-  emit('next')
-}
+const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
+const { validateBeforeLeave, next: handleNext } = leaveAttempt
 
 defineExpose({ validateBeforeLeave })
 

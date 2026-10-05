@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
 import * as yup from 'yup'
+import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -125,7 +126,7 @@ async function save() {
   }
 }
 
-async function validateBeforeLeave(): Promise<boolean> {
+async function validateAndSave(): Promise<boolean> {
   if (!(await validateAll())) return false
   if (debounceTimer) {
     clearTimeout(debounceTimer)
@@ -135,10 +136,8 @@ async function validateBeforeLeave(): Promise<boolean> {
   return true
 }
 
-async function handleNext(): Promise<void> {
-  if (!await validateBeforeLeave()) return
-  emit('next')
-}
+const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
+const { validateBeforeLeave, next: handleNext } = leaveAttempt
 
 defineExpose({ validateBeforeLeave })
 
