@@ -233,13 +233,21 @@ async function save() {
 }
 
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
-function handleNext() {
+async function validateBeforeLeave(): Promise<boolean> {
   if (openingOptionId.value === null) {
     openModal('Выберите вариант открытия')
-    return
+    return false
   }
+  await save()
+  return true
+}
+
+async function handleNext(): Promise<void> {
+  if (!await validateBeforeLeave()) return
   emit('next')
 }
+
+defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {

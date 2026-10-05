@@ -125,11 +125,22 @@ async function save() {
   }
 }
 
-async function handleNext() {
-  if (!(await validateAll())) return
-  await save() // Сохраняем в calc и API перед переходом — debounce может не успеть сработать
+async function validateBeforeLeave(): Promise<boolean> {
+  if (!(await validateAll())) return false
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
+  await save()
+  return true
+}
+
+async function handleNext(): Promise<void> {
+  if (!await validateBeforeLeave()) return
   emit('next')
 }
+
+defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {

@@ -1,7 +1,9 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import RazmeryProyema from './RazmeryProyema.vue'
+import { saveWicketData } from '../../app/api/wicket'
+import { useCalculation } from '../../composables/useCalculation'
 
 vi.mock('../../app/api/wicket', () => ({
   saveWicketData: vi.fn().mockResolvedValue(undefined),
@@ -10,6 +12,12 @@ vi.mock('../../app/api/wicket', () => ({
 
 function mountComponent() {
   return mount(RazmeryProyema)
+}
+
+async function validateBeforeLeave(wrapper: VueWrapper): Promise<boolean> {
+  return await (wrapper.vm as unknown as {
+    validateBeforeLeave: () => boolean | Promise<boolean>
+  }).validateBeforeLeave()
 }
 
 function getNextButton(wrapper: ReturnType<typeof mountComponent>) {
@@ -29,6 +37,11 @@ async function fillValidOpening(wrapper: ReturnType<typeof mountComponent>) {
 describe('RazmeryProyema', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const calc = useCalculation()
+    calc.reset()
+    calc.orderId.value = 42
+    calc.productRowId.value = 7
+    calc.modelId.value = '1'
     vi.clearAllMocks()
   })
 
@@ -59,5 +72,29 @@ describe('RazmeryProyema', () => {
     await flushPromises()
 
     expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it('rejects an out-of-range opening through the exposed guard', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    await fillValidOpening(wrapper)
+    await wrapper.get('#width').setValue('599')
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(wrapper.text()).toContain('От 600 до 1200 мм')
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('accepts 600x1000 with valid clearance and saves before leaving', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    await wrapper.get('#width').setValue('600')
+    await wrapper.get('#height').setValue('1000')
+    await wrapper.get('#clearance').setValue('10')
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
   })
 })

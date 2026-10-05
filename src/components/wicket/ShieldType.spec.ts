@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { useCalculation } from '../../composables/useCalculation'
@@ -36,6 +36,18 @@ function mountShieldType() {
   })
 }
 
+async function validateBeforeLeave(wrapper: VueWrapper): Promise<boolean> {
+  return await (wrapper.vm as unknown as {
+    validateBeforeLeave: () => boolean | Promise<boolean>
+  }).validateBeforeLeave()
+}
+
+function getNextButton(wrapper: VueWrapper) {
+  const button = wrapper.findAll('button').find(candidate => candidate.text() === 'Далее')
+  if (!button) throw new Error('Кнопка «Далее» не найдена')
+  return button
+}
+
 describe('ShieldType top-only subtype', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -45,6 +57,38 @@ describe('ShieldType top-only subtype', () => {
     calc.productRowId.value = 7
     calc.modelId.value = '1'
     vi.mocked(saveWicketData).mockClear()
+  })
+
+  it('rejects an invalid visible upper mesh and blocks Next', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'Тип_5'
+    calc.heightTopPart.value = '0'
+    const wrapper = mountShieldType()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    await flushPromises()
+    expect(document.body.textContent).toContain('Выберите значение больше 0: Высота верхней части')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await getNextButton(wrapper).trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
+  })
+
+  it('saves valid upper mesh and emits Next once', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'Тип_5'
+    calc.heightTopPart.value = '150'
+    calc.assortmentHeightUpperNetId.value = 31
+    const wrapper = mountShieldType()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    await getNextButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
   })
 
   it('places Type 5 between Type 2 and Type 3', async () => {

@@ -195,14 +195,22 @@ function applySavedSelection() {
   }
 }
 
-function continueToNext() {
+async function validateBeforeLeave(): Promise<boolean> {
   if (showDetails.value && showPenSelection.value && selectedPenId.value != null && selectedColor.value == null) {
     colorError.value = 'Для выбранной ручки не настроен доступный цвет'
-    return
+    return false
   }
   colorError.value = ''
+  await save()
+  return true
+}
+
+async function continueToNext(): Promise<void> {
+  if (!await validateBeforeLeave()) return
   emit('next')
 }
+
+defineExpose({ validateBeforeLeave })
 
 async function save() {
   syncCalcFields()

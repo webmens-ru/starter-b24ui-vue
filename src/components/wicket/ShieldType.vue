@@ -542,15 +542,22 @@ function validate(): boolean {
   return true
 }
 
-async function handleNext() {
-  if (!validate()) return
+async function validateBeforeLeave(): Promise<boolean> {
+  if (!validate()) return false
   if (debounceTimer) {
     clearTimeout(debounceTimer)
     debounceTimer = null
   }
   await save()
+  return true
+}
+
+async function handleNext(): Promise<void> {
+  if (!await validateBeforeLeave()) return
   emit('next')
 }
+
+defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {

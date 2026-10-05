@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -29,6 +29,18 @@ function mountPen() {
       stubs: { B24Button: true, B24SelectMenu: SelectStub, SelectMenu: SelectStub, ImageViewer: true },
     },
   })
+}
+
+async function validateBeforeLeave(wrapper: VueWrapper): Promise<boolean> {
+  return await (wrapper.vm as unknown as {
+    validateBeforeLeave: () => boolean | Promise<boolean>
+  }).validateBeforeLeave()
+}
+
+function getNextButton(wrapper: VueWrapper) {
+  const button = wrapper.findAll('button').find(candidate => candidate.text() === 'Далее')
+  if (!button) throw new Error('Кнопка «Далее» не найдена')
+  return button
 }
 
 describe('Pen frame color capability', () => {
@@ -98,10 +110,43 @@ describe('Pen frame color capability', () => {
 
     const wrapper = mountPen()
     await flushPromises()
-    const nextButton = wrapper.findAll('button').find(button => button.text() === 'Далее')
-    await nextButton?.trigger('click')
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await getNextButton(wrapper).trigger('click')
 
     expect(wrapper.text()).toContain('Для выбранной ручки не настроен доступный цвет')
     expect(wrapper.emitted('next')).toBeUndefined()
+  })
+
+  it('accepts a pen with a configured color and saves before Next', async () => {
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{
+      id: 8,
+      marking: 'СК-8',
+      canUseFrameColor: false,
+      colors: [{ id: 4, name: 'Белый' }],
+      imageUrls: [],
+    }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    await getNextButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it('accepts the branch without a manufacturer-selected pen', async () => {
+    useCalculation().isTherePenName.value = 'Не будет'
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [] })
+    const wrapper = mountPen()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockClear()
+
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
   })
 })
