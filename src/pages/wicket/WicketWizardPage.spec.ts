@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { flushPromises, shallowMount } from '@vue/test-utils'
+import { flushPromises, mount, shallowMount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, reactive } from 'vue'
+import { defineComponent, h, markRaw, reactive, watch } from 'vue'
 
 import { useCalculation } from '../../composables/useCalculation'
 import WicketWizardPage from './WicketWizardPage.vue'
@@ -75,6 +75,139 @@ function mountPage(stepComponents: Record<string, ReturnType<typeof defineCompon
     },
   })
 }
+
+const guard = vi.fn<() => boolean | Promise<boolean>>()
+
+const GuardedStep = markRaw(defineComponent({
+  emits: ['back', 'next'],
+  setup(_, { emit, expose }) {
+    expose({ validateBeforeLeave: () => guard() })
+    return () => h('div', [
+      h('button', { 'data-testid': 'back', onClick: () => emit('back') }, 'Назад'),
+      h('button', { 'data-testid': 'next', onClick: () => emit('next') }, 'Далее'),
+    ])
+  },
+}))
+
+const MenuStub = defineComponent({
+  emits: ['select'],
+  template: '<button data-testid="menu-page2" @click="$emit(\'select\', { page: \'page2\' })">page2</button>',
+})
+
+const twoPageRoute: WicketRouteDefinition = {
+  sections: [],
+  menu: () => [],
+  validations: () => new Map(),
+  next: from => from === 'page1' ? 'page2' : null,
+  prev: from => from === 'page2' ? 'page1' : null,
+}
+
+function mountNavigationPage() {
+  mocks.route.query = { orderId: '42', productRowId: '7' }
+  mocks.loadWicketData.mockResolvedValue({
+    orderId: 42,
+    productRowId: 7,
+    modelId: '1',
+    activePage: 'page1',
+    reachedStep: 'page2',
+    visitedPages: ['page1', 'page2'],
+  })
+  return mount(WicketWizardPage, {
+    props: { stepComponents: { page1: GuardedStep, page2: GuardedStep }, route: twoPageRoute },
+    global: {
+      stubs: {
+        App: { template: '<div><slot /></div>' },
+        B24App: { template: '<div><slot /></div>' },
+        B24Modal: true,
+        WicketMenu: MenuStub,
+        DrawingPanel: true,
+        CalculateTable: true,
+        Transition: false,
+      },
+    },
+  })
+}
+
+describe('WicketWizardPage guarded navigation', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    guard.mockReset()
+    mocks.route = reactive({ path: '/wicket/type1', query: {} })
+    mocks.getWicketAccessoryComposition.mockResolvedValue({
+      lockVersion: 3,
+      lockComponents: [],
+      skud: [],
+      doorClosers: [],
+      bumpers: [],
+      orderTotals: { priceRetail: 0, priceDealer: 0 },
+    })
+    mocks.getLocks.mockResolvedValue({ items: [] })
+  })
+
+  it('blocks Back and side-menu navigation when the active step guard returns false', async () => {
+    guard.mockReturnValue(false)
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page1')
+
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    expect(calc.activePage.value).toBe('page2')
+    await wrapper.get('[data-testid="back"]').trigger('click')
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(guard).toHaveBeenCalledTimes(2)
+  })
+
+  it('awaits the active step guard before a side-menu transition', async () => {
+    let resolveGuard!: (allowed: boolean) => void
+    guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    expect(calc.activePage.value).toBe('page1')
+    resolveGuard(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(guard).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores repeated navigation while the guard is pending', async () => {
+    let resolveGuard!: (allowed: boolean) => void
+    guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+    let transitions = 0
+    const stop = watch(calc.activePage, () => { transitions += 1 }, { flush: 'sync' })
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    expect(calc.activePage.value).toBe('page1')
+    expect(guard).toHaveBeenCalledTimes(1)
+    resolveGuard(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(transitions).toBe(1)
+    stop()
+  })
+
+  it('does not invoke the leave guard for the Next event', async () => {
+    guard.mockReturnValue(false)
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    expect(useCalculation().activePage.value).toBe('page2')
+    expect(guard).not.toHaveBeenCalled()
+  })
+})
 
 describe('WicketWizardPage mobile summary', () => {
   beforeEach(() => {

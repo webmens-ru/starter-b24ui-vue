@@ -14,6 +14,7 @@ import type { ProductRowContext } from '../../app/api/productRows'
 import { WICKET_CALCULATION_KEY, type WicketCalculationApi } from './wicketCalculationInjection'
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { WICKET_ROUTE_KEY, type WicketMenuItem, type WicketRouteDefinition } from './wicketRoute'
+import type { WicketStepNavigationGuard } from './wicketStepNavigationGuard'
 
 declare const window: Window & {
   _PARAMS_?: { placementOptions?: { id?: string | number; modelId?: string } }
@@ -52,6 +53,8 @@ const showLockConflictModal = ref(false)
 const loadPending = ref(true)
 const isMobile = computed(() => windowWidth.value < 1024)
 const currentComponent = shallowRef<Component | null>(null)
+const activeStepRef = ref<WicketStepNavigationGuard | null>(null)
+const leaveGuardPending = ref(false)
 function routeQueryValueKey(value: unknown): string {
   if (value === undefined) return 'undefined'
   if (value === null) return 'null'
@@ -251,16 +254,26 @@ function switchTo(page: string) {
   }
 }
 
-function navigateTo(page: string) {
-  if (!isPageAccessible(page)) {
+async function runGuardedNavigation(navigate: () => void): Promise<boolean> {
+  if (leaveGuardPending.value) return false
+  leaveGuardPending.value = true
+  try {
+    const allowed = await activeStepRef.value?.validateBeforeLeave?.()
+    if (allowed === false) return false
+    navigate()
+    return true
+  } finally {
+    leaveGuardPending.value = false
+  }
+}
+
+async function onMenuSelect(item: WicketMenuItem): Promise<void> {
+  if (!isPageAccessible(item.page)) {
     showWarningModal.value = true
     return
   }
-  switchTo(page)
-}
-
-function onMenuSelect(item: WicketMenuItem) {
-  navigateTo(item.page)
+  await runGuardedNavigation(() => switchTo(item.page))
+  menuOpen.value = false
 }
 
 function goNext() {
@@ -268,9 +281,9 @@ function goNext() {
   if (next) switchTo(next)
 }
 
-function goBack() {
+async function goBack(): Promise<void> {
   const prev = getPrevPage(activePage.value)
-  if (prev) switchTo(prev)
+  if (prev) await runGuardedNavigation(() => switchTo(prev))
 }
 </script>
 
@@ -416,7 +429,7 @@ function goBack() {
               :is-page-accessible="isPageAccessible"
               :incomplete-pages="incompletePages"
               :collapsed="false"
-              @select="(item) => { onMenuSelect(item); menuOpen = false }"
+              @select="onMenuSelect"
             />
           </div>
         </aside>
@@ -428,6 +441,7 @@ function goBack() {
         <component
           v-if="!loadPending && currentComponent"
           :is="currentComponent"
+          ref="activeStepRef"
           @next="goNext"
           @back="goBack"
         />
