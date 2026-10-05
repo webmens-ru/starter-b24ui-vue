@@ -198,6 +198,28 @@ describe('WicketWizardPage guarded navigation', () => {
     stop()
   })
 
+  it('blocks Next during a pending menu guard without validating Next', async () => {
+    let resolveGuard!: (allowed: boolean) => void
+    guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+    let transitions = 0
+    const stop = watch(calc.activePage, () => { transitions += 1 }, { flush: 'sync' })
+
+    await wrapper.get('[data-testid="menu-page2"]').trigger('click')
+    expect(guard).toHaveBeenCalledTimes(1)
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    expect(calc.activePage.value).toBe('page1')
+    expect(guard).toHaveBeenCalledTimes(1)
+
+    resolveGuard(true)
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(transitions).toBe(1)
+    stop()
+  })
+
   it('does not invoke the leave guard for the Next event', async () => {
     guard.mockReturnValue(false)
     const wrapper = mountNavigationPage()

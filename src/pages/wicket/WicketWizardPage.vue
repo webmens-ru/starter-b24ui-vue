@@ -277,6 +277,7 @@ async function onMenuSelect(item: WicketMenuItem): Promise<void> {
 }
 
 function goNext() {
+  if (leaveGuardPending.value) return
   const next = getNextPage(activePage.value)
   if (next) switchTo(next)
 }
