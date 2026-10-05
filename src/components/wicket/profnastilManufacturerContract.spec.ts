@@ -13,19 +13,22 @@ const componentFiles = [
 ]
 
 describe('shared profnastil contract', () => {
-  it.each(componentFiles)('%s does not consume manufacturer or color', (file) => {
+  it.each(componentFiles)('%s keeps manufacturer and color out of table data', (file) => {
     const source = readFileSync(resolve(__dirname, file), 'utf8')
+    const table = source.match(/<table\b[\s\S]*?<\/table>/)?.[0] ?? ''
 
     expect(source).not.toContain('row.company')
     expect(source).not.toContain('selectedRow.company')
     expect(source).not.toContain('data-key="company"')
     expect(source).not.toContain('filters.companies')
-    expect(source).not.toContain('Производитель материала')
     expect(source).not.toContain('row.color')
     expect(source).not.toContain('selectedRow.color')
     expect(source).not.toContain('data-key="color"')
     expect(source).not.toContain('filters.colors')
-    expect(source).not.toContain('label="Цвет"')
+    if (table) {
+      expect(table).not.toMatch(/<th\b[^>]*>\s*Производитель(?: материала)?\s*<\/th>/)
+      expect(table).not.toMatch(/<th\b[^>]*>\s*Цвет\s*<\/th>/)
+    }
   })
 
   it('removes manufacturer and color from API types and mock data', () => {
