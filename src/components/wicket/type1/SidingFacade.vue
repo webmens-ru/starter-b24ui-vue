@@ -274,6 +274,14 @@ onMounted(async () => {
       />
     </div>
 
+    <FillingAppearanceFields
+      v-if="selectedRow"
+      :model-id="calc.modelId.value"
+      material-group="Сайдинг"
+      side="facade"
+      @change="saveAppearance"
+    />
+
     <!-- Таблица -->
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
@@ -365,14 +373,6 @@ onMounted(async () => {
         >»</button>
       </div>
     </div>
-
-    <FillingAppearanceFields
-      v-if="selectedRow"
-      :model-id="calc.modelId.value"
-      material-group="Сайдинг"
-      side="facade"
-      @change="saveAppearance"
-    />
 
     <div
       v-if="appearanceSaveFailed"

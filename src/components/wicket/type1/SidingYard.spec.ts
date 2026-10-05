@@ -102,6 +102,18 @@ describe('SidingYard', () => {
     apiMocks.recalculate.mockReset()
   })
 
+  it('shows appearance fields before the material table after selecting a row', async () => {
+    const wrapper = mountYard()
+    await flushPromises()
+
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+
+    const appearance = wrapper.get('.appearance-fields').element
+    const table = wrapper.get('table').element
+    expect(appearance.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('saves yard product and appearance without changing facade state', async () => {
     const wrapper = mountYard()
     await flushPromises()

@@ -111,6 +111,18 @@ describe('SidingFacade', () => {
     apiMocks.recalculate.mockReset()
   })
 
+  it('shows appearance fields before the material table after selecting a row', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+
+    const appearance = wrapper.get('.appearance-fields').element
+    const table = wrapper.get('table').element
+    expect(appearance.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('combines a product-only siding row with optional facade appearance in the save payload', async () => {
     const wrapper = mountFacade()
     await flushPromises()
