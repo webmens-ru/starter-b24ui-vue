@@ -10,6 +10,10 @@ import {
 } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
+import {
+  createFillingAppearanceSaveCoordinator,
+  restoreFillingAppearance,
+} from '../shared/fillingAppearanceState'
 import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
@@ -41,6 +45,9 @@ const selectedRow  = ref<ProfnastilRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
+const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'yard')
+const appearanceSaving = appearanceSave.saving
+const appearanceSaveFailed = appearanceSave.failed
 
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
@@ -116,7 +123,29 @@ async function save(row: ProfnastilRow): Promise<boolean> {
 
 async function saveAppearance() {
   if (!selectedRow.value) return
-  if (await save(selectedRow.value)) await doRecalculate()
+  const attempt = appearanceSave.beginSave()
+  try {
+    if (await save(selectedRow.value)) {
+      if (appearanceSave.recordSuccess(attempt)) {
+        calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+        await doRecalculate()
+      }
+      return
+    }
+
+    if (appearanceSave.recordFailure(attempt)) {
+      calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+    }
+  } finally {
+    appearanceSave.finishSave()
+  }
+}
+
+async function retryAppearanceSave(): Promise<void> {
+  const failedAppearance = appearanceSave.getFailedSnapshot()
+  if (failedAppearance === null) return
+  restoreFillingAppearance(calc, 'yard', failedAppearance)
+  await saveAppearance()
 }
 
 async function doRecalculate() {
@@ -139,13 +168,17 @@ async function selectRow(row: ProfnastilRow) {
   if (!selectedRow.value || String(selectedRow.value.id) !== String(row.id)) {
     calc.resetYardFilling()
   }
+  const attempt = appearanceSave.beginRevision()
   selectedRow.value = row
-  if (await save(row)) await doRecalculate()
+  if (await save(row)) {
+    if (appearanceSave.recordSuccess(attempt)) await doRecalculate()
+  }
 }
 
 function deselectRow() {
   selectedRow.value = null
   calc.resetYardFilling()
+  appearanceSave.resetToCurrent()
 }
 
 function isSelected(row: ProfnastilRow) {
@@ -153,6 +186,10 @@ function isSelected(row: ProfnastilRow) {
 }
 
 function onContinue() {
+  if (appearanceSaving.value || appearanceSaveFailed.value) {
+    openModal('Сначала повторите сохранение оформления.')
+    return
+  }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
     return
@@ -177,9 +214,10 @@ watch(() => calc.idYard.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
+    const attempt = appearanceSave.beginRevision()
     selectedRow.value = saved
     try {
-      await save(saved)
+      if (await save(saved)) appearanceSave.recordSuccess(attempt)
     } catch (e) {
       console.warn('saveWicketData при восстановлении:', e)
     }
@@ -211,7 +249,12 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
-      <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
+      <B24Button
+        label="Далее"
+        color="air-secondary"
+        :disabled="appearanceSaving || appearanceSaveFailed"
+        @click="onContinue"
+      />
     </div>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
@@ -300,6 +343,23 @@ onMounted(async () => {
         <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.page + 1)">›</button>
         <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.pageCount)">»</button>
       </div>
+    </div>
+
+    <div
+      v-if="appearanceSaveFailed"
+      data-testid="appearance-save-error"
+      class="flex items-center justify-between gap-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+    >
+      <span>Не удалось сохранить оформление. Повторите попытку.</span>
+      <button
+        data-testid="appearance-save-retry"
+        type="button"
+        class="rounded border border-red-400 bg-white px-3 py-1 disabled:opacity-50"
+        :disabled="appearanceSaving"
+        @click="retryAppearanceSave"
+      >
+        Повторить
+      </button>
     </div>
 
   </div>

@@ -39,6 +39,13 @@ const FilterDropdownStub = defineComponent({
   template: '<button class="filter-stub">{{ label }}</button>',
 })
 
+const ButtonStub = defineComponent({
+  name: 'B24Button',
+  props: ['label', 'disabled'],
+  emits: ['click'],
+  template: '<button :data-label="label" :disabled="disabled" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+})
+
 const rows: ProfnastilRow[] = [
   { id: 17, material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
   { id: 21, material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
@@ -50,8 +57,8 @@ function mountYard() {
       stubs: {
         B24Modal: true,
         Modal: true,
-        B24Button: true,
-        Button: true,
+        B24Button: ButtonStub,
+        Button: ButtonStub,
         B24SelectMenu: SelectMenuStub,
         SelectMenu: SelectMenuStub,
         FilterDropdown: FilterDropdownStub,
@@ -77,11 +84,15 @@ describe('ProfnastilYard', () => {
     apiMocks.getFillingAppearanceOptions.mockReset()
     apiMocks.getFillingAppearanceOptions.mockResolvedValue({
       manufacturers: [{ id: 4, name: 'Двор-Профиль' }],
-      colors: [{ id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' }],
+      colors: [
+        { id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' },
+        { id: 10, name: 'RAL 7016', hex: '#383E42', image: '/colors/7016.webp' },
+      ],
     })
     apiMocks.saveWicketData.mockReset()
     apiMocks.saveWicketData.mockResolvedValue({ lockVersion: 1 })
     apiMocks.recalculate.mockReset()
+    apiMocks.recalculate.mockResolvedValue({ priceDealer: '900.00', priceRetail: '1200.00' })
   })
 
   it('saves shared manufacturer and color before the profnastil table', async () => {
@@ -153,6 +164,85 @@ describe('ProfnastilYard', () => {
 
     expect(apiMocks.recalculate).not.toHaveBeenCalled()
     expect(calc.priceRetail.value).toBe('1200.00')
+    expect(calc.manufacturerYardId.value).toBeNull()
+    expect(calc.materialSupplierYard.value).toBe('')
+    expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
+      .toContainEqual({ name: 'Производитель материала', value: '' })
+    expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
     warning.mockRestore()
+  })
+
+  it('rolls back a failed appearance save and retries the selected values after pagination', async () => {
+    apiMocks.getProfnastilTable.mockImplementation(async (_modelId, _filters, page) => ({
+      table: page === 2 ? [rows[1]] : [rows[0]],
+      pagination: { page, pageSize: 1, totalCount: 2, pageCount: 2 },
+    }))
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
+    await flushPromises()
+    apiMocks.saveWicketData.mockRejectedValueOnce(new Error('network unavailable'))
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('10')
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.colorYardId.value).toBeNull()
+    expect(calc.colorYard.value).toBe('')
+    expect(calc.colorYardHex.value).toBe('')
+    expect(calc.colorYardImage.value).toBe('')
+    expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
+      .not.toContainEqual({ name: 'Цвет', value: 'RAL 7016' })
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
+    await wrapper.findAll('button').find(button => button.text() === '›')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('страница 2 из 2')
+    const error = wrapper.get('[data-testid="appearance-save-error"]')
+    expect(error.text()).toContain('Не удалось сохранить')
+    expect(wrapper.get('table').element.compareDocumentPosition(error.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await wrapper.get('[data-testid="appearance-save-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(apiMocks.saveWicketData.mock.lastCall?.[0]).toMatchObject({
+      idYard: 17,
+      manufacturerYardId: 4,
+      colorYardId: 10,
+      colorYard: 'RAL 7016',
+    })
+    expect(calc.colorYardId.value).toBe(10)
+    expect(calc.colorYard.value).toBe('RAL 7016')
+    expect(wrapper.find('[data-testid="appearance-save-error"]').exists()).toBe(false)
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(false)
+    warning.mockRestore()
+  })
+
+  it('blocks Continue while an appearance save is pending', async () => {
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    let resolveSave!: (value: { lockVersion: number }) => void
+    apiMocks.saveWicketData.mockImplementationOnce(() => new Promise(resolve => {
+      resolveSave = resolve
+    }))
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await wrapper.vm.$nextTick()
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
+
+    resolveSave({ lockVersion: 2 })
+    await flushPromises()
+    expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(false)
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    expect(wrapper.emitted('next')).toHaveLength(1)
   })
 })
