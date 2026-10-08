@@ -23,7 +23,7 @@ const productTypes = [
     label: 'Калитки',
     productType: 'Калитка',
     route: '/wicket/model',
-    image: '/web/k2.jpg',
+    image: '/k2.jpg',
   },
   {
     id: 'swing',
@@ -32,7 +32,7 @@ const productTypes = [
     route: '/swing-gates/type1',
     modelId: '1',
     model: 'Ворота распашные',
-    image: '/web/k3.jpg',
+    image: '/k3.jpg',
     soon: true,
   },
 ]

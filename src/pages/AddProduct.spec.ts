@@ -230,4 +230,15 @@ describe('AddProduct order flow', () => {
     expect(swingButton.attributes('disabled')).toBeDefined()
     expect(swingButton.text()).toContain('Скоро')
   })
+
+  it('loads product images from the public web root', async () => {
+    mocks.route.query = { orderId: '42' }
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.findAll('img').map(image => image.attributes('src'))).toEqual([
+      '/k2.jpg',
+      '/k3.jpg',
+    ])
+  })
 })

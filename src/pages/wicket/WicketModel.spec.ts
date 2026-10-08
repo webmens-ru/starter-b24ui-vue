@@ -59,6 +59,14 @@ describe('WicketModel', () => {
     expect(type3Button?.text()).not.toContain('Скоро')
   })
 
+  it('loads model images from the public web root', () => {
+    const wrapper = mountPage()
+    const sources = wrapper.findAll('img').map(image => image.attributes('src'))
+
+    expect(sources.length).toBeGreaterThan(0)
+    expect(sources.every(source => source.startsWith('/') && !source.startsWith('/web/'))).toBe(true)
+  })
+
   it('creates a wicket product row and opens the wizard with both ids', async () => {
     const wrapper = mountPage()
     const type3Button = wrapper.findAll('button').find(button => button.text().includes('штакетник'))!
