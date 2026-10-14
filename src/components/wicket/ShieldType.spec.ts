@@ -91,6 +91,23 @@ describe('ShieldType top-only subtype', () => {
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
 
+  it('explicitly clears the upper net assortment when the customer provides it', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'Тип_5'
+    calc.heightTopPart.value = '150'
+    calc.netWidthProviderTop.value = 'customer'
+    calc.assortmentHeightUpperNetId.value = 31
+
+    const wrapper = mountShieldType()
+    await flushPromises()
+
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({
+      netWidthProviderTop: 'customer',
+      assortmentHeightUpperNetId: null,
+    })
+    wrapper.unmount()
+  })
+
   it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
     const calc = useCalculation()
     calc.shieldType.value = 'Тип_5'

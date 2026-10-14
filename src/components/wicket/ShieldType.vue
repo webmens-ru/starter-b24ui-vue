@@ -454,9 +454,15 @@ async function save() {
       netWidthProviderTop:  showHeightTop.value ? provTop : undefined,
       netWidthProviderLower: showHeightLower.value ? provLower : undefined,
       netWidthProviderSide:  showSidePart.value ? provSide : undefined,
-      assortmentHeightLowerNetId: showHeightLower.value && provLower === 'executor' ? (assortmentHeightLowerNetId.value ?? undefined) : undefined,
-      assortmentSideGrilleNetId: showSidePart.value && provSide === 'executor' ? (assortmentSideGrilleNetId.value ?? undefined) : undefined,
-      assortmentHeightUpperNetId: showHeightTop.value && provTop === 'executor' ? (assortmentHeightUpperNetId.value ?? undefined) : undefined,
+      assortmentHeightLowerNetId: showHeightLower.value
+        ? (provLower === 'executor' ? assortmentHeightLowerNetId.value : null)
+        : undefined,
+      assortmentSideGrilleNetId: showSidePart.value
+        ? (provSide === 'executor' ? assortmentSideGrilleNetId.value : null)
+        : undefined,
+      assortmentHeightUpperNetId: showHeightTop.value
+        ? (provTop === 'executor' ? assortmentHeightUpperNetId.value : null)
+        : undefined,
       grilleLocation:         calc.grilleLocation.value,
     })
   } catch (e) {
