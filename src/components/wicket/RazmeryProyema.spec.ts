@@ -46,7 +46,7 @@ describe('RazmeryProyema', () => {
   })
 
   it.each([
-    ['width', '1201', 'От 600 до 1200 мм'],
+    ['width', '1201', 'От 700 до 1200 мм'],
     ['height', '2501', 'От 1000 до 2500 мм'],
   ])('блокирует переход при превышении максимума поля %s', async (field, value, message) => {
     const wrapper = mountComponent()
@@ -63,7 +63,7 @@ describe('RazmeryProyema', () => {
   it('принимает максимальные ширину 1200 мм и высоту 2500 мм', async () => {
     const wrapper = mountComponent()
     await flushPromises()
-    expect(wrapper.get('#width').attributes('placeholder')).toBe('Введите ширину (600–1200)')
+    expect(wrapper.get('#width').attributes('placeholder')).toBe('Введите ширину (700–1200)')
     expect(wrapper.get('#height').attributes('placeholder')).toBe('Введите высоту (1000–2500)')
     await wrapper.get('#width').setValue('1200')
     await wrapper.get('#height').setValue('2500')
@@ -78,18 +78,18 @@ describe('RazmeryProyema', () => {
     const wrapper = mountComponent()
     await flushPromises()
     await fillValidOpening(wrapper)
-    await wrapper.get('#width').setValue('599')
+    await wrapper.get('#width').setValue('699')
     vi.mocked(saveWicketData).mockClear()
 
     expect(await validateBeforeLeave(wrapper)).toBe(false)
-    expect(wrapper.text()).toContain('От 600 до 1200 мм')
+    expect(wrapper.text()).toContain('От 700 до 1200 мм')
     expect(saveWicketData).not.toHaveBeenCalled()
   })
 
-  it('accepts 600x1000 with valid clearance and saves before leaving', async () => {
+  it('accepts 700x1000 with valid clearance and saves before leaving', async () => {
     const wrapper = mountComponent()
     await flushPromises()
-    await wrapper.get('#width').setValue('600')
+    await wrapper.get('#width').setValue('700')
     await wrapper.get('#height').setValue('1000')
     await wrapper.get('#clearance').setValue('10')
     vi.mocked(saveWicketData).mockClear()
@@ -101,7 +101,7 @@ describe('RazmeryProyema', () => {
   it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
     const wrapper = mountComponent()
     await flushPromises()
-    await wrapper.get('#width').setValue('600')
+    await wrapper.get('#width').setValue('700')
     await wrapper.get('#height').setValue('1000')
     await wrapper.get('#clearance').setValue('10')
     vi.mocked(saveWicketData).mockClear()

@@ -25,7 +25,7 @@ const errClearance = ref('')
 
 // ─── Yup схема ───────────────────────────────────────────────────────────────
 const schema = yup.object({
-  width:     yup.number().typeError('Только числа').required('Обязательное поле').min(600,  'От 600 до 1200 мм').max(1200, 'От 600 до 1200 мм'),
+  width:     yup.number().typeError('Только числа').required('Обязательное поле').min(700,  'От 700 до 1200 мм').max(1200, 'От 700 до 1200 мм'),
   height:    yup.number().typeError('Только числа').required('Обязательное поле').min(1000, 'От 1000 до 2500 мм').max(2500, 'От 1000 до 2500 мм'),
   clearance: yup.number().typeError('Только числа').required('Обязательное поле').min(10,   'От 10 до 100 мм').max(100,  'От 10 до 100 мм'),
 })
@@ -210,7 +210,7 @@ onMounted(async () => {
             id="width"
             v-model="width"
             type="text"
-            placeholder="Введите ширину (600–1200)"
+            placeholder="Введите ширину (700–1200)"
             class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errWidth ? 'border-red-500' : 'border-gray-300'"
             @blur="validateField('width', width)"
