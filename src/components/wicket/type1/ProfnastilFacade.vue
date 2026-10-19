@@ -12,6 +12,12 @@ import {
 } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import { hasRequiredFillingColor } from '../shared/fillingColorValidation'
+import {
+  createFillingAppearanceSaveCoordinator,
+  restoreFillingAppearance,
+} from '../shared/fillingAppearanceState'
+import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -46,6 +52,9 @@ const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount:
 const colors       = ref<ProfnastilColorOption[]>([])
 const colorLoading = ref(false)
 const selectedColorId = ref<number | null>(null)
+const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'facade')
+const appearanceSaving = appearanceSave.saving
+const appearanceSaveFailed = appearanceSave.failed
 
 const selectedColor = computed<ProfnastilColorOption | undefined>(() =>
   colors.value.find((c) => c.id === selectedColorId.value),
@@ -128,7 +137,7 @@ function buildSummaryParams() {
   return params
 }
 
-async function save(row: ProfnastilRow) {
+async function save(row: ProfnastilRow): Promise<boolean> {
   calc.idFacade.value                = row.id
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = ''
@@ -153,13 +162,17 @@ async function save(row: ProfnastilRow) {
       colorFacadeHex:          calc.colorFacadeHex.value,
       colorFacadeImage:        calc.colorFacadeImage.value,
     })
+    return true
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
+    return false
   }
 }
 
 async function saveColor() {
+  if (!selectedRow.value) return
   applySelectedColor()
+  const attempt = appearanceSave.beginSave()
   calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
 
   try {
@@ -175,9 +188,28 @@ async function saveColor() {
       colorFacadeHex:          calc.colorFacadeHex.value,
       colorFacadeImage:        calc.colorFacadeImage.value,
     })
+    appearanceSave.recordSuccess(attempt)
   } catch (e) {
     console.warn('saveWicketData (цвет) недоступен:', e)
+    if (appearanceSave.recordFailure(attempt)) {
+      selectedColorId.value = calc.colorFacadeId.value === null
+        ? null
+        : Number(calc.colorFacadeId.value)
+      calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+    }
+  } finally {
+    appearanceSave.finishSave()
   }
+}
+
+async function retryAppearanceSave(): Promise<void> {
+  const failedAppearance = appearanceSave.getFailedSnapshot()
+  if (failedAppearance === null) return
+  restoreFillingAppearance(calc, 'facade', failedAppearance)
+  selectedColorId.value = failedAppearance.colorId === null
+    ? null
+    : Number(failedAppearance.colorId)
+  await saveColor()
 }
 
 async function doRecalculate() {
@@ -199,8 +231,10 @@ async function doRecalculate() {
 async function selectRow(row: ProfnastilRow) {
   selectedRow.value = row
   clearColor()
-  await save(row)
-  await doRecalculate()
+  if (await save(row)) {
+    appearanceSave.resetToCurrent()
+    await doRecalculate()
+  }
 }
 
 function deselectRow() {
@@ -213,23 +247,35 @@ function deselectRow() {
   calc.coatingFacadeHex.value = ''
   calc.coatingFacadeImage.value = ''
   calc.reliefFacadeImage.value = ''
+  appearanceSave.resetToCurrent()
 }
 
 function isSelected(row: ProfnastilRow) {
   return selectedRow.value?.id === row.id
 }
 
-function onContinue() {
+async function validateStep(): Promise<boolean> {
+  if (appearanceSaving.value || appearanceSaveFailed.value) {
+    openModal('Сначала повторите сохранение цвета.')
+    return false
+  }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
-    return
+    return false
   }
-  if (colors.value.length > 0 && selectedColorId.value === null) {
+  if (!hasRequiredFillingColor(selectedColorId.value, calc.colorFacade.value)) {
     openModal('Вы не выбрали цвет!')
-    return
+    return false
   }
-  emit('next')
+  return true
 }
+
+const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
+  validateStep,
+  () => emit('next'),
+)
+
+defineExpose({ validateBeforeLeave })
 
 function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idFacade.value) return null
@@ -253,7 +299,7 @@ watch(() => calc.idFacade.value, async (val) => {
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
     try {
-      await save(saved)
+      if (await save(saved)) appearanceSave.resetToCurrent()
     } catch (e) {
       console.warn('saveWicketData при восстановлении:', e)
     }
@@ -283,7 +329,12 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение (фасад)</span>
-      <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
+      <B24Button
+        label="Далее"
+        color="air-secondary"
+        :disabled="appearanceSaving || appearanceSaveFailed"
+        @click="onContinue"
+      />
     </div>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
@@ -378,6 +429,23 @@ onMounted(async () => {
         @update:model-value="(id) => { selectedColorId = id ?? null; saveColor() }"
       />
       <span v-if="colorLoading" class="text-xs text-gray-400">Загрузка цветов...</span>
+    </div>
+
+    <div
+      v-if="appearanceSaveFailed"
+      data-testid="appearance-save-error"
+      class="flex items-center justify-between gap-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+    >
+      <span>Не удалось сохранить цвет. Повторите попытку.</span>
+      <button
+        data-testid="appearance-save-retry"
+        type="button"
+        class="rounded border border-red-400 bg-white px-3 py-1 disabled:opacity-50"
+        :disabled="appearanceSaving"
+        @click="retryAppearanceSave"
+      >
+        Повторить
+      </button>
     </div>
 
   </div>

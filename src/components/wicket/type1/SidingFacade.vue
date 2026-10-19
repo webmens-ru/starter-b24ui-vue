@@ -9,6 +9,7 @@ import {
   restoreFillingAppearance,
 } from '../shared/fillingAppearanceState'
 import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -44,6 +45,7 @@ const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'facade')
+const appearanceFields = ref<{ validate: () => boolean } | null>(null)
 const appearanceSaving = appearanceSave.saving
 const appearanceSaveFailed = appearanceSave.failed
 
@@ -207,17 +209,24 @@ function isSelected(row: SidingRow) {
 }
 
 // ─── Навигация ────────────────────────────────────────────────────────────────
-function onContinue() {
+async function validateStep(): Promise<boolean> {
   if (appearanceSaving.value || appearanceSaveFailed.value) {
     openModal('Сначала повторите сохранение оформления.')
-    return
+    return false
   }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
-    return
+    return false
   }
-  emit('next')
+  return appearanceFields.value?.validate() ?? false
 }
+
+const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
+  validateStep,
+  () => emit('next'),
+)
+
+defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -276,6 +285,7 @@ onMounted(async () => {
 
     <FillingAppearanceFields
       v-if="selectedRow"
+      ref="appearanceFields"
       :model-id="calc.modelId.value"
       material-group="Сайдинг"
       side="facade"

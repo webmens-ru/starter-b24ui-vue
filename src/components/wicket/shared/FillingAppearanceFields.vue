@@ -5,6 +5,7 @@ import {
   type FillingAppearanceOptions,
 } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
+import { hasRequiredFillingColor } from './fillingColorValidation'
 
 type FillingSide = 'facade' | 'yard'
 type SelectValue = string | number | null | undefined
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const calc = useCalculation()
 const options = ref<FillingAppearanceOptions>({ manufacturers: [], colors: [] })
 const loading = ref(false)
+const submitted = ref(false)
 let loadVersion = 0
 
 const selectedManufacturerId = computed(() => (
@@ -34,6 +36,13 @@ const selectedColorId = computed(() => (
   props.side === 'facade'
     ? calc.colorFacadeId.value ?? undefined
     : calc.colorYardId.value ?? undefined
+))
+
+const selectedColorName = computed(() => (
+  props.side === 'facade' ? calc.colorFacade.value : calc.colorYard.value
+))
+const colorValid = computed(() => (
+  hasRequiredFillingColor(selectedColorId.value, selectedColorName.value)
 ))
 
 const manufacturerItems = computed(() => [
@@ -131,6 +140,13 @@ function onColorChange(value: SelectValue): void {
   if (setColor(selected)) emit('change')
 }
 
+function validate(): boolean {
+  submitted.value = true
+  return colorValid.value
+}
+
+defineExpose({ validate })
+
 watch(
   () => [props.modelId, props.materialGroup] as const,
   loadOptions,
@@ -170,6 +186,11 @@ onBeforeUnmount(() => {
         :disabled="loading"
         @update:model-value="onColorChange"
       />
+      <span
+        v-if="submitted && !colorValid"
+        data-testid="appearance-color-error"
+        class="text-sm text-red-600"
+      >Выберите цвет</span>
     </label>
 
     <span v-if="loading" class="text-xs text-gray-400">Загрузка вариантов...</span>
