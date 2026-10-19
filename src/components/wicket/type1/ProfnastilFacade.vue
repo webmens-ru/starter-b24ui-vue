@@ -171,8 +171,8 @@ async function save(row: ProfnastilRow): Promise<boolean> {
 
 async function saveColor() {
   if (!selectedRow.value) return
-  const attempt = appearanceSave.beginSave()
   applySelectedColor()
+  const attempt = appearanceSave.beginSave()
   calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
 
   try {
