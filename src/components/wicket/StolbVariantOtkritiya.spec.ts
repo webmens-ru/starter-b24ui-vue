@@ -43,6 +43,17 @@ describe('StolbVariantOtkritiya navigation', () => {
     vi.mocked(saveWicketData).mockClear()
   })
 
+  it('loads opening diagrams from the public image root', () => {
+    const wrapper = mountComponent()
+
+    expect(wrapper.findAll('img').map(image => image.attributes('src'))).toEqual([
+      '/img/wicket_opening_diagram_02.jpg',
+      '/img/wicket_opening_diagram_01.jpg',
+      '/img/wicket_opening_diagram_03.jpg',
+      '/img/wicket_opening_diagram_04.jpg',
+    ])
+  })
+
   it('rejects a missing opening option and keeps the existing modal message', async () => {
     const wrapper = mountComponent()
     await flushPromises()
