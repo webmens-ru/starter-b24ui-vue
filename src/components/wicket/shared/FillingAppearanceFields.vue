@@ -183,6 +183,7 @@ onBeforeUnmount(() => {
         :items="colorItems"
         placeholder="Не выбран"
         class="w-full"
+        :b24ui="{ content: 'z-50' }"
         :disabled="loading"
         @update:model-value="onColorChange"
       />

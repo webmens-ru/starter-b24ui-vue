@@ -273,6 +273,7 @@ onMounted(async () => {
         :items="colorSelectItems"
         placeholder="Выберите цвет"
         class="w-full"
+        :b24ui="{ content: 'z-50' }"
         @update:model-value="onDictionaryColorChange"
       />
       <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>

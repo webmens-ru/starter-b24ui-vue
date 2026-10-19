@@ -146,6 +146,10 @@ describe('Type 2 profnastil leave guards', () => {
 })
 
 describe('Type 2 profnastil pages', () => {
+  it('layers the color menu above surrounding content', () => {
+    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
+  })
+
   it('replaces the facade table with the dependent form', () => {
     expect(facade).toContain('<T2ProfnastilForm ref="formRef" side="facade" />')
     expect(facade).not.toContain('<table')

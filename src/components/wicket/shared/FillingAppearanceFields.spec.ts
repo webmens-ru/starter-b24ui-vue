@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCalculation } from '../../../composables/useCalculation'
 import FillingAppearanceFields from './FillingAppearanceFields.vue'
+import form from './FillingAppearanceFields.vue?raw'
 
 const apiMocks = vi.hoisted(() => ({
   getFillingAppearanceOptions: vi.fn(),
@@ -43,6 +44,10 @@ const sidingOptions = {
 }
 
 describe('FillingAppearanceFields', () => {
+  it('layers the color menu above surrounding content', () => {
+    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
+  })
+
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()

@@ -424,6 +424,7 @@ onMounted(async () => {
         value-key="id"
         :items="colorSelectItems"
         placeholder="Выберите цвет"
+        :b24ui="{ content: 'z-50' }"
         :disabled="!selectedRow || colorLoading"
         class="w-full"
         @update:model-value="(id) => { selectedColorId = id ?? null; saveColor() }"
