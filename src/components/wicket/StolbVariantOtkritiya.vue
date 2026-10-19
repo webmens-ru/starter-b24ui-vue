@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
 import {
   getAssortmentStolb,
@@ -39,12 +38,11 @@ const showStolbList     = computed(() => nalichieStolbovName.value === 'Со с�
 
 // ─── Вариант открытия ────────────────────────────────────────────────────────
 const openingOptions = computed(() => {
-  const base = window._HOSTNAME_
   return [
-    { label: 'Наружу / Правая', id: 1, img: `${base}/web/img/wicket_opening_diagram_02.jpg` },
-    { label: 'Наружу / Левая',  id: 3, img: `${base}/web/img/wicket_opening_diagram_01.jpg` },
-    { label: 'Внутрь / Левая',  id: 2, img: `${base}/web/img/wicket_opening_diagram_03.jpg` },
-    { label: 'Внутрь / Правая', id: 4, img: `${base}/web/img/wicket_opening_diagram_04.jpg` },
+    { label: 'Наружу / Правая', id: 1, img: '/img/wicket_opening_diagram_02.jpg' },
+    { label: 'Наружу / Левая',  id: 3, img: '/img/wicket_opening_diagram_01.jpg' },
+    { label: 'Внутрь / Левая',  id: 2, img: '/img/wicket_opening_diagram_03.jpg' },
+    { label: 'Внутрь / Правая', id: 4, img: '/img/wicket_opening_diagram_04.jpg' },
   ]
 })
 const openingOptionId = ref<number | null>(null)
