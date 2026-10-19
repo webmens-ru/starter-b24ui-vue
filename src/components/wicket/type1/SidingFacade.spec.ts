@@ -162,7 +162,7 @@ describe('SidingFacade', () => {
     expect(calc.colorFacadeImage.value).toBe('/colors/8017.webp')
   })
 
-  it('clears stale facade appearance when the product changes and still allows product-only continuation', async () => {
+  it('clears stale facade appearance and requires a new color before continuation', async () => {
     const wrapper = mountFacade()
     await flushPromises()
 
@@ -199,6 +199,13 @@ describe('SidingFacade', () => {
       typeOfCoatingFacade: 'Матовый',
     })
 
+    await wrapper.get('[data-label="Далее"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.emitted('next')).toBeUndefined()
+    expect(wrapper.get('[data-testid="appearance-color-error"]').text()).toBe('Выберите цвет')
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    await flushPromises()
     await wrapper.get('[data-label="Далее"]').trigger('click')
     expect(wrapper.emitted('next')).toHaveLength(1)
   })

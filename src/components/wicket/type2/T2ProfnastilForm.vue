@@ -7,6 +7,7 @@ import {
 } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
+import { hasRequiredFillingColor } from '../shared/fillingColorValidation'
 
 const props = defineProps<{ side: 'facade' | 'yard' }>()
 const calc = useCalculation()
@@ -56,7 +57,6 @@ const colorName = computed({
   },
 })
 const colorMode = computed(() => getProfnastilColorMode(coating.value))
-const colorRequired = computed(() => colorMode.value !== 'none')
 const manufacturerSelectItems = computed(() => [
   { id: '', label: 'Не выбран' },
   ...options.value.manufacturers.map(item => ({ id: item.id, label: item.name })),
@@ -84,7 +84,7 @@ const dictionaryColorId = computed<number | undefined>(() => {
 const valid = computed(() =>
   profile.value.trim() !== ''
   && coating.value.trim() !== ''
-  && (!colorRequired.value || colorName.value.trim() !== ''),
+  && hasRequiredFillingColor(colorId.value, colorName.value),
 )
 
 async function load(profileValue?: string, coatingValue?: string) {
@@ -265,7 +265,7 @@ onMounted(async () => {
         <span v-if="submitted && !coating" class="text-sm text-red-600">Выберите тип покрытия</span>
     </label>
 
-    <label v-if="colorMode === 'list'" class="form-field">
+    <label v-if="colorMode !== 'combobox'" class="form-field">
       <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
       <B24SelectMenu
         :model-value="dictionaryColorId"

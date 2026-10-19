@@ -44,6 +44,7 @@ const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'facade')
+const appearanceFields = ref<{ validate: () => boolean } | null>(null)
 const appearanceSaving = appearanceSave.saving
 const appearanceSaveFailed = appearanceSave.failed
 
@@ -216,6 +217,7 @@ function onContinue() {
     openModal('Вы не заполнили этот блок!')
     return
   }
+  if (!appearanceFields.value?.validate()) return
   emit('next')
 }
 
@@ -276,6 +278,7 @@ onMounted(async () => {
 
     <FillingAppearanceFields
       v-if="selectedRow"
+      ref="appearanceFields"
       :model-id="calc.modelId.value"
       material-group="Сайдинг"
       side="facade"

@@ -52,6 +52,36 @@ describe('FillingAppearanceFields', () => {
     apiMocks.getFillingAppearanceOptions.mockResolvedValue(sidingOptions)
   })
 
+  it('requires a color and clears the error after facade color selection', async () => {
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: '1', materialGroup: 'Сайдинг', side: 'facade' },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(false)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('[data-testid="appearance-color-error"]').text()).toBe('Выберите цвет')
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="appearance-color-error"]').exists()).toBe(false)
+  })
+
+  it('uses the same required-color contract for the yard side', async () => {
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: '1', materialGroup: 'Профлист', side: 'yard' },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(false)
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(true)
+    expect(useCalculation().colorYardId.value).toBe(9)
+  })
+
   it('updates facade appearance without changing yard appearance', async () => {
     const calc = useCalculation()
     calc.manufacturerYardId.value = 40

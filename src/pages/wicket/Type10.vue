@@ -4,7 +4,7 @@ import WicketWizardPage from './WicketWizardPage.vue'
 import ManufacturingOption from '../../components/wicket/ManufacturingOption.vue'
 /** Шаги page2–page2_facade_profnastil: только калитка типа 10 (`components/wicket/type10/`). */
 import FillSide from '../../components/wicket/type10/T10FillSide.vue'
-import ProfnastilFacade from '../../components/wicket/type10/T10ProfnastilFacade.vue'
+import ProfnastilFacade from '../../components/wicket/type1/ProfnastilFacade.vue'
 import StolbVariantOtkritiya from '../../components/wicket/StolbVariantOtkritiya.vue'
 import ShieldType from '../../components/wicket/ShieldType.vue'
 import RaspolozheniyePolotna from '../../components/wicket/RaspolozheniyePolotna.vue'

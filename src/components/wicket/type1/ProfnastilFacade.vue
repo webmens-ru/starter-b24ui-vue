@@ -12,6 +12,7 @@ import {
 } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import { hasRequiredFillingColor } from '../shared/fillingColorValidation'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -224,7 +225,7 @@ function onContinue() {
     openModal('Вы не заполнили этот блок!')
     return
   }
-  if (colors.value.length > 0 && selectedColorId.value === null) {
+  if (!hasRequiredFillingColor(selectedColorId.value, calc.colorFacade.value)) {
     openModal('Вы не выбрали цвет!')
     return
   }
