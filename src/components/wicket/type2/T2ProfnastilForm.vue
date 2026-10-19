@@ -84,7 +84,7 @@ const dictionaryColorId = computed<number | undefined>(() => {
 const valid = computed(() =>
   profile.value.trim() !== ''
   && coating.value.trim() !== ''
-  && hasRequiredFillingColor(colorId.value, colorName.value),
+  && hasRequiredFillingColor(colorId.value, colorName.value, colorMode.value === 'combobox'),
 )
 
 async function load(profileValue?: string, coatingValue?: string) {

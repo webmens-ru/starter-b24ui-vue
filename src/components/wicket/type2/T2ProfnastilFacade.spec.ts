@@ -190,7 +190,7 @@ describe('Type 2 profnastil pages', () => {
 
   it('uses the shared required-color rule without a coating-mode bypass', () => {
     expect(form).toContain("import { hasRequiredFillingColor } from '../shared/fillingColorValidation'")
-    expect(form).toContain('hasRequiredFillingColor(colorId.value, colorName.value)')
+    expect(form).toContain("hasRequiredFillingColor(colorId.value, colorName.value, colorMode.value === 'combobox')")
     expect(form).not.toContain('!colorRequired.value ||')
     expect(form).toContain("colorMode !== 'combobox'")
   })

@@ -9,6 +9,7 @@ import {
   restoreFillingAppearance,
 } from '../shared/fillingAppearanceState'
 import { wicketSidingFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -208,18 +209,24 @@ function isSelected(row: SidingRow) {
 }
 
 // ─── Навигация ────────────────────────────────────────────────────────────────
-function onContinue() {
+async function validateStep(): Promise<boolean> {
   if (appearanceSaving.value || appearanceSaveFailed.value) {
     openModal('Сначала повторите сохранение оформления.')
-    return
+    return false
   }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
-    return
+    return false
   }
-  if (!appearanceFields.value?.validate()) return
-  emit('next')
+  return appearanceFields.value?.validate() ?? false
 }
+
+const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
+  validateStep,
+  () => emit('next'),
+)
+
+defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {

@@ -7,4 +7,11 @@ describe('ProfnastilFacade color contract', () => {
     expect(form).toContain('hasRequiredFillingColor(selectedColorId.value, calc.colorFacade.value)')
     expect(form).not.toContain('colors.value.length > 0 && selectedColorId.value === null')
   })
+
+  it('blocks every navigation path while color saving is pending or failed', () => {
+    expect(form).toContain("createFillingAppearanceSaveCoordinator(calc, 'facade')")
+    expect(form).toContain('appearanceSaving.value || appearanceSaveFailed.value')
+    expect(form).toContain('defineExpose({ validateBeforeLeave })')
+    expect(form).toContain('data-testid="appearance-save-retry"')
+  })
 })

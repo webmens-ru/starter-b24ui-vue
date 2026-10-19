@@ -210,6 +210,20 @@ describe('SidingFacade', () => {
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
 
+  it('exposes the same color guard to wizard menu navigation', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+
+    const guard = (wrapper.vm as unknown as { validateBeforeLeave: () => Promise<boolean> }).validateBeforeLeave
+    expect(await guard()).toBe(false)
+
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    await flushPromises()
+    expect(await guard()).toBe(true)
+  })
+
   it('recalculates once after a successful facade appearance save and refreshes the stored price', async () => {
     const calc = useCalculation()
     calc.idFacade.value = 7

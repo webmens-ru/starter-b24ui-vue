@@ -15,6 +15,7 @@ import {
   restoreFillingAppearance,
 } from '../shared/fillingAppearanceState'
 import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -186,18 +187,24 @@ function isSelected(row: ProfnastilRow) {
   return selectedRow.value?.id === row.id
 }
 
-function onContinue() {
+async function validateStep(): Promise<boolean> {
   if (appearanceSaving.value || appearanceSaveFailed.value) {
     openModal('Сначала повторите сохранение оформления.')
-    return
+    return false
   }
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
-    return
+    return false
   }
-  if (!appearanceFields.value?.validate()) return
-  emit('next')
+  return appearanceFields.value?.validate() ?? false
 }
+
+const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
+  validateStep,
+  () => emit('next'),
+)
+
+defineExpose({ validateBeforeLeave })
 
 function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idYard.value) return null
