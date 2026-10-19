@@ -45,6 +45,10 @@ function mountFacade() {
 }
 
 describe('ProfnastilFacade color contract', () => {
+  it('layers the color menu above surrounding content', () => {
+    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
+  })
+
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()
