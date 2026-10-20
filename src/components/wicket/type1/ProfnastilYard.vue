@@ -210,6 +210,7 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    name:          calc.materialYard.value,
     material:      calc.materialYard.value,
     thickness:     calc.thicknessYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,

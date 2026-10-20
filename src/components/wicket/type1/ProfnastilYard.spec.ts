@@ -47,8 +47,8 @@ const ButtonStub = defineComponent({
 })
 
 const rows: ProfnastilRow[] = [
-  { id: 17, material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
-  { id: 21, material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
+  { id: 17, name: 'Профлист C8, 0,5 мм, Полиэстер', material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
+  { id: 21, name: 'Профлист C10, 0,6 мм, Пурал', material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
 ]
 
 function mountYard() {

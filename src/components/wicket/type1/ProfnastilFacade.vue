@@ -284,6 +284,7 @@ function restoreFromCalc(): ProfnastilRow | null {
   }
   return {
     id:            calc.idFacade.value,
+    name:          calc.materialFacade.value,
     material:      calc.materialFacade.value,
     thickness:     calc.thicknessFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,

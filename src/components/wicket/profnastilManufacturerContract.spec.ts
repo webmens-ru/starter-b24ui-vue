@@ -31,7 +31,7 @@ describe('shared profnastil contract', () => {
     }
   })
 
-  it('removes manufacturer and color from API types and mock data', () => {
+  it('keeps profnastil name and material separate in API types and mock data', () => {
     const types = readFileSync(resolve(__dirname, '../../app/api/wicket.types.ts'), 'utf8')
     const mock = readFileSync(resolve(__dirname, '../../app/api/mockWicket.ts'), 'utf8')
     const profnastilRows = mock.match(/const PROFNASTIL_ROWS:[\s\S]*?\n\]/)?.[0] ?? ''
@@ -43,9 +43,17 @@ describe('shared profnastil contract', () => {
     expect(profnastilFilters).not.toContain('colors')
     expect(profnastilRow).not.toContain('company')
     expect(profnastilRow).not.toMatch(/\bcolor/)
+    expect(profnastilRow).toMatch(/\bname:\s*string/)
+    expect(profnastilRow).toMatch(/\bmaterial:\s*string/)
     expect(profnastilTable).not.toContain('filters.companies')
     expect(profnastilTable).not.toContain('filters.colors')
     expect(profnastilRows).not.toContain('company')
     expect(profnastilRows).not.toMatch(/\bcolor/)
+    const rows = [...profnastilRows.matchAll(/^\s*\{ id: \d+,[^\n]*\},?$/gm)]
+    expect(rows.length).toBeGreaterThan(0)
+    for (const [row] of rows) {
+      expect(row).toMatch(/\bname:\s*'[^']+'/)
+      expect(row).toMatch(/\bmaterial:\s*'[^']+'/)
+    }
   })
 })

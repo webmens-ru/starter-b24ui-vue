@@ -59,7 +59,7 @@ describe('ProfnastilFacade color contract', () => {
     calc.materialFacadeGlob.value = 'Профнастил'
     apiMocks.getProfnastilTable.mockReset()
     apiMocks.getProfnastilTable.mockResolvedValue({
-      table: [{ id: 7, material: 'С-8', thickness: '0.5', typeOfCoating: 'Полиэстер' }],
+      table: [{ id: 7, name: 'Профлист С-8, 0,5 мм, Полиэстер', material: 'С-8', thickness: '0.5', typeOfCoating: 'Полиэстер' }],
       pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 },
     })
     apiMocks.getProfnastilColors.mockReset()

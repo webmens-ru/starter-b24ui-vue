@@ -167,6 +167,7 @@ export interface ProfnastilFilters {
 
 export interface ProfnastilRow {
   id: string | number
+  name: string
   material: string
   thickness: string | number
   typeOfCoating: string
