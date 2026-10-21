@@ -3,8 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 
 declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
-import { getColorShield, getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
-import type { ColorShieldItem } from '../../app/api/wicket'
+import { getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
 import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
@@ -38,10 +37,6 @@ function openModal(msg: string, title = 'Внимание') {
   modalMsg.value   = msg
   showModal.value  = true
 }
-
-// ─── Цвет рамы ────────────────────────────────────────────────────────────────
-const colorOptions    = ref<ColorShieldItem[]>([])
-const colorShieldId = ref<string | number>('')
 
 // ─── Тип щита ────────────────────────────────────────────────────────────────
 const shieldType = ref<string>('Тип_1')
@@ -125,38 +120,6 @@ const shieldOptions = computed(() => {
     { value: 'Тип_4', label: 'Сетка сбоку', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
   ]
 })
-
-// Группировка: Стандартная краска / Не стандартная (для B24SelectMenu)
-// id приводим к string — B24SelectMenu сравнивает по value-key строго, colorShieldId хранится как string
-const colorSelectItems = computed(() => {
-  const standard = colorOptions.value.filter(i => (i.isStandard ?? 1) === 1)
-  const custom   = colorOptions.value.filter(i => (i.isStandard ?? 1) === 0)
-  const rows: Array<{ type?: 'label' | 'separator'; label?: string; id?: string | number }> = []
-  if (standard.length) {
-    rows.push({ type: 'label', label: 'Стандартная краска' })
-    rows.push(...standard.map(i => ({ id: String(i.id), label: i.name })))
-  }
-  if (custom.length) {
-    if (rows.length) rows.push({ type: 'separator' })
-    rows.push({ type: 'label', label: 'Не стандартная краска' })
-    rows.push(...custom.map(i => ({ id: String(i.id), label: i.name })))
-  }
-  return rows
-})
-
-// ─── Загрузка цветов ─────────────────────────────────────────────────────────
-async function loadColorShield() {
-  try {
-    const res = await getColorShield(calc.modelId.value)
-    colorOptions.value = res.colorShield
-    if (!colorShieldId.value && colorOptions.value.length) {
-      colorShieldId.value = String(colorOptions.value[0].id)
-    }
-  } catch (e) {
-    console.warn('getColorShield:', e)
-    openModal('Не удалось загрузить данные для выпадающего списка color-shield.')
-  }
-}
 
 // ─── Загрузка ширины сетки ───────────────────────────────────────────────────
 async function loadNetWidths() {
@@ -346,17 +309,9 @@ async function onShieldTypeChange() {
   await save()
 }
 
-function onColorChange() {
-  save()
-}
-
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
   calc.shieldType.value       = shieldType.value
-  calc.colorShieldId.value   = String(colorShieldId.value ?? '')
-  const colorItem = colorOptions.value.find(i => String(i.id) === String(colorShieldId.value))
-  calc.colorShieldName.value = colorItem?.name ?? ''
-  calc.colorShieldHex.value  = colorItem?.hex ?? ''
   calc.heightTopPart.value   = showHeightTop.value ? heightTopPart.value : ''
   calc.heightLowerPart.value = showHeightLower.value ? heightLowerPart.value : ''
   calc.widthSidePart.value   = showSidePart.value ? widthSidePart.value : ''
@@ -394,9 +349,6 @@ function buildBlock() {
   const params: { name: string; value: string }[] = [
     { name: 'Тип щита', value: calc.shieldType.value },
   ]
-  if (calc.colorShieldName.value) {
-    params.push({ name: 'Цвет рамы', value: calc.colorShieldName.value })
-  }
   const provTop = providerTop.value
   const topVal = calc.heightTopPart.value
   if (showHeightTop.value && provTop !== '' && topVal && topVal !== '0' && Number(topVal) > 0) {
@@ -446,8 +398,6 @@ async function save() {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       shieldType:        calc.shieldType.value,
-      colorShieldName:  calc.colorShieldName.value,
-      colorShieldId:    calc.colorShieldId.value,
       heightTopPart:    topVal,
       heightLowerPart:  lowerVal,
       widthSidePart:    sideVal,
@@ -590,9 +540,6 @@ onMounted(async () => {
     widthSidePart.value = String(savedSide)
   }
   if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
-  if (calc.colorShieldId.value)    colorShieldId.value    = String(calc.colorShieldId.value)
-
-  await loadColorShield()
   await loadNetWidths()
   if (showSidePart.value && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
   if (showHeightLower.value && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
@@ -633,22 +580,6 @@ onMounted(async () => {
     </div>
 
     <div class="flex flex-col gap-5 px-1">
-
-      <!-- Цвет рамы -->
-      <div class="flex flex-col gap-2">
-        <span class="font-bold text-base whitespace-nowrap">Цвет рамы:</span>
-        <div class="select-full-width">
-          <B24SelectMenu
-            v-model="colorShieldId"
-            value-key="id"
-            :items="colorSelectItems"
-            placeholder="Выберите цвет"
-            class="w-full"
-            :b24ui="{ content: 'min-w-fit max-w-[90vw]', viewport: 'min-w-fit', item: 'whitespace-normal' }"
-            @update:model-value="onColorChange"
-          />
-        </div>
-      </div>
 
       <!-- Типы щита -->
       <div class="shield-grid">

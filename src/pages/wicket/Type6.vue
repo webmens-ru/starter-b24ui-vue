@@ -7,6 +7,7 @@ import FillSide from '../../components/wicket/type6/T6FillSide.vue'
 import ZhalyuziFacade from '../../components/wicket/type6/T6ZhalyuziFacade.vue'
 import StolbVariantOtkritiya from '../../components/wicket/StolbVariantOtkritiya.vue'
 import ShieldType from '../../components/wicket/ShieldType.vue'
+import Painting from '../../components/wicket/Painting.vue'
 import RaspolozheniyePolotna from '../../components/wicket/RaspolozheniyePolotna.vue'
 import RazmeryProyema from '../../components/wicket/RazmeryProyema.vue'
 import IsTherelock from '../../components/wicket/IsTherelock.vue'
@@ -21,6 +22,7 @@ const stepComponents: Record<string, Component> = {
   page2_facade_zhalyuzi: ZhalyuziFacade,
   page5: StolbVariantOtkritiya,
   page3: ShieldType,
+  page_painting: Painting,
   page6: RaspolozheniyePolotna,
   page7: RazmeryProyema,
   page9: IsTherelock,

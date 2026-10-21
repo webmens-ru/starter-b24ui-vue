@@ -15,6 +15,7 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'additionalPenId',
   'lockPenColorId',
   'penColorId',
+  'primerId',
   'assortmentSideGrilleNetId',
   'assortmentHeightUpperNetId',
   'assortmentHeightLowerNetId',

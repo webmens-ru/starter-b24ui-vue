@@ -107,7 +107,7 @@ describe('ProfnastilFacade color contract', () => {
     await wrapper.get('select').setValue('8')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="appearance-save-error"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="appearance-save-error"]').exists()).toBe(true)
     apiMocks.saveWicketData.mockResolvedValueOnce({ lockVersion: 2 })
     await wrapper.get('[data-testid="appearance-save-retry"]').trigger('click')
     await flushPromises()

@@ -78,8 +78,8 @@ describe('type2Navigation', () => {
       it('page1 → page7', () => {
         expect(getNextPage('page1', state())).toBe('page7')
       })
-      it('page5 → page3', () => {
-        expect(getNextPage('page5', state())).toBe('page3')
+      it('page5 → page6', () => {
+        expect(getNextPage('page5', state())).toBe('page6')
       })
       it('page_lock_type → page10', () => {
         expect(getNextPage('page_lock_type', state())).toBe('page10')

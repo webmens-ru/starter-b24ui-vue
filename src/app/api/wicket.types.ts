@@ -108,6 +108,9 @@ export interface SelectItem {
 /** Элемент списка цветов щита (dir_paints). isStandard: 1 — стандартная, 0 — не стандартная. */
 export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
+  paintCategoryName?: string
+  isFixedColor?: boolean
+  primers?: Array<{ id: number; name: string }>
   paintTypeId: number
   paintTypeName: string
   consumptionRate: number
@@ -383,5 +386,7 @@ export interface WicketGetDataResponse {
   lockInstaller?: string | null
   /** ID краски (dir_paints); для type1 — единственное хранимое поле выбора краски рамы. */
   colorShieldId?: number | null
+  colorShieldNote?: string
+  primerId?: number | null
   [key: string]: unknown
 }

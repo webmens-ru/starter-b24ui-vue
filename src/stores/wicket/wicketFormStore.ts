@@ -130,6 +130,9 @@ const shieldType       = ref<string>('Тип_1')
 const colorShieldId   = ref<string | number>('')
 const colorShieldName = ref<string>('')
 const colorShieldHex  = ref<string>('')
+const colorShieldNote = ref<string>('')
+const primerId = ref<number | null>(null)
+const primerName = ref<string>('')
 const heightTopPart   = ref<string>('0')
 const heightLowerPart = ref<string>('0')
 const widthSidePart         = ref<string>('0')
@@ -323,6 +326,9 @@ const fieldsFilled = ref<number>(0)
     colorShieldId.value = ''
     colorShieldName.value = ''
     colorShieldHex.value = ''
+    colorShieldNote.value = ''
+    primerId.value = null
+    primerName.value = ''
     heightTopPart.value = '0'
     heightLowerPart.value = '0'
     widthSidePart.value = '0'
@@ -510,14 +516,15 @@ const fieldsFilled = ref<number>(0)
           'page2',
           'page2_facade_profnastil',
           'page5',
-          'page3',
           'page6',
+          'page3',
+          'page_painting',
           'page9',
           'page_lock_type',
           'page10',
           'page12',
         ]
-      : ['page1', 'page7', 'page2', 'page3', 'page5', 'page6', 'page9', 'page10', 'page12']
+      : ['page1', 'page7', 'page2', 'page5', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
     const visited: string[] = []
     let active = 'page1'
 
@@ -543,6 +550,9 @@ const fieldsFilled = ref<number>(0)
           break
         case 'page3':
           completed = notEmpty(shieldType.value)
+          break
+        case 'page_painting':
+          completed = notEmpty(colorShieldId.value)
           break
         case 'page5':
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
@@ -637,6 +647,9 @@ const fieldsFilled = ref<number>(0)
       colorShieldId,
       colorShieldName,
       colorShieldHex,
+      colorShieldNote,
+      primerId,
+      primerName,
       heightTopPart,
       heightLowerPart,
       widthSidePart,
@@ -853,13 +866,16 @@ const fieldsFilled = ref<number>(0)
     }
     blocks.push({ blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
 
+    // Расположение полотна
+    blocks.push({
+      blockName: 'Расположение полотна',
+      params: [{ name: 'Расположение полотна', value: raspolozheniyePolotna.value }],
+    })
+
     // Тип щита
     const shieldParams: CalcBlock['params'] = [
       { name: 'Тип щита', value: shieldType.value },
     ]
-    if (colorShieldName.value) {
-      shieldParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
-    }
     const shieldCapabilities = frameSubtypeCapabilities(shieldType.value)
     if (shieldCapabilities.top && heightTopPart.value && heightTopPart.value !== '0') {
       shieldParams.push({ name: 'Высота верхней части', value: heightTopPart.value })
@@ -877,11 +893,11 @@ const fieldsFilled = ref<number>(0)
     }
     blocks.push({ blockName: 'Тип щита', params: shieldParams })
 
-    // Расположение полотна
-    blocks.push({
-      blockName: 'Расположение полотна',
-      params: [{ name: 'Расположение полотна', value: raspolozheniyePolotna.value }],
-    })
+    const paintingParams: CalcBlock['params'] = []
+    if (colorShieldName.value) paintingParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
+    if (colorShieldNote.value) paintingParams.push({ name: 'Примечание к цвету краски', value: colorShieldNote.value })
+    if (primerName.value) paintingParams.push({ name: 'Грунтовка', value: primerName.value })
+    blocks.push({ blockName: 'Окраска', params: paintingParams })
 
     // Проем
     if (widthProyema.value || heightProyema.value || clearanceProyema.value) {
@@ -980,6 +996,9 @@ const fieldsFilled = ref<number>(0)
     colorShieldId,
     colorShieldName,
     colorShieldHex,
+    colorShieldNote,
+    primerId,
+    primerName,
     heightTopPart,
     heightLowerPart,
     widthSidePart,

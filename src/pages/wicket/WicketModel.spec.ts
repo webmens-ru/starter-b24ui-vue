@@ -64,7 +64,7 @@ describe('WicketModel', () => {
     const sources = wrapper.findAll('img').map(image => image.attributes('src'))
 
     expect(sources.length).toBeGreaterThan(0)
-    expect(sources.every(source => source.startsWith('/') && !source.startsWith('/web/'))).toBe(true)
+    expect(sources.every(source => source != null && source.startsWith('/') && !source.startsWith('/web/'))).toBe(true)
   })
 
   it('creates a wicket product row and opens the wizard with both ids', async () => {

@@ -24,6 +24,16 @@ function section(page: string, pages = [page]): WicketRouteSection {
 }
 
 describe('defineWicketRoute', () => {
+  it('orders canvas, shield and painting as separate consecutive sections', () => {
+    const route = defineWicketRoute(standardTailSections())
+    expect(route.menu(state).map(item => item.label)).toEqual([
+      'Столбы / Вариант открытия / Перемычка', 'Расположение полотна', 'Тип щита',
+      'Окраска', 'Комплект замка', 'Дополнительная ручка', 'Рассчитать',
+    ])
+    expect(route.next('page6', state)).toBe('page3')
+    expect(route.next('page3', state)).toBe('page_painting')
+    expect(route.prev('page9', state)).toBe('page_painting')
+  })
   it('строит меню и линейные переходы из одного массива разделов', () => {
     const route = defineWicketRoute([
       section('page1'),

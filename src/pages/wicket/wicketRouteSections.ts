@@ -93,6 +93,10 @@ export function canvasSection(): WicketRouteSection {
   return section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
 }
 
+export function paintingSection(): WicketRouteSection {
+  return section('page_painting', 'Окраска', 'painting')
+}
+
 export function lockSection(): WicketRouteSection {
   const result = section('page9', 'Комплект замка', 'is-there-lock', ['page9', 'page_lock_type'])
   result.next = (from, state) => {
@@ -123,8 +127,9 @@ export function calculateSection(): WicketRouteSection {
 export function standardTailSections(): WicketRouteSection[] {
   return [
     postsSection(),
-    shieldSection(),
     canvasSection(),
+    shieldSection(),
+    paintingSection(),
     lockSection(),
     penSection(),
     calculateSection(),

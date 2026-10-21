@@ -88,6 +88,8 @@ export function useCalculation() {
       assortmentJumperId: form.assortmentJumperId || null,
       shieldType: form.shieldType,
       colorShieldId: form.colorShieldId || null,
+      colorShieldNote: form.colorShieldNote,
+      primerId: form.primerId,
       heightTopPart: form.heightTopPart,
       heightLowerPart: form.heightLowerPart,
       widthSidePart: form.widthSidePart,
