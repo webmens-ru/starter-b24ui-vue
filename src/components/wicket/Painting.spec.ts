@@ -13,12 +13,12 @@ vi.mock('../../app/api/wicket', async (original) => ({
   saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 2 }),
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
 }))
-const { saveWicketData } = await import('../../app/api/wicket')
+const { saveWicketData, recalculate, getColorShield } = await import('../../app/api/wicket')
 
 const selectStub = {
-  props: ['modelValue', 'items'],
+  props: ['modelValue', 'items', 'disabled'],
   emits: ['update:modelValue'],
-  template: `<select :value="modelValue ?? ''" @change="$emit('update:modelValue', $event.target.value)">
+  template: `<select :value="modelValue ?? ''" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)">
     <template v-for="(item, i) in items" :key="i"><option v-if="!item.type" :value="item.id">{{ item.label }}</option></template>
   </select>`,
 }
@@ -94,6 +94,47 @@ describe('Окраска', () => {
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
     expect(wrapper.text()).toContain('Ошибка сохранения')
     expect(wrapper.emitted('next')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('explains calculation failure separately from a successful painting save and allows leaving', async () => {
+    const calc = useCalculation()
+    calc.priceRetail.value = '1000'
+    const wrapper = render()
+    await flushPromises()
+    vi.mocked(recalculate).mockRejectedValueOnce({ response: { status: 422, data: {
+      error: 'Не удалось рассчитать цену',
+      problems: [{ message: 'Заклёпка 5×3,2 мм: позиция не найдена.' }],
+    } } })
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(wrapper.text()).toContain('Окраска сохранена')
+    expect(wrapper.text()).toContain('Заклёпка 5×3,2 мм: позиция не найдена.')
+    expect(wrapper.text()).not.toContain('Request failed')
+    wrapper.unmount()
+  })
+
+  it('disables the primer dropdown when no compatible primers exist', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [{
+      id: 1, name: 'Эмаль', isFixedColor: true, paintTypeId: 1, paintTypeName: 'Эмаль',
+      consumptionRate: 100, primers: [],
+    }] })
+    const wrapper = render()
+    await flushPromises()
+    const select = wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]')
+    expect(select.element.disabled).toBe(true)
+    expect(select.element.value).toBe('none')
+    expect(wrapper.text()).toContain('Без грунтовки')
+    wrapper.unmount()
+  })
+
+  it('shows server validation details when the painting itself could not be saved', async () => {
+    const wrapper = render()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce({ response: { status: 422, data: {
+      errors: { primerId: ['Выберите совместимую грунтовку.'] },
+    } } })
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
+    expect(wrapper.text()).toContain('Выберите совместимую грунтовку.')
     wrapper.unmount()
   })
 })

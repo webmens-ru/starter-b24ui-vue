@@ -11,6 +11,7 @@ const colors = ref<ColorShieldItem[]>([])
 const loading = ref(true)
 const submitted = ref(false)
 const error = ref('')
+const calculationWarning = ref('')
 const selectedColor = computed(() => colors.value.find(item => String(item.id) === String(calc.colorShieldId.value)))
 const individual = computed(() => selectedColor.value?.isFixedColor === false)
 const primers = computed(() => selectedColor.value?.primers ?? [])
@@ -26,9 +27,35 @@ const colorItems = computed(() => {
   ])
 })
 const primerItems = computed(() => [
-  { id: '', label: 'Без грунтовки' },
+  { id: 'none', label: 'Без грунтовки' },
   ...primers.value.map(item => ({ id: String(item.id), label: item.name })),
 ])
+
+function requestErrorMessage(cause: unknown, fallback: string): string {
+  if (typeof cause === 'object' && cause !== null && 'response' in cause) {
+    const response = cause.response
+    if (typeof response === 'object' && response !== null && 'data' in response) {
+      const data = response.data
+      if (typeof data === 'object' && data !== null) {
+        const messages: string[] = []
+        if ('problems' in data && Array.isArray(data.problems)) {
+          for (const problem of data.problems) {
+            if (typeof problem === 'object' && problem !== null && typeof problem.message === 'string') messages.push(problem.message)
+          }
+        }
+        if ('errors' in data && typeof data.errors === 'object' && data.errors !== null) {
+          for (const value of Object.values(data.errors).flat()) {
+            if (typeof value === 'string') messages.push(value)
+          }
+        }
+        if (messages.length) return [...new Set(messages)].join('\n')
+        if ('error' in data && typeof data.error === 'string') return data.error
+        if ('message' in data && typeof data.message === 'string') return data.message
+      }
+    }
+  }
+  return cause instanceof Error ? cause.message : fallback
+}
 
 function syncSelection(): void {
   calc.colorShieldName.value = selectedColor.value?.name ?? ''
@@ -62,7 +89,7 @@ async function save(): Promise<boolean> {
     })
     error.value = ''
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось сохранить окраску'
+    error.value = requestErrorMessage(e, 'Не удалось сохранить окраску')
     return false
   }
   if (calc.priceRetail.value) {
@@ -73,9 +100,12 @@ async function save(): Promise<boolean> {
         model: calc.model.value,
       })
       calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+      calculationWarning.value = ''
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Не удалось пересчитать стоимость'
-      return false
+      calculationWarning.value = `Окраска сохранена. Стоимость не пересчитана:\n${requestErrorMessage(e, 'Не удалось пересчитать стоимость')}`
+      calc.priceRetail.value = ''
+      calc.priceDealer.value = ''
+      calc.data.value = calc.data.value.filter(block => block.blockName !== 'Цена')
     }
   }
   return true
@@ -87,7 +117,7 @@ async function onColorChange(value: string | number): Promise<void> {
   await save()
 }
 async function onPrimerChange(value: string | number | null): Promise<void> {
-  calc.primerId.value = value === '' || value == null ? null : Number(value)
+  calc.primerId.value = value === 'none' || value === '' || value == null ? null : Number(value)
   await save()
 }
 async function validateAndSave(): Promise<boolean> {
@@ -125,10 +155,11 @@ onMounted(async () => {
       <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
     </div>
     <p v-if="loading">Загрузка красок…</p>
-    <div v-if="error" role="alert" class="text-red-600">
+    <div v-if="error" role="alert" class="text-red-600 whitespace-pre-line">
       {{ error }}
       <B24Button v-if="!colors.length" label="Повторить загрузку" color="air-secondary" @click="load" />
     </div>
+    <p v-if="calculationWarning" role="status" class="text-amber-700 whitespace-pre-line">{{ calculationWarning }}</p>
     <div class="flex flex-col gap-5 px-1">
       <label class="flex flex-col gap-2">
         <span class="font-semibold">Цвет рамы</span>
@@ -151,7 +182,7 @@ onMounted(async () => {
           required
           maxlength="1000"
           rows="3"
-          class="w-full px-3 py-2 border rounded border-gray-300"
+          class="w-full px-3 py-2 border rounded border-gray-300 bg-white"
           :aria-invalid="submitted && !calc.colorShieldNote.value.trim()"
           placeholder="Укажите индивидуальный цвет и требования к нему"
           @change="save"
@@ -162,10 +193,11 @@ onMounted(async () => {
         <span class="font-semibold">Грунтовка <span class="font-normal text-gray-500">(необязательно)</span></span>
         <B24SelectMenu
           data-testid="paint-primer"
-          :model-value="calc.primerId.value == null ? '' : String(calc.primerId.value)"
+          :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)"
           :items="primerItems"
           value-key="id"
           class="w-full"
+          :disabled="!primers.length"
           @update:model-value="onPrimerChange"
         />
         <span v-if="!primers.length" class="text-sm text-gray-500">Для выбранной краски совместимые грунтовки не заданы.</span>
