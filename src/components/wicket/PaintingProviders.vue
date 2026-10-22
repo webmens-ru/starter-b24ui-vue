@@ -9,6 +9,6 @@ const painters = ['Выполняет изготовитель', 'Выполня
 
 <template>
   <div class="flex flex-col gap-6">
-    <ProviderChoice v-model="calc.doesPaintingFrame.value" title="Окраска каркаса" :options="painters" :disabled="disabled" @change="emit('change')" />
+    <ProviderChoice v-model="calc.doesPaintingFrame.value" title="Кто осуществляет окраску" :options="painters" :disabled="disabled" @change="emit('change')" />
   </div>
 </template>

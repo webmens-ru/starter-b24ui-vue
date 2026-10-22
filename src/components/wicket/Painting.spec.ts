@@ -48,7 +48,7 @@ describe('Окраска', () => {
     calc.doesAssembly.value = 'Выполняет заказчик'
     const wrapper = render()
     await flushPromises()
-    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Окраска каркаса'])
+    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Кто осуществляет окраску'])
     expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.find('input[value="Предоставляет заказчик"]').exists()).toBe(false)
     expect(saveWicketData).not.toHaveBeenCalled()
@@ -83,7 +83,7 @@ describe('Окраска', () => {
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
     await wrapper.get('input[value="Выполняет заказчик"]').setValue()
     await flushPromises()
-    expect(wrapper.findAll('legend').map(item => item.text())).toEqual(['Окраска каркаса'])
+    expect(wrapper.findAll('legend').map(item => item.text())).toEqual(['Кто осуществляет окраску'])
     expect(wrapper.find('[aria-label="Категория краски"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
     expect(wrapper.find('textarea').exists()).toBe(false)
