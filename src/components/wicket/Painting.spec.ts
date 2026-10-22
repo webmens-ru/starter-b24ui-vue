@@ -206,7 +206,7 @@ describe('Окраска', () => {
     vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
       { id: 1, name: 'Белая', paintCategoryName: 'Стандартная', isFixedColor: true, primers: [], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
       { id: 8, name: 'Давальческая эмаль', paintCategoryName: 'Давальческая', isFixedColor: true,
-        primers: [{ id: 10, name: 'Грунт А' }, { id: 20, name: 'Грунт Б' }], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
+        primers: [{ id: 10, name: 'Грунт А' }, { id: 20, name: 'Грунт Б' }], paintTypeId: null, paintTypeName: null, consumptionRate: null },
     ] })
     const calc = useCalculation()
     const wrapper = render()
