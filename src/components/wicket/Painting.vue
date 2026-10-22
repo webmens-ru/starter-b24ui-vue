@@ -196,6 +196,7 @@ onMounted(async () => {
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
     </div>
+    <PaintingProviders :disabled="loading" @change="save" />
     <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
       <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card"
         :data-paint-category="item.name" :aria-pressed="category === item.name"
@@ -203,7 +204,6 @@ onMounted(async () => {
         {{ item.name }}
       </button>
     </div>
-    <PaintingProviders :disabled="loading" @change="save" />
     <p v-if="legacyCustomerPaint" role="status" class="text-amber-700">В старом заказе краску «{{ selectedColor?.name }}» предоставляет заказчик. Выбор сохранён. Для замены выберите категорию и краску заново.</p>
     <p v-if="!loading && !filteredColors.length" role="status">В этой категории пока нет доступных красок.</p>
     <p v-if="loading">Загрузка красок…</p>
