@@ -72,6 +72,7 @@ const WICKET_NET_PROVIDER_KEYS = new Set([
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
   providesMaterial: 'Предоставляет изготовитель',
   providesPaint: 'Предоставляет изготовитель',
+  providesPrimer: 'Предоставляет изготовитель',
   doesPaintingFrame: 'Выполняет изготовитель',
   doesAssembly: 'Выполняет изготовитель',
   fillSide: 'Одна сторона',

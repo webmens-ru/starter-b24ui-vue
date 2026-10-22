@@ -3,6 +3,7 @@ import type { OrderTotals, ProductRowContext, ProductRowSummary } from './produc
 export type { ProductRowContext } from './productRows.types'
 
 export interface WicketSavePayload extends ProductRowContext {
+  providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
   lockInstaller?: string | null
@@ -389,5 +390,6 @@ export interface WicketGetDataResponse {
   colorShieldId?: number | null
   colorShieldNote?: string
   primerId?: number | null
+  providesPrimer?: string | null
   [key: string]: unknown
 }

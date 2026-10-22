@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PaintingProviders from './PaintingProviders.vue'
+import ProviderChoice from './ProviderChoice.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, recalculate, saveWicketData } from '../../app/api/wicket'
@@ -15,9 +16,10 @@ const category = ref('Стандартная')
 function colorCategory(item: ColorShieldItem): string {
   return item.paintCategoryName ?? (item.isStandard === 0 ? 'Не стандартная' : 'Стандартная')
 }
-const filteredColors = computed(() => category.value === 'Давальческая'
-  ? colors.value
-  : colors.value.filter(item => colorCategory(item) === category.value))
+const filteredColors = computed(() => colors.value.filter(item => colorCategory(item) === category.value
+  || (legacyCustomerPaint.value && String(item.id) === String(calc.colorShieldId.value))))
+const legacyCustomerPaint = ref(false)
+const primerProviders = ['Предоставляет изготовитель', 'Предоставляет заказчик']
 const loading = ref(true)
 const submitted = ref(false)
 const error = ref('')
@@ -37,6 +39,7 @@ const colorItems = computed(() => {
   ])
 })
 async function onCategoryChange(name: string): Promise<void> {
+  legacyCustomerPaint.value = false
   category.value = name
   calc.providesPaint.value = name === 'Давальческая' ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
   if (!filteredColors.value.some(item => String(item.id) === String(calc.colorShieldId.value))) {
@@ -91,7 +94,10 @@ function syncSelection(): void {
   if (individual.value && calc.colorShieldNote.value.trim()) {
     params.push({ name: 'Примечание к цвету краски', value: calc.colorShieldNote.value.trim() })
   }
-  if (primer) params.push({ name: 'Грунтовка', value: primer.name })
+  if (primer) params.push(
+    { name: 'Грунтовка', value: primer.name },
+    { name: 'Поставщик грунтовки', value: calc.providesPrimer.value },
+  )
   calc.updateOrCreateBlock('Окраска', params)
 }
 
@@ -107,6 +113,7 @@ async function save(): Promise<boolean> {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       providesPaint: calc.providesPaint.value,
+      providesPrimer: calc.providesPrimer.value,
       doesPaintingFrame: calc.doesPaintingFrame.value,
       doesAssembly: calc.doesAssembly.value,
       colorShieldId: calc.colorShieldId.value,
@@ -138,7 +145,9 @@ async function save(): Promise<boolean> {
 }
 
 async function onColorChange(value: string | number): Promise<void> {
+  legacyCustomerPaint.value = false
   calc.colorShieldId.value = String(value ?? '')
+  calc.providesPaint.value = category.value === 'Давальческая' ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
   syncSelection()
   await save()
 }
@@ -160,7 +169,9 @@ async function load(): Promise<void> {
     const response = await getColorShield(calc.modelId.value)
     colors.value = response.colorShield
     categories.value = response.paintCategories ?? categoryNames.map((name, id) => ({ id, name }))
-    if (!calc.colorShieldId.value && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
+    legacyCustomerPaint.value = calc.providesPaint.value === 'Предоставляет заказчик'
+      && !!selectedColor.value && colorCategory(selectedColor.value) !== 'Давальческая'
+    if (!calc.colorShieldId.value && calc.providesPaint.value !== 'Предоставляет заказчик' && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
     category.value = calc.providesPaint.value === 'Предоставляет заказчик' ? 'Давальческая'
       : selectedColor.value ? colorCategory(selectedColor.value) : 'Стандартная'
     if (category.value === 'Давальческая') calc.providesPaint.value = 'Предоставляет заказчик'
@@ -192,6 +203,7 @@ onMounted(async () => {
         :disabled="loading" @click="onCategoryChange(item.name)" />
     </div>
     <PaintingProviders :disabled="loading" @change="save" />
+    <p v-if="legacyCustomerPaint" role="status" class="text-amber-700">В старом заказе краску «{{ selectedColor?.name }}» предоставляет заказчик. Выбор сохранён. Для замены выберите категорию и краску заново.</p>
     <p v-if="!loading && !filteredColors.length" role="status">В этой категории пока нет доступных красок.</p>
     <p v-if="loading">Загрузка красок…</p>
     <div v-if="error" role="alert" class="text-red-600 whitespace-pre-line">
@@ -241,6 +253,8 @@ onMounted(async () => {
         />
         <span v-if="!primers.length" class="text-sm text-gray-500">Для выбранной краски совместимые грунтовки не заданы.</span>
       </label>
+      <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value"
+        title="Поставщик грунтовки" :options="primerProviders" :disabled="loading" @change="save" />
     </div>
   </div>
 </template>

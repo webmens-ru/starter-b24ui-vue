@@ -44,6 +44,7 @@ describe('Окраска', () => {
   it('shows providers first and saves both choices with legacy assembly and painting details', async () => {
     const calc = useCalculation()
     calc.providesPaint.value = 'Предоставляет заказчик'
+    calc.colorShieldId.value = '1'
     calc.doesAssembly.value = 'Выполняет заказчик'
     const wrapper = render()
     await flushPromises()
@@ -67,6 +68,7 @@ describe('Окраска', () => {
     calc.reset()
     calc.loadFromApi(payload)
     expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(wrapper.text()).toContain('В старом заказе')
     expect(calc.doesPaintingFrame.value).toBe('Выполняет заказчик')
     expect(calc.doesAssembly.value).toBe('Выполняет заказчик')
     expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
@@ -119,20 +121,63 @@ describe('Окраска', () => {
     wrapper.unmount()
   })
 
-  it('keeps the underlying color and primer for customer supplied paint and restores manufacturer for normal categories', async () => {
+  it('clears paint and primer for an empty Daval category and restores manufacturer for normal categories', async () => {
     const wrapper = render()
     await flushPromises()
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
+    vi.mocked(saveWicketData).mockClear()
     await wrapper.get('[data-paint-category="Давальческая"]').trigger('click')
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'Предоставляет заказчик', colorShieldId: '1', primerId: 10,
-    }))
-    expect(wrapper.get('[data-testid="paint-color"]').text()).toContain('Индивидуальная эмаль')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(useCalculation().colorShieldId.value).toBe('')
+    expect(useCalculation().primerId.value).toBeNull()
+    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
+    expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
     await wrapper.get('[data-paint-category="Стандартная"]').trigger('click')
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'Предоставляет изготовитель' }))
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Индивидуальная эмаль')
+    wrapper.unmount()
+  })
+
+  it('saves independent primer supplier with customer paint and manufacturer painting through reload', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
+      { id: 1, name: 'Белая', paintCategoryName: 'Стандартная', isFixedColor: true, primers: [], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
+      { id: 8, name: 'Давальческая эмаль', paintCategoryName: 'Давальческая', isFixedColor: true,
+        primers: [{ id: 10, name: 'Грунт А' }, { id: 20, name: 'Грунт Б' }], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
+    ] })
+    const calc = useCalculation()
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Поставщик грунтовки')
+    await wrapper.get('[data-paint-category="Давальческая"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
+    expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
+    await wrapper.get('[data-testid="paint-primer"]').setValue('20')
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      providesPaint: 'Предоставляет заказчик', providesPrimer: 'Предоставляет изготовитель',
+      doesPaintingFrame: 'Выполняет изготовитель', primerId: 20,
+    }))
+    await wrapper.get('input[value="Предоставляет заказчик"]').setValue()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPrimer: 'Предоставляет заказчик' }))
+    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
+      .toContainEqual({ name: 'Поставщик грунтовки', value: 'Предоставляет заказчик' })
+    const payload = calc.getFullSavePayload()
+    calc.reset()
+    expect(calc.providesPrimer.value).toBe('Предоставляет изготовитель')
+    calc.loadFromApi(payload)
+    expect(calc.providesPrimer.value).toBe('Предоставляет заказчик')
+    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(calc.primerId.value).toBe(20)
+    calc.loadFromApi({ providesPrimer: null })
+    expect(calc.providesPrimer.value).toBe('Предоставляет изготовитель')
+    await wrapper.get('[data-testid="paint-primer"]').setValue('none')
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Поставщик грунтовки')
+    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params.some(param => param.name === 'Поставщик грунтовки')).toBe(false)
     wrapper.unmount()
   })
 

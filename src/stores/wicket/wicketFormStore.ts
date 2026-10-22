@@ -31,6 +31,7 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
 // Поставщики материала и краски, исполнитель окраски и legacy-сборка
 const providesMaterial    = ref<string>('Предоставляет изготовитель')
 const providesPaint       = ref<string>('Предоставляет изготовитель')
+const providesPrimer = ref<string>('Предоставляет изготовитель')
 const doesPaintingFrame  = ref<string>('Выполняет изготовитель')
 const doesAssembly        = ref<string>('Выполняет изготовитель')
 
@@ -275,6 +276,7 @@ const fieldsFilled = ref<number>(0)
     priceDealer.value = ''
     providesMaterial.value = 'Предоставляет изготовитель'
     providesPaint.value = 'Предоставляет изготовитель'
+    providesPrimer.value = 'Предоставляет изготовитель'
     doesPaintingFrame.value = 'Выполняет изготовитель'
     doesAssembly.value = 'Выполняет изготовитель'
     fillSide.value = 'Одна сторона'
@@ -598,6 +600,7 @@ const fieldsFilled = ref<number>(0)
       model: w.model,
       providesMaterial,
       providesPaint,
+      providesPrimer,
       doesPaintingFrame,
       doesAssembly,
       fillSide,
@@ -888,7 +891,10 @@ const fieldsFilled = ref<number>(0)
     ]
     if (colorShieldName.value) paintingParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
     if (colorShieldNote.value) paintingParams.push({ name: 'Примечание к цвету краски', value: colorShieldNote.value })
-    if (primerName.value) paintingParams.push({ name: 'Грунтовка', value: primerName.value })
+    if (primerName.value) paintingParams.push(
+      { name: 'Грунтовка', value: primerName.value },
+      { name: 'Поставщик грунтовки', value: providesPrimer.value },
+    )
     blocks.push({ blockName: 'Окраска', params: paintingParams })
 
     // Проем
@@ -942,6 +948,7 @@ const fieldsFilled = ref<number>(0)
     data,
     providesMaterial,
     providesPaint,
+    providesPrimer,
     doesPaintingFrame,
     doesAssembly,
     fillSide,

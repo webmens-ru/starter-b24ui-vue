@@ -663,6 +663,7 @@ export async function mockLoadWicketData(
     modelId: '1',
     providesMaterial: 'Предоставляет изготовитель',
     providesPaint: 'Предоставляет изготовитель',
+    providesPrimer: 'Предоставляет изготовитель',
     doesPaintingFrame: 'Выполняет изготовитель',
     doesAssembly: 'Выполняет изготовитель',
     fillSide: 'Одна сторона',

@@ -76,6 +76,7 @@ export function useCalculation() {
       ...supplierPayload,
       providesMaterial: form.providesMaterial,
       providesPaint: form.providesPaint,
+      providesPrimer: form.providesPrimer,
       doesPaintingFrame: form.doesPaintingFrame,
       doesAssembly: form.doesAssembly,
       fillSide: form.fillSide,
