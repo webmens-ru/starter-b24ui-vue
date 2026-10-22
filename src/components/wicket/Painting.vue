@@ -196,11 +196,12 @@ onMounted(async () => {
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
     </div>
-    <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <B24Button v-for="item in categories" :key="item.id" :label="item.name"
+    <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
+      <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card"
         :data-paint-category="item.name" :aria-pressed="category === item.name"
-        :color="category === item.name ? 'air-primary' : 'air-secondary'"
-        :disabled="loading" @click="onCategoryChange(item.name)" />
+        :disabled="loading" @click="onCategoryChange(item.name)">
+        {{ item.name }}
+      </button>
     </div>
     <PaintingProviders :disabled="loading" @change="save" />
     <p v-if="legacyCustomerPaint" role="status" class="text-amber-700">В старом заказе краску «{{ selectedColor?.name }}» предоставляет заказчик. Выбор сохранён. Для замены выберите категорию и краску заново.</p>
@@ -258,3 +259,25 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.paint-category-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: #000;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+.paint-category-card:hover { border-color: #93c5fd; }
+.paint-category-card[aria-pressed="true"] {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+  background: #eff6ff;
+}
+.paint-category-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.paint-category-card:disabled { cursor: wait; opacity: .6; }
+</style>
