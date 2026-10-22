@@ -4,12 +4,19 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
 import Painting from './Painting.vue'
 
+const { categoryFixtures } = vi.hoisted(() => ({ categoryFixtures: [
+  { id: 71, name: 'Базовая переименованная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
+  { id: 83, name: 'Другая', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
+  { id: 96, name: 'Произвольная', isFixedColor: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
+  { id: 125, name: 'Материал клиента', isFixedColor: true, isCustomerSupplied: true, requiresPaintType: false, allowsAnyPrimer: true, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
+] }))
+
 vi.mock('../../app/api/wicket', async (original) => ({
   ...(await original<typeof import('../../app/api/wicket')>()),
   getColorShield: vi.fn().mockResolvedValue({ colorShield: [
-    { id: 1, name: 'Белая', paintCategoryName: 'Стандартная', isFixedColor: true, primers: [{ id: 10, name: 'Грунт А' }], hex: '#ffffff' },
-    { id: 2, name: 'Индивидуальная эмаль', paintCategoryName: 'Индивидуальная', isFixedColor: false, primers: [{ id: 20, name: 'Грунт Б' }] },
-  ] }),
+    { id: 1, name: 'Белая', paintCategoryId: 71, primers: [{ id: 10, name: 'Грунт А' }], hex: '#ffffff' },
+    { id: 2, name: 'Индивидуальная эмаль', paintCategoryId: 96, primers: [{ id: 20, name: 'Грунт Б' }] },
+  ], paintCategories: categoryFixtures }),
   saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 2 }),
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
 }))
@@ -49,7 +56,7 @@ describe('Окраска', () => {
     const wrapper = render()
     await flushPromises()
     expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Кто осуществляет окраску'])
-    expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-paint-category="71"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.find('input[value="Предоставляет заказчик"]').exists()).toBe(false)
     expect(saveWicketData).not.toHaveBeenCalled()
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
@@ -140,7 +147,7 @@ describe('Окраска', () => {
   it('requires a nonblank note for individual paint before saving or leaving', async () => {
     const wrapper = render()
     await flushPromises()
-    await wrapper.get('[data-paint-category="Индивидуальная"]').trigger('click')
+    await wrapper.get('[data-paint-category="96"]').trigger('click')
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
@@ -165,7 +172,7 @@ describe('Окраска', () => {
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
     await flushPromises()
     expect(useCalculation().primerId.value).toBe(10)
-    await wrapper.get('[data-paint-category="Индивидуальная"]').trigger('click')
+    await wrapper.get('[data-paint-category="96"]').trigger('click')
     expect(useCalculation().primerId.value).toBeNull()
     expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
     wrapper.unmount()
@@ -188,14 +195,14 @@ describe('Окраска', () => {
     await flushPromises()
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
     vi.mocked(saveWicketData).mockClear()
-    await wrapper.get('[data-paint-category="Давальческая"]').trigger('click')
+    await wrapper.get('[data-paint-category="125"]').trigger('click')
     await flushPromises()
     expect(saveWicketData).not.toHaveBeenCalled()
     expect(useCalculation().colorShieldId.value).toBe('')
     expect(useCalculation().primerId.value).toBeNull()
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
     expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
-    await wrapper.get('[data-paint-category="Стандартная"]').trigger('click')
+    await wrapper.get('[data-paint-category="71"]').trigger('click')
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'Предоставляет изготовитель' }))
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Индивидуальная эмаль')
@@ -204,15 +211,15 @@ describe('Окраска', () => {
 
   it('saves independent primer supplier with customer paint and manufacturer painting through reload', async () => {
     vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
-      { id: 1, name: 'Белая', paintCategoryName: 'Стандартная', isFixedColor: true, primers: [], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
-      { id: 8, name: 'Давальческая эмаль', paintCategoryName: 'Давальческая', isFixedColor: true,
+      { id: 1, name: 'Белая', paintCategoryId: 71, primers: [], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
+      { id: 8, name: 'Давальческая эмаль', paintCategoryId: 125,
         primers: [{ id: 10, name: 'Грунт А' }, { id: 20, name: 'Грунт Б' }], paintTypeId: null, paintTypeName: null, consumptionRate: null },
-    ] })
+    ], paintCategories: categoryFixtures })
     const calc = useCalculation()
     const wrapper = render()
     await flushPromises()
     expect(wrapper.text()).not.toContain('Поставщик грунтовки')
-    await wrapper.get('[data-paint-category="Давальческая"]').trigger('click')
+    await wrapper.get('[data-paint-category="125"]').trigger('click')
     await flushPromises()
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
     expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
@@ -246,7 +253,7 @@ describe('Окраска', () => {
   it('shows an empty category without saving an unavailable paint', async () => {
     const wrapper = render()
     await flushPromises()
-    await wrapper.get('[data-paint-category="Не стандартная"]').trigger('click')
+    await wrapper.get('[data-paint-category="83"]').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
     expect(saveWicketData).not.toHaveBeenCalled()
@@ -256,15 +263,15 @@ describe('Окраска', () => {
 
   it('recognizes a configured customer supplied paint without an automatic save', async () => {
     vi.mocked(getColorShield).mockResolvedValueOnce({
-      colorShield: [{ id: 8, name: 'Краска заказчика', paintCategoryName: 'Давальческая',
+      colorShield: [{ id: 8, name: 'Краска заказчика',
         paintCategoryId: 34, isFixedColor: true, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 }],
-      paintCategories: [{ id: 34, name: 'Давальческая', isFixedColor: false }],
+      paintCategories: [{ ...categoryFixtures[3]!, id: 34 }],
     })
     const calc = useCalculation()
     calc.colorShieldId.value = '8'
     const wrapper = render()
     await flushPromises()
-    expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-paint-category="34"]').attributes('aria-pressed')).toBe('true')
     expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
     expect(saveWicketData).not.toHaveBeenCalled()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
@@ -281,6 +288,48 @@ describe('Окраска', () => {
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
     expect(wrapper.text()).toContain('Ошибка сохранения')
     expect(wrapper.emitted('next')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('keeps equally named arbitrary categories separate and uses independent properties', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({
+      paintCategories: [
+        { ...categoryFixtures[0]!, id: 407, name: 'Одинаковая', isCustomerSupplied: true, isFixedColor: false },
+        { ...categoryFixtures[3]!, id: 908, name: 'Одинаковая', isCustomerSupplied: false, isFixedColor: true },
+      ],
+      colorShield: [
+        { id: 31, name: 'Первый материал', paintCategoryId: 407, paintTypeId: null, paintTypeName: null, consumptionRate: null },
+        { id: 32, name: 'Второй материал', paintCategoryId: 908, paintTypeId: null, paintTypeName: null, consumptionRate: null },
+      ],
+    })
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.get('[data-paint-category="908"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-testid="paint-color"]').text()).toContain('Второй материал')
+    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Первый материал')
+    await wrapper.get('[data-paint-category="407"]').trigger('click')
+    expect(useCalculation().providesPaint.value).toBe('Предоставляет заказчик')
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
+    await wrapper.get('textarea').setValue('По образцу')
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', providesPaint: 'Предоставляет заказчик' }))
+    wrapper.unmount()
+  })
+
+  it('requires category metadata instead of guessing from old labels and supports retry', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
+      { id: 99, name: 'Материал', paintCategoryName: 'Стандартная', paintTypeId: null, paintTypeName: null, consumptionRate: null },
+    ] })
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Не удалось загрузить свойства категорий краски')
+    expect(wrapper.find('[data-paint-category]').exists()).toBe(false)
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.findAll('button').find(button => button.text() === 'Повторить загрузку')!.trigger('click')
+    await flushPromises()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
     wrapper.unmount()
   })
 
@@ -302,9 +351,9 @@ describe('Окраска', () => {
 
   it('disables the primer dropdown when no compatible primers exist', async () => {
     vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [{
-      id: 1, name: 'Эмаль', isFixedColor: true, paintTypeId: 1, paintTypeName: 'Эмаль',
+      id: 1, name: 'Эмаль', paintCategoryId: 71, paintTypeId: 1, paintTypeName: 'Эмаль',
       consumptionRate: 100, primers: [],
-    }] })
+    }], paintCategories: categoryFixtures })
     const wrapper = render()
     await flushPromises()
     const select = wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]')

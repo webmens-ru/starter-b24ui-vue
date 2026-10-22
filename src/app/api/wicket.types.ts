@@ -106,7 +106,18 @@ export interface SelectItem {
   name: string
 }
 
-/** Элемент списка цветов щита (dir_paints). isStandard: 1 — стандартная, 0 — не стандартная. */
+export interface PaintCategory {
+  id: number
+  name: string
+  isFixedColor: boolean
+  isCustomerSupplied: boolean
+  requiresPaintType: boolean
+  allowsAnyPrimer: boolean
+  quantityCalculationMode: 'consumption' | 'ceilKg'
+  costCoefficient: number
+}
+
+/** Элемент списка красок. Связь с поведением задаёт paintCategoryId. */
 export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
   paintCategoryName?: string

@@ -34,6 +34,7 @@ import {
   mockFetchSavedOrderPrice,
 } from './mockWicket'
 import type {
+  PaintCategory,
   SelectItem,
   ColorShieldItem,
   FilterOptionItem,
@@ -485,7 +486,7 @@ export async function getAssortmentJumper(
 
 export async function getColorShield(
   modelId: string | number
-): Promise<{ colorShield: ColorShieldItem[]; paintCategories?: Array<{ id: number; name: string; isFixedColor: boolean }> }> {
+): Promise<{ colorShield: ColorShieldItem[]; paintCategories?: PaintCategory[] }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
   return data.data

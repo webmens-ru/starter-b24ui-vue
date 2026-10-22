@@ -1,6 +1,7 @@
 import type {
   SelectItem,
   ColorShieldItem,
+  PaintCategory,
   RecalculateResponse,
   FilterOptions,
   FillingAppearanceOptions,
@@ -472,9 +473,15 @@ const MOCK_COLOR_SHIELD: ColorShieldItem[] = [
   { id: 102, name: 'RAL 5010 (Горечавково-синий)', isStandard: 0, paintTypeId: 2, paintTypeName: 'Молотковая', consumptionRate: 150, hex: '#1B3F6E' },
 ]
 
-export async function mockGetColorShield(): Promise<{ colorShield: ColorShieldItem[] }> {
+export async function mockGetColorShield(): Promise<{ colorShield: ColorShieldItem[]; paintCategories: PaintCategory[] }> {
   await delay(100)
-  return { colorShield: MOCK_COLOR_SHIELD }
+  return {
+    colorShield: MOCK_COLOR_SHIELD.map(item => ({ ...item, paintCategoryId: item.isStandard === 0 ? 102 : 101 })),
+    paintCategories: [
+      { id: 101, name: 'Стандартная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption', costCoefficient: 1 },
+      { id: 102, name: 'Не стандартная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg', costCoefficient: 1.1 },
+    ],
+  }
 }
 
 // ─── Мок ширины сетки ────────────────────────────────────────────────────────
