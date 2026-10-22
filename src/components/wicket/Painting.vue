@@ -163,6 +163,7 @@ async function load(): Promise<void> {
     if (!calc.colorShieldId.value && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
     category.value = calc.providesPaint.value === 'Предоставляет заказчик' ? 'Давальческая'
       : selectedColor.value ? colorCategory(selectedColor.value) : 'Стандартная'
+    if (category.value === 'Давальческая') calc.providesPaint.value = 'Предоставляет заказчик'
     if (selectedColor.value) syncSelection()
     else error.value = 'Выбранная краска недоступна. Выберите краску из списка.'
   } catch (e) {

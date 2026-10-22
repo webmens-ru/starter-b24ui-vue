@@ -147,6 +147,26 @@ describe('Окраска', () => {
     wrapper.unmount()
   })
 
+  it('recognizes a configured customer supplied paint without an automatic save', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({
+      colorShield: [{ id: 8, name: 'Краска заказчика', paintCategoryName: 'Давальческая',
+        paintCategoryId: 34, isFixedColor: true, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 }],
+      paintCategories: [{ id: 34, name: 'Давальческая', isFixedColor: false }],
+    })
+    const calc = useCalculation()
+    calc.colorShieldId.value = '8'
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
+    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      providesPaint: 'Предоставляет заказчик', colorShieldId: '8',
+    }))
+    wrapper.unmount()
+  })
+
   it('does not advance when saving fails', async () => {
     const wrapper = render()
     await flushPromises()
