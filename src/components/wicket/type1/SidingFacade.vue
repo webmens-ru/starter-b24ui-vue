@@ -105,6 +105,9 @@ function restoreFromCalc(): SidingRow | null {
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow): Promise<boolean> {
+  calc.sidingFormFacadeId.value = row.sidingFormId ?? null
+  calc.typeOfCoatingFacadeId.value = row.typeOfCoatingId ?? null
+  calc.profileTypeFacadeId.value = null
   calc.idFacade.value                = row.id
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = row.form

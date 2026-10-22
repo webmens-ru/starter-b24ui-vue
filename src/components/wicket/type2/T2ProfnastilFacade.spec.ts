@@ -209,10 +209,9 @@ describe('Type 2 profnastil pages', () => {
   })
 
   it('reloads colors for the selected coating', () => {
-    expect(api).toContain('coating?: string')
-    expect(api).toContain('coating: coating || null')
+    expect(api).toContain('typeOfCoatingId?: number')
+    expect(api).toContain('typeOfCoatingId: typeOfCoatingId ?? null')
     expect(form).toContain('await load(profile.value, coating.value)')
-    expect(form).toContain('await load(profile.value, nextCoating)')
     expect(form).toContain('getPrintechSelectItems')
   })
 })

@@ -153,6 +153,8 @@ export interface SidingFilters {
 
 export interface SidingRow {
   id: string | number
+  sidingFormId?: number
+  typeOfCoatingId?: number
   material: string
   form: string
   typeOfCoating: string
@@ -183,6 +185,8 @@ export interface ProfnastilFilters {
 
 export interface ProfnastilRow {
   id: string | number
+  profileTypeId?: number
+  typeOfCoatingId?: number
   name: string
   material: string
   thickness: string | number
@@ -206,7 +210,7 @@ export interface ProfnastilFormOption {
 }
 
 export interface ProfnastilCoatingOption extends ProfnastilFormOption {
-  id: string
+  id: number
   profnastilId: number
   thickness: string | number
   coatingHex: string | null

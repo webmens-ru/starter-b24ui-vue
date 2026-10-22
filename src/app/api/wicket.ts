@@ -1,5 +1,5 @@
 import api from '.'
-import { isPositiveSafeInteger } from '../positiveDecimalId'
+import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 import {
   forgetWicketProductRowLockVersion,
@@ -259,13 +259,26 @@ export async function getFilterOptions(url: string, type?: string): Promise<Filt
   return data.data
 }
 
+function directoryFilterIds(values: string[]): number[] {
+  return values.map(value => {
+    const id = parsePositiveDecimalId(value)
+    if (id.kind !== 'valid') throw new Error('Некорректный ID справочника')
+    return id.value
+  })
+}
+
 export async function getSidingTable(
   modelId: string | number,
   filters: SidingFilters,
   page = 1,
 ): Promise<SidingTableResponse> {
   if (isMock) return mockGetSidingTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-siding`, { ...filters, page })
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-siding`, {
+    materials: filters.materials,
+    sidingFormIds: directoryFilterIds(filters.form),
+    typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
+    page,
+  })
   return data.data
 }
 
@@ -287,7 +300,11 @@ export async function getProfnastilTable(
   page = 1,
 ): Promise<Required<ProfnastilTableResponse>> {
   if (isMock) return mockGetProfnastilTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, { ...filters, page })
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, {
+    profileTypeIds: directoryFilterIds(filters.materials),
+    typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
+    page,
+  })
   const result: ProfnastilTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {
@@ -308,15 +325,15 @@ export async function getProfnastilColors(
 }
 
 export async function getType2ProfnastilFormOptions(
-  profile?: string,
-  coating?: string,
+  profileTypeId?: number,
+  typeOfCoatingId?: number,
 ): Promise<ProfnastilFormOptions> {
   if (isMock) {
     return {
-      profiles: [{ id: 'С-8', name: 'С-8' }],
-      coatings: profile
+      profiles: [{ id: 1, name: 'С-8' }],
+      coatings: profileTypeId
         ? [{
-            id: 'Глянец',
+            id: 1,
             name: 'Глянец',
             profnastilId: 1,
             thickness: '0.45',
@@ -326,14 +343,14 @@ export async function getType2ProfnastilFormOptions(
           }]
         : [],
       manufacturers: [],
-      colors: coating
+      colors: typeOfCoatingId
         ? [{ id: 1, name: 'RAL 7016', hex: '#383E42', image: null }]
         : [],
     }
   }
   const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
-    profile: profile || null,
-    coating: coating || null,
+    profileTypeId: profileTypeId ?? null,
+    typeOfCoatingId: typeOfCoatingId ?? null,
   })
   return data.data
 }

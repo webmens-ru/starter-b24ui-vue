@@ -22,17 +22,17 @@ const submitted = ref(false)
 
 const isFacade = computed(() => props.side === 'facade')
 const profile = computed({
-  get: () => String(isFacade.value ? calc.materialFacade.value : calc.materialYard.value),
+  get: () => isFacade.value ? calc.profileTypeFacadeId.value : calc.profileTypeYardId.value,
   set: value => {
-    if (isFacade.value) calc.materialFacade.value = value
-    else calc.materialYard.value = value
+    if (isFacade.value) calc.profileTypeFacadeId.value = value
+    else calc.profileTypeYardId.value = value
   },
 })
 const coating = computed({
-  get: () => String(isFacade.value ? calc.typeOfCoatingFacade.value : calc.typeOfCoatingYard.value),
+  get: () => isFacade.value ? calc.typeOfCoatingFacadeId.value : calc.typeOfCoatingYardId.value,
   set: value => {
-    if (isFacade.value) calc.typeOfCoatingFacade.value = value
-    else calc.typeOfCoatingYard.value = value
+    if (isFacade.value) calc.typeOfCoatingFacadeId.value = value
+    else calc.typeOfCoatingYardId.value = value
   },
 })
 const manufacturerId = computed({
@@ -56,16 +56,25 @@ const colorName = computed({
     else calc.colorYard.value = value
   },
 })
-const colorMode = computed(() => getProfnastilColorMode(coating.value))
+const selectedMaterialId = computed<number | undefined>(() => {
+  const value = Number(isFacade.value ? calc.idFacade.value : calc.idYard.value)
+  return Number.isSafeInteger(value) && value > 0 ? value : undefined
+})
+const selectedMaterial = computed(() => options.value.coatings.find(item => String(item.profnastilId) === String(selectedMaterialId.value)))
+const selectionDiagnostic = computed(() => calc.materialSelectionProblems.value
+  .filter(problem => problem.side === props.side).map(problem => problem.message).join(' ')
+  || (selectedMaterialId.value && profile.value == null ? 'Не удалось восстановить связи материала. Выберите профиль и покрытие заново.' : ''))
+// Existing display-name color modes are remediated separately in stage 3.
+const colorMode = computed(() => getProfnastilColorMode(selectedMaterial.value?.name ?? ''))
 const manufacturerSelectItems = computed(() => [
   { id: '', label: 'Не выбран' },
   ...options.value.manufacturers.map(item => ({ id: item.id, label: item.name })),
 ])
 const profileSelectItems = computed(() =>
-  options.value.profiles.map(item => ({ id: item.name, label: item.name })),
+  options.value.profiles.map(item => ({ id: item.id, label: item.name })),
 )
 const coatingSelectItems = computed(() =>
-  options.value.coatings.map(item => ({ id: item.name, label: item.name })),
+  options.value.coatings.map(item => ({ id: item.profnastilId, label: `${item.name} — ${item.thickness} мм` })),
 )
 const selectedManufacturerId = computed<string | number>(() => manufacturerId.value ?? '')
 const colorSelectItems = computed(() =>
@@ -82,15 +91,15 @@ const dictionaryColorId = computed<number | undefined>(() => {
   return Number.isFinite(value) && value > 0 ? value : undefined
 })
 const valid = computed(() =>
-  profile.value.trim() !== ''
-  && coating.value.trim() !== ''
+  profile.value !== null
+  && selectedMaterial.value !== undefined
   && hasRequiredFillingColor(colorId.value, colorName.value, colorMode.value === 'combobox'),
 )
 
-async function load(profileValue?: string, coatingValue?: string) {
+async function load(profileValue: number | null, coatingValue: number | null) {
   loading.value = true
   try {
-    options.value = await getType2ProfnastilFormOptions(profileValue, coatingValue)
+    options.value = await getType2ProfnastilFormOptions(profileValue ?? undefined, coatingValue ?? undefined)
   } finally {
     loading.value = false
   }
@@ -109,11 +118,11 @@ function clearColor() {
 }
 
 async function onProfileChange() {
-  coating.value = ''
+  coating.value = null
   clearColor()
   if (isFacade.value) calc.idFacade.value = ''
   else calc.idYard.value = ''
-  await load(profile.value, undefined)
+  await load(profile.value, null)
   await save()
 }
 
@@ -123,28 +132,46 @@ async function onManufacturerChange(value: string | number | undefined) {
 }
 
 async function onProfileSelectChange(value: string | number | undefined) {
-  profile.value = String(value ?? '')
+  calc.materialSelectionProblems.value = calc.materialSelectionProblems.value.filter(problem => problem.side !== props.side)
+  const id = Number(value)
+  profile.value = options.value.profiles.some(item => Number(item.id) === id) ? id : null
+  const label = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''
+  if (isFacade.value) {
+    calc.materialFacade.value = label
+    calc.typeOfCoatingFacade.value = ''
+  } else {
+    calc.materialYard.value = label
+    calc.typeOfCoatingYard.value = ''
+  }
   await onProfileChange()
 }
 
 async function onCoatingSelectChange(value: string | number | undefined) {
-  const nextCoating = String(value ?? '')
-  coating.value = nextCoating
-  await load(profile.value, nextCoating)
+  const material = options.value.coatings.find(item => String(item.profnastilId) === String(value))
+  if (!material) return
+  coating.value = material.id
+  if (isFacade.value) calc.idFacade.value = material.profnastilId
+  else calc.idYard.value = material.profnastilId
+  await load(profile.value, coating.value)
   await onCoatingChange()
 }
 
 async function onCoatingChange() {
   clearColor()
-  const selected = options.value.coatings.find(item => item.id === coating.value)
+  const selected = selectedMaterial.value
   if (selected) {
+    const profileName = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''
     if (isFacade.value) {
+      calc.materialFacade.value = profileName
+      calc.typeOfCoatingFacade.value = selected.name
       calc.idFacade.value = selected.profnastilId
       calc.thicknessFacade.value = String(selected.thickness)
       calc.coatingFacadeHex.value = selected.coatingHex ?? ''
       calc.coatingFacadeImage.value = selected.coatingImage ?? ''
       calc.reliefFacadeImage.value = selected.reliefImage ?? ''
     } else {
+      calc.materialYard.value = profileName
+      calc.typeOfCoatingYard.value = selected.name
       calc.idYard.value = selected.profnastilId
       calc.thicknessYard.value = String(selected.thickness)
       calc.coatingYardHex.value = selected.coatingHex ?? ''
@@ -157,7 +184,7 @@ async function onCoatingChange() {
 
 async function onColorChange() {
   const selected = options.value.colors.find(item =>
-    String(item.id) === String(colorId.value) || item.name === colorName.value.trim(),
+    String(item.id) === String(colorId.value),
   )
   if (selected) {
     colorId.value = selected.id
@@ -200,9 +227,9 @@ async function save() {
   await saveWicketData({
     ...calc.getBaseSavePayload(),
     [`id${suffix}`]: isFacade.value ? calc.idFacade.value || null : calc.idYard.value || null,
-    [`material${suffix}`]: profile.value,
+    [`material${suffix}`]: isFacade.value ? calc.materialFacade.value : calc.materialYard.value,
     [`manufacturer${suffix}Id`]: manufacturerId.value || null,
-    [`typeOfCoating${suffix}`]: coating.value,
+    [`typeOfCoating${suffix}`]: isFacade.value ? calc.typeOfCoatingFacade.value : calc.typeOfCoatingYard.value,
     [`color${suffix}Id`]: colorId.value || null,
     [`color${suffix}`]: colorName.value.trim(),
     [`thickness${suffix}`]: isFacade.value ? calc.thicknessFacade.value : calc.thicknessYard.value,
@@ -224,6 +251,7 @@ onMounted(async () => {
 
 <template>
   <div class="profnastil-form">
+    <p v-if="selectionDiagnostic" role="alert" class="text-red-600">{{ selectionDiagnostic }}</p>
     <label class="form-field">
       <span class="font-semibold">Производитель</span>
       <B24SelectMenu
@@ -254,7 +282,7 @@ onMounted(async () => {
     <label class="form-field">
         <span class="font-semibold">Тип покрытия <span class="text-red-600">*</span></span>
         <B24SelectMenu
-          :model-value="coating || undefined"
+          :model-value="selectedMaterialId || undefined"
           value-key="id"
           :items="coatingSelectItems"
           placeholder="Выберите тип покрытия"

@@ -3,6 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const api = { get: vi.fn(), post: vi.fn() }
 vi.mock('.', () => ({ default: api }))
 
+describe('material directory relation requests', () => {
+  it('sends numeric foreign keys separately from labels', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 } } } })
+    await wicket.getSidingTable('2', { materials: ['Текстовый поиск'], form: ['901'], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-siding', { materials: ['Текстовый поиск'], sidingFormIds: [901], typeOfCoatingIds: [707], page: 1 })
+    await wicket.getProfnastilTable('2', { materials: ['602'], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-profnastil', { profileTypeIds: [602], typeOfCoatingIds: [707], page: 1 })
+  })
+
+  it('rejects display names rather than converting them into numeric identifiers', async () => {
+    const wicket = await import('./wicket')
+    await expect(wicket.getProfnastilTable('2', { materials: ['Профиль'], typeOfCoating: [] })).rejects.toThrow('ID')
+  })
+})
+
 function deferred<T>(): {
   promise: Promise<T>
   resolve: (value: T) => void

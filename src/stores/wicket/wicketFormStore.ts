@@ -151,6 +151,10 @@ const netWidthProviderSide  = ref<string>('executor')
 
 // Поля шага "Заполнение (фасад)"
 const idFacade                = ref<string | number>('')
+const materialSelectionProblems = ref<Array<{ side: 'facade' | 'yard'; reason: string; message: string }>>([])
+const profileTypeFacadeId = ref<number | null>(null)
+const typeOfCoatingFacadeId = ref<number | null>(null)
+const sidingFormFacadeId = ref<number | null>(null)
 const manufacturerFacadeId    = ref<string | number | null>(null)
 const colorFacadeId           = ref<string | number | null>(null)
 const materialSupplierFacade = ref<string>('')
@@ -172,6 +176,9 @@ const numberOfSticks           = ref<number | null>(null)
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
+const profileTypeYardId = ref<number | null>(null)
+const typeOfCoatingYardId = ref<number | null>(null)
+const sidingFormYardId = ref<number | null>(null)
 const manufacturerYardId    = ref<string | number | null>(null)
 const colorYardId           = ref<string | number | null>(null)
 const materialSupplierYard = ref<string>('')
@@ -231,6 +238,9 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetFacadeFilling(): void {
+    profileTypeFacadeId.value = null
+    typeOfCoatingFacadeId.value = null
+    sidingFormFacadeId.value = null
     idFacade.value = ''
     manufacturerFacadeId.value = null
     colorFacadeId.value = null
@@ -253,6 +263,9 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    profileTypeYardId.value = null
+    typeOfCoatingYardId.value = null
+    sidingFormYardId.value = null
     idYard.value = ''
     manufacturerYardId.value = null
     colorYardId.value = null
@@ -271,6 +284,7 @@ const fieldsFilled = ref<number>(0)
 
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
+    materialSelectionProblems.value = []
     data.value = []
     priceRetail.value = ''
     priceDealer.value = ''
@@ -590,6 +604,7 @@ const fieldsFilled = ref<number>(0)
 
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
+    materialSelectionProblems.value = []
     const wizard = useWicketWizardStore()
     const w = storeToRefs(wizard)
     const refMap: Record<string, { value: unknown }> = {
@@ -664,6 +679,10 @@ const fieldsFilled = ref<number>(0)
       netWidthProviderLower,
       netWidthProviderSide,
       idFacade,
+      materialSelectionProblems,
+      profileTypeFacadeId,
+      typeOfCoatingFacadeId,
+      sidingFormFacadeId,
       manufacturerFacadeId,
       colorFacadeId,
       materialSupplierFacade,
@@ -683,6 +702,9 @@ const fieldsFilled = ref<number>(0)
       gapName,
       numberOfSticks,
       idYard,
+      profileTypeYardId,
+      typeOfCoatingYardId,
+      sidingFormYardId,
       manufacturerYardId,
       colorYardId,
       materialSupplierYard,
@@ -1012,6 +1034,10 @@ const fieldsFilled = ref<number>(0)
     netWidthProviderLower,
     netWidthProviderSide,
     idFacade,
+    materialSelectionProblems,
+    profileTypeFacadeId,
+    typeOfCoatingFacadeId,
+    sidingFormFacadeId,
     manufacturerFacadeId,
     colorFacadeId,
     materialSupplierFacade,
@@ -1031,6 +1057,9 @@ const fieldsFilled = ref<number>(0)
     gapName,
     numberOfSticks,
     idYard,
+    profileTypeYardId,
+    typeOfCoatingYardId,
+    sidingFormYardId,
     manufacturerYardId,
     colorYardId,
     materialSupplierYard,

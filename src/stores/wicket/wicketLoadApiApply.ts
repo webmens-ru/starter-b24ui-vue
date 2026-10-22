@@ -5,6 +5,12 @@
 
 /** Поля, которые должны быть строго числами (сравнение с value radio). */
 export const WICKET_API_NUMERIC_KEYS = new Set([
+  'profileTypeFacadeId',
+  'profileTypeYardId',
+  'typeOfCoatingFacadeId',
+  'typeOfCoatingYardId',
+  'sidingFormFacadeId',
+  'sidingFormYardId',
   'productRowId',
   'hasStolby',
   'openingOptionId',

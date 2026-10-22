@@ -138,6 +138,9 @@ function buildSummaryParams() {
 }
 
 async function save(row: ProfnastilRow): Promise<boolean> {
+  calc.profileTypeFacadeId.value = row.profileTypeId ?? null
+  calc.typeOfCoatingFacadeId.value = row.typeOfCoatingId ?? null
+  calc.sidingFormFacadeId.value = null
   calc.idFacade.value                = row.id
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = ''
