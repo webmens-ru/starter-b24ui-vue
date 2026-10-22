@@ -229,7 +229,7 @@ onMounted(async () => {
     <p v-if="calculationWarning" role="status" class="text-amber-700 whitespace-pre-line">{{ calculationWarning }}</p>
     <div class="flex flex-col gap-5 px-1">
       <label class="flex flex-col gap-2">
-        <span class="font-semibold">Цвет рамы</span>
+        <span class="font-semibold">Краска</span>
         <B24SelectMenu
           data-testid="paint-color"
           :model-value="String(calc.colorShieldId.value)"
