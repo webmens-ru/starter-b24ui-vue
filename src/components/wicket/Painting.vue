@@ -209,12 +209,15 @@ onMounted(async () => {
     <PaintingProviders @change="save" />
     <div v-if="error && customerPainting" role="alert" class="text-red-600 whitespace-pre-line">{{ error }}</div>
     <template v-if="!customerPainting">
-    <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
+    <div role="group" aria-labelledby="paint-category-heading">
+    <h2 id="paint-category-heading" class="text-center text-xl font-semibold mb-3">Категория краски</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
       <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card"
         :data-paint-category="item.name" :aria-pressed="category === item.name"
         :disabled="loading" @click="onCategoryChange(item.name)">
         {{ item.name }}
       </button>
+    </div>
     </div>
     <p v-if="legacyCustomerPaint" role="status" class="text-amber-700">В старом заказе краску «{{ selectedColor?.name }}» предоставляет заказчик. Выбор сохранён. Для замены выберите категорию и краску заново.</p>
     <p v-if="!loading && !filteredColors.length" role="status">В этой категории пока нет доступных красок.</p>
