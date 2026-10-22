@@ -113,9 +113,9 @@ export interface ColorShieldItem extends SelectItem {
   paintCategoryId?: number
   isFixedColor?: boolean
   primers?: Array<{ id: number; name: string }>
-  paintTypeId: number
-  paintTypeName: string
-  consumptionRate: number
+  paintTypeId: number | null
+  paintTypeName: string | null
+  consumptionRate: number | null
   /** HEX-цвет для визуализации (из dir_color.hex через dir_paints.color) */
   hex?: string | null
 }
