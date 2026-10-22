@@ -211,6 +211,8 @@ export interface ProfnastilFormOption {
 
 export interface ProfnastilCoatingOption extends ProfnastilFormOption {
   id: number
+  colorInputMode: 'list' | 'combobox' | 'none'
+  isDoubleSided: boolean
   profnastilId: number
   thickness: string | number
   coatingHex: string | null

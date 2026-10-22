@@ -37,8 +37,8 @@ beforeEach(() => {
   vi.mocked(getType2ProfnastilFormOptions).mockResolvedValue({
     profiles: [{ id: 901, name: 'Профиль' }, { id: 902, name: 'Профиль' }],
     coatings: [
-      { id: 707, name: 'Глянец', profnastilId: 21, thickness: '0.45', coatingHex: null, coatingImage: null, reliefImage: null },
-      { id: 707, name: 'Глянец', profnastilId: 22, thickness: '0.50', coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, name: 'Глянец', profnastilId: 21, thickness: '0.45', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, name: 'Глянец', profnastilId: 22, thickness: '0.50', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
     ],
     manufacturers: [],
     colors: [{ id: 604, name: 'Цвет', hex: '#000000', image: null }, { id: 603, name: 'Цвет', hex: '#ffffff', image: null }],
