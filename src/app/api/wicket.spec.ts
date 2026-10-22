@@ -17,6 +17,25 @@ describe('material directory relation requests', () => {
     const wicket = await import('./wicket')
     await expect(wicket.getProfnastilTable('2', { materials: ['Профиль'], typeOfCoating: [] })).rejects.toThrow('ID')
   })
+
+  it('sends coating references for fence and zhalyuzi without sending labels', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [] } } })
+    await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], colors: [], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', {
+      companies: [], materials: [], widthFence: [], colors: [], typeOfCoatingIds: [707], page: 1,
+    })
+    await wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['808'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type6/get-filling-zhalyuzi', {
+      companies: [], materials: [], thickness: [], colors: [], typeOfCoatingIds: [808], page: 1,
+    })
+  })
+
+  it('rejects coating labels at the fence and zhalyuzi request boundary', async () => {
+    const wicket = await import('./wicket')
+    await expect(wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], colors: [], typeOfCoating: ['Название'] })).rejects.toThrow('ID')
+    await expect(wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['Название'] })).rejects.toThrow('ID')
+  })
 })
 
 function deferred<T>(): {

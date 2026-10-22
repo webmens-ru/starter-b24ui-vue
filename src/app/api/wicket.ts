@@ -360,7 +360,10 @@ export async function getZhalyuziTable(
   filters: import('./wicket.types').ZhalyuziFilters,
   page = 1,
 ): Promise<Required<import('./wicket.types').ZhalyuziTableResponse>> {
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-zhalyuzi`, { ...filters, page })
+  const { typeOfCoating, ...otherFilters } = filters
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-zhalyuzi`, {
+    ...otherFilters, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+  })
   const result: import('./wicket.types').ZhalyuziTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {
@@ -411,7 +414,10 @@ export async function getFenceTable(
   filters: import('./wicket.types').FenceFilters,
   page = 1,
 ): Promise<Required<import('./wicket.types').FenceTableResponse>> {
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, { ...filters, page })
+  const { typeOfCoating, ...otherFilters } = filters
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, {
+    ...otherFilters, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+  })
   const result: import('./wicket.types').FenceTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {

@@ -241,6 +241,7 @@ export interface ZhalyuziFilters {
 
 export interface ZhalyuziRow {
   id: string | number
+  typeOfCoatingId?: number | null
   company: string
   material: string
   thickness: string | number
@@ -326,6 +327,7 @@ export interface FenceFilters {
 
 export interface FenceRow {
   id: string | number
+  typeOfCoatingId?: number | null
   company: string
   material: string
   widthFence: string | number
