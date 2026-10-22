@@ -109,6 +109,7 @@ export interface SelectItem {
 export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
   paintCategoryName?: string
+  paintCategoryId?: number
   isFixedColor?: boolean
   primers?: Array<{ id: number; name: string }>
   paintTypeId: number

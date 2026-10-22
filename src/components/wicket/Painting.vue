@@ -9,6 +9,15 @@ import { createStepLeaveAttempt } from './stepLeaveAttempt'
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
 const colors = ref<ColorShieldItem[]>([])
+const categoryNames = ['Стандартная', 'Не стандартная', 'Индивидуальная', 'Давальческая']
+const categories = ref<Array<{ id: number; name: string }>>([])
+const category = ref('Стандартная')
+function colorCategory(item: ColorShieldItem): string {
+  return item.paintCategoryName ?? (item.isStandard === 0 ? 'Не стандартная' : 'Стандартная')
+}
+const filteredColors = computed(() => category.value === 'Давальческая'
+  ? colors.value
+  : colors.value.filter(item => colorCategory(item) === category.value))
 const loading = ref(true)
 const submitted = ref(false)
 const error = ref('')
@@ -18,7 +27,7 @@ const individual = computed(() => selectedColor.value?.isFixedColor === false)
 const primers = computed(() => selectedColor.value?.primers ?? [])
 const colorItems = computed(() => {
   const groups = new Map<string, ColorShieldItem[]>()
-  for (const item of colors.value) {
+  for (const item of filteredColors.value) {
     const name = item.paintCategoryName ?? (item.isStandard === 0 ? 'Не стандартная' : 'Стандартная')
     groups.set(name, [...(groups.get(name) ?? []), item])
   }
@@ -27,6 +36,15 @@ const colorItems = computed(() => {
     ...items.map(item => ({ id: String(item.id), label: item.name })),
   ])
 })
+async function onCategoryChange(name: string): Promise<void> {
+  category.value = name
+  calc.providesPaint.value = name === 'Давальческая' ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
+  if (!filteredColors.value.some(item => String(item.id) === String(calc.colorShieldId.value))) {
+    calc.colorShieldId.value = filteredColors.value[0] ? String(filteredColors.value[0].id) : ''
+  }
+  syncSelection()
+  await save()
+}
 const primerItems = computed(() => [
   { id: 'none', label: 'Без грунтовки' },
   ...primers.value.map(item => ({ id: String(item.id), label: item.name })),
@@ -139,8 +157,12 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = ''
   try {
-    colors.value = (await getColorShield(calc.modelId.value)).colorShield
+    const response = await getColorShield(calc.modelId.value)
+    colors.value = response.colorShield
+    categories.value = response.paintCategories ?? categoryNames.map((name, id) => ({ id, name }))
     if (!calc.colorShieldId.value && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
+    category.value = calc.providesPaint.value === 'Предоставляет заказчик' ? 'Давальческая'
+      : selectedColor.value ? colorCategory(selectedColor.value) : 'Стандартная'
     if (selectedColor.value) syncSelection()
     else error.value = 'Выбранная краска недоступна. Выберите краску из списка.'
   } catch (e) {
@@ -162,7 +184,14 @@ onMounted(async () => {
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
     </div>
+    <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <B24Button v-for="item in categories" :key="item.id" :label="item.name"
+        :data-paint-category="item.name" :aria-pressed="category === item.name"
+        :color="category === item.name ? 'air-primary' : 'air-secondary'"
+        :disabled="loading" @click="onCategoryChange(item.name)" />
+    </div>
     <PaintingProviders :disabled="loading" @change="save" />
+    <p v-if="!loading && !filteredColors.length" role="status">В этой категории пока нет доступных красок.</p>
     <p v-if="loading">Загрузка красок…</p>
     <div v-if="error" role="alert" class="text-red-600 whitespace-pre-line">
       {{ error }}

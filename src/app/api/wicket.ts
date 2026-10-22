@@ -485,7 +485,7 @@ export async function getAssortmentJumper(
 
 export async function getColorShield(
   modelId: string | number
-): Promise<{ colorShield: ColorShieldItem[] }> {
+): Promise<{ colorShield: ColorShieldItem[]; paintCategories?: Array<{ id: number; name: string; isFixedColor: boolean }> }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
   return data.data

@@ -47,8 +47,10 @@ describe('Окраска', () => {
     calc.doesAssembly.value = 'Выполняет заказчик'
     const wrapper = render()
     await flushPromises()
-    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Краска', 'Окраска каркаса'])
-    expect(wrapper.get<HTMLInputElement>('input[value="Предоставляет заказчик"]').element.checked).toBe(true)
+    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Окраска каркаса'])
+    expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('input[value="Предоставляет заказчик"]').exists()).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
     await wrapper.get('input[value="Выполняет заказчик"]').setValue()
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -74,7 +76,7 @@ describe('Окраска', () => {
   it('requires a nonblank note for individual paint before saving or leaving', async () => {
     const wrapper = render()
     await flushPromises()
-    await wrapper.get('[data-testid="paint-color"]').setValue('2')
+    await wrapper.get('[data-paint-category="Индивидуальная"]').trigger('click')
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
@@ -99,7 +101,7 @@ describe('Окраска', () => {
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
     await flushPromises()
     expect(useCalculation().primerId.value).toBe(10)
-    await wrapper.get('[data-testid="paint-color"]').setValue('2')
+    await wrapper.get('[data-paint-category="Индивидуальная"]').trigger('click')
     expect(useCalculation().primerId.value).toBeNull()
     expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
     wrapper.unmount()
@@ -114,6 +116,34 @@ describe('Окраска', () => {
     expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
     expect(calc.getFullSavePayload()).toMatchObject({ colorShieldNote: 'Матовый по образцу', primerId: 20 })
     expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Грунтовка', value: 'Грунт Б' })
+    wrapper.unmount()
+  })
+
+  it('keeps the underlying color and primer for customer supplied paint and restores manufacturer for normal categories', async () => {
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
+    await wrapper.get('[data-paint-category="Давальческая"]').trigger('click')
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      providesPaint: 'Предоставляет заказчик', colorShieldId: '1', primerId: 10,
+    }))
+    expect(wrapper.get('[data-testid="paint-color"]').text()).toContain('Индивидуальная эмаль')
+    await wrapper.get('[data-paint-category="Стандартная"]').trigger('click')
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'Предоставляет изготовитель' }))
+    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Индивидуальная эмаль')
+    wrapper.unmount()
+  })
+
+  it('shows an empty category without saving an unavailable paint', async () => {
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.get('[data-paint-category="Не стандартная"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
     wrapper.unmount()
   })
 
