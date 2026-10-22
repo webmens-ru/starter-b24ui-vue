@@ -41,6 +41,36 @@ describe('Окраска', () => {
     vi.clearAllMocks()
   })
 
+  it('shows providers first and saves both choices with legacy assembly and painting details', async () => {
+    const calc = useCalculation()
+    calc.providesPaint.value = 'Предоставляет заказчик'
+    calc.doesAssembly.value = 'Выполняет заказчик'
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Краска', 'Окраска каркаса'])
+    expect(wrapper.get<HTMLInputElement>('input[value="Предоставляет заказчик"]').element.checked).toBe(true)
+    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      providesPaint: 'Предоставляет заказчик', doesPaintingFrame: 'Выполняет заказчик',
+      doesAssembly: 'Выполняет заказчик', colorShieldId: '1', primerId: null,
+    }))
+    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
+    await flushPromises()
+    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
+      { name: 'Краска', value: 'Предоставляет заказчик' },
+      { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+    ])
+    const payload = calc.getFullSavePayload()
+    calc.reset()
+    calc.loadFromApi(payload)
+    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(calc.doesPaintingFrame.value).toBe('Выполняет заказчик')
+    expect(calc.doesAssembly.value).toBe('Выполняет заказчик')
+    expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
+    wrapper.unmount()
+  })
+
   it('requires a nonblank note for individual paint before saving or leaving', async () => {
     const wrapper = render()
     await flushPromises()

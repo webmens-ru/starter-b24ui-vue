@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { type Component } from 'vue'
 import WicketWizardPage from './WicketWizardPage.vue'
-import ManufacturingOption from '../../components/wicket/ManufacturingOption.vue'
 /** Шаги page2–page2_facade_zhalyuzi: только калитка типа 6 (`components/wicket/type6/`). */
 import FillSide from '../../components/wicket/type6/T6FillSide.vue'
 import ZhalyuziFacade from '../../components/wicket/type6/T6ZhalyuziFacade.vue'
@@ -17,7 +16,6 @@ import End from '../../components/wicket/End.vue'
 import { type6Route } from './type6Route'
 
 const stepComponents: Record<string, Component> = {
-  page1: ManufacturingOption,
   page2: FillSide,
   page2_facade_zhalyuzi: ZhalyuziFacade,
   page5: StolbVariantOtkritiya,

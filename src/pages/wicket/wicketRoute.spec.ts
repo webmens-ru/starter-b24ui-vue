@@ -14,6 +14,8 @@ const state: WicketSharedNavState = {
   availableSections: [],
 }
 
+const routes = import.meta.glob<Record<string, unknown>>('./type*Route.ts', { eager: true })
+
 function section(page: string, pages = [page]): WicketRouteSection {
   return {
     menu: { page, label: page, url: page },
@@ -24,6 +26,12 @@ function section(page: string, pages = [page]): WicketRouteSection {
 }
 
 describe('defineWicketRoute', () => {
+  it.each(Object.entries(routes))('%s starts at opening and contains no manufacturing section', (_, module) => {
+    const route = Object.values(module).find(value => typeof value === 'object' && value !== null && 'sections' in value) as ReturnType<typeof defineWicketRoute>
+    expect(route.menu(state)[0]?.page).toBe('page7')
+    expect(route.menu(state).some(item => item.page === 'page1' || item.label === 'Вариант изготовления')).toBe(false)
+    expect(route.prev('page7', state)).toBeNull()
+  })
   it('orders canvas, shield and painting as separate consecutive sections', () => {
     const route = defineWicketRoute(standardTailSections())
     expect(route.menu(state).map(item => item.label)).toEqual([

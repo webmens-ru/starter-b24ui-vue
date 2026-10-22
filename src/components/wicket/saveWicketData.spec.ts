@@ -7,7 +7,6 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
-import ManufacturingOption from './ManufacturingOption.vue'
 import FillSide from './type1/FillSide.vue'
 import IsTherelock from './IsTherelock.vue'
 import LockType from './LockType.vue'
@@ -84,33 +83,6 @@ describe('saveWicketData — данные передаются на бэк', () 
 
   afterEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('ManufacturingOption передаёт вариант изготовления', async () => {
-    mount(ManufacturingOption, {
-      global: {
-        plugins: [testRouter],
-        stubs: ['B24Button'],
-      },
-    })
-
-    // save вызывается на onMounted
-    await new Promise(r => setTimeout(r, 100))
-
-    expect(saveWicketData).toHaveBeenCalled()
-    const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-
-    expect(payload).toMatchObject({
-      orderId: 42,
-      productRowId: 7,
-      modelId: '1',
-      reachedStep: 'page1',
-    })
-    expect(payload).toHaveProperty('visitedPages')
-    expect(payload).toHaveProperty('providesMaterial')
-    expect(payload).toHaveProperty('providesPaint')
-    expect(payload).toHaveProperty('doesPaintingFrame')
-    expect(payload).toHaveProperty('doesAssembly')
   })
 
   it('FillSide передаёт fillSide и materialFacadeGlob', async () => {

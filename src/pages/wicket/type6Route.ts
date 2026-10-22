@@ -1,9 +1,8 @@
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute } from './wicketRoute'
-import { fixedFillingSection, manufacturingSection, openingSection, standardTailSections } from './wicketRouteSections'
+import { fixedFillingSection, openingSection, standardTailSections } from './wicketRouteSections'
 
 export const type6Route = defineWicketRoute([
-  manufacturingSection(),
   openingSection(),
   fixedFillingSection('page2_facade_zhalyuzi'),
   ...standardTailSections(),

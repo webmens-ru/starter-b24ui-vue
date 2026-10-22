@@ -501,7 +501,7 @@ describe('useCalculation', () => {
       calc.loadFromApi(fullApiData)
 
       const allPages = [
-        'page1', 'page2', 'page2_facade_siding', 'page2_facade_profnastil',
+        'page2', 'page2_facade_siding', 'page2_facade_profnastil',
         'page2_yard_siding', 'page2_yard_profnastil', 'page5', 'page3', 'page6',
         'page7', 'page9', 'page_lock_type', 'page10', 'page12',
       ]
@@ -519,7 +519,8 @@ describe('useCalculation', () => {
         activePage: 'page2',
       })
 
-      expect(calc.isPageAccessible('page1')).toBe(true)
+      expect(calc.isPageAccessible('page1')).toBe(false)
+      expect(calc.isPageAccessible('page7')).toBe(true)
       expect(calc.isPageAccessible('page2')).toBe(true)
       expect(calc.isPageAccessible('page5')).toBe(false)
       expect(calc.isPageAccessible('page12')).toBe(false)
@@ -543,8 +544,9 @@ describe('useCalculation', () => {
         isTherePen: 0,
       })
 
-      expect(calc.activePage.value).toBe('page1')
-      expect(calc.isPageAccessible('page1')).toBe(true)
+      expect(calc.activePage.value).toBe('page7')
+      expect(calc.isPageAccessible('page1')).toBe(false)
+      expect(calc.isPageAccessible('page7')).toBe(true)
       expect(calc.isPageAccessible('page2')).toBe(true)
       expect(calc.isPageAccessible('page2_facade_profnastil')).toBe(true)
       expect(calc.isPageAccessible('page5')).toBe(true)
@@ -585,7 +587,7 @@ describe('useCalculation', () => {
         priceRetail: '1000',
       })
 
-      expect(calc.activePage.value).toBe('page1')
+      expect(calc.activePage.value).toBe('page7')
       expect(calc.activePage.value).not.toBe('page_lock_components')
       expect(calc.isPageAccessible('page_lock_type')).toBe(true)
       expect(calc.isPageAccessible('page_lock_components')).toBe(false)
@@ -631,7 +633,7 @@ describe('useCalculation', () => {
 
       const blockNames = calc.data.value.map(b => b.blockName)
 
-      expect(blockNames).toContain('Вариант изготовления')
+      expect(blockNames).not.toContain('Вариант изготовления')
       expect(blockNames).toContain('Заполнение')
       expect(blockNames).toContain('Столбы / вариант открытия / перемычка')
       expect(blockNames).toContain('Замок')

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { type Component } from 'vue'
 import WicketWizardPage from './WicketWizardPage.vue'
-import ManufacturingOption from '../../components/wicket/ManufacturingOption.vue'
 /** Шаги page2–page2_facade_profnastil: только калитка типа 9 (`components/wicket/type9/`). */
 import FillSide from '../../components/wicket/type9/T9FillSide.vue'
 import ProfnastilFacade from '../../components/wicket/type1/ProfnastilFacade.vue'
@@ -17,7 +16,6 @@ import End from '../../components/wicket/End.vue'
 import { type9Route } from './type9Route'
 
 const stepComponents: Record<string, Component> = {
-  page1: ManufacturingOption,
   page2: FillSide,
   page2_facade_profnastil: ProfnastilFacade,
   page5: StolbVariantOtkritiya,

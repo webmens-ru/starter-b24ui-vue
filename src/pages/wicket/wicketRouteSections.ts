@@ -17,10 +17,6 @@ function section(
   }
 }
 
-export function manufacturingSection(): WicketRouteSection {
-  return section('page1', 'Вариант изготовления', 'manufacturing-option')
-}
-
 export function openingSection(): WicketRouteSection {
   const result = section('page7', 'Проем', 'razmery-proyema')
   result.validate = state => {

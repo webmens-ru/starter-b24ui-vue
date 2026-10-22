@@ -75,8 +75,8 @@ describe('type2Navigation', () => {
     })
 
     describe('линейная последовательность', () => {
-      it('page1 → page7', () => {
-        expect(getNextPage('page1', state())).toBe('page7')
+      it('удалённый page1 отсутствует в маршруте', () => {
+        expect(getNextPage('page1', state())).toBeNull()
       })
       it('page5 → page6', () => {
         expect(getNextPage('page5', state())).toBe('page6')
@@ -150,8 +150,8 @@ describe('type2Navigation', () => {
       it('page2 → page7', () => {
         expect(getPrevPage('page2', state())).toBe('page7')
       })
-      it('page1 → null', () => {
-        expect(getPrevPage('page1', state())).toBeNull()
+      it('первый шаг page7 → null', () => {
+        expect(getPrevPage('page7', state())).toBeNull()
       })
     })
   })

@@ -50,6 +50,36 @@ function composition(): WicketAccessoryCompositionResponse {
 describe('wicketFormStore accessory composition', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
+  it.each(Array.from({ length: 11 }, (_, index) => String(index + 1)))('type %s migrates legacy manufacturing progress and relocates restored summary fields', modelId => {
+    const store = useWicketFormStore()
+    const wizard = useWicketWizardStore()
+    store.loadFromApi({
+      modelId, activePage: 'page1', reachedStep: 'page1', visitedPages: ['page1'],
+      providesMaterial: 'Предоставляет заказчик', providesPaint: 'Предоставляет заказчик',
+      doesPaintingFrame: 'Выполняет заказчик', doesAssembly: 'Выполняет заказчик',
+    })
+    expect(wizard.activePage).toBe('page7')
+    expect(wizard.visitedPages).toEqual(['page7'])
+    expect(wizard.isPageAccessible('page1')).toBe(false)
+    expect(wizard.isPageAccessible('page2')).toBe(false)
+    expect(store.data.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
+    expect(store.data.find(block => block.blockName === 'Заполнение')?.params[0]).toEqual({
+      name: 'Материал заполнения', value: 'Предоставляет заказчик',
+    })
+    expect(store.data.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
+      { name: 'Краска', value: 'Предоставляет заказчик' },
+      { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+    ])
+    expect(store.doesAssembly).toBe('Выполняет заказчик')
+  })
+
+  it('uses legacy reachedStep when activePage was omitted', () => {
+    const store = useWicketFormStore()
+    store.loadFromApi({ modelId: '1', reachedStep: 'page1', visitedPages: [] })
+    expect(useWicketWizardStore().activePage).toBe('page7')
+    expect(useWicketWizardStore().visitedPages).toEqual(['page7'])
+  })
+
   it('empty canonical composition leaves root lock-set state unchanged', () => {
     const store = useWicketFormStore()
     store.lockSetId = 7
@@ -238,7 +268,6 @@ describe('wicketFormStore accessory composition', () => {
 
     expect(wizard.activePage).toBe('page12')
     expect(wizard.visitedPages).toEqual([
-      'page1',
       'page7',
       'page2',
       'page5',
@@ -269,7 +298,7 @@ describe('wicketFormStore accessory composition', () => {
     })
 
     expect(wizard.activePage).toBe('page7')
-    expect(wizard.visitedPages).toEqual(['page1', 'page7', 'page10'])
+    expect(wizard.visitedPages).toEqual(['page7', 'page10'])
     for (const page of retiredPages) {
       expect(wizard.visitedPages).not.toContain(page)
     }

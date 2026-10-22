@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MaterialProvider from '../MaterialProvider.vue'
 import { onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../../app/api/wicket'
@@ -27,12 +28,14 @@ async function save() {
   clearYardSelection()
 
   calc.updateOrCreateBlock('Заполнение', [
+    { name: 'Материал заполнения', value: calc.providesMaterial.value },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
     { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
   ])
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),
+    providesMaterial: calc.providesMaterial.value,
     fillSide:                calc.fillSide.value,
     materialFacadeGlob:     calc.materialFacadeGlob.value,
     materialYardGlob:       null,
@@ -77,6 +80,8 @@ onMounted(async () => {
       <span class="text-3xl font-bold flex-1 text-center">Заполнение</span>
       <B24Button label="Далее"  color="air-secondary" @click="emit('next')" />
     </div>
+
+    <MaterialProvider @change="save" />
 
     <!-- Группы карточек -->
     <div class="flex flex-col gap-6 mt-4">

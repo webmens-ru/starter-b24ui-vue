@@ -59,7 +59,7 @@ const wicketRoute: WicketRouteDefinition = {
   prev: () => null,
 }
 
-function mountPage(stepComponents: Record<string, ReturnType<typeof defineComponent>> = { page1: EmptyStep }) {
+function mountPage(stepComponents: Record<string, ReturnType<typeof defineComponent>> = { page7: EmptyStep }) {
   return shallowMount(WicketWizardPage, {
     props: { stepComponents, route: wicketRoute },
     global: {
@@ -98,8 +98,8 @@ const twoPageRoute: WicketRouteDefinition = {
   sections: [],
   menu: () => [],
   validations: () => new Map(),
-  next: from => from === 'page1' ? 'page2' : null,
-  prev: from => from === 'page2' ? 'page1' : null,
+  next: from => from === 'page7' ? 'page2' : null,
+  prev: from => from === 'page2' ? 'page7' : null,
 }
 
 function mountNavigationPage() {
@@ -108,12 +108,12 @@ function mountNavigationPage() {
     orderId: 42,
     productRowId: 7,
     modelId: '1',
-    activePage: 'page1',
+    activePage: 'page7',
     reachedStep: 'page2',
-    visitedPages: ['page1', 'page2'],
+    visitedPages: ['page7', 'page2'],
   })
   return mount(WicketWizardPage, {
-    props: { stepComponents: { page1: GuardedStep, page2: GuardedStep }, route: twoPageRoute },
+    props: { stepComponents: { page7: GuardedStep, page2: GuardedStep }, route: twoPageRoute },
     global: {
       stubs: {
         App: { template: '<div><slot /></div>' },
@@ -153,7 +153,7 @@ describe('WicketWizardPage guarded navigation', () => {
 
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
     await flushPromises()
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
 
     await wrapper.get('[data-testid="next"]').trigger('click')
     expect(calc.activePage.value).toBe('page2')
@@ -171,7 +171,7 @@ describe('WicketWizardPage guarded navigation', () => {
     const calc = useCalculation()
 
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
     resolveGuard(true)
     await flushPromises()
     expect(calc.activePage.value).toBe('page2')
@@ -189,7 +189,7 @@ describe('WicketWizardPage guarded navigation', () => {
 
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
     expect(guard).toHaveBeenCalledTimes(1)
     resolveGuard(true)
     await flushPromises()
@@ -211,16 +211,16 @@ describe('WicketWizardPage guarded navigation', () => {
       orderId: 42,
       productRowId: 8,
       modelId: '1',
-      activePage: 'page1',
+      activePage: 'page7',
       reachedStep: 'page2',
-      visitedPages: ['page1', 'page2'],
+      visitedPages: ['page7', 'page2'],
     })
     mocks.route.query.productRowId = '8'
     await vi.waitFor(() => expect(calc.productRowId.value).toBe(8))
 
     resolveOld(true)
     await flushPromises()
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
 
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
     await flushPromises()
@@ -237,12 +237,12 @@ describe('WicketWizardPage guarded navigation', () => {
 
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
     wrapper.unmount()
-    calc.visitedPages.value = ['page1']
+    calc.visitedPages.value = ['page7']
 
     resolveGuard(true)
     await flushPromises()
-    expect(calc.activePage.value).toBe('page1')
-    expect(calc.visitedPages.value).toEqual(['page1'])
+    expect(calc.activePage.value).toBe('page7')
+    expect(calc.visitedPages.value).toEqual(['page7'])
   })
 
   it('discards a pending guard when the active step changes', async () => {
@@ -274,9 +274,9 @@ describe('WicketWizardPage guarded navigation', () => {
       orderId: 42,
       productRowId: 8,
       modelId: '1',
-      activePage: 'page1',
+      activePage: 'page7',
       reachedStep: 'page2',
-      visitedPages: ['page1', 'page2'],
+      visitedPages: ['page7', 'page2'],
     })
     mocks.route.query.productRowId = '8'
     await vi.waitFor(() => expect(calc.productRowId.value).toBe(8))
@@ -286,7 +286,7 @@ describe('WicketWizardPage guarded navigation', () => {
     resolveOld(true)
     await flushPromises()
     await wrapper.get('[data-testid="next"]').trigger('click')
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
 
     resolveNew(true)
     await flushPromises()
@@ -306,7 +306,7 @@ describe('WicketWizardPage guarded navigation', () => {
     await wrapper.get('[data-testid="menu-page2"]').trigger('click')
     expect(guard).toHaveBeenCalledTimes(1)
     await wrapper.get('[data-testid="next"]').trigger('click')
-    expect(calc.activePage.value).toBe('page1')
+    expect(calc.activePage.value).toBe('page7')
     expect(guard).toHaveBeenCalledTimes(1)
 
     resolveGuard(true)
@@ -336,8 +336,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      reachedStep: 'page1',
-      visitedPages: ['page1'],
+      reachedStep: 'page7',
+      visitedPages: ['page7'],
     })
     mocks.getWicketAccessoryComposition.mockResolvedValue({
       lockVersion: 3,
@@ -440,8 +440,8 @@ describe('WicketWizardPage mobile summary', () => {
       lockSetId: 9,
       providesLock: 'Предоставляет изготовитель',
       lockInstaller: 'Выполняет заказчик',
-      reachedStep: 'page1',
-      visitedPages: ['page1'],
+      reachedStep: 'page7',
+      visitedPages: ['page7'],
     })
 
     mountPage()
@@ -469,7 +469,7 @@ describe('WicketWizardPage mobile summary', () => {
       priceRetail: '19978.49',
       activePage: 'page12',
       reachedStep: 'page12',
-      visitedPages: ['page1', 'page_lock_type', 'page12'],
+      visitedPages: ['page7', 'page_lock_type', 'page12'],
     })
     mocks.getLocks.mockResolvedValue({
       items: [{
@@ -480,7 +480,7 @@ describe('WicketWizardPage mobile summary', () => {
       }],
     })
 
-    mountPage({ page1: EmptyStep, page12: defineComponent({ template: '<div>Итого</div>' }) })
+    mountPage({ page7: EmptyStep, page12: defineComponent({ template: '<div>Итого</div>' }) })
     await flushPromises()
 
     const calc = useCalculation()
@@ -508,8 +508,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      reachedStep: 'page1',
-      visitedPages: ['page1'],
+      reachedStep: 'page7',
+      visitedPages: ['page7'],
       widthProyema: '910',
     })
     mocks.getLocks.mockRejectedValue(new Error('catalog unavailable'))
@@ -681,8 +681,8 @@ describe('WicketWizardPage mobile summary', () => {
         orderId: 43,
         productRowId: 8,
         modelId: '1',
-        activePage: 'page1',
-        visitedPages: ['page1'],
+        activePage: 'page7',
+        visitedPages: ['page7'],
         widthProyema: '430',
       })
     })
@@ -698,8 +698,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      activePage: 'page1',
-      visitedPages: ['page1'],
+      activePage: 'page7',
+      visitedPages: ['page7'],
       widthProyema: '420',
     })
     await flushPromises()
@@ -751,8 +751,8 @@ describe('WicketWizardPage mobile summary', () => {
         orderId: 42,
         productRowId: 7,
         modelId: '2',
-        activePage: 'page1',
-        visitedPages: ['page1'],
+        activePage: 'page7',
+        visitedPages: ['page7'],
         widthProyema: '520',
       })
     })
@@ -771,8 +771,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      activePage: 'page1',
-      visitedPages: ['page1'],
+      activePage: 'page7',
+      visitedPages: ['page7'],
       widthProyema: '420',
     })
     await flushPromises()
@@ -799,8 +799,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      activePage: 'page1',
-      visitedPages: ['page1'],
+      activePage: 'page7',
+      visitedPages: ['page7'],
       widthProyema: '420',
     })
     await flushPromises()
@@ -831,8 +831,8 @@ describe('WicketWizardPage mobile summary', () => {
       orderId: 42,
       productRowId: 7,
       modelId: '1',
-      activePage: 'page1',
-      visitedPages: ['page1'],
+      activePage: 'page7',
+      visitedPages: ['page7'],
       widthProyema: '420',
     })
     await flushPromises()

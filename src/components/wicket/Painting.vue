@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PaintingProviders from './PaintingProviders.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, recalculate, saveWicketData } from '../../app/api/wicket'
@@ -64,7 +65,11 @@ function syncSelection(): void {
   const primer = primers.value.find(item => item.id === calc.primerId.value)
   calc.primerId.value = primer?.id ?? null
   calc.primerName.value = primer?.name ?? ''
-  const params = [{ name: 'Цвет рамы', value: calc.colorShieldName.value }]
+  const params = [
+    { name: 'Краска', value: calc.providesPaint.value },
+    { name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
+    { name: 'Цвет рамы', value: calc.colorShieldName.value },
+  ]
   if (individual.value && calc.colorShieldNote.value.trim()) {
     params.push({ name: 'Примечание к цвету краски', value: calc.colorShieldNote.value.trim() })
   }
@@ -83,6 +88,9 @@ async function save(): Promise<boolean> {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
+      providesPaint: calc.providesPaint.value,
+      doesPaintingFrame: calc.doesPaintingFrame.value,
+      doesAssembly: calc.doesAssembly.value,
       colorShieldId: calc.colorShieldId.value,
       colorShieldNote: calc.colorShieldNote.value.trim(),
       primerId: calc.primerId.value,
@@ -154,6 +162,7 @@ onMounted(async () => {
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
     </div>
+    <PaintingProviders :disabled="loading" @change="save" />
     <p v-if="loading">Загрузка красок…</p>
     <div v-if="error" role="alert" class="text-red-600 whitespace-pre-line">
       {{ error }}

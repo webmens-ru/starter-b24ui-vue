@@ -20,6 +20,7 @@ const RETIRED_STANDALONE_PAGE_IDS = new Set([
 ])
 
 const RETIRED_WICKET_PAGES: Record<string, string> = {
+  page1: 'page7',
   page11: 'page12',
 }
 
@@ -27,7 +28,7 @@ const RETIRED_WICKET_PAGES: Record<string, string> = {
 export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
 
-// Поля шага "Вариант изготовления"
+// Поставщики материала и краски, исполнитель окраски и legacy-сборка
 const providesMaterial    = ref<string>('Предоставляет изготовитель')
 const providesPaint       = ref<string>('Предоставляет изготовитель')
 const doesPaintingFrame  = ref<string>('Выполняет изготовитель')
@@ -511,7 +512,6 @@ const fieldsFilled = ref<number>(0)
     const modelId = String(apiData?.modelId ?? useWicketWizardStore().modelId ?? '')
     const stepOrder = modelId === '2'
       ? [
-          'page1',
           'page7',
           'page2',
           'page2_facade_profnastil',
@@ -524,9 +524,9 @@ const fieldsFilled = ref<number>(0)
           'page10',
           'page12',
         ]
-      : ['page1', 'page7', 'page2', 'page5', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
+      : ['page7', 'page2', 'page5', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
     const visited: string[] = []
-    let active = 'page1'
+    let active = 'page7'
 
     function notEmpty(v: unknown): boolean {
       return v != null && String(v).trim() !== ''
@@ -539,9 +539,6 @@ const fieldsFilled = ref<number>(0)
     for (const pageId of stepOrder) {
       let completed = false
       switch (pageId) {
-        case 'page1':
-          completed = notEmpty(providesMaterial.value) && notEmpty(providesPaint.value) && notEmpty(doesPaintingFrame.value)
-          break
         case 'page2':
           completed = notEmpty(fillSide.value) || !!(idFacade.value && String(idFacade.value)) || !!(idYard.value && String(idYard.value))
           break
@@ -749,7 +746,9 @@ const fieldsFilled = ref<number>(0)
     const savedActive =
       typeof apiData.activePage === 'string' && apiData.activePage
         ? apiData.activePage
-        : 'page1'
+        : typeof apiData.reachedStep === 'string' && apiData.reachedStep
+          ? apiData.reachedStep
+          : 'page7'
     const replacementPage = RETIRED_WICKET_PAGES[savedActive]
     const apiActive = replacementPage ?? savedActive
     const hasPrice =
@@ -767,7 +766,7 @@ const fieldsFilled = ref<number>(0)
     }
 
     const shouldStartFromFirstPage = modelIdForLoad === '2' && !replacementPage
-    w.activePage.value = shouldStartFromFirstPage ? 'page1' : active
+    w.activePage.value = shouldStartFromFirstPage ? 'page7' : active
     w.visitedPages.value =
       apiVisited.length > 0 || replacementPage
         ? mergeVisitedPages(visitedPagesUpTo(active, apiVisited), computedProgress.visitedPages)
@@ -781,19 +780,9 @@ const fieldsFilled = ref<number>(0)
   function rebuildSummaryBlocks() {
     const blocks: CalcBlock[] = []
 
-    // Вариант изготовления
-    blocks.push({
-      blockName: 'Вариант изготовления',
-      params: [
-        { name: 'Материал заполнения', value: providesMaterial.value },
-        { name: 'Краска', value: providesPaint.value },
-        { name: 'Окраска каркаса', value: doesPaintingFrame.value },
-        { name: 'Сборка', value: doesAssembly.value },
-      ],
-    })
-
     // Заполнение
     const fillParams: CalcBlock['params'] = [
+      { name: 'Материал заполнения', value: providesMaterial.value },
       { name: 'Сторона заполнения', value: fillSide.value },
       { name: 'Материал заполнения (фасад)', value: materialFacadeGlob.value },
     ]
@@ -893,7 +882,10 @@ const fieldsFilled = ref<number>(0)
     }
     blocks.push({ blockName: 'Тип щита', params: shieldParams })
 
-    const paintingParams: CalcBlock['params'] = []
+    const paintingParams: CalcBlock['params'] = [
+      { name: 'Краска', value: providesPaint.value },
+      { name: 'Окраска каркаса', value: doesPaintingFrame.value },
+    ]
     if (colorShieldName.value) paintingParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
     if (colorShieldNote.value) paintingParams.push({ name: 'Примечание к цвету краски', value: colorShieldNote.value })
     if (primerName.value) paintingParams.push({ name: 'Грунтовка', value: primerName.value })

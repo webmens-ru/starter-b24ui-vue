@@ -18,7 +18,7 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
   const modelId = ref<string | number>('')
   const productType = ref<string>('')
   const model = ref<string>('')
-  const activePage = ref<string>('page1')
+  const activePage = ref<string>('page7')
   const visitedPages = ref<string[]>([])
 
   function setActivePage(page: string) {
@@ -40,7 +40,7 @@ export const useWicketWizardStore = defineStore('wicket-wizard', () => {
     productType.value = ''
     model.value = ''
     visitedPages.value = []
-    activePage.value = 'page1'
+    activePage.value = 'page7'
   }
 
   return {
