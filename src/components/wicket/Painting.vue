@@ -23,8 +23,10 @@ const primerProviders = ['Предоставляет изготовитель', 
 const loading = ref(true)
 const submitted = ref(false)
 const error = ref('')
+const catalogError = ref('')
 const calculationWarning = ref('')
 const selectedColor = computed(() => colors.value.find(item => String(item.id) === String(calc.colorShieldId.value)))
+const customerPainting = computed(() => calc.doesPaintingFrame.value === 'Выполняет заказчик')
 const individual = computed(() => selectedColor.value?.isFixedColor === false)
 const primers = computed(() => selectedColor.value?.primers ?? [])
 const colorItems = computed(() => {
@@ -102,13 +104,20 @@ function syncSelection(): void {
 }
 
 async function save(): Promise<boolean> {
-  if (loading.value) return false
-  if (!selectedColor.value) {
+  if (loading.value && !customerPainting.value) return false
+  if (!customerPainting.value && !selectedColor.value) {
     error.value = 'Выберите краску из списка.'
     return false
   }
-  syncSelection()
-  if (individual.value && !calc.colorShieldNote.value.trim()) return false
+  if (!customerPainting.value) syncSelection()
+  else {
+    const params = calc.data.value.find(block => block.blockName === 'Окраска')?.params ?? []
+    calc.updateOrCreateBlock('Окраска', [
+      ...params.filter(param => param.name !== 'Окраска каркаса'),
+      { name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
+    ])
+  }
+  if (!customerPainting.value && individual.value && !calc.colorShieldNote.value.trim()) return false
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
@@ -164,21 +173,22 @@ defineExpose({ validateBeforeLeave })
 
 async function load(): Promise<void> {
   loading.value = true
-  error.value = ''
+  catalogError.value = ''
   try {
     const response = await getColorShield(calc.modelId.value)
     colors.value = response.colorShield
     categories.value = response.paintCategories ?? categoryNames.map((name, id) => ({ id, name }))
     legacyCustomerPaint.value = calc.providesPaint.value === 'Предоставляет заказчик'
       && !!selectedColor.value && colorCategory(selectedColor.value) !== 'Давальческая'
-    if (!calc.colorShieldId.value && calc.providesPaint.value !== 'Предоставляет заказчик' && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
+    if (!customerPainting.value && !calc.colorShieldId.value && calc.providesPaint.value !== 'Предоставляет заказчик' && colors.value.length) calc.colorShieldId.value = String(colors.value[0]!.id)
     category.value = calc.providesPaint.value === 'Предоставляет заказчик' ? 'Давальческая'
       : selectedColor.value ? colorCategory(selectedColor.value) : 'Стандартная'
-    if (category.value === 'Давальческая') calc.providesPaint.value = 'Предоставляет заказчик'
-    if (selectedColor.value) syncSelection()
-    else error.value = 'Выбранная краска недоступна. Выберите краску из списка.'
+    if (!customerPainting.value && category.value === 'Давальческая') calc.providesPaint.value = 'Предоставляет заказчик'
+    if (selectedColor.value) {
+      if (!customerPainting.value) syncSelection()
+    } else catalogError.value = 'Выбранная краска недоступна. Выберите краску из списка.'
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось загрузить краски'
+    catalogError.value = e instanceof Error ? e.message : 'Не удалось загрузить краски'
   } finally {
     loading.value = false
   }
@@ -194,9 +204,11 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
-      <B24Button label="Далее" color="air-secondary" :disabled="loading" @click="next" />
+      <B24Button label="Далее" color="air-secondary" :disabled="loading && !customerPainting" @click="next" />
     </div>
-    <PaintingProviders :disabled="loading" @change="save" />
+    <PaintingProviders @change="save" />
+    <div v-if="error && customerPainting" role="alert" class="text-red-600 whitespace-pre-line">{{ error }}</div>
+    <template v-if="!customerPainting">
     <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
       <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card"
         :data-paint-category="item.name" :aria-pressed="category === item.name"
@@ -207,8 +219,8 @@ onMounted(async () => {
     <p v-if="legacyCustomerPaint" role="status" class="text-amber-700">В старом заказе краску «{{ selectedColor?.name }}» предоставляет заказчик. Выбор сохранён. Для замены выберите категорию и краску заново.</p>
     <p v-if="!loading && !filteredColors.length" role="status">В этой категории пока нет доступных красок.</p>
     <p v-if="loading">Загрузка красок…</p>
-    <div v-if="error" role="alert" class="text-red-600 whitespace-pre-line">
-      {{ error }}
+    <div v-if="error || catalogError" role="alert" class="text-red-600 whitespace-pre-line">
+      {{ error || catalogError }}
       <B24Button v-if="!colors.length" label="Повторить загрузку" color="air-secondary" @click="load" />
     </div>
     <p v-if="calculationWarning" role="status" class="text-amber-700 whitespace-pre-line">{{ calculationWarning }}</p>
@@ -257,6 +269,7 @@ onMounted(async () => {
       <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value"
         title="Поставщик грунтовки" :options="primerProviders" :disabled="loading" @change="save" />
     </div>
+    </template>
   </div>
 </template>
 

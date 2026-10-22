@@ -347,6 +347,20 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.visitedPages).toContain('page12')
     expect(wizard.isPageAccessible('page11')).toBe(false)
   })
+
+  it.each(Array.from({ length: 11 }, (_, index) => String(index + 1)))('type %s completes customer painting without a color', modelId => {
+    const store = useWicketFormStore()
+    const wizard = useWicketWizardStore()
+    const payload = {
+      modelId, widthProyema: '1000', heightProyema: '2000', fillSide: 'Одна сторона',
+      idFacade: 5, shieldType: 'Тип_1', openingOptionId: 1,
+      raspolozheniyePolotna: 'Вертикально', doesPaintingFrame: 'Выполняет заказчик',
+    }
+    store.loadFromApi(payload)
+    expect(wizard.visitedPages).toContain('page_painting')
+    store.loadFromApi({ ...payload, doesPaintingFrame: 'Выполняет изготовитель' })
+    expect(wizard.visitedPages).not.toContain('page_painting')
+  })
 })
 
 describe('wicketFormStore restored shield summary', () => {

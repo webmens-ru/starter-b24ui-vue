@@ -551,7 +551,7 @@ const fieldsFilled = ref<number>(0)
           completed = notEmpty(shieldType.value)
           break
         case 'page_painting':
-          completed = notEmpty(colorShieldId.value)
+          completed = doesPaintingFrame.value === 'Выполняет заказчик' || notEmpty(colorShieldId.value)
           break
         case 'page5':
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0

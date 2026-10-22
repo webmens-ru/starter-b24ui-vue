@@ -52,26 +52,88 @@ describe('Окраска', () => {
     expect(wrapper.get('[data-paint-category="Давальческая"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.find('input[value="Предоставляет заказчик"]').exists()).toBe(false)
     expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
     await wrapper.get('input[value="Выполняет заказчик"]').setValue()
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
       providesPaint: 'Предоставляет заказчик', doesPaintingFrame: 'Выполняет заказчик',
-      doesAssembly: 'Выполняет заказчик', colorShieldId: '1', primerId: null,
+      doesAssembly: 'Выполняет заказчик', colorShieldId: '1', primerId: 10,
     }))
-    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
-    await flushPromises()
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
-      { name: 'Краска', value: 'Предоставляет заказчик' },
-      { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
-    ])
+    expect(wrapper.find('[data-testid="paint-primer"]').exists()).toBe(false)
+    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
+      .toContainEqual({ name: 'Окраска каркаса', value: 'Выполняет заказчик' })
     const payload = calc.getFullSavePayload()
     calc.reset()
     calc.loadFromApi(payload)
     expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
-    expect(wrapper.text()).toContain('В старом заказе')
+    expect(wrapper.text()).not.toContain('В старом заказе')
     expect(calc.doesPaintingFrame.value).toBe('Выполняет заказчик')
     expect(calc.doesAssembly.value).toBe('Выполняет заказчик')
     expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('hides all material controls for customer painting and restores selections and validation on return', async () => {
+    const calc = useCalculation()
+    calc.colorShieldId.value = '2'
+    calc.primerId.value = 20
+    calc.providesPrimer.value = 'Предоставляет заказчик'
+    const wrapper = render()
+    await flushPromises()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
+    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await flushPromises()
+    expect(wrapper.findAll('legend').map(item => item.text())).toEqual(['Окраска каркаса'])
+    expect(wrapper.find('[aria-label="Категория краски"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
+    expect(wrapper.find('textarea').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Укажите примечание')
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      doesPaintingFrame: 'Выполняет заказчик', colorShieldId: '2', primerId: 20,
+      colorShieldNote: '', providesPrimer: 'Предоставляет заказчик',
+    }))
+    await wrapper.get('input[value="Выполняет изготовитель"]').setValue()
+    await flushPromises()
+    expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it.each(['empty', 'unavailable', 'failed', 'pending'])('saves customer painting with an %s catalog', async (catalog) => {
+    const calc = useCalculation()
+    if (catalog === 'unavailable') calc.colorShieldId.value = '999'
+    if (catalog === 'empty') vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [] })
+    if (catalog === 'failed') vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Каталог недоступен'))
+    if (catalog === 'pending') vi.mocked(getColorShield).mockImplementationOnce(() => new Promise(() => {}))
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await flushPromises()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(wrapper.text()).not.toContain('Каталог недоступен')
+    expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
+    expect(wrapper.text()).not.toContain('Загрузка красок')
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ doesPaintingFrame: 'Выполняет заказчик' }))
+    wrapper.unmount()
+  })
+
+  it('restores saved customer painting without changing hidden selections or reporting a valid color unavailable', async () => {
+    const calc = useCalculation()
+    calc.doesPaintingFrame.value = 'Выполняет заказчик'
+    calc.colorShieldId.value = '2'
+    calc.colorShieldNote.value = 'По образцу'
+    calc.primerId.value = 20
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
+    expect(calc.primerId.value).toBe(20)
+    await wrapper.get('input[value="Выполняет изготовитель"]').setValue()
+    await flushPromises()
+    expect(wrapper.get('textarea').element.value).toBe('По образцу')
+    expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
     wrapper.unmount()
   })
 
