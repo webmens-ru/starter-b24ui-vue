@@ -2,27 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
 describe('getProfnastilColorMode', () => {
-  it.each(['Глянец', 'Глянец двухсторонний', 'Матовый', 'Матовый двусторонний'])(
-    'requires a dictionary color for %s',
-    (coating) => expect(getProfnastilColorMode(coating)).toBe('list'),
+  it.each(['list', 'combobox', 'none'] as const)(
+    'uses explicit contract mode %s',
+    mode => expect(getProfnastilColorMode(mode)).toBe(mode),
   )
-
-  it.each(['Printech', 'Printech двусторонний'])(
-    'allows a list or manual value for %s',
-    (coating) => expect(getProfnastilColorMode(coating)).toBe('combobox'),
+  it.each([undefined, null, '', 'Глянец', 'Printech', 'Оцинковка', 'LIST', ' list ', 0, {}])(
+    'rejects unknown or missing mode %s instead of guessing from a label',
+    mode => expect(() => getProfnastilColorMode(mode)).toThrow(),
   )
-
-  it('does not request color for another coating', () => {
-    expect(getProfnastilColorMode('Оцинковка')).toBe('none')
-  })
 })
 
 describe('getPrintechSelectItems', () => {
-  it('keeps a custom Printech name available for InputMenu display', () => {
-    expect(getPrintechSelectItems(['Дуб', 'Орех'], 'Камень тёмный')).toEqual([
-      'Дуб',
-      'Орех',
-      'Камень тёмный',
+  it('keeps a custom value separate from equal dictionary labels', () => {
+    expect(getPrintechSelectItems([{ id: 603, label: 'Цвет' }, { id: 604, label: 'Цвет' }], 'Цвет')).toEqual([
+      { id: 603, label: 'Цвет' },
+      { id: 604, label: 'Цвет' },
+      { id: 'custom:Цвет', label: 'Цвет' },
     ])
   })
 })

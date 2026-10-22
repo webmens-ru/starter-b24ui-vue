@@ -7,7 +7,6 @@ import {
 } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
-import { hasRequiredFillingColor } from '../shared/fillingColorValidation'
 
 const props = defineProps<{ side: 'facade' | 'yard' }>()
 const calc = useCalculation()
@@ -18,6 +17,9 @@ const options = ref<ProfnastilFormOptions>({
   colors: [],
 })
 const loading = ref(false)
+const loaded = ref(false)
+const loadError = ref('')
+const selectionEdited = ref(false)
 const submitted = ref(false)
 
 const isFacade = computed(() => props.side === 'facade')
@@ -50,7 +52,7 @@ const colorId = computed({
   },
 })
 const colorName = computed({
-  get: () => String(isFacade.value ? calc.colorFacade.value : calc.colorYard.value),
+  get: () => String((isFacade.value ? calc.colorFacade.value : calc.colorYard.value) ?? ''),
   set: value => {
     if (isFacade.value) calc.colorFacade.value = value
     else calc.colorYard.value = value
@@ -63,9 +65,18 @@ const selectedMaterialId = computed<number | undefined>(() => {
 const selectedMaterial = computed(() => options.value.coatings.find(item => String(item.profnastilId) === String(selectedMaterialId.value)))
 const selectionDiagnostic = computed(() => calc.materialSelectionProblems.value
   .filter(problem => problem.side === props.side).map(problem => problem.message).join(' ')
-  || (selectedMaterialId.value && profile.value == null ? 'Не удалось восстановить связи материала. Выберите профиль и покрытие заново.' : ''))
-// Existing display-name color modes are remediated separately in stage 3.
-const colorMode = computed(() => getProfnastilColorMode(selectedMaterial.value?.name ?? ''))
+  || (selectedMaterialId.value && profile.value == null ? 'Не удалось восстановить связи материала. Выберите профиль и покрытие заново.' : '')
+  || (loaded.value && !loading.value && !loadError.value && selectedMaterialId.value && !selectedMaterial.value
+    ? 'Сохранённый материал недоступен. Выберите профиль и покрытие заново.' : ''))
+const colorSettings = computed(() => {
+  if (!selectedMaterial.value) return { mode: null, error: '' }
+  try {
+    return { mode: getProfnastilColorMode(selectedMaterial.value.colorInputMode), error: '' }
+  } catch (error) {
+    return { mode: null, error: error instanceof Error ? error.message : 'Некорректный режим цвета покрытия.' }
+  }
+})
+const colorMode = computed(() => colorSettings.value.mode)
 const manufacturerSelectItems = computed(() => [
   { id: '', label: 'Не выбран' },
   ...options.value.manufacturers.map(item => ({ id: item.id, label: item.name })),
@@ -77,29 +88,60 @@ const coatingSelectItems = computed(() =>
   options.value.coatings.map(item => ({ id: item.profnastilId, label: `${item.name} — ${item.thickness} мм` })),
 )
 const selectedManufacturerId = computed<string | number>(() => manufacturerId.value ?? '')
-const colorSelectItems = computed(() =>
-  options.value.colors.map(item => ({ id: item.id, label: item.name })),
-)
+const colorSelectItems = computed(() => {
+  const items = options.value.colors.map(item => ({ id: item.id, label: item.name }))
+  if (dictionaryColorId.value && !allowedColor.value) {
+    return [...items, { id: dictionaryColorId.value, label: `${colorName.value || `Цвет #${dictionaryColorId.value}`} (недоступен)`, disabled: true }]
+  }
+  return items
+})
 const printechSelectItems = computed(() =>
   getPrintechSelectItems(
-    options.value.colors.map(item => item.name),
-    colorName.value,
+    colorSelectItems.value,
+    colorId.value == null || colorId.value === '' ? colorName.value : '',
   ),
 )
+const comboboxValue = computed(() => dictionaryColorId.value
+  ?? (colorName.value.trim() ? `custom:${colorName.value.trim()}` : undefined))
 const dictionaryColorId = computed<number | undefined>(() => {
   const value = Number(colorId.value)
-  return Number.isFinite(value) && value > 0 ? value : undefined
+  return Number.isSafeInteger(value) && value > 0 ? value : undefined
 })
+const hasColorId = computed(() => colorId.value != null && colorId.value !== '')
+const allowedColor = computed(() => options.value.colors.some(item => String(item.id) === String(colorId.value)))
+const colorDiagnostic = computed(() => {
+  if (colorMode.value === 'list' && options.value.colors.length === 0) {
+    return 'У покрытия нет доступных цветов. Проверьте настройки справочника.'
+  }
+  if (colorMode.value === 'none' && (hasColorId.value || colorName.value.trim())) {
+    return 'Для этого покрытия цвет не выбирается. Выберите покрытие заново, чтобы очистить старый цвет.'
+  }
+  if (colorMode.value && hasColorId.value && !allowedColor.value) {
+    return 'Сохранённый цвет недоступен для этого покрытия. Выберите цвет заново.'
+  }
+  return ''
+})
+const diagnostic = computed(() => loadError.value || colorSettings.value.error || selectionDiagnostic.value || colorDiagnostic.value)
+const colorValid = computed(() => colorMode.value === 'none'
+  ? !hasColorId.value && colorName.value.trim() === ''
+  : hasColorId.value ? allowedColor.value : colorMode.value === 'combobox' && colorName.value.trim() !== '')
 const valid = computed(() =>
-  profile.value !== null
+  loaded.value && !loading.value && !diagnostic.value
+  && profile.value !== null
   && selectedMaterial.value !== undefined
-  && hasRequiredFillingColor(colorId.value, colorName.value, colorMode.value === 'combobox'),
+  && colorMode.value !== null && colorValid.value,
 )
 
 async function load(profileValue: number | null, coatingValue: number | null) {
   loading.value = true
+  loadError.value = ''
   try {
     options.value = await getType2ProfnastilFormOptions(profileValue ?? undefined, coatingValue ?? undefined)
+    loaded.value = true
+    return true
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : 'Не удалось загрузить справочник покрытий.'
+    return false
   } finally {
     loading.value = false
   }
@@ -122,8 +164,7 @@ async function onProfileChange() {
   clearColor()
   if (isFacade.value) calc.idFacade.value = ''
   else calc.idYard.value = ''
-  await load(profile.value, null)
-  await save()
+  if (await load(profile.value, null)) await save()
 }
 
 async function onManufacturerChange(value: string | number | undefined) {
@@ -149,11 +190,11 @@ async function onProfileSelectChange(value: string | number | undefined) {
 async function onCoatingSelectChange(value: string | number | undefined) {
   const material = options.value.coatings.find(item => String(item.profnastilId) === String(value))
   if (!material) return
+  selectionEdited.value = true
   coating.value = material.id
   if (isFacade.value) calc.idFacade.value = material.profnastilId
   else calc.idYard.value = material.profnastilId
-  await load(profile.value, coating.value)
-  await onCoatingChange()
+  if (await load(profile.value, coating.value)) await onCoatingChange()
 }
 
 async function onCoatingChange() {
@@ -179,10 +220,12 @@ async function onCoatingChange() {
       calc.reliefYardImage.value = selected.reliefImage ?? ''
     }
   }
-  await save()
+  // A list/combobox choice is only persisted once its required color is complete.
+  if (valid.value) await save()
 }
 
 async function onColorChange() {
+  selectionEdited.value = true
   const selected = options.value.colors.find(item =>
     String(item.id) === String(colorId.value),
   )
@@ -196,25 +239,27 @@ async function onColorChange() {
       calc.colorYardHex.value = selected.hex ?? ''
       calc.colorYardImage.value = selected.image ?? ''
     }
-  } else if (colorMode.value === 'combobox') {
-    colorId.value = null
+  } else {
+    clearColor()
   }
-  await save()
+  if (valid.value) await save()
 }
 
 async function onPrintechColorChange(value: number | string | null) {
-  const manualValue = String(value ?? '').trim()
-  const selected = options.value.colors.find(item =>
-    String(item.id) === String(value) || item.name === manualValue,
-  )
+  const selected = options.value.colors.find(item => typeof value === 'number' && item.id === value)
   if (selected) {
     colorId.value = selected.id
-    colorName.value = selected.name
-  } else {
-    colorId.value = null
-    colorName.value = manualValue
+    await onColorChange()
+  } else if (value === `custom:${colorName.value.trim()}`) {
+    await onCustomColorCreate(colorName.value)
   }
-  await onColorChange()
+}
+
+async function onCustomColorCreate(value: string) {
+  selectionEdited.value = true
+  clearColor()
+  colorName.value = String(value).trim()
+  if (valid.value) await save()
 }
 
 async function onDictionaryColorChange(value: number | undefined) {
@@ -223,6 +268,8 @@ async function onDictionaryColorChange(value: number | undefined) {
 }
 
 async function save() {
+  if (loading.value || loadError.value || colorSettings.value.error) return
+  if (selectionEdited.value && selectedMaterialId.value && !valid.value) return
   const suffix = isFacade.value ? 'Facade' : 'Yard'
   await saveWicketData({
     ...calc.getBaseSavePayload(),
@@ -234,6 +281,7 @@ async function save() {
     [`color${suffix}`]: colorName.value.trim(),
     [`thickness${suffix}`]: isFacade.value ? calc.thicknessFacade.value : calc.thicknessYard.value,
   })
+  selectionEdited.value = false
 }
 
 async function validate(): Promise<boolean> {
@@ -251,7 +299,7 @@ onMounted(async () => {
 
 <template>
   <div class="profnastil-form">
-    <p v-if="selectionDiagnostic" role="alert" class="text-red-600">{{ selectionDiagnostic }}</p>
+    <p v-if="diagnostic" role="alert" class="text-red-600">{{ diagnostic }}</p>
     <label class="form-field">
       <span class="font-semibold">Производитель</span>
       <B24SelectMenu
@@ -293,7 +341,7 @@ onMounted(async () => {
         <span v-if="submitted && !coating" class="text-sm text-red-600">Выберите тип покрытия</span>
     </label>
 
-    <label v-if="colorMode !== 'combobox'" class="form-field">
+    <label v-if="colorMode === 'list'" class="form-field">
       <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
       <B24SelectMenu
         :model-value="dictionaryColorId"
@@ -302,24 +350,27 @@ onMounted(async () => {
         placeholder="Выберите цвет"
         class="w-full"
         :b24ui="{ content: 'z-50' }"
+        :disabled="loading || !!loadError"
         @update:model-value="onDictionaryColorChange"
       />
-      <span v-if="submitted && !colorName" class="text-sm text-red-600">Выберите цвет</span>
+      <span v-if="submitted && !colorValid" class="text-sm text-red-600">Выберите цвет</span>
     </label>
 
     <label v-else-if="colorMode === 'combobox'" class="form-field">
-      <span class="font-semibold">Цвет / название Printech <span class="text-red-600">*</span></span>
+      <span class="font-semibold">Цвет / текстура <span class="text-red-600">*</span></span>
       <B24InputMenu
-        :model-value="colorName"
+        :model-value="comboboxValue"
+        value-key="id"
         :items="printechSelectItems"
         create-item="always"
         placeholder="Выберите или введите название"
         class="w-full"
+        :disabled="loading || !!loadError"
         :content="{ side: 'bottom', align: 'start', sideOffset: 4, avoidCollisions: false }"
         @update:model-value="onPrintechColorChange"
-        @create="onPrintechColorChange"
+        @create="onCustomColorCreate"
       />
-      <span v-if="submitted && !colorName.trim()" class="text-sm text-red-600">Укажите цвет или название Printech</span>
+      <span v-if="submitted && !colorValid" class="text-sm text-red-600">Укажите цвет или текстуру</span>
     </label>
   </div>
 </template>

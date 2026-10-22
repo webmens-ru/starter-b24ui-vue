@@ -192,22 +192,6 @@ describe('Type 2 profnastil pages', () => {
     expect(form).not.toContain('<select v-model="colorId"')
   })
 
-  it('uses the shared required-color rule without a coating-mode bypass', () => {
-    expect(form).toContain("import { hasRequiredFillingColor } from '../shared/fillingColorValidation'")
-    expect(form).toContain("hasRequiredFillingColor(colorId.value, colorName.value, colorMode.value === 'combobox')")
-    expect(form).not.toContain('!colorRequired.value ||')
-    expect(form).toContain("colorMode !== 'combobox'")
-  })
-
-  it('opens the Printech suggestions below the field and allows a custom value', () => {
-    expect(form).toContain('<B24InputMenu')
-    expect(form).toContain('create-item="always"')
-    expect(form).toContain("side: 'bottom'")
-    expect(form).toContain('avoidCollisions: false')
-    expect(form).toContain('@create="onPrintechColorChange"')
-    expect(form).not.toContain('<datalist')
-  })
-
   it('reloads colors for the selected coating', () => {
     expect(api).toContain('typeOfCoatingId?: number')
     expect(api).toContain('typeOfCoatingId: typeOfCoatingId ?? null')
