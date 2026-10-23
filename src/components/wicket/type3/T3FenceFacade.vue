@@ -88,7 +88,11 @@ async function loadGapOptions() {
       ...calc.getFullSavePayload(),
       widthFenceFacade: calc.thicknessFacade.value,
     })
-    const restored = gapOptions.value.find(option => option.name === Number(calc.gapName.value))
+    const restored = gapOptions.value.find(option => option.gapMm === Number(calc.gapName.value))
+    if (restored) {
+      calc.gapId.value = restored.id
+      calc.numberOfSticks.value = restored.quantity
+    }
     if (calc.gapName.value != null && !restored) clearGap()
   } catch (e) {
     console.warn('getFenceGapOptions недоступен:', e)
@@ -111,12 +115,12 @@ async function selectGap(event: Event) {
     return
   }
   calc.gapId.value = option.id
-  calc.gapName.value = option.name
+  calc.gapName.value = option.gapMm
   calc.numberOfSticks.value = option.quantity
   await saveWicketData({
     ...calc.getBaseSavePayload(),
     gapId: option.id,
-    gapName: option.name,
+    gapName: option.gapMm,
     numberOfSticks: option.quantity,
   })
   await doRecalculate()
@@ -280,7 +284,7 @@ onMounted(async () => {
       >
         <option value="">Выберите зазор</option>
         <option v-for="option in gapOptions" :key="option.id" :value="option.id">
-          {{ option.name }} мм — {{ option.quantity }} шт.
+          {{ option.label }} — {{ option.quantity }} шт.
         </option>
       </select>
     </label>

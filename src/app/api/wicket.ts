@@ -6,6 +6,7 @@ import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecima
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 import { parsePipeOptions, type PipeOption } from './pipeProfiles'
 import { parseFillingDrawingRow } from './fillingDrawingProfiles'
+import { parseFenceGapOptions } from './fenceGapOptions'
 export type { PipeProfile, PipeProfileProblem, PipeOption } from './pipeProfiles'
 import {
   forgetWicketProductRowLockVersion,
@@ -455,7 +456,7 @@ export async function getFenceGapOptions(
 ): Promise<import('./wicket.types').FenceGapOption[]> {
   const { data } = await api.post('/api/wicket/type3/get-gap', payload)
   const result = data.data ?? data
-  return result.gaps ?? []
+  return parseFenceGapOptions(result.gaps)
 }
 
 export async function getLamelTable(

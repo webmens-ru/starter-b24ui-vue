@@ -371,7 +371,8 @@ export interface FenceTableResponse {
 
 export interface FenceGapOption {
   id: number
-  name: number
+  gapMm: number
+  label: string
   quantity: number
 }
 
