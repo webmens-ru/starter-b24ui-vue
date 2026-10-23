@@ -117,8 +117,8 @@ async function save() {
 }
 
 onMounted(async () => {
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   calc.setActivePage('page2')
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   // Дефолт материала «Ламель» (единственная опция) — выставляем, если ещё не выбран
   if (!calc.materialFacadeGlob.value) {
     calc.materialFacadeGlob.value = 'lamella'

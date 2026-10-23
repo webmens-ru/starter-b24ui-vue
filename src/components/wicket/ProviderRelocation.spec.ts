@@ -75,11 +75,13 @@ describe('material provider in filling', () => {
     calc.materialFacadeGlob.value = ''
     calc.materialYardGlob.value = ''
     vi.clearAllMocks()
+    calc.setActivePage('page1')
     const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
     await flushPromises()
     expect(calc.materialFacadeGlob.value).toBe('')
     expect(calc.materialYardGlob.value).toBe('')
     expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.getBaseSavePayload().reachedStep).toBe('page2')
     wrapper.unmount()
   })
   beforeEach(() => {

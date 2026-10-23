@@ -78,8 +78,8 @@ async function save() {
 }
 
 onMounted(async () => {
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   calc.setActivePage('page2')
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   await save()
 })
 </script>

@@ -126,10 +126,10 @@ async function save() {
 }
 
 onMounted(async () => {
+  calc.setActivePage('page2')
   if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   if (calc.materialFacadeGlob.value === null) calc.materialFacadeGlob.value = 'siding'
   coerceType1FacadeToSiding()
-  calc.setActivePage('page2')
   await save()
 })
 </script>
