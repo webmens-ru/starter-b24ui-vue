@@ -80,7 +80,7 @@ describe('Окраска', () => {
     }))
     expect(wrapper.find('[data-testid="paint-primer"]').exists()).toBe(false)
     expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
-      .toContainEqual({ name: 'Окраска каркаса', value: 'Выполняет заказчик' })
+      .toContainEqual({ paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' })
     const payload = calc.getFullSavePayload()
     calc.reset()
     calc.loadFromApi(payload)
@@ -89,6 +89,35 @@ describe('Окраска', () => {
     expect(calc.doesPaintingFrame.value).toBe('customer')
     expect(calc.doesAssembly.value).toBe('customer')
     expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('updates performer and removes stale price by codes despite renamed summary labels', async () => {
+    const calc = useCalculation()
+    calc.colorShieldId.value = '1'
+    calc.priceRetail.value = 1200
+    const renamedBlocks = [
+      { blockCode: 'painting', blockName: 'Changed coating', params: [
+        { paramCode: 'paintingPerformer', name: 'Changed performer', value: 'old' },
+        { paramCode: 'paint', name: 'Changed material', value: 'keep' },
+      ] },
+      { blockCode: 'price', blockName: 'Changed commercial', params: [] },
+      { blockCode: 'other', blockName: 'Цена', params: [] },
+    ]
+    vi.mocked(recalculate).mockRejectedValueOnce(new Error('unavailable'))
+    const wrapper = render()
+    await flushPromises()
+    calc.data.value = renamedBlocks
+    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
+    await flushPromises()
+    const coating = calc.data.value.filter(block => block.blockCode === 'painting')
+    expect(coating).toHaveLength(1)
+    expect(coating[0]?.params.filter(param => param.paramCode === 'paintingPerformer')).toEqual([
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+    ])
+    expect(coating[0]?.params).toContainEqual({ paramCode: 'paint', name: 'Changed material', value: 'keep' })
+    expect(calc.data.value.some(block => block.blockCode === 'price')).toBe(false)
+    expect(calc.data.value.some(block => block.blockCode === 'other')).toBe(true)
     wrapper.unmount()
   })
 
@@ -198,7 +227,7 @@ describe('Окраска', () => {
     expect(wrapper.get('textarea').element.value).toBe('Матовый по образцу')
     expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
     expect(calc.getFullSavePayload()).toMatchObject({ colorShieldNote: 'Матовый по образцу', primerId: 20 })
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Грунтовка', value: 'Грунт Б' })
+    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ paramCode: 'primer', name: 'Грунтовка', value: 'Грунт Б' })
     wrapper.unmount()
   })
 
@@ -245,7 +274,7 @@ describe('Окраска', () => {
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPrimer: 'customer' }))
     expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
-      .toContainEqual({ name: 'Поставщик грунтовки', value: 'Предоставляет заказчик' })
+      .toContainEqual({ paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: 'Предоставляет заказчик' })
     const payload = calc.getFullSavePayload()
     calc.reset()
     expect(calc.providesPrimer.value).toBe('manufacturer')

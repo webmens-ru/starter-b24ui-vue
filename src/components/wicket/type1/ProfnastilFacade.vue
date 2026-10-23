@@ -142,13 +142,13 @@ function applySelectedColor() {
 }
 
 function buildSummaryParams() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Материал',      value: selectedRow.value?.material ?? '' },
-    { name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
-    { name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'material', name: 'Материал',      value: selectedRow.value?.material ?? '' },
+    { paramCode: 'sheetThickness', name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
+    { paramCode: 'coating', name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
   ]
   if (calc.colorFacade.value) {
-    params.push({ name: 'Цвет', value: calc.colorFacade.value })
+    params.push({ paramCode: 'color', name: 'Цвет', value: calc.colorFacade.value })
   }
   return params
 }
@@ -169,7 +169,7 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.coatingFacadeImage.value      = row.coatingImage ?? ''
   calc.reliefFacadeImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
 
   try {
     await saveWicketData({
@@ -195,7 +195,7 @@ async function saveColor() {
   if (!selectedRow.value) return
   applySelectedColor()
   const attempt = appearanceSave.beginSave()
-  calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
 
   try {
     await saveWicketData({
@@ -217,7 +217,7 @@ async function saveColor() {
       selectedColorId.value = calc.colorFacadeId.value === null
         ? null
         : Number(calc.colorFacadeId.value)
-      calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+      calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
     }
   } finally {
     appearanceSave.finishSave()

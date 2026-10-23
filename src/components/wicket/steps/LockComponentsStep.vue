@@ -111,11 +111,11 @@ async function save() {
   calc.setAccessoryGroupProvided('lock_component', provided.value === 'manufacturer')
   calc.setAccessoryGroupInstalled('lock_component', installed.value === 'manufacturer')
 
-  calc.updateOrCreateBlock('Комплектующие замка', [
-    { name: 'Комплектующие', value: marking || 'Не выбрано' },
-    { name: 'Предоставляет', value: participantRoleLabel('provide', provided.value) },
-    { name: 'Устанавливает', value: participantRoleLabel('install', installed.value) },
-  ])
+  calc.updateOrCreateBlock('lockComponents', [
+    { paramCode: 'components', name: 'Комплектующие', value: marking || 'Не выбрано' },
+    { paramCode: 'provider', name: 'Предоставляет', value: participantRoleLabel('provide', provided.value) },
+    { paramCode: 'installer', name: 'Устанавливает', value: participantRoleLabel('install', installed.value) },
+  ], 'Комплектующие замка')
 
   try {
     await calc.saveAccessoryComposition()

@@ -316,22 +316,22 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'postsPresence', name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
   ]
   if (postsChoice.value === 1 && calc.stolbName.value) {
-    params.push({ name: 'Сортамент столбов', value: calc.stolbName.value })
+    params.push({ paramCode: 'postProfile', name: 'Сортамент столбов', value: calc.stolbName.value })
   }
   if (calc.openingOptionName.value) {
-    params.push({ name: 'Вариант открытия', value: calc.openingOptionName.value })
+    params.push({ paramCode: 'openingOption', name: 'Вариант открытия', value: calc.openingOptionName.value })
   }
   if (calc.peremichkaPolozheniyeName.value) {
-    params.push({ name: 'Положение перемычки', value: calc.peremichkaPolozheniyeName.value })
+    params.push({ paramCode: 'jumperPlacement', name: 'Положение перемычки', value: calc.peremichkaPolozheniyeName.value })
   }
   if (calc.peremichkaSortamentName.value) {
-    params.push({ name: 'Сортамент перемычки', value: calc.peremichkaSortamentName.value })
+    params.push({ paramCode: 'jumperProfile', name: 'Сортамент перемычки', value: calc.peremichkaSortamentName.value })
   }
-  calc.updateOrCreateBlock('Столбы / вариант открытия / перемычка', params)
+  calc.updateOrCreateBlock('postsOpeningJumper', params, 'Столбы / вариант открытия / перемычка')
 }
 
 function selectionProblem(): string {

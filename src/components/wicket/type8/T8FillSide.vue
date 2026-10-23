@@ -55,11 +55,11 @@ async function save() {
   calc.materialYardGlob.value = null
   clearYardSelection()
 
-  calc.updateOrCreateBlock('Заполнение', [
-    { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
-    { name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
-    { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
-  ])
+  calc.updateOrCreateBlock('filling', [
+    { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
+    { paramCode: 'sideCount', name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
+    { paramCode: 'facadeGroup', name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
+  ], 'Заполнение')
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),

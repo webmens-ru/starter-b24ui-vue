@@ -109,6 +109,10 @@ describe('FurnitureAddon', () => {
     const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.lastCall?.[0]
     expect(payload?.doorClosers).toEqual([{ role: 'door_closer', materialItemId: 31,
       providedByManufacturer: false, installedByManufacturer: true }])
+    expect(form.data.find(block => block.blockCode === 'doorCloser')).toMatchObject({
+      blockName: 'Переведённый заголовок',
+      params: expect.arrayContaining([{ paramCode: 'presence', name: 'Переведённый заголовок', value: 'Будет' }]),
+    })
     wrapper.unmount()
   })
 

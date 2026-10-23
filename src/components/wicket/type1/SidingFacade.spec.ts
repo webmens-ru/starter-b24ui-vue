@@ -279,8 +279,8 @@ describe('SidingFacade', () => {
     expect(calc.priceDealer.value).toBe('1125.00')
     expect(calc.priceRetail.value).toBe('1500.00')
     expect(calc.data.value.find(block => block.blockName === 'Цена')?.params).toEqual([
-      { name: 'Дилерская цена', value: '1125.00' },
-      { name: 'Рек. розн. цена', value: '1500.00' },
+      { paramCode: 'dealerPrice', name: 'Дилерская цена', value: '1125.00' },
+      { paramCode: 'retailPrice', name: 'Рек. розн. цена', value: '1500.00' },
     ])
   })
 

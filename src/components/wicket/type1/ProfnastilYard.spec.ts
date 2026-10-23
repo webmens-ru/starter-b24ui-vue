@@ -151,7 +151,7 @@ describe('ProfnastilYard', () => {
       colorYardImage: '/colors/9003.webp',
     })
     expect(useCalculation().data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .toContainEqual({ name: 'Производитель материала', value: 'Двор-Профиль' })
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: 'Двор-Профиль' })
   })
 
   it('clears manufacturer and every color field before saving another product', async () => {
@@ -198,7 +198,7 @@ describe('ProfnastilYard', () => {
     expect(calc.manufacturerYardId.value).toBeNull()
     expect(calc.materialSupplierYard.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .toContainEqual({ name: 'Производитель материала', value: '' })
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: '' })
     expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
     warning.mockRestore()
   })
@@ -226,7 +226,7 @@ describe('ProfnastilYard', () => {
     expect(calc.colorYardHex.value).toBe('')
     expect(calc.colorYardImage.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .not.toContainEqual({ name: 'Цвет', value: 'RAL 7016' })
+      .not.toContainEqual({ paramCode: 'color', name: 'Цвет', value: 'RAL 7016' })
     expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
 
     await wrapper.get('[data-label="Далее"]').trigger('click')

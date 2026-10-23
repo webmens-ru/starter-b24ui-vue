@@ -64,8 +64,8 @@ describe('wicketFormStore accessory composition', () => {
       providesPrimerCode: 'manufacturer', doesPaintingFrameCode: 'customer' })
     expect(store.providesPaint).toBe('customer')
     expect(store.providesPrimer).toBe('manufacturer')
-    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Краска', value: 'Предоставляет заказчик' })
-    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Окраска каркаса', value: 'Выполняет заказчик' })
+    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ paramCode: 'paintProvider', name: 'Краска', value: 'Предоставляет заказчик' })
+    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' })
     store.resetFormFields()
     expect(store.providesPaint).toBe('manufacturer')
   })
@@ -84,11 +84,11 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.isPageAccessible('page2')).toBe(false)
     expect(store.data.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
     expect(store.data.find(block => block.blockName === 'Заполнение')?.params[0]).toEqual({
-      name: 'Материал заполнения', value: 'Предоставляет заказчик',
+      paramCode: 'fillingProvider', name: 'Материал заполнения', value: 'Предоставляет заказчик',
     })
     expect(store.data.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
-      { name: 'Краска', value: 'Предоставляет заказчик' },
-      { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+      { paramCode: 'paintProvider', name: 'Краска', value: 'Предоставляет заказчик' },
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' },
     ])
     expect(store.doesAssembly).toBe('customer')
   })
@@ -389,16 +389,16 @@ describe('wicketFormStore restored shield summary', () => {
   describe.each(['1', '11'])('model %s', modelId => {
     it.each([
       ['Тип_1', 'Без сеток', []],
-      ['Тип_2', 'Сетка снизу', [{ name: 'Высота нижней части', value: '200' }]],
+      ['Тип_2', 'Сетка снизу', [{ paramCode: 'lowerHeight', name: 'Высота нижней части', value: '200' }]],
       ['Тип_3', 'Сетка снизу и сверху', [
-        { name: 'Высота верхней части', value: '300' },
-        { name: 'Высота нижней части', value: '200' },
+        { paramCode: 'upperHeight', name: 'Высота верхней части', value: '300' },
+        { paramCode: 'lowerHeight', name: 'Высота нижней части', value: '200' },
       ]],
       ['Тип_4', 'Сетка сбоку', [
-        { name: 'Ширина боковой части', value: '100' },
-        { name: 'Расположение решётки', value: 'Возле замка' },
+        { paramCode: 'sideWidth', name: 'Ширина боковой части', value: '100' },
+        { paramCode: 'grilleSide', name: 'Расположение решётки', value: 'Возле замка' },
       ]],
-      ['Тип_5', 'Сетка сверху', [{ name: 'Высота верхней части', value: '300' }]],
+      ['Тип_5', 'Сетка сверху', [{ paramCode: 'upperHeight', name: 'Высота верхней части', value: '300' }]],
     ] as const)('restores %s zone summary without mounting the form', (shieldType, label, zones) => {
       const store = useWicketFormStore()
       store.loadFromApi({
@@ -416,7 +416,7 @@ describe('wicketFormStore restored shield summary', () => {
 
       const shieldSummary = store.data.find(block => block.blockName === 'Тип щита')
       expect(shieldSummary?.params).toEqual([
-        { name: 'Тип щита', value: label },
+        { paramCode: 'frameSubtype', name: 'Тип щита', value: label },
         ...zones,
       ])
     })

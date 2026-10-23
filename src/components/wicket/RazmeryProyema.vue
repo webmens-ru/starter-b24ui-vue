@@ -85,12 +85,12 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  calc.updateOrCreateBlock('Проем', [
-    { name: 'Ширина',            value: calc.widthProyema.value },
-    { name: 'Высота',            value: calc.heightProyema.value },
-    { name: 'Просвет',           value: calc.clearanceProyema.value },
-    { name: 'Состояние проема',  value: calc.sostoyaniyeProyema.value },
-  ])
+  calc.updateOrCreateBlock('opening', [
+    { paramCode: 'width', name: 'Ширина',            value: calc.widthProyema.value },
+    { paramCode: 'height', name: 'Высота',            value: calc.heightProyema.value },
+    { paramCode: 'clearance', name: 'Просвет',           value: calc.clearanceProyema.value },
+    { paramCode: 'openingCondition', name: 'Состояние проема',  value: calc.sostoyaniyeProyema.value },
+  ], 'Проем')
 }
 
 async function save() {

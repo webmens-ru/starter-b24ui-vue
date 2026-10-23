@@ -22,9 +22,9 @@ async function save() {
   if (!isFillingOrientation(selected.value)) return
   calc.raspolozheniyePolotna.value = selected.value
 
-  calc.updateOrCreateBlock('Расположение полотна', [
-    { name: 'Расположение полотна', value: fillingOrientationLabel(calc.raspolozheniyePolotna.value) },
-  ])
+  calc.updateOrCreateBlock('fillingOrientation', [
+    { paramCode: 'fillingOrientation', name: 'Расположение полотна', value: fillingOrientationLabel(calc.raspolozheniyePolotna.value) },
+  ], 'Расположение полотна')
 
   try {
     await saveWicketData({

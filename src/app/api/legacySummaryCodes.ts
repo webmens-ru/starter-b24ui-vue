@@ -1,0 +1,115 @@
+import type { CalcBlock } from '../../stores/wicket/types'
+
+// Only historical summaries without technical keys may decode display captions.
+const historicalBlocks: Record<string, string> = {
+  "Номер расчета": "calculationNumber",
+  "Название заказа": "orderName",
+  "Тип изделия": "productType",
+  "Модель": "model",
+  "Вариант изготовления": "manufacturing",
+  "Заполнение": "filling",
+  "Заполнение (фасад)": "fillingFacade",
+  "Заполнение (двор)": "fillingYard",
+  "Столбы / вариант открытия / перемычка": "postsOpeningJumper",
+  "Расположение полотна": "fillingOrientation",
+  "Тип щита": "frameSubtype",
+  "Окраска": "painting",
+  "Проем": "opening",
+  "Замок": "lock",
+  "Дополнительная ручка (скоба)": "additionalPen",
+  "Комплектующие замка": "lockComponents",
+  "Цена": "price",
+  "Клиент": "client",
+  "Доводчик": "doorCloser",
+  "Отбойник": "bumper",
+  "СКУД": "skud"
+}
+const historicalParams: Record<string, string> = {
+  "Адрес": "address",
+  "Вариант открытия": "openingOption",
+  "Высота": "height",
+  "Высота верхней части": "upperHeight",
+  "Высота верхних декоративных элементов": "upperDecorationHeight",
+  "Высота нижней части": "lowerHeight",
+  "Грунтовку предоставляет": "primerProvider",
+  "Дополнительная ручка": "presence",
+  "Имя": "firstName",
+  "Комментарий": "comment",
+  "Краска": "paintProvider",
+  "Материал": "material",
+  "Материал заполнения": "fillingProvider",
+  "Материал заполнения (двор)": "yardGroup",
+  "Материал заполнения (фасад)": "facadeGroup",
+  "Модель": "model",
+  "Модель ручки": "penModel",
+  "Название заказа": "orderName",
+  "Наличие столбов": "postsPresence",
+  "Номер расчета": "calculationNumber",
+  "Окраска каркаса": "paintingPerformer",
+  "Отчество": "middleName",
+  "Положение перемычки": "jumperPlacement",
+  "Производитель": "manufacturer",
+  "Производитель материала": "materialManufacturer",
+  "Просвет": "clearance",
+  "Расположение полотна": "fillingOrientation",
+  "Ручку предоставляет": "penProvider",
+  "Ручку устанавливает": "penInstaller",
+  "Сборка": "assemblyPerformer",
+  "Сортамент cтолбов": "postProfile",
+  "Сортамент перемычки": "jumperProfile",
+  "Сортамент столбов": "postProfile",
+  "Состояние проема": "openingCondition",
+  "Сторона заполнения": "sideCount",
+  "Телефон": "phone",
+  "Тип изделия": "productType",
+  "Тип покрытия": "coating",
+  "Тип щита": "frameSubtype",
+  "Толщина": "thickness",
+  "Толщина листа": "sheetThickness",
+  "Фамилия": "lastName",
+  "Форма": "form",
+  "Цвет": "color",
+  "Цвет рамы": "paint",
+  "Цвет ручки": "penColor",
+  "Цена за 1м2": "pricePerSquareMeter",
+  "Ширина": "width",
+  "Ширина штакетника": "fenceWidth",
+  "Электронная почта": "email",
+  "Замок есть/нет": "presence",
+  "Замок предоставляет": "lockProvider",
+  "Врезку замка выполняет": "lockInstaller",
+  "Тип замка": "lockType",
+  "Дилерская цена": "dealerPrice",
+  "Рек. розн. цена": "retailPrice",
+  "Примечание к цвету краски": "paintNote",
+  "Грунтовка": "primer",
+  "Поставщик грунтовки": "primerProvider",
+  "Сетка верхней части": "upperNet",
+  "Сетка нижней части": "lowerNet",
+  "Ширина боковой части": "sideWidth",
+  "Сетка боковой решётки": "sideNet",
+  "Расположение решётки": "grilleSide",
+  "Ширина ламели": "lamellaWidth",
+  "Предоставляет": "provider",
+  "Устанавливает": "installer",
+  "Модели": "models",
+  "Комплектующие": "components",
+  "id_facade": "facadeId",
+  "id_yard": "yardId"
+}
+
+export function adaptLegacySummaryBlock(block: CalcBlock): CalcBlock {
+  const blockCode = block.blockCode === undefined
+    ? (Object.prototype.hasOwnProperty.call(historicalBlocks, block.blockName) ? historicalBlocks[block.blockName] : undefined)
+    : block.blockCode
+  return {
+    ...block,
+    ...(blockCode !== undefined ? { blockCode } : {}),
+    params: block.params.map(param => {
+      const paramCode = param.paramCode === undefined
+        ? (Object.prototype.hasOwnProperty.call(historicalParams, param.name) ? historicalParams[param.name] : undefined)
+        : param.paramCode
+      return { ...param, ...(paramCode !== undefined ? { paramCode } : {}) }
+    }),
+  }
+}

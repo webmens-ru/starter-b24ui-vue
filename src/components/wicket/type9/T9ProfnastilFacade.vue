@@ -94,11 +94,11 @@ async function save(row: ProfnastilRow) {
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.colorFacade.value             = ''
 
-  calc.updateOrCreateBlock('Заполнение (фасад)', [
-    { name: 'Материал',                value: row.material },
-    { name: 'Толщина листа',           value: String(row.thickness) },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-  ])
+  calc.updateOrCreateBlock('fillingFacade', [
+    { paramCode: 'material', name: 'Материал',                value: row.material },
+    { paramCode: 'sheetThickness', name: 'Толщина листа',           value: String(row.thickness) },
+    { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+  ], 'Заполнение (фасад)')
 
   try {
     await saveWicketData({

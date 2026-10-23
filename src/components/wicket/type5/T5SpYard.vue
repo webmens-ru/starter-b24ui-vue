@@ -100,14 +100,14 @@ async function save(row: SpRow) {
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.colorYard.value             = row.color
 
-  calc.updateOrCreateBlock('Заполнение (двор)', [
-    { name: 'Производитель материала', value: row.company },
-    { name: 'Материал',                value: row.material },
-    { name: 'Толщина листа',           value: String(row.thickness) },
-    { name: 'Ширина',                  value: String(row.width) },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: row.color },
-  ])
+  calc.updateOrCreateBlock('fillingYard', [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
+    { paramCode: 'material', name: 'Материал',                value: row.material },
+    { paramCode: 'sheetThickness', name: 'Толщина листа',           value: String(row.thickness) },
+    { paramCode: 'width', name: 'Ширина',                  value: String(row.width) },
+    { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет',                    value: row.color },
+  ], 'Заполнение (двор)')
 
   try {
     await saveWicketData({

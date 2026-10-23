@@ -160,13 +160,13 @@ async function save(row: SidingRow): Promise<boolean> {
 }
 
 function updateSummary(row: SidingRow): void {
-  calc.updateOrCreateBlock('Заполнение (фасад)', [
-    { name: 'Производитель материала', value: calc.materialSupplierFacade.value },
-    { name: 'Материал',                value: row.material },
-    { name: 'Форма',                   value: row.form },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: calc.colorFacade.value },
-  ])
+  calc.updateOrCreateBlock('fillingFacade', [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierFacade.value },
+    { paramCode: 'material', name: 'Материал',                value: row.material },
+    { paramCode: 'form', name: 'Форма',                   value: row.form },
+    { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет',                    value: calc.colorFacade.value },
+  ], 'Заполнение (фасад)')
 }
 
 async function doRecalculate() {

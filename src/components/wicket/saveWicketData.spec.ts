@@ -449,7 +449,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(calc.providesLock.value).toBe('manufacturer')
     expect(wrapper.find('input[name="providesLock"][value="manufacturer"]:checked').exists()).toBe(true)
     expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
-      name: 'Замок предоставляет',
+      paramCode: 'lockProvider', name: 'Замок предоставляет',
       value: 'Предоставляет изготовитель',
     })
     expect(recalculate).not.toHaveBeenCalled()

@@ -490,11 +490,11 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.lockPenColorId.value).toBeNull()
     expect(calc.lockPenColor.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
-      name: 'Тип замка',
+      paramCode: 'lockType', name: 'Тип замка',
       value: 'Комплект из каталога',
     })
     expect(calc.data.value.flatMap(block => block.params)).not.toContainEqual({
-      name: 'Цвет ручки',
+      paramCode: 'penColor', name: 'Цвет ручки',
       value: 'Старый цвет',
     })
     expect(mocks.getLocks).toHaveBeenCalledTimes(1)

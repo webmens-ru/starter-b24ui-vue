@@ -346,40 +346,40 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Тип щита', value: frameSubtypeLabel(calc.shieldType.value) },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'frameSubtype', name: 'Тип щита', value: frameSubtypeLabel(calc.shieldType.value) },
   ]
   const provTop = providerTop.value
   const topVal = calc.heightTopPart.value
   if (showHeightTop.value && provTop !== '' && topVal && topVal !== '0' && Number(topVal) > 0) {
-    params.push({ name: 'Высота верхней части', value: topVal })
+    params.push({ paramCode: 'upperHeight', name: 'Высота верхней части', value: topVal })
     if (provTop === 'executor') {
       const selUpperNet = heightUpperNetItems.value.find(n => n.id === assortmentHeightUpperNetId.value)
-      if (selUpperNet) params.push({ name: 'Сетка верхней части', value: selUpperNet.model })
+      if (selUpperNet) params.push({ paramCode: 'upperNet', name: 'Сетка верхней части', value: selUpperNet.model })
     }
   }
   const provLower = providerLower.value
   const lowerVal = calc.heightLowerPart.value
   if (showHeightLower.value && provLower !== '' && lowerVal && lowerVal !== '0' && Number(lowerVal) > 0) {
-    params.push({ name: 'Высота нижней части', value: lowerVal })
+    params.push({ paramCode: 'lowerHeight', name: 'Высота нижней части', value: lowerVal })
     if (provLower === 'executor') {
       const selLowerNet = heightLowerNetItems.value.find(n => n.id === assortmentHeightLowerNetId.value)
-      if (selLowerNet) params.push({ name: 'Сетка нижней части', value: selLowerNet.model })
+      if (selLowerNet) params.push({ paramCode: 'lowerNet', name: 'Сетка нижней части', value: selLowerNet.model })
     }
   }
   const provSide = providerSide.value
   const sideVal = calc.widthSidePart.value
   if (showSidePart.value && provSide !== '' && sideVal && sideVal !== '0' && Number(sideVal) > 0) {
-    params.push({ name: 'Ширина боковой части', value: sideVal })
+    params.push({ paramCode: 'sideWidth', name: 'Ширина боковой части', value: sideVal })
     if (provSide === 'executor') {
       const selNet = grilleNetItems.value.find(n => n.id === assortmentSideGrilleNetId.value)
-      if (selNet) params.push({ name: 'Сетка боковой решётки', value: selNet.model })
+      if (selNet) params.push({ paramCode: 'sideNet', name: 'Сетка боковой решётки', value: selNet.model })
     }
   }
   if (showSidePart.value && calc.grilleLocation.value) {
-    params.push({ name: 'Расположение решётки', value: grilleSideLabel(calc.grilleLocation.value) })
+    params.push({ paramCode: 'grilleSide', name: 'Расположение решётки', value: grilleSideLabel(calc.grilleLocation.value) })
   }
-  calc.updateOrCreateBlock('Тип щита', params)
+  calc.updateOrCreateBlock('frameSubtype', params, 'Тип щита')
 }
 
 async function save() {

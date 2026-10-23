@@ -107,20 +107,20 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Дополнительная ручка', value: optionPresenceLabel(calc.isTherePen.value, 'optional') },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'presence', name: 'Дополнительная ручка', value: optionPresenceLabel(calc.isTherePen.value, 'optional') },
   ]
   if (showDetails.value) {
-    params.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', calc.penProvided.value) })
-    params.push({ name: 'Ручку устанавливает', value: participantRoleLabel('install', calc.penInstalled.value) })
+    params.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', calc.penProvided.value) })
+    params.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', calc.penInstalled.value) })
     if (showPenSelection.value) {
       if (calc.additionalPenId.value != null && calc.additionalPenMarking.value) {
-        params.push({ name: 'Модель ручки', value: calc.additionalPenMarking.value })
+        params.push({ paramCode: 'penModel', name: 'Модель ручки', value: calc.additionalPenMarking.value })
       }
-      params.push({ name: 'Цвет ручки', value: calc.additionalPenColor.value || calc.penColor.value })
+      params.push({ paramCode: 'penColor', name: 'Цвет ручки', value: calc.additionalPenColor.value || calc.penColor.value })
     }
   }
-  calc.updateOrCreateBlock('Дополнительная ручка (скоба)', params)
+  calc.updateOrCreateBlock('additionalPen', params, 'Дополнительная ручка (скоба)')
 }
 
 async function loadAdditionalPens() {

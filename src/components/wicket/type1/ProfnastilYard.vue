@@ -93,14 +93,14 @@ watch(filters, () => {
 }, { deep: true })
 
 function buildSummaryParams() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Производитель материала', value: calc.materialSupplierYard.value },
-    { name: 'Материал',      value: selectedRow.value?.material ?? '' },
-    { name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
-    { name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierYard.value },
+    { paramCode: 'material', name: 'Материал',      value: selectedRow.value?.material ?? '' },
+    { paramCode: 'sheetThickness', name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
+    { paramCode: 'coating', name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
   ]
   if (calc.colorYard.value) {
-    params.push({ name: 'Цвет', value: calc.colorYard.value })
+    params.push({ paramCode: 'color', name: 'Цвет', value: calc.colorYard.value })
   }
   return params
 }
@@ -121,7 +121,7 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
 
   try {
     await saveWicketData({
@@ -151,14 +151,14 @@ async function saveAppearance() {
   try {
     if (await save(selectedRow.value)) {
       if (appearanceSave.recordSuccess(attempt)) {
-        calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+        calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
         await doRecalculate()
       }
       return
     }
 
     if (appearanceSave.recordFailure(attempt)) {
-      calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+      calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
     }
   } finally {
     appearanceSave.finishSave()

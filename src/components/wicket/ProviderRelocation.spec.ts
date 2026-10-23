@@ -210,7 +210,7 @@ describe('material provider in filling', () => {
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesMaterial: 'manufacturer' }))
     expect(calc.data.value.find(block => block.blockName === 'Заполнение')?.params[0]).toEqual({
-      name: 'Материал заполнения', value: 'Предоставляет изготовитель',
+      paramCode: 'fillingProvider', name: 'Материал заполнения', value: 'Предоставляет изготовитель',
     })
     wrapper.unmount()
   })

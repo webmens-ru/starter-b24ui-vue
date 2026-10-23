@@ -23,6 +23,7 @@ import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
 import { frameSubtypeLabel, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
 import { grilleSideLabel, type GrilleSideSelection } from '../../app/grilleSides'
 import { optionPresenceLabel, presenceFromLockSetId, type OptionPresenceSelection } from '../../app/optionPresence'
+import { normalizeSummaryBlocks } from '../../app/summaryCodes'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -232,34 +233,36 @@ const fieldsFilled = ref<number>(0)
     return !isFillingSideCount(fillSide.value) || !hasFacade || (needYard && !hasYard)
   })
 
-  function updateOrCreateBlock(blockName: string, params: CalcBlock['params']) {
-    const block = data.value.find(b => b.blockName === blockName)
+  function updateOrCreateBlock(blockCode: string, params: CalcBlock['params'], blockName: string) {
+    data.value = normalizeSummaryBlocks(data.value)
+    const block = data.value.find(b => b.blockCode === blockCode)
     if (block) {
+      block.blockName = blockName
       block.params = params
     } else {
-      data.value.push({ blockName, params })
+      data.value.push({ blockCode, blockName, params })
     }
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
   function buildLockSummaryParams(): CalcBlock['params'] {
     const params: CalcBlock['params'] = [
-      { name: 'Замок есть/нет', value: optionPresenceLabel(isThereLock.value, 'lock') },
+      { paramCode: 'presence', name: 'Замок есть/нет', value: optionPresenceLabel(isThereLock.value, 'lock') },
     ]
     if (isThereLock.value === 1) {
-      params.push({ name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
-      params.push({ name: 'Врезку замка выполняет', value: participantRoleLabel('perform', lockInstaller.value) })
-      params.push({ name: 'Тип замка', value: typeLock.value || '' })
+      params.push({ paramCode: 'lockProvider', name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
+      params.push({ paramCode: 'lockInstaller', name: 'Врезку замка выполняет', value: participantRoleLabel('perform', lockInstaller.value) })
+      params.push({ paramCode: 'lockType', name: 'Тип замка', value: typeLock.value || '' })
     }
     return params
   }
 
   function rebuildLockSummaryBlock(): void {
-    updateOrCreateBlock('Замок', buildLockSummaryParams())
+    updateOrCreateBlock('lock', buildLockSummaryParams(), 'Замок')
   }
 
-  function removeAllBlocksExcept(allowedBlockNames: string[]) {
-    data.value = data.value.filter(b => allowedBlockNames.includes(b.blockName))
+  function removeAllBlocksExcept(allowedBlockCodes: string[]) {
+    data.value = data.value.filter(b => b.blockCode !== undefined && allowedBlockCodes.includes(b.blockCode))
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
@@ -411,10 +414,10 @@ const fieldsFilled = ref<number>(0)
   function updatePriceBlock(dealer: string | number, retail: string | number) {
     priceDealer.value = dealer
     priceRetail.value = retail
-    updateOrCreateBlock('Цена', [
-      { name: 'Дилерская цена', value: String(dealer) },
-      { name: 'Рек. розн. цена', value: String(retail) },
-    ])
+    updateOrCreateBlock('price', [
+      { paramCode: 'dealerPrice', name: 'Дилерская цена', value: String(dealer) },
+      { paramCode: 'retailPrice', name: 'Рек. розн. цена', value: String(retail) },
+    ], 'Цена')
   }
 
   function selectionsFromRows<Role extends WicketAccessoryRole>(
@@ -866,34 +869,34 @@ const fieldsFilled = ref<number>(0)
 
     // Заполнение
     const fillParams: CalcBlock['params'] = [
-      { name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
-      { name: 'Сторона заполнения', value: fillingSideCountLabel(fillSide.value) },
-      { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(materialFacadeGlob.value) },
+      { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
+      { paramCode: 'sideCount', name: 'Сторона заполнения', value: fillingSideCountLabel(fillSide.value) },
+      { paramCode: 'facadeGroup', name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(materialFacadeGlob.value) },
     ]
     if (fillSide.value === 2) {
-      fillParams.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
+      fillParams.push({ paramCode: 'yardGroup', name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
     }
-    blocks.push({ blockName: 'Заполнение', params: fillParams })
+    blocks.push({ blockCode: 'filling', blockName: 'Заполнение', params: fillParams })
 
     // Заполнение (фасад) — сайдинг или профлист
     if (idFacade.value || materialFacade.value) {
       const isProfnastil = materialFacadeGlob.value === 'profnastil'
       blocks.push({
-        blockName: 'Заполнение (фасад)',
+        blockCode: 'fillingFacade', blockName: 'Заполнение (фасад)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: materialSupplierFacade.value },
-              { name: 'Материал', value: materialFacade.value },
-              { name: 'Толщина листа', value: thicknessFacade.value },
-              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
-              { name: 'Цвет', value: colorFacade.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierFacade.value },
+              { paramCode: 'material', name: 'Материал', value: materialFacade.value },
+              { paramCode: 'sheetThickness', name: 'Толщина листа', value: thicknessFacade.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { paramCode: 'color', name: 'Цвет', value: colorFacade.value },
             ]
           : [
-              { name: 'Производитель материала', value: materialSupplierFacade.value },
-              { name: 'Материал', value: materialFacade.value },
-              { name: 'Форма', value: formFacade.value },
-              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
-              { name: 'Цвет', value: colorFacade.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierFacade.value },
+              { paramCode: 'material', name: 'Материал', value: materialFacade.value },
+              { paramCode: 'form', name: 'Форма', value: formFacade.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { paramCode: 'color', name: 'Цвет', value: colorFacade.value },
             ],
       })
     }
@@ -902,121 +905,121 @@ const fieldsFilled = ref<number>(0)
     if (fillSide.value === 2 && (idYard.value || materialYard.value)) {
       const isProfnastil = materialYardGlob.value === 'profnastil'
       blocks.push({
-        blockName: 'Заполнение (двор)',
+        blockCode: 'fillingYard', blockName: 'Заполнение (двор)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: materialSupplierYard.value },
-              { name: 'Материал', value: materialYard.value },
-              { name: 'Толщина листа', value: thicknessYard.value },
-              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
-              { name: 'Цвет', value: colorYard.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierYard.value },
+              { paramCode: 'material', name: 'Материал', value: materialYard.value },
+              { paramCode: 'sheetThickness', name: 'Толщина листа', value: thicknessYard.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { paramCode: 'color', name: 'Цвет', value: colorYard.value },
             ]
           : [
-              { name: 'Производитель материала', value: materialSupplierYard.value },
-              { name: 'Материал', value: materialYard.value },
-              { name: 'Форма', value: formYard.value },
-              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
-              { name: 'Цвет', value: colorYard.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierYard.value },
+              { paramCode: 'material', name: 'Материал', value: materialYard.value },
+              { paramCode: 'form', name: 'Форма', value: formYard.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { paramCode: 'color', name: 'Цвет', value: colorYard.value },
             ],
       })
     }
 
     // Столбы / вариант открытия / перемычка
     const stolbParams: CalcBlock['params'] = [
-      { name: 'Наличие столбов', value: nalichieStolbovName.value },
+      { paramCode: 'postsPresence', name: 'Наличие столбов', value: nalichieStolbovName.value },
     ]
     if (hasStolby.value === 1 && stolbName.value) {
-      stolbParams.push({ name: 'Сортамент столбов', value: stolbName.value })
+      stolbParams.push({ paramCode: 'postProfile', name: 'Сортамент столбов', value: stolbName.value })
     }
     if (openingOptionName.value) {
-      stolbParams.push({ name: 'Вариант открытия', value: openingOptionName.value })
+      stolbParams.push({ paramCode: 'openingOption', name: 'Вариант открытия', value: openingOptionName.value })
     }
     if (peremichkaPolozheniyeName.value) {
-      stolbParams.push({ name: 'Положение перемычки', value: peremichkaPolozheniyeName.value })
+      stolbParams.push({ paramCode: 'jumperPlacement', name: 'Положение перемычки', value: peremichkaPolozheniyeName.value })
     }
     if (peremichkaSortamentName.value) {
-      stolbParams.push({ name: 'Сортамент перемычки', value: peremichkaSortamentName.value })
+      stolbParams.push({ paramCode: 'jumperProfile', name: 'Сортамент перемычки', value: peremichkaSortamentName.value })
     }
-    blocks.push({ blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
+    blocks.push({ blockCode: 'postsOpeningJumper', blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
 
     // Расположение полотна
     blocks.push({
-      blockName: 'Расположение полотна',
-      params: [{ name: 'Расположение полотна', value: fillingOrientationLabel(raspolozheniyePolotna.value) }],
+      blockCode: 'fillingOrientation', blockName: 'Расположение полотна',
+      params: [{ paramCode: 'fillingOrientation', name: 'Расположение полотна', value: fillingOrientationLabel(raspolozheniyePolotna.value) }],
     })
 
     // Тип щита
     const shieldParams: CalcBlock['params'] = [
-      { name: 'Тип щита', value: frameSubtypeLabel(shieldType.value) },
+      { paramCode: 'frameSubtype', name: 'Тип щита', value: frameSubtypeLabel(shieldType.value) },
     ]
     const shieldCapabilities = frameSubtypeCapabilities(shieldType.value)
     if (shieldCapabilities.top && heightTopPart.value && heightTopPart.value !== '0') {
-      shieldParams.push({ name: 'Высота верхней части', value: heightTopPart.value })
+      shieldParams.push({ paramCode: 'upperHeight', name: 'Высота верхней части', value: heightTopPart.value })
     }
     if (shieldCapabilities.lower && heightLowerPart.value && heightLowerPart.value !== '0') {
-      shieldParams.push({ name: 'Высота нижней части', value: heightLowerPart.value })
+      shieldParams.push({ paramCode: 'lowerHeight', name: 'Высота нижней части', value: heightLowerPart.value })
     }
     if (shieldCapabilities.side) {
       if (widthSidePart.value && widthSidePart.value !== '0') {
-        shieldParams.push({ name: 'Ширина боковой части', value: widthSidePart.value })
+        shieldParams.push({ paramCode: 'sideWidth', name: 'Ширина боковой части', value: widthSidePart.value })
       }
       if (grilleLocation.value) {
-        shieldParams.push({ name: 'Расположение решётки', value: grilleSideLabel(grilleLocation.value) })
+        shieldParams.push({ paramCode: 'grilleSide', name: 'Расположение решётки', value: grilleSideLabel(grilleLocation.value) })
       }
     }
-    blocks.push({ blockName: 'Тип щита', params: shieldParams })
+    blocks.push({ blockCode: 'frameSubtype', blockName: 'Тип щита', params: shieldParams })
 
     const paintingParams: CalcBlock['params'] = [
-      { name: 'Краска', value: participantRoleLabel('provide', providesPaint.value) },
-      { name: 'Окраска каркаса', value: participantRoleLabel('perform', doesPaintingFrame.value) },
+      { paramCode: 'paintProvider', name: 'Краска', value: participantRoleLabel('provide', providesPaint.value) },
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', doesPaintingFrame.value) },
     ]
-    if (colorShieldName.value) paintingParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
-    if (colorShieldNote.value) paintingParams.push({ name: 'Примечание к цвету краски', value: colorShieldNote.value })
+    if (colorShieldName.value) paintingParams.push({ paramCode: 'paint', name: 'Цвет рамы', value: colorShieldName.value })
+    if (colorShieldNote.value) paintingParams.push({ paramCode: 'paintNote', name: 'Примечание к цвету краски', value: colorShieldNote.value })
     if (primerName.value) paintingParams.push(
-      { name: 'Грунтовка', value: primerName.value },
-      { name: 'Поставщик грунтовки', value: participantRoleLabel('provide', providesPrimer.value) },
+      { paramCode: 'primer', name: 'Грунтовка', value: primerName.value },
+      { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: participantRoleLabel('provide', providesPrimer.value) },
     )
-    blocks.push({ blockName: 'Окраска', params: paintingParams })
+    blocks.push({ blockCode: 'painting', blockName: 'Окраска', params: paintingParams })
 
     // Проем
     if (widthProyema.value || heightProyema.value || clearanceProyema.value) {
       blocks.push({
-        blockName: 'Проем',
+        blockCode: 'opening', blockName: 'Проем',
         params: [
-          { name: 'Ширина', value: widthProyema.value },
-          { name: 'Высота', value: heightProyema.value },
-          { name: 'Просвет', value: clearanceProyema.value },
-          { name: 'Состояние проема', value: sostoyaniyeProyema.value },
+          { paramCode: 'width', name: 'Ширина', value: widthProyema.value },
+          { paramCode: 'height', name: 'Высота', value: heightProyema.value },
+          { paramCode: 'clearance', name: 'Просвет', value: clearanceProyema.value },
+          { paramCode: 'openingCondition', name: 'Состояние проема', value: sostoyaniyeProyema.value },
         ],
       })
     }
 
     // Замок
-    blocks.push({ blockName: 'Замок', params: buildLockSummaryParams() })
+    blocks.push({ blockCode: 'lock', blockName: 'Замок', params: buildLockSummaryParams() })
 
     // Дополнительная ручка (скоба)
     const penParams: CalcBlock['params'] = [
-      { name: 'Дополнительная ручка', value: optionPresenceLabel(isTherePen.value, 'optional') },
+      { paramCode: 'presence', name: 'Дополнительная ручка', value: optionPresenceLabel(isTherePen.value, 'optional') },
     ]
     if (isTherePen.value === 1) {
-      penParams.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
-      penParams.push({ name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
+      penParams.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
+      penParams.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
       if (penProvided.value === 'manufacturer') {
         if (additionalPenId.value != null && additionalPenMarking.value) {
-          penParams.push({ name: 'Модель ручки', value: additionalPenMarking.value })
+          penParams.push({ paramCode: 'penModel', name: 'Модель ручки', value: additionalPenMarking.value })
         }
-        penParams.push({ name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
+        penParams.push({ paramCode: 'penColor', name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
       }
     }
-    blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
+    blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
     // Цена
     if (priceDealer.value || priceRetail.value) {
       blocks.push({
-        blockName: 'Цена',
+        blockCode: 'price', blockName: 'Цена',
         params: [
-          { name: 'Дилерская цена', value: String(priceDealer.value) },
-          { name: 'Рек. розн. цена', value: String(priceRetail.value) },
+          { paramCode: 'dealerPrice', name: 'Дилерская цена', value: String(priceDealer.value) },
+          { paramCode: 'retailPrice', name: 'Рек. розн. цена', value: String(priceRetail.value) },
         ],
       })
     }

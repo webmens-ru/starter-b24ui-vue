@@ -56,7 +56,7 @@ describe('explicit grille side boundary', () => {
     store.loadFromApi({ frameSubtypeCode: 'sideNet', grilleSideCode: 'lock', grilleLocation: 'Переименовано' })
     expect(store.grilleLocation).toBe('lock')
     expect(store.data.find(block => block.blockName === 'Тип щита')?.params)
-      .toContainEqual({ name: 'Расположение решётки', value: 'Возле замка' })
+      .toContainEqual({ paramCode: 'grilleSide', name: 'Расположение решётки', value: 'Возле замка' })
     store.resetFormFields()
     expect(store.grilleLocation).toBe('hinge')
   })

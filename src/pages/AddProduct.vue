@@ -71,12 +71,12 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
     calc.orderId.value = currentOrderId.value
     calc.productType.value = item.productType
 
-    calc.updateOrCreateBlock('Номер расчета', [
-      { name: 'Номер расчета', value: String(currentOrderId.value) },
-    ])
-    calc.updateOrCreateBlock('Тип изделия', [
-      { name: 'Тип изделия', value: item.productType },
-    ])
+    calc.updateOrCreateBlock('calculationNumber', [
+      { paramCode: 'calculationNumber', name: 'Номер расчета', value: String(currentOrderId.value) },
+    ], 'Номер расчета')
+    calc.updateOrCreateBlock('productType', [
+      { paramCode: 'productType', name: 'Тип изделия', value: item.productType },
+    ], 'Тип изделия')
 
     await router.push({
       path: item.route,

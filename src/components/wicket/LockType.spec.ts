@@ -138,11 +138,11 @@ describe('LockType', () => {
     expect(calc.lockPenColorId.value).toBeNull()
     expect(calc.lockPenColor.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
-      name: 'Тип замка',
+      paramCode: 'lockType', name: 'Тип замка',
       value: lockSet7.marking,
     })
     expect(calc.data.value.flatMap(block => block.params)).not.toContainEqual({
-      name: 'Цвет ручки',
+      paramCode: 'penColor', name: 'Цвет ручки',
       value: 'Старый цвет ручки',
     })
     expect(apiMocks.saveWicketData).not.toHaveBeenCalled()

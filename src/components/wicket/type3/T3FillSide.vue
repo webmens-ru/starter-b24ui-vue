@@ -65,14 +65,14 @@ function onMaterialYardChange() {
 
 async function save() {
   const params = [
-    { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
-    { name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
-    { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
+    { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
+    { paramCode: 'sideCount', name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
+    { paramCode: 'facadeGroup', name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ]
   if (calc.fillSide.value === 2) {
-    params.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
+    params.push({ paramCode: 'yardGroup', name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
   }
-  calc.updateOrCreateBlock('Заполнение', params)
+  calc.updateOrCreateBlock('filling', params, 'Заполнение')
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),

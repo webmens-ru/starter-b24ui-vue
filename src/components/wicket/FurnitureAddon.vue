@@ -114,24 +114,24 @@ function sync() {
 
 function buildBlock() {
   const st = calc.addons.value[props.config.key]
-  const params: { name: string; value: string }[] = [{ name: props.config.title, value: optionPresenceLabel(presence.value, 'optional') }]
+  const params: { paramCode?: string; name: string; value: string }[] = [{ paramCode: 'presence', name: props.config.title, value: optionPresenceLabel(presence.value, 'optional') }]
   if (showDetails.value) {
     if (showProvided) {
-      params.push({ name: 'Предоставляет', value: participantRoleLabel('provide', st.provided) })
+      params.push({ paramCode: 'provider', name: 'Предоставляет', value: participantRoleLabel('provide', st.provided) })
     }
-    params.push({ name: 'Устанавливает', value: participantRoleLabel('install', st.installed) })
+    params.push({ paramCode: 'installer', name: 'Устанавливает', value: participantRoleLabel('install', st.installed) })
     if (isMulti.value && st.itemIds.length > 0) {
       const labels = st.itemIds
         .map(id => items.value.find(i => i.id === id)?.name)
         .filter(Boolean)
       if (labels.length > 0) {
-        params.push({ name: 'Модели', value: labels.join(', ') })
+        params.push({ paramCode: 'models', name: 'Модели', value: labels.join(', ') })
       }
     } else if (!isMulti.value && showSelection.value && st.itemId != null && st.marking) {
-      params.push({ name: 'Модель', value: st.marking })
+      params.push({ paramCode: 'model', name: 'Модель', value: st.marking })
     }
   }
-  calc.updateOrCreateBlock(props.config.title, params)
+  calc.updateOrCreateBlock(props.config.key, params, props.config.title)
 }
 
 async function save() {

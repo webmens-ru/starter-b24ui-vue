@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { findSummaryBlock, withoutSummaryBlock } from '../../app/summaryCodes'
 import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
@@ -89,18 +90,18 @@ function syncSelection(): void {
   calc.primerId.value = primer?.id ?? null
   calc.primerName.value = primer?.name ?? ''
   const params = [
-    { name: 'Краска', value: participantRoleLabel('provide', calc.providesPaint.value) },
-    { name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
-    { name: 'Цвет рамы', value: calc.colorShieldName.value },
+    { paramCode: 'paintProvider', name: 'Краска', value: participantRoleLabel('provide', calc.providesPaint.value) },
+    { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
+    { paramCode: 'paint', name: 'Цвет рамы', value: calc.colorShieldName.value },
   ]
   if (individual.value && calc.colorShieldNote.value.trim()) {
-    params.push({ name: 'Примечание к цвету краски', value: calc.colorShieldNote.value.trim() })
+    params.push({ paramCode: 'paintNote', name: 'Примечание к цвету краски', value: calc.colorShieldNote.value.trim() })
   }
   if (primer) params.push(
-    { name: 'Грунтовка', value: primer.name },
-    { name: 'Поставщик грунтовки', value: participantRoleLabel('provide', calc.providesPrimer.value) },
+    { paramCode: 'primer', name: 'Грунтовка', value: primer.name },
+    { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: participantRoleLabel('provide', calc.providesPrimer.value) },
   )
-  calc.updateOrCreateBlock('Окраска', params)
+  calc.updateOrCreateBlock('painting', params, 'Окраска')
 }
 
 async function save(): Promise<boolean> {
@@ -112,11 +113,11 @@ async function save(): Promise<boolean> {
   }
   if (!customerPainting.value) syncSelection()
   else {
-    const params = calc.data.value.find(block => block.blockName === 'Окраска')?.params ?? []
-    calc.updateOrCreateBlock('Окраска', [
-      ...params.filter(param => param.name !== 'Окраска каркаса'),
-      { name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
-    ])
+    const params = findSummaryBlock(calc.data.value, 'painting')?.params ?? []
+    calc.updateOrCreateBlock('painting', [
+      ...params.filter(param => param.paramCode !== 'paintingPerformer'),
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
+    ], 'Окраска')
   }
   if (!customerPainting.value && individual.value && !calc.colorShieldNote.value.trim()) return false
   try {
@@ -148,7 +149,7 @@ async function save(): Promise<boolean> {
       calculationWarning.value = `Окраска сохранена. Стоимость не пересчитана:\n${requestErrorMessage(e, 'Не удалось пересчитать стоимость')}`
       calc.priceRetail.value = ''
       calc.priceDealer.value = ''
-      calc.data.value = calc.data.value.filter(block => block.blockName !== 'Цена')
+      calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
     }
   }
   return true

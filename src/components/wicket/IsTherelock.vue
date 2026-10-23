@@ -52,14 +52,14 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Замок есть/нет', value: optionPresenceLabel(calc.isThereLock.value, 'lock') },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'presence', name: 'Замок есть/нет', value: optionPresenceLabel(calc.isThereLock.value, 'lock') },
   ]
   if (showLockDetails.value) {
-    params.push({ name: 'Замок предоставляет',    value: participantRoleLabel('provide', calc.providesLock.value) })
-    params.push({ name: 'Врезку замка выполняет', value: participantRoleLabel('perform', calc.lockInstaller.value) })
+    params.push({ paramCode: 'lockProvider', name: 'Замок предоставляет',    value: participantRoleLabel('provide', calc.providesLock.value) })
+    params.push({ paramCode: 'lockInstaller', name: 'Врезку замка выполняет', value: participantRoleLabel('perform', calc.lockInstaller.value) })
   }
-  calc.updateOrCreateBlock('Замок', params)
+  calc.updateOrCreateBlock('lock', params, 'Замок')
 }
 
 async function save() {

@@ -72,13 +72,13 @@ const isSummaryOpen = ref(false)
           <col class="w-1/2">
         </colgroup>
         <tbody>
-          <template v-for="block in data" :key="block.blockName">
+          <template v-for="(block, blockIndex) in data" :key="block.blockCode ?? blockIndex">
             <tr>
               <td colspan="2" class="font-semibold bg-(--ui-color-base-200) px-3 py-1.5">
                 {{ block.blockName }}
               </td>
             </tr>
-            <tr v-for="param in block.params" :key="param.name">
+            <tr v-for="(param, paramIndex) in block.params" :key="param.paramCode ?? paramIndex">
               <td class="text-(--ui-color-text-secondary) px-3 py-1.5">{{ param.name }}</td>
               <td class="px-3 py-1.5">{{ param.value }}</td>
             </tr>

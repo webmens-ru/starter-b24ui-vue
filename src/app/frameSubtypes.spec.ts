@@ -59,7 +59,7 @@ describe('explicit frame subtype boundary', () => {
     store.loadFromApi({ frameSubtypeCode: 'upperNet', shieldType: 'Переименовано' })
     expect(store.shieldType).toBe('upperNet')
     expect(store.data.find(block => block.blockName === 'Тип щита')?.params)
-      .toContainEqual({ name: 'Тип щита', value: 'Сетка сверху' })
+      .toContainEqual({ paramCode: 'frameSubtype', name: 'Тип щита', value: 'Сетка сверху' })
     store.resetFormFields()
     expect(store.shieldType).toBe('noNet')
   })

@@ -53,7 +53,7 @@ describe('explicit filling orientation boundary', () => {
     store.loadFromApi({ fillingOrientationCode: 'horizontal', raspolozheniyePolotna: 'Иная подпись' })
     expect(store.raspolozheniyePolotna).toBe('horizontal')
     expect(store.data.find(block => block.blockName === 'Расположение полотна')?.params)
-      .toContainEqual({ name: 'Расположение полотна', value: 'Горизонтально' })
+      .toContainEqual({ paramCode: 'fillingOrientation', name: 'Расположение полотна', value: 'Горизонтально' })
     store.resetFormFields()
     expect(store.raspolozheniyePolotna).toBe('vertical')
   })

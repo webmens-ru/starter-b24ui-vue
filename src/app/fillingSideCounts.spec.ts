@@ -36,7 +36,7 @@ describe('numeric filling side count boundary', () => {
     store.loadFromApi({ fillingSideCount: 2, fillSide: 'Произвольная подпись', idFacade: 21, idYard: 39 })
     expect(store.fillSide).toBe(2)
     expect(store.data.find(block => block.blockName === 'Заполнение')?.params)
-      .toContainEqual({ name: 'Сторона заполнения', value: 'Две стороны' })
+      .toContainEqual({ paramCode: 'sideCount', name: 'Сторона заполнения', value: 'Две стороны' })
   })
   it('keeps numeric options separate from display labels and rejects coercible values', () => {
     expect(fillingSideCountOptions()).toEqual([{ value: 1, label: 'Одна сторона' }, { value: 2, label: 'Две стороны' }])
