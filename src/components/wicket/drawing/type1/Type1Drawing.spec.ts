@@ -10,6 +10,10 @@ const c = {
   jumperPlacement: ref<'none' | 'above' | 'behind' | null>('none'),
   jumperPlacementProblem: ref(null),
   postsPresenceProblem: ref(null),
+  postProfile: ref<{sizeA:number;sizeB:number}|null>({ sizeA: 60, sizeB: 60 }),
+  postProfileProblem: ref(null),
+  jumperProfile: ref<{sizeA:number;sizeB:number}|null>(null),
+  jumperProfileProblem: ref(null),
   stolbName: ref('60/60/2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
@@ -43,6 +47,22 @@ const c = {
   upperGrilleNetImage: ref(''),
   fillSide: ref('Одна сторона'),
 }
+
+describe('numeric pipe rendering errors', () => {
+  it('replaces SVG with an error for missing post dimensions and recovers on valid properties', async () => {
+    const previous = c.postProfile.value
+    c.postProfile.value = null
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      c.postProfile.value = { sizeA: 60, sizeB: 40 }
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    } finally { wrapper.unmount(); c.postProfile.value = previous }
+  })
+})
 
 vi.mock('../../../../composables/useCalculation', () => ({ useCalculation: () => c }))
 
@@ -277,6 +297,7 @@ describe('Type1Drawing', () => {
     c.peremichkaPolozheniyeName.value = 'За калиткой'
     c.jumperPlacement.value = 'behind'
     c.peremichkaSortamentName.value = '60/60/2'
+    c.jumperProfile.value = { sizeA: 60, sizeB: 60 }
     c.fillSide.value = 'Две стороны'
 
     try {
@@ -303,6 +324,7 @@ describe('Type1Drawing', () => {
       c.peremichkaPolozheniyeName.value = previousPlacement
       c.jumperPlacement.value = previousJumperPlacement
       c.peremichkaSortamentName.value = previousProfile
+      c.jumperProfile.value = null
       c.fillSide.value = previousFillSide
     }
   })
@@ -314,6 +336,7 @@ describe('Type1Drawing', () => {
     c.peremichkaPolozheniyeName.value = 'Над калиткой'
     c.jumperPlacement.value = 'above'
     c.peremichkaSortamentName.value = '60/60/2'
+    c.jumperProfile.value = { sizeA: 60, sizeB: 60 }
 
     try {
       const wrapper = mount(Type1Drawing)
@@ -327,6 +350,7 @@ describe('Type1Drawing', () => {
       c.peremichkaPolozheniyeName.value = previousPlacement
       c.jumperPlacement.value = previousJumperPlacement
       c.peremichkaSortamentName.value = previousProfile
+      c.jumperProfile.value = null
     }
   })
 })

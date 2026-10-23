@@ -9,7 +9,7 @@ describe.each([['Type1', computeType1Geometry], ['Type2', computeType2Geometry]]
     { opensOutward: false, hingeSide: 'left' as const, x: 54, hingeX: 44 },
     { opensOutward: false, hingeSide: 'right' as const, x: 60, hingeX: 940 },
   ])('uses explicit properties: $opensOutward / $hingeSide', ({ opensOutward, hingeSide, x, hingeX }) => {
-    const source = { widthProyema: 1000, heightProyema: 2000, hasStolby: 1, jumperPlacement: 'none', openingOrientation: { opensOutward, hingeSide } }
+    const source = { widthProyema: 1000, heightProyema: 2000, postProfile: { sizeA: 50, sizeB: 50 }, jumperProfile: null, hasStolby: 1, jumperPlacement: 'none', openingOrientation: { opensOutward, hingeSide } }
     const geometry = compute({ ...source, openingOptionName: 'Переименовано' })
     expect(geometry.gate.x).toBe(x)
     expect(geometry.hinges[0]?.x).toBe(hingeX)
@@ -17,6 +17,6 @@ describe.each([['Type1', computeType1Geometry], ['Type2', computeType2Geometry]]
   })
 
   it.each([undefined, null, {}, { opensOutward: 'false', hingeSide: 'left' }])('rejects missing or malformed orientation: %j', openingOrientation => {
-    expect(() => compute({ hasStolby: 1, jumperPlacement: 'none', openingOrientation, openingOptionName: 'Наружу / Левая' })).toThrow()
+    expect(() => compute({ postProfile: { sizeA: 50, sizeB: 50 }, jumperProfile: null, hasStolby: 1, jumperPlacement: 'none', openingOrientation, openingOptionName: 'Наружу / Левая' })).toThrow()
   })
 })

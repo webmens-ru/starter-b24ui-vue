@@ -1,8 +1,8 @@
 import { frameSubtypeCapabilities } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
-import { parseDrawingJumperProperties } from '../jumperProperties'
+import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 
-export interface Type3DrawingSource {
+export interface Type3DrawingSource extends DrawingPipeSource {
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
@@ -62,17 +62,6 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function profileSize(value: unknown, fallback = 80): number {
-  const source = text(value)
-  const match = source.match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
-  if (!match) {
-    return numberValue(source.match(/(\d+(?:[.,]\d+)?)/)?.[1]?.replace(',', '.'), fallback, 20, 200)
-  }
-  const first = numberValue(match?.[1]?.replace(',', '.'), fallback, 20, 200)
-  const second = numberValue(match?.[2]?.replace(',', '.'), fallback, 20, 200)
-  return first === 50 ? second : first
-}
-
 function rect(x: number, y: number, width: number, height: number): Type3Rect {
   return { x, y, width: Math.max(0, width), height: Math.max(0, height) }
 }
@@ -81,10 +70,10 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const width = numberValue(source.widthProyema, 1000, 400, 5000)
   const height = numberValue(source.heightProyema, 2000, 600, 5000)
   const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
-  const jumper = parseDrawingJumperProperties(source)
+  const jumper = parseDrawingPipeProfiles(source, 50)
   const postsVisible = jumper.hasPosts
-  const postSize = postsVisible ? profileSize(source.stolbName) : 0
-  const extraRailSize = profileSize(source.peremichkaSortamentName, 60)
+  const postSize = jumper.postWidth
+  const extraRailSize = jumper.placement === 'above' ? jumper.overheadJumperHeight : jumper.jumperFaceSize
   const verticalGeometry = computeJumperGeometry({
     openingHeight: height,
     bottomClearance: clearance,

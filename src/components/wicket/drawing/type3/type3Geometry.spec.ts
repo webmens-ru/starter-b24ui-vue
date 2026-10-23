@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { buildType3Geometry } from './type3Geometry'
 
 const base = {
-  jumperPlacement: 'none',
+  jumperProfile: null, jumperPlacement: 'none',
   widthProyema: 1200,
   heightProyema: 2100,
   clearanceProyema: 100,
-  hasStolby: 1,
+  postProfile: { sizeA: 80, sizeB: 80 }, hasStolby: 1,
   stolbName: '80/80/3',
   shieldType: 'Тип_1',
   numberOfSticks: 8,
@@ -20,10 +20,10 @@ describe('buildType3Geometry', () => {
     const geometry = buildType3Geometry({
       heightProyema: '2000',
       clearanceProyema: '50',
-      hasStolby: 1,
+      postProfile: { sizeA: 80, sizeB: 80 }, hasStolby: 1,
       peremichkaPolozheniyeName: 'Над калиткой',
       peremichkaSortamentName: '60/60/2',
-      jumperPlacement: 'above',
+      jumperProfile: { sizeA: 60, sizeB: 50 }, jumperPlacement: 'above',
     })
 
     expect(geometry.gate).toMatchObject({ y: 65, height: 1885 })
@@ -35,10 +35,10 @@ describe('buildType3Geometry', () => {
     const geometry = buildType3Geometry({
       heightProyema: '2000',
       clearanceProyema: '50',
-      hasStolby: 1,
+      postProfile: { sizeA: 80, sizeB: 80 }, hasStolby: 1,
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName: '60/60/2',
-      jumperPlacement: 'behind',
+      jumperProfile: { sizeA: 60, sizeB: 60 }, jumperPlacement: 'behind',
     })
 
     expect(geometry.gate).toMatchObject({ y: 0, height: 1950 })
@@ -50,8 +50,8 @@ describe('buildType3Geometry', () => {
       widthProyema: '',
       heightProyema: '',
       clearanceProyema: '',
-      jumperPlacement: 'none',
-      hasStolby: 0,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: null, hasStolby: 0,
     })
 
     expect(geometry.opening).toEqual({ x: 0, y: 0, width: 1000, height: 2000 })
@@ -72,11 +72,11 @@ describe('buildType3Geometry', () => {
 
   it('shows posts only when they are selected', () => {
     expect(buildType3Geometry(base).posts.visible).toBe(true)
-    expect(buildType3Geometry({ ...base, hasStolby: 0 }).posts.visible).toBe(false)
+    expect(buildType3Geometry({ ...base, postProfile: null, hasStolby: 0 }).posts.visible).toBe(false)
   })
 
-  it('keeps a single-dimension post profile when parsing jumper dimensions', () => {
-    expect(buildType3Geometry({ ...base, stolbName: '100' }).posts.left.width).toBe(100)
+  it('uses explicit numeric post dimensions despite a single-number caption', () => {
+    expect(buildType3Geometry({ ...base, stolbName: '100', postProfile: { sizeA: 100, sizeB: 100 } }).posts.left.width).toBe(100)
   })
 
   it.each([
@@ -101,8 +101,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 300,
       numberOfSticks: 4,
       upperGrilleNetImage: '/upper.png',
-      jumperPlacement: 'none',
-      hasStolby: 0,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: null, hasStolby: 0,
     })
 
     expect(geometry.upperNetArea).toEqual({ x: 54, y: 50, width: 486, height: 300, visible: true })
@@ -121,8 +121,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 300,
       heightLowerPart: 200,
       numberOfSticks: 4,
-      jumperPlacement: 'none',
-      hasStolby: 0,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: null, hasStolby: 0,
     })
 
     expect(geometry.rails.lower.visible).toBe(false)
@@ -139,8 +139,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 900,
       numberOfSticks: 4,
       raspolozheniyePolotna: direction,
-      jumperPlacement: 'none',
-      hasStolby: 0,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: null, hasStolby: 0,
     })
 
     expect(geometry.rails.upper).toMatchObject({ y: 830, height: 50, visible: true })

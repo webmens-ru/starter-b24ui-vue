@@ -10,6 +10,10 @@ const calc = {
   jumperPlacement: ref<'none' | 'above' | 'behind' | null>('none'),
   jumperPlacementProblem: ref(null),
   postsPresenceProblem: ref(null),
+  postProfile: ref<{sizeA:number;sizeB:number}|null>({ sizeA: 50, sizeB: 50 }),
+  postProfileProblem: ref(null),
+  jumperProfile: ref<{sizeA:number;sizeB:number}|null>(null),
+  jumperProfileProblem: ref(null),
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
@@ -52,6 +56,16 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  it('renders an error, not SVG, when a used pipe has no numeric profile', () => {
+    const previous = calc.postProfile.value
+    calc.postProfile.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.postProfile.value = previous }
+  })
   it('shows an error instead of SVG when jumper properties are missing', () => {
     const previous = calc.jumperPlacement.value
     calc.jumperPlacement.value = null
@@ -119,6 +133,7 @@ describe('Type2Drawing', () => {
     calc.widthProyema.value = '1000'
     calc.heightProyema.value = '2000'
     calc.stolbName.value = 'Труба 50×50×2'
+    calc.postProfile.value = { sizeA: 50, sizeB: 50 }
     calc.openingOptionName.value = 'Наружу / Левая'
     calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
     calc.shieldType.value = 'Тип_1'
@@ -147,6 +162,7 @@ describe('Type2Drawing', () => {
     calc.peremichkaPolozheniyeName.value = 'Без перемычки'
     calc.jumperPlacement.value = 'none'
     calc.peremichkaSortamentName.value = ''
+    calc.jumperProfile.value = null
   })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
     const wrapper = mount(Type2Drawing)
@@ -165,22 +181,26 @@ describe('Type2Drawing', () => {
 
   it('обновляет ширину столбов при смене профиля', async () => {
     calc.stolbName.value = '60/60/2'
+    calc.postProfile.value = { sizeA: 60, sizeB: 60 }
     const wrapper = mount(Type2Drawing)
     const posts = wrapper.get('[data-testid="type2-drawing-posts"]')
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['60', '60'])
 
     calc.stolbName.value = '80/80/3'
+    calc.postProfile.value = { sizeA: 80, sizeB: 80 }
     await wrapper.vm.$nextTick()
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['80', '80'])
 
     calc.stolbName.value = '50/100/3'
+    calc.postProfile.value = { sizeA: 100, sizeB: 50 }
     await wrapper.vm.$nextTick()
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['100', '100'])
 
     calc.stolbName.value = 'Труба 50×50×2'
+    calc.postProfile.value = { sizeA: 50, sizeB: 50 }
   })
 
   it('вставляет картинку выбранной сетки только в боковую область подтипа 4', async () => {
@@ -408,6 +428,7 @@ describe('Type2Drawing', () => {
     calc.peremichkaPolozheniyeName.value = 'За калиткой'
     calc.jumperPlacement.value = 'behind'
     calc.peremichkaSortamentName.value = '60/60/2'
+    calc.jumperProfile.value = { sizeA: 60, sizeB: 50 }
     calc.fillSide.value = 'Две стороны'
     const wrapper = mount(Type2Drawing)
     const html = wrapper.html()
@@ -434,6 +455,7 @@ describe('Type2Drawing', () => {
     calc.peremichkaPolozheniyeName.value = 'Над калиткой'
     calc.jumperPlacement.value = 'above'
     calc.peremichkaSortamentName.value = '60/60/2'
+    calc.jumperProfile.value = { sizeA: 60, sizeB: 50 }
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('[data-testid="type2-drawing-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()

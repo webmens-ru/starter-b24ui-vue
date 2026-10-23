@@ -1,9 +1,9 @@
 import { computeJumperGeometry } from '../jumperGeometry'
-import { parseDrawingJumperProperties } from '../jumperProperties'
+import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { parseOpeningOrientation } from '../../openingOrientation'
 
-export interface Type2DrawingSource {
+export interface Type2DrawingSource extends DrawingPipeSource {
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
@@ -110,13 +110,6 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function type2VisibleProfileSize(value: unknown, fallback: number): number {
-  const match = text(value).match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
-  const first = numberInRange(match?.[1]?.replace(',', '.'), fallback, 20, 200)
-  const second = numberInRange(match?.[2]?.replace(',', '.'), fallback, 20, 200)
-  return first === 50 ? second : first
-}
-
 function fillColor(value: unknown): string {
   const valueText = text(value)
   // Поддерживает #RRGGBB и RRGGBB (с и без решётки)
@@ -150,9 +143,9 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const openingWidth = numberInRange(source.widthProyema, 1000, 300, 10000)
   const openingHeight = numberInRange(source.heightProyema, 2000, 500, 5000)
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
-  const jumper = parseDrawingJumperProperties(source)
+  const jumper = parseDrawingPipeProfiles(source, RAIL_SIZE)
   const hasPosts = jumper.hasPosts
-  const postWidth = type2VisibleProfileSize(source.stolbName, 50)
+  const postWidth = jumper.postWidth
   const { hingeSide } = parseOpeningOrientation(source.openingOrientation)
   const gateSubtype = resolveFrameSubtype(source.shieldType)
   const capabilities = frameSubtypeCapabilities(gateSubtype)
@@ -161,7 +154,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)
   const grilleSide: 'hinge' | 'lock' = /замк/i.test(text(source.grilleLocation)) ? 'lock' : 'hinge'
 
-  const extraRailSize = type2VisibleProfileSize(source.peremichkaSortamentName, 60)
+  const extraRailSize = jumper.placement === 'above' ? jumper.overheadJumperHeight : jumper.jumperFaceSize
   const vertical = computeJumperGeometry({
     openingHeight,
     bottomClearance: clearance,

@@ -1,5 +1,5 @@
 import { computeJumperGeometry } from '../jumperGeometry'
-import { parseDrawingJumperProperties } from '../jumperProperties'
+import { parseDrawingPipeProfiles } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { parseOpeningOrientation } from '../../openingOrientation'
 
@@ -27,17 +27,16 @@ function n(v:unknown,f:number,min:number,max:number){
   return Math.min(max,Math.max(min,Number.isFinite(p)?p:f))
 }
 function rect(x:number,y:number,width:number,height:number):Rect{return{x,y,width:Math.max(0,width),height:Math.max(0,height)}}
-function size(v:unknown,f:number){const m=t(v).match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i);const a=n(m?.[1]?.replace(',','.'),f,20,200),b=n(m?.[2]?.replace(',','.'),f,20,200);return a===50?b:a}
 function color(v:unknown,f:string){const s=t(v);return /^#[\da-f]{6}$/i.test(s)?s:/^[\da-f]{6}$/i.test(s)?`#${s}`:f}
 export function topPath(r:Rect){return`M${r.x},${r.y} L${r.x+r.width},${r.y} L${r.x+r.width-r.height},${r.y+r.height} L${r.x+r.height},${r.y+r.height} Z`}
 export function bottomPath(r:Rect){return`M${r.x},${r.y+r.height} L${r.x+r.width},${r.y+r.height} L${r.x+r.width-r.height},${r.y} L${r.x+r.height},${r.y} Z`}
 export function computeType1Geometry(s:Type1Source):Type1Geometry{
  const orientation=parseOpeningOrientation(s.openingOrientation)
  const ow=n(s.widthProyema,1000,300,10000),oh=n(s.heightProyema,2000,500,5000),clear=n(s.clearanceProyema,50,0,500)
- const jumper=parseDrawingJumperProperties(s)
- const has=jumper.hasPosts,pw=size(s.stolbName,50),right=orientation.hingeSide==='right'
+ const jumper=parseDrawingPipeProfiles(s,R)
+ const has=jumper.hasPosts,pw=jumper.postWidth,right=orientation.hingeSide==='right'
  const sub=resolveFrameSubtype(s.shieldType),capabilities=frameSubtypeCapabilities(sub),lowerH=n(s.heightLowerPart,300,0,1000),upperH=n(s.heightTopPart,300,0,1000),sideW=n(s.widthSidePart,300,20,3000)
- const extraSize=size(s.peremichkaSortamentName,60),verticalGeometry=computeJumperGeometry({openingHeight:oh,bottomClearance:clear,hasPosts:has,jumperPlacement:jumper.placement,jumperHeight:extraSize})
+ const extraSize=jumper.placement==='above'?jumper.overheadJumperHeight:jumper.jumperFaceSize,verticalGeometry=computeJumperGeometry({openingHeight:oh,bottomClearance:clear,hasPosts:has,jumperPlacement:jumper.placement,jumperHeight:extraSize})
  const drawingHeight=oh,gateY=verticalGeometry.gateY,gateHeight=verticalGeometry.gateHeight,postHeight=verticalGeometry.postHeight
  const zx=has?pw:0,zw=ow-(has?pw*2:0),gw=Math.max(0,zw-14),gx=zx+(right?10:4),gate=rect(gx,gateY,gw,gateHeight),gateZone=rect(zx,gateY,zw,gateHeight)
  const gi=rect(gate.x+R,gate.y+R,gate.width-R*2,gate.height-R*2),base=rect(gi.x+I,gi.y+I,gi.width-I*2,gi.height-I*2)

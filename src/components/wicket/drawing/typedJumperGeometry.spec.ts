@@ -10,14 +10,14 @@ const base = {
 }
 
 describe.each([
-  ['type1', computeType1Geometry], ['type2', computeType2Geometry], ['type3', buildType3Geometry],
-] as const)('%s explicit jumper geometry', (_name, build) => {
+  ['type1', computeType1Geometry, 60], ['type2', computeType2Geometry, 50], ['type3', buildType3Geometry, 50],
+] as const)('%s explicit jumper geometry', (_name, build, frameSize) => {
   it.each([
     ['none', 1950, false, 'above'], ['above', 1885, true, 'above'], ['behind', 1950, true, 'behind'],
   ] as const)('uses %s regardless of captions and foreign keys', (jumperPlacement, height, visible, projection) => {
     for (const hasStolby of [0, '1']) {
       for (const peremichkaPolozheniyeName of ['Без перемычки', 'Перемычка за створкой', 'Переименовано', null]) {
-        const geometry = build({ ...base, hasStolby, jumperPlacement, peremichkaPolozheniyeName, peremichkaPolozheniyeId: 1733 })
+        const geometry = build({ ...base, hasStolby, jumperPlacement, postProfile: hasStolby === '1' ? { sizeA: 50, sizeB: 50 } : null, jumperProfile: jumperPlacement === 'none' ? null : { sizeA: 60, sizeB: jumperPlacement === 'above' ? frameSize : 60 }, peremichkaPolozheniyeName, peremichkaPolozheniyeId: 1733 })
         expect(geometry.gate.height).toBe(height)
         expect(geometry.posts.visible).toBe(hasStolby === '1')
         expect(geometry.extraRail).toMatchObject({ visible, placement: projection })

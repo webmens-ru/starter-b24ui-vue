@@ -4,7 +4,7 @@ import { computeType2Geometry } from './type2Geometry'
 
 describe('computeType2Geometry', () => {
   it('использует размеры по умолчанию при явных свойствах открытия', () => {
-    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, jumperPlacement: 'none', hasStolby: 1 })
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 })
 
     expect(geometry.drawing).toEqual({ width: 1000, height: 2000 })
     expect(geometry.gate).toEqual({ x: 54, y: 0, width: 886, height: 1950 })
@@ -20,7 +20,7 @@ describe('computeType2Geometry', () => {
       widthProyema: '1250',
       heightProyema: '2300',
       clearanceProyema: '75',
-      hasStolby: 0,
+      postProfile: null, hasStolby: 0,
       stolbName: 'Труба 60×60×2',
       openingOptionName: 'Произвольная подпись',
       openingOrientation: { opensOutward: false, hingeSide: 'right' },
@@ -40,12 +40,12 @@ describe('computeType2Geometry', () => {
       colorFacadeReverseImage: '  /uploads/colors/reverse.webp  ',
       sideGrilleNetImage: '  /uploads/nets/side.webp  ',
       raspolozheniyePolotna: 'Вертикально',
-      jumperPlacement: 'behind',
+      jumperProfile: { sizeA: 40, sizeB: 20 }, jumperPlacement: 'behind',
     })
 
     expect(geometry.drawing).toEqual({ width: 1250, height: 2300 })
     expect(geometry.posts.visible).toBe(false)
-    expect(geometry.posts.left.width).toBe(60)
+    expect(geometry.posts.left.width).toBe(0)
     expect(geometry.gate).toEqual({ x: 10, y: 0, width: 1236, height: 2225 })
     expect(geometry.hingeSide).toBe('right')
     expect(geometry.subtype).toBe('type4')
@@ -65,29 +65,29 @@ describe('computeType2Geometry', () => {
   })
 
   it.each([
-    ['60/60/2', 60],
-    ['80/80/3', 80],
-    ['50/100/3', 100],
-    ['60/100/3', 60],
-    ['Труба 50×80×3', 80],
-    ['Труба 100×100×4', 100],
-  ])('берёт ширину столба из маркировки %s', (stolbName, expectedWidth) => {
-    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, stolbName, hasStolby: 1 , jumperPlacement: 'none' })
+    ['60/60/2', { sizeA: 60, sizeB: 60 }, 60],
+    ['80/80/3', { sizeA: 80, sizeB: 80 }, 80],
+    ['50/100/3', { sizeA: 100, sizeB: 50 }, 100],
+    ['60/100/3', { sizeA: 100, sizeB: 60 }, 100],
+    ['Труба 50×80×3', { sizeA: 80, sizeB: 50 }, 80],
+    ['Труба 100×100×4', { sizeA: 100, sizeB: 100 }, 100],
+  ])('берёт ширину из свойств независимо от подписи %s', (stolbName, postProfile, expectedWidth) => {
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, stolbName, postProfile, hasStolby: 1 , jumperProfile: null, jumperPlacement: 'none' })
 
     expect(geometry.posts.left.width).toBe(expectedWidth)
     expect(geometry.posts.right.width).toBe(expectedWidth)
   })
 
   it.each([
-    ['50/100/3', 100],
-    ['60/30/2', 60],
-    ['Труба 50×80×3', 80],
-  ])('берёт видимую высоту перемычки из маркировки %s', (peremichkaSortamentName, expectedHeight) => {
+    ['50/100/3', { sizeA: 100, sizeB: 50 }, 100],
+    ['60/30/2', { sizeA: 60, sizeB: 30 }, 60],
+    ['Труба 50×80×3', { sizeA: 80, sizeB: 50 }, 80],
+  ])('берёт видимую высоту из свойств независимо от подписи %s', (peremichkaSortamentName, jumperProfile, expectedHeight) => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName,
-      jumperPlacement: 'behind',
-      hasStolby: 1,
+      jumperProfile, jumperPlacement: 'behind',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.extraRail.height).toBe(expectedHeight)
@@ -100,8 +100,8 @@ describe('computeType2Geometry', () => {
       clearanceProyema: '50',
       peremichkaPolozheniyeName: 'Над калиткой',
       peremichkaSortamentName: '60/60/2',
-      jumperPlacement: 'above',
-      hasStolby: 1,
+      jumperProfile: { sizeA: 60, sizeB: 50 }, jumperPlacement: 'above',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.gate).toMatchObject({ y: 65, height: 1885 })
@@ -115,8 +115,8 @@ describe('computeType2Geometry', () => {
       clearanceProyema: '50',
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName: '60/60/2',
-      jumperPlacement: 'behind',
-      hasStolby: 1,
+      jumperProfile: { sizeA: 60, sizeB: 60 }, jumperPlacement: 'behind',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.gate.y).toBe(0)
@@ -128,19 +128,19 @@ describe('computeType2Geometry', () => {
     expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#A1b2C3',
-     jumperPlacement: 'none', hasStolby: 1 }).fill.color).toBe('#A1b2C3')
+     jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).fill.color).toBe('#A1b2C3')
 
     expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: 'A1b2C3',
-     jumperPlacement: 'none', hasStolby: 1 }).fill.color).toBe('#A1b2C3')
+     jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).fill.color).toBe('#A1b2C3')
 
     expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#123',
-     jumperPlacement: 'none', hasStolby: 1 }).fill.color).toBe('')
+     jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).fill.color).toBe('')
 
-    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, colorFacade: 'RAL 7016' , jumperPlacement: 'none', hasStolby: 1 }).fill.color).toBe('')
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, colorFacade: 'RAL 7016' , jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).fill.color).toBe('')
   })
 
   it.each([
@@ -149,7 +149,7 @@ describe('computeType2Geometry', () => {
     ['Тип_3', 'type3'],
     ['Тип_4', 'type4'],
   ] as const)('строит геометрию подтипа %s', (shieldType, subtype) => {
-    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, shieldType , jumperPlacement: 'none', hasStolby: 1 })
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, shieldType , jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 })
 
     expect(geometry.subtype).toBe(subtype)
     expect(geometry.rails.lowerSubtype.visible).toBe(subtype === 'type2' || subtype === 'type3')
@@ -168,8 +168,8 @@ describe('computeType2Geometry', () => {
       shieldType,
       heightLowerPart: '300',
       lowerGrilleNetImage: '/uploads/nets/lower.webp',
-      jumperPlacement: 'none',
-      hasStolby: 1,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.netArea.visible).toBe(true)
@@ -187,8 +187,8 @@ describe('computeType2Geometry', () => {
       heightTopPart: 300,
       upperGrilleNetImage: '/u.png',
       lowerGrilleNetImage: '/l.png',
-      jumperPlacement: 'none',
-      hasStolby: 1,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.subtype).toBe('type5')
@@ -209,8 +209,8 @@ describe('computeType2Geometry', () => {
       shieldType: 'Тип_3',
       heightTopPart: '300',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
-      jumperPlacement: 'none',
-      hasStolby: 1,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     expect(geometry.upperNetArea.visible).toBe(true)
@@ -222,7 +222,7 @@ describe('computeType2Geometry', () => {
     expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       shieldType: 'Тип_2',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
-     jumperPlacement: 'none', hasStolby: 1 }).upperNetArea.visible).toBe(false)
+     jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).upperNetArea.visible).toBe(false)
   })
 
   it('не возвращает отрицательные размеры для предельных значений', () => {
@@ -233,8 +233,8 @@ describe('computeType2Geometry', () => {
       widthSidePart: '9999',
       heightLowerPart: '9999',
       heightTopPart: '9999',
-      jumperPlacement: 'none',
-      hasStolby: 1,
+      jumperProfile: null, jumperPlacement: 'none',
+      postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1,
     })
 
     const rects = [
