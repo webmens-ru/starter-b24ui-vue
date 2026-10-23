@@ -278,6 +278,10 @@ onMounted(async () => {
   await loadAdditionalPens()
   if (showDetails.value && penItems.value.length) {
     applySavedSelection()
+  } else if (presence.value === null && calc.penColorId.value == null
+    && penItems.value.some(pen => pen.id === selectedPenId.value && pen.canUseFrameColor)) {
+    // Restore the pending capability-based choice without selecting a fallback pen or saving.
+    selectedColor.value = 'frame'
   }
 
   isRestoringSelection = false

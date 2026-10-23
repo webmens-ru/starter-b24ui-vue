@@ -121,6 +121,25 @@ describe('Pen frame color capability', () => {
     wrapper.unmount()
   })
 
+  it('preserves pending frame colour when repairing unresolved presence', async () => {
+    const calc = useCalculation()
+    calc.isTherePen.value = null
+    calc.additionalPenId.value = 7
+    calc.penColorId.value = null
+    calc.additionalPenColor.value = 'Цвет каркаса'
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ id: 7, marking: 'СК-7', canUseFrameColor: true,
+      colors: [], imageUrls: [] }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.get('input[name="pen-presence"][value="1"]').setValue()
+    await flushPromises()
+    expect(calc.additionalPenColor.value).toBe('Цвет каркаса')
+    expect(calc.penColorId.value).toBe(null)
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    wrapper.unmount()
+  })
+
   it('does not clear a pending pen or colour while saved participant roles are unresolved', async () => {
     const calc = useCalculation()
     calc.penProvided.value = ''

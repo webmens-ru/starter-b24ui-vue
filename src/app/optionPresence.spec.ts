@@ -63,6 +63,12 @@ describe('numeric option presence boundary', () => {
     expect(store.isTherePen).toBe(null)
     expect(store.isThereLock).toBe(null)
   })
+  it.each([true, false, '1e2', ' 7', '7 ', '0x10', [7]])('rejects raw invalid lock FK %j before numeric coercion', raw => {
+    setActivePinia(createPinia())
+    const store = useWicketFormStore()
+    store.loadFromApi({ lockSetId: raw })
+    expect(store.isThereLock).toBe(null)
+  })
   it('does not navigate past unresolved lock presence as though it were absence', () => {
     const state = { modelId: '2', materialFacadeGlob: 'siding', materialYardGlob: null, fillSide: 1,
       isThereLock: null, providesLock: 'manufacturer', availableSections: [] }
