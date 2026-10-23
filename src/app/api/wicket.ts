@@ -1,4 +1,6 @@
 import api from '.'
+import { parseJumperOptions, type JumperOptionsResponse } from './jumperProperties'
+export type { JumperPlacement, JumperOption, JumperOptionsResponse } from './jumperProperties'
 import { parseOpeningOrientation } from '../../components/wicket/openingOrientation'
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
@@ -503,12 +505,12 @@ export async function getAssortmentStolb(
 export async function getPolozhenieJumper(
   modelId: string | number,
   openingOptionId: number
-): Promise<{ availablePolozheniyeJumper: SelectItem[] }> {
-  if (isMock) return mockGetPolozhenieJumper()
+): Promise<JumperOptionsResponse> {
+  if (isMock) return parseJumperOptions(await mockGetPolozhenieJumper(openingOptionId))
   const { data } = await api.post(`/api/wicket/type${modelId}/get-available-polozheniye-jumper`, {
     openingOptionId,
   })
-  return data.data
+  return parseJumperOptions(data.data)
 }
 
 export async function getOpeningOptions(): Promise<OpeningOptionsResponse> {

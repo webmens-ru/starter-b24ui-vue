@@ -431,10 +431,10 @@ const MOCK_ASSORTMENT_STOLB: SelectItem[] = [
   { id: 13, name: '60/40/4' },
 ]
 
-const MOCK_PEREMICHKA_POLOZHENIYE: SelectItem[] = [
-  { id: '1', name: 'Без перемычки' },
-  { id: '2', name: 'Перемычка над створкой' },
-  { id: '3', name: 'Перемычка за створкой' },
+const MOCK_PEREMICHKA_POLOZHENIYE: import('./jumperProperties').JumperOption[] = [
+  { id: 1733, name: 'Без перемычки', placement: 'none', hasJumper: false },
+  { id: 2941, name: 'Перемычка над створкой', placement: 'above', hasJumper: true },
+  { id: 4811, name: 'Перемычка за створкой', placement: 'behind', hasJumper: true },
 ]
 
 const MOCK_ASSORTMENT_JUMPER: SelectItem[] = [
@@ -461,9 +461,13 @@ export async function mockGetOpeningOptions(): Promise<OpeningOptionsResponse> {
   ], problems: [] }
 }
 
-export async function mockGetPolozhenieJumper(): Promise<{ availablePolozheniyeJumper: SelectItem[] }> {
+export async function mockGetPolozhenieJumper(openingOptionId: number): Promise<import('./jumperProperties').JumperOptionsResponse> {
   await delay(100)
-  return { availablePolozheniyeJumper: MOCK_PEREMICHKA_POLOZHENIYE }
+  const opening = (await mockGetOpeningOptions()).options.find(option => option.id === openingOptionId)
+  if (!opening) throw new Error('Выбранный вариант открытия недоступен.')
+  return { availablePolozheniyeJumper: MOCK_PEREMICHKA_POLOZHENIYE
+    .filter(option => opening.opensOutward || option.placement !== 'behind')
+    .map(option => ({ ...option })) }
 }
 
 export async function mockGetAssortmentJumper(): Promise<{ assortmentJumper: SelectItem[] }> {
@@ -696,8 +700,11 @@ export async function mockLoadWicketData(
     openingOptionName: 'Наружу / Правая',
     openingOrientation: { opensOutward: true, hingeSide: 'right' },
     openingOrientationProblem: null,
-    peremichkaPolozheniyeId: '1',
+    peremichkaPolozheniyeId: 1733,
     peremichkaPolozheniyeName: 'Без перемычки',
+    jumperPlacement: 'none',
+    jumperPlacementProblem: null,
+    postsPresenceProblem: null,
     assortmentJumperId: null,
     peremichkaSortamentName: null,
     isTherePen: 0,
