@@ -37,4 +37,10 @@ describe('stable summary codes', () => {
     expect(block?.blockCode).toBeUndefined()
     expect(block?.params[0]?.paramCode).toBeUndefined()
   })
+
+  it.each(['Доводчик', 'Отбойник', 'СКУД'])('retains old addon presence %s through its contextual alias', name => {
+    const old = [{ blockName: name, params: [{ name, value: 'Не будет' }] }]
+    expect(normalizeSummaryBlocks(old)[0]?.params[0]?.paramCode).toBe('presence')
+    expect(normalizeSummaryBlocks([{ ...old[0]!, params: [{ name, paramCode: '', value: 'Не будет' }] }])[0]?.params[0]?.paramCode).toBe('')
+  })
 })

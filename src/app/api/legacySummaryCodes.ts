@@ -106,9 +106,13 @@ export function adaptLegacySummaryBlock(block: CalcBlock): CalcBlock {
     ...block,
     ...(blockCode !== undefined ? { blockCode } : {}),
     params: block.params.map(param => {
-      const paramCode = param.paramCode === undefined
+      let paramCode = param.paramCode === undefined
         ? (Object.prototype.hasOwnProperty.call(historicalParams, param.name) ? historicalParams[param.name] : undefined)
         : param.paramCode
+      if (param.paramCode === undefined && paramCode === undefined
+        && ((blockCode === 'doorCloser' && param.name === 'Доводчик')
+          || (blockCode === 'bumper' && param.name === 'Отбойник')
+          || (blockCode === 'skud' && param.name === 'СКУД'))) paramCode = 'presence'
       return { ...param, ...(paramCode !== undefined ? { paramCode } : {}) }
     }),
   }
