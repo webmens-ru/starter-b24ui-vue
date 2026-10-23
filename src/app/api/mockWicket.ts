@@ -1,5 +1,6 @@
 import type {
   SelectItem,
+  OpeningOptionsResponse,
   ColorShieldItem,
   PaintCategory,
   RecalculateResponse,
@@ -451,6 +452,15 @@ export async function mockGetAssortmentStolb(): Promise<{ assortmentPipe: Select
   return { assortmentPipe: MOCK_ASSORTMENT_STOLB }
 }
 
+export async function mockGetOpeningOptions(): Promise<OpeningOptionsResponse> {
+  return { options: [
+    { id: 1, name: 'Наружу / Правая', pathPhoto: '/img/wicket_opening_diagram_02.jpg', opensOutward: true, hingeSide: 'right' },
+    { id: 920, name: 'Наружу / Левая', pathPhoto: '/img/wicket_opening_diagram_01.jpg', opensOutward: true, hingeSide: 'left' },
+    { id: 1220, name: 'Внутрь / Левая', pathPhoto: '/img/wicket_opening_diagram_03.jpg', opensOutward: false, hingeSide: 'right' },
+    { id: 1430, name: 'Внутрь / Правая', pathPhoto: '/img/wicket_opening_diagram_04.jpg', opensOutward: false, hingeSide: 'left' },
+  ], problems: [] }
+}
+
 export async function mockGetPolozhenieJumper(): Promise<{ availablePolozheniyeJumper: SelectItem[] }> {
   await delay(100)
   return { availablePolozheniyeJumper: MOCK_PEREMICHKA_POLOZHENIYE }
@@ -684,6 +694,8 @@ export async function mockLoadWicketData(
     stolbName: '60/60/2',
     openingOptionId: 1,
     openingOptionName: 'Наружу / Правая',
+    openingOrientation: { opensOutward: true, hingeSide: 'right' },
+    openingOrientationProblem: null,
     peremichkaPolozheniyeId: '1',
     peremichkaPolozheniyeName: 'Без перемычки',
     assortmentJumperId: null,

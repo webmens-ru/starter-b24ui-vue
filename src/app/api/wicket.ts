@@ -1,4 +1,5 @@
 import api from '.'
+import { parseOpeningOrientation } from '../../components/wicket/openingOrientation'
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 import {
@@ -19,6 +20,7 @@ import {
   mockGetProfnastilColors,
   mockGetAssortmentStolb,
   mockGetPolozhenieJumper,
+  mockGetOpeningOptions,
   mockGetAssortmentJumper,
   mockGetColorShield,
   mockGetNetWidths,
@@ -35,6 +37,10 @@ import {
 } from './mockWicket'
 import type {
   PaintCategory,
+  OpeningOrientation,
+  OpeningOrientationProblem,
+  OpeningOption,
+  OpeningOptionsResponse,
   SelectItem,
   ColorShieldItem,
   FilterOptionItem,
@@ -78,6 +84,10 @@ import type {
 } from './wicket.types'
 
 export type {
+  OpeningOrientation,
+  OpeningOrientationProblem,
+  OpeningOption,
+  OpeningOptionsResponse,
   SelectItem,
   ColorShieldItem,
   FilterOptionItem,
@@ -499,6 +509,34 @@ export async function getPolozhenieJumper(
     openingOptionId,
   })
   return data.data
+}
+
+export async function getOpeningOptions(): Promise<OpeningOptionsResponse> {
+  const raw: unknown = isMock ? await mockGetOpeningOptions()
+    : (await api.get('/api/wicket/base-model/get-opening-options')).data.data
+  if (!raw || typeof raw !== 'object' || !('options' in raw) || !('problems' in raw)
+    || !Array.isArray(raw.options) || !Array.isArray(raw.problems)) {
+    throw new Error('Некорректный ответ справочника вариантов открытия.')
+  }
+  const seen = new Set<number>()
+  const options = raw.options.map((item: unknown) => {
+    if (!item || typeof item !== 'object' || !('id' in item) || !isPositiveSafeInteger(item.id)
+      || !('name' in item) || typeof item.name !== 'string'
+      || !('pathPhoto' in item) || (item.pathPhoto !== null && typeof item.pathPhoto !== 'string')
+      || seen.has(item.id)) {
+      throw new Error('Некорректный вариант открытия.')
+    }
+    seen.add(item.id)
+    return { id: item.id, name: item.name, pathPhoto: item.pathPhoto, ...parseOpeningOrientation(item) }
+  })
+  const problems = raw.problems.map((item: unknown) => {
+    if (!item || typeof item !== 'object' || !('id' in item) || !isPositiveSafeInteger(item.id)
+      || !('message' in item) || typeof item.message !== 'string') {
+      throw new Error('Некорректная диагностика вариантов открытия.')
+    }
+    return { id: item.id, message: item.message }
+  })
+  return { options, problems }
 }
 
 export async function getAssortmentJumper(

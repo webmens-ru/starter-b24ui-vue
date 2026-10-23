@@ -1,6 +1,6 @@
 import type { WicketSavePayload } from './wicket.types'
 
-/** Legacy handles are no longer part of a selected lock set. */
+/** Remove legacy handles, retired fields and server-derived opening properties. */
 export function canonicalizeWicketRootSavePayload(
   payload: WicketSavePayload,
 ): WicketSavePayload {
@@ -14,6 +14,8 @@ export function canonicalizeWicketRootSavePayload(
     clientAddress: _clientAddress,
     clientComment: _clientComment,
     countryCode: _countryCode,
+    openingOrientation: _openingOrientation,
+    openingOrientationProblem: _openingOrientationProblem,
     ...canonicalPayload
   } = payload
   void _calculationName
@@ -25,6 +27,8 @@ export function canonicalizeWicketRootSavePayload(
   void _clientAddress
   void _clientComment
   void _countryCode
+  void _openingOrientation
+  void _openingOrientationProblem
 
   return {
     ...canonicalPayload,

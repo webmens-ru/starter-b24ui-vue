@@ -2,6 +2,27 @@ import type { OrderTotals, ProductRowContext, ProductRowSummary } from './produc
 
 export type { ProductRowContext } from './productRows.types'
 
+export interface OpeningOrientation {
+  opensOutward: boolean
+  hingeSide: 'left' | 'right'
+}
+
+export interface OpeningOrientationProblem {
+  code: 'invalid' | 'missing' | 'inactive'
+  message: string
+}
+
+export interface OpeningOption extends OpeningOrientation {
+  id: number
+  name: string
+  pathPhoto: string | null
+}
+
+export interface OpeningOptionsResponse {
+  options: OpeningOption[]
+  problems: Array<{ id: number; message: string }>
+}
+
 export interface WicketSavePayload extends ProductRowContext {
   providesPrimer?: string | null
   lockSetId?: number | null
@@ -400,6 +421,8 @@ export interface CompanyScopedPayload {
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
 export interface WicketGetDataResponse {
+  openingOrientation?: OpeningOrientation | null
+  openingOrientationProblem?: OpeningOrientationProblem | null
   visitedPages: string[]
   activePage: string
   lockSetId?: number | null

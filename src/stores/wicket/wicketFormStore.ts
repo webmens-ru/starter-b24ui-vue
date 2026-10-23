@@ -5,6 +5,8 @@ import type {
   WicketAccessoryCompositionResponse,
   WicketAccessoryRole,
   WicketAccessorySelectionPayload,
+  OpeningOrientation,
+  OpeningOrientationProblem,
 } from '../../app/api/wicket.types'
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
@@ -47,6 +49,8 @@ const stolbId                    = ref<string | number>('')
 const stolbName                  = ref<string>('')
 const openingOptionName         = ref<string>('')
 const openingOptionId           = ref<number | null>(null)
+const openingOrientation = ref<OpeningOrientation | null>(null)
+const openingOrientationProblem = ref<OpeningOrientationProblem | null>(null)
 const openingOptionPathPhoto   = ref<string>('')
 const peremichkaPolozheniyeId   = ref<string>('')
 const peremichkaPolozheniyeName = ref<string>('')
@@ -302,6 +306,8 @@ const fieldsFilled = ref<number>(0)
     stolbName.value = ''
     openingOptionName.value = ''
     openingOptionId.value = null
+    openingOrientation.value = null
+    openingOrientationProblem.value = null
     openingOptionPathPhoto.value = ''
     peremichkaPolozheniyeId.value = ''
     peremichkaPolozheniyeName.value = ''
@@ -627,6 +633,8 @@ const fieldsFilled = ref<number>(0)
       stolbName,
       openingOptionName,
       openingOptionId,
+      openingOrientation,
+      openingOrientationProblem,
       openingOptionPathPhoto,
       peremichkaPolozheniyeId,
       peremichkaPolozheniyeName,
@@ -982,6 +990,8 @@ const fieldsFilled = ref<number>(0)
     stolbName,
     openingOptionName,
     openingOptionId,
+    openingOrientation,
+    openingOrientationProblem,
     openingOptionPathPhoto,
     peremichkaPolozheniyeId,
     peremichkaPolozheniyeName,
