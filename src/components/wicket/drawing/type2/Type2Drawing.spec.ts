@@ -6,7 +6,10 @@ const calc = {
   widthProyema: ref('1000'),
   heightProyema: ref('2000'),
   clearanceProyema: ref('50'),
-  hasStolby: ref(1),
+  hasStolby: ref<0 | 1 | null>(1),
+  jumperPlacement: ref<'none' | 'above' | 'behind' | null>('none'),
+  jumperPlacementProblem: ref(null),
+  postsPresenceProblem: ref(null),
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
@@ -49,6 +52,27 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  it('shows an error instead of SVG when jumper properties are missing', () => {
+    const previous = calc.jumperPlacement.value
+    calc.jumperPlacement.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.jumperPlacement.value = previous }
+  })
+
+  it('shows an error instead of SVG when posts are unknown', () => {
+    const previous = calc.hasStolby.value
+    calc.hasStolby.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.hasStolby.value = previous }
+  })
   it.each([
     { opensOutward: true, hingeSide: 'left' as const, x: '44' },
     { opensOutward: true, hingeSide: 'right' as const, x: '940' },
@@ -121,6 +145,7 @@ describe('Type2Drawing', () => {
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
     calc.peremichkaPolozheniyeName.value = 'Без перемычки'
+    calc.jumperPlacement.value = 'none'
     calc.peremichkaSortamentName.value = ''
   })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
@@ -381,6 +406,7 @@ describe('Type2Drawing', () => {
 
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
     calc.peremichkaPolozheniyeName.value = 'За калиткой'
+    calc.jumperPlacement.value = 'behind'
     calc.peremichkaSortamentName.value = '60/60/2'
     calc.fillSide.value = 'Две стороны'
     const wrapper = mount(Type2Drawing)
@@ -406,6 +432,7 @@ describe('Type2Drawing', () => {
 
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
     calc.peremichkaPolozheniyeName.value = 'Над калиткой'
+    calc.jumperPlacement.value = 'above'
     calc.peremichkaSortamentName.value = '60/60/2'
     const wrapper = mount(Type2Drawing)
 

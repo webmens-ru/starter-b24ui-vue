@@ -1,11 +1,15 @@
 import { frameSubtypeCapabilities } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
+import { parseDrawingJumperProperties } from '../jumperProperties'
 
 export interface Type3DrawingSource {
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
   hasStolby?: unknown
+  jumperPlacement?: unknown
+  jumperPlacementProblem?: unknown
+  postsPresenceProblem?: unknown
   stolbName?: unknown
   shieldType?: unknown
   heightTopPart?: unknown
@@ -77,14 +81,15 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const width = numberValue(source.widthProyema, 1000, 400, 5000)
   const height = numberValue(source.heightProyema, 2000, 600, 5000)
   const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
-  const postsVisible = Number(source.hasStolby) === 1
+  const jumper = parseDrawingJumperProperties(source)
+  const postsVisible = jumper.hasPosts
   const postSize = postsVisible ? profileSize(source.stolbName) : 0
   const extraRailSize = profileSize(source.peremichkaSortamentName, 60)
   const verticalGeometry = computeJumperGeometry({
     openingHeight: height,
     bottomClearance: clearance,
     hasPosts: postsVisible,
-    jumperName: source.peremichkaPolozheniyeName,
+    jumperPlacement: jumper.placement,
     jumperHeight: extraRailSize,
   })
   const gate = rect(postSize + 4, verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)

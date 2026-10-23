@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildType3Geometry } from './type3Geometry'
 
 const base = {
+  jumperPlacement: 'none',
   widthProyema: 1200,
   heightProyema: 2100,
   clearanceProyema: 100,
@@ -22,6 +23,7 @@ describe('buildType3Geometry', () => {
       hasStolby: 1,
       peremichkaPolozheniyeName: 'Над калиткой',
       peremichkaSortamentName: '60/60/2',
+      jumperPlacement: 'above',
     })
 
     expect(geometry.gate).toMatchObject({ y: 65, height: 1885 })
@@ -36,6 +38,7 @@ describe('buildType3Geometry', () => {
       hasStolby: 1,
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName: '60/60/2',
+      jumperPlacement: 'behind',
     })
 
     expect(geometry.gate).toMatchObject({ y: 0, height: 1950 })
@@ -47,6 +50,8 @@ describe('buildType3Geometry', () => {
       widthProyema: '',
       heightProyema: '',
       clearanceProyema: '',
+      jumperPlacement: 'none',
+      hasStolby: 0,
     })
 
     expect(geometry.opening).toEqual({ x: 0, y: 0, width: 1000, height: 2000 })
@@ -96,6 +101,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 300,
       numberOfSticks: 4,
       upperGrilleNetImage: '/upper.png',
+      jumperPlacement: 'none',
+      hasStolby: 0,
     })
 
     expect(geometry.upperNetArea).toEqual({ x: 54, y: 50, width: 486, height: 300, visible: true })
@@ -114,6 +121,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 300,
       heightLowerPart: 200,
       numberOfSticks: 4,
+      jumperPlacement: 'none',
+      hasStolby: 0,
     })
 
     expect(geometry.rails.lower.visible).toBe(false)
@@ -130,6 +139,8 @@ describe('buildType3Geometry', () => {
       heightTopPart: 900,
       numberOfSticks: 4,
       raspolozheniyePolotna: direction,
+      jumperPlacement: 'none',
+      hasStolby: 0,
     })
 
     expect(geometry.rails.upper).toMatchObject({ y: 830, height: 50, visible: true })

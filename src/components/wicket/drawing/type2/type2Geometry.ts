@@ -1,4 +1,5 @@
 import { computeJumperGeometry } from '../jumperGeometry'
+import { parseDrawingJumperProperties } from '../jumperProperties'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { parseOpeningOrientation } from '../../openingOrientation'
 
@@ -7,6 +8,9 @@ export interface Type2DrawingSource {
   heightProyema?: unknown
   clearanceProyema?: unknown
   hasStolby?: unknown
+  jumperPlacement?: unknown
+  jumperPlacementProblem?: unknown
+  postsPresenceProblem?: unknown
   stolbName?: unknown
   openingOptionName?: unknown
   openingOrientation?: unknown
@@ -146,7 +150,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const openingWidth = numberInRange(source.widthProyema, 1000, 300, 10000)
   const openingHeight = numberInRange(source.heightProyema, 2000, 500, 5000)
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
-  const hasPosts = source.hasStolby === undefined ? true : Number(source.hasStolby) !== 0
+  const jumper = parseDrawingJumperProperties(source)
+  const hasPosts = jumper.hasPosts
   const postWidth = type2VisibleProfileSize(source.stolbName, 50)
   const { hingeSide } = parseOpeningOrientation(source.openingOrientation)
   const gateSubtype = resolveFrameSubtype(source.shieldType)
@@ -161,7 +166,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     openingHeight,
     bottomClearance: clearance,
     hasPosts,
-    jumperName: source.peremichkaPolozheniyeName,
+    jumperPlacement: jumper.placement,
     jumperHeight: extraRailSize,
   })
 

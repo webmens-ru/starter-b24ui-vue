@@ -6,8 +6,20 @@ import { useWicketFormStore } from '../../../../stores/wicket/wicketFormStore'
 import Type3Drawing from './Type3Drawing.vue'
 
 describe('Type3Drawing', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useWicketFormStore().hasStolby = 0
+    useWicketFormStore().jumperPlacement = 'none'
+  })
   afterEach(() => vi.unstubAllGlobals())
+
+  it.each(['jumperPlacement', 'hasStolby'] as const)('shows an error instead of SVG when %s is unknown', field => {
+    useWicketFormStore()[field] = null
+    const wrapper = mount(Type3Drawing)
+    expect(wrapper.find('svg').exists()).toBe(false)
+    expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+    wrapper.unmount()
+  })
 
   it('рисует точное число штакетин и выбранные столбы', () => {
     const store = useWicketFormStore()
@@ -60,6 +72,7 @@ describe('Type3Drawing', () => {
   it('передаёт выбранный профиль перемычки в геометрию', () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.jumperPlacement = 'above'
     store.peremichkaSortamentName = '80/80/3'
 
     const wrapper = mount(Type3Drawing)
@@ -73,6 +86,7 @@ describe('Type3Drawing', () => {
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'За калиткой'
+    store.jumperPlacement = 'behind'
     store.peremichkaSortamentName = '60/60/2'
     store.fillSide = 'Две стороны'
     const wrapper = mount(Type3Drawing)
@@ -99,6 +113,7 @@ describe('Type3Drawing', () => {
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.jumperPlacement = 'above'
     store.peremichkaSortamentName = '60/60/2'
     const wrapper = mount(Type3Drawing)
 

@@ -10,6 +10,7 @@ import { computed, ref, watch } from 'vue'
 import { useCalculation } from '../../../../composables/useCalculation'
 import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildType3Geometry } from './type3Geometry'
+import { useDrawingGeometry } from '../useDrawingGeometry'
 
 const calc = useCalculation()
 const instanceId = instanceCounter++
@@ -20,7 +21,7 @@ const facadePatternId = `type3-facade-${instanceId}`
 const yardPatternId = `type3-yard-${instanceId}`
 const upperNetPatternId = `type3-upper-net-pattern-${instanceId}`
 
-const geometry = computed(() => buildType3Geometry({
+const { geometry, error: drawingError } = useDrawingGeometry(() => buildType3Geometry({
   widthProyema: calc.widthProyema.value,
   heightProyema: calc.heightProyema.value,
   clearanceProyema: calc.clearanceProyema.value,
@@ -34,7 +35,9 @@ const geometry = computed(() => buildType3Geometry({
   gapName: calc.gapName.value,
   thicknessFacade: calc.thicknessFacade.value,
   raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
-  peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
+  jumperPlacement: calc.jumperPlacement.value,
+  jumperPlacementProblem: calc.jumperPlacementProblem.value,
+  postsPresenceProblem: calc.postsPresenceProblem.value,
   peremichkaSortamentName: calc.peremichkaSortamentName.value,
   colorShieldHex: calc.colorShieldHex.value,
   colorFacadeHex: calc.colorFacadeHex.value,
@@ -51,14 +54,14 @@ const upperNetTileWidth = computed(() => Math.max(
   geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
 ))
 watch(
-  () => geometry.value.upperNetImage,
+  () => drawingError.value ? '' : geometry.value.upperNetImage,
   (imageUrl) => {
     upperNetImageWidthToHeight.value = 1
     if (!imageUrl || typeof window === 'undefined') return
 
     const image = new window.Image()
     image.onload = () => {
-      if (geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
+      if (drawingError.value || geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
       upperNetImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
@@ -95,7 +98,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
 
 <template>
   <div class="flex flex-col gap-3" data-testid="type3-drawing">
+    <p v-if="drawingError" role="alert">{{ drawingError }}</p>
     <svg
+      v-if="!drawingError"
       data-testid="type3-drawing-svg"
       class="block h-auto max-h-[650px] w-full"
       :viewBox="viewBox"

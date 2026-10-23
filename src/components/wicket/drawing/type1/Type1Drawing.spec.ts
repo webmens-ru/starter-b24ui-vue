@@ -6,7 +6,10 @@ const c = {
   widthProyema: ref('1000'),
   heightProyema: ref('2000'),
   clearanceProyema: ref('50'),
-  hasStolby: ref(1),
+  hasStolby: ref<0 | 1 | null>(1),
+  jumperPlacement: ref<'none' | 'above' | 'behind' | null>('none'),
+  jumperPlacementProblem: ref(null),
+  postsPresenceProblem: ref(null),
   stolbName: ref('60/60/2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
@@ -46,6 +49,27 @@ vi.mock('../../../../composables/useCalculation', () => ({ useCalculation: () =>
 import Type1Drawing from './Type1Drawing.vue'
 
 describe('Type1Drawing', () => {
+  it('shows an error instead of SVG when jumper properties are missing', () => {
+    const previous = c.jumperPlacement.value
+    c.jumperPlacement.value = null
+    try {
+      const wrapper = mount(Type1Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { c.jumperPlacement.value = previous }
+  })
+
+  it('shows an error instead of SVG when posts are unknown', () => {
+    const previous = c.hasStolby.value
+    c.hasStolby.value = null
+    try {
+      const wrapper = mount(Type1Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { c.hasStolby.value = previous }
+  })
   it.each([
     { opensOutward: true, hingeSide: 'left' as const, x: '54' },
     { opensOutward: true, hingeSide: 'right' as const, x: '930' },
@@ -247,9 +271,11 @@ describe('Type1Drawing', () => {
 
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
     const previousPlacement = c.peremichkaPolozheniyeName.value
+    const previousJumperPlacement = c.jumperPlacement.value
     const previousProfile = c.peremichkaSortamentName.value
     const previousFillSide = c.fillSide.value
     c.peremichkaPolozheniyeName.value = 'За калиткой'
+    c.jumperPlacement.value = 'behind'
     c.peremichkaSortamentName.value = '60/60/2'
     c.fillSide.value = 'Две стороны'
 
@@ -275,6 +301,7 @@ describe('Type1Drawing', () => {
       expect(wrapper.get('[data-testid="type1-jumper-foreground"]').attributes('fill')).toBe('#d1d5db')
     } finally {
       c.peremichkaPolozheniyeName.value = previousPlacement
+      c.jumperPlacement.value = previousJumperPlacement
       c.peremichkaSortamentName.value = previousProfile
       c.fillSide.value = previousFillSide
     }
@@ -282,8 +309,10 @@ describe('Type1Drawing', () => {
 
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
     const previousPlacement = c.peremichkaPolozheniyeName.value
+    const previousJumperPlacement = c.jumperPlacement.value
     const previousProfile = c.peremichkaSortamentName.value
     c.peremichkaPolozheniyeName.value = 'Над калиткой'
+    c.jumperPlacement.value = 'above'
     c.peremichkaSortamentName.value = '60/60/2'
 
     try {
@@ -296,6 +325,7 @@ describe('Type1Drawing', () => {
       expect(wrapper.find('[data-testid="type1-jumper-background"]').exists()).toBe(false)
     } finally {
       c.peremichkaPolozheniyeName.value = previousPlacement
+      c.jumperPlacement.value = previousJumperPlacement
       c.peremichkaSortamentName.value = previousProfile
     }
   })
