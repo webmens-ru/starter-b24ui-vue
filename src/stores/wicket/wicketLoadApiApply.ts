@@ -7,6 +7,7 @@ import { participantRoleFields } from '../../app/participantRoles'
 import { readParticipantRole } from '../../app/api/legacyParticipantRoles'
 import { readFillingMaterialGroup } from '../../app/api/legacyFillingMaterialGroups'
 import { readFillingSideCount } from '../../app/api/legacyFillingSideCounts'
+import { readFillingOrientation } from '../../app/api/legacyFillingOrientations'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -91,7 +92,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   doesPaintingFrame: 'manufacturer',
   doesAssembly: 'manufacturer',
   nalichieStolbovName: 'Со столбами',
-  raspolozheniyePolotna: 'Вертикально',
   sostoyaniyeProyema: 'Готов',
   shieldType: 'Тип_1',
   grilleLocation: 'Возле петель',
@@ -172,6 +172,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'raspolozheniyePolotna' || key === 'fillingOrientationCode' || key === 'fillingOrientationProblem') continue
     if (key === 'fillSide' || key === 'fillingSideCount' || key === 'fillingSideCountProblem') continue
     if (key === 'materialFacadeGlob' || key === 'materialYardGlob'
       || key === 'materialFacadeGroupCode' || key === 'materialYardGroupCode' || key === 'fillingGroupProblems') continue
@@ -185,6 +186,10 @@ export function applyWicketApiFieldMappings(
       || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
     if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
+  }
+  if (refMap.raspolozheniyePolotna && (Object.prototype.hasOwnProperty.call(apiData, 'raspolozheniyePolotna')
+    || Object.prototype.hasOwnProperty.call(apiData, 'fillingOrientationCode'))) {
+    refMap.raspolozheniyePolotna.value = readFillingOrientation(apiData)
   }
   for (const field of participantRoleFields) {
     if (refMap[field] && (Object.prototype.hasOwnProperty.call(apiData, field) || Object.prototype.hasOwnProperty.call(apiData, `${field}Code`))) {

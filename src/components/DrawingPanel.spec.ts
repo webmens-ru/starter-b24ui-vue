@@ -44,7 +44,7 @@ const calc = {
   colorYardHex: ref(''),
   colorYardImage: ref(''),
   colorShieldHex: ref(''),
-  raspolozheniyePolotna: ref('Вертикально'),
+  raspolozheniyePolotna: ref('vertical'),
 }
 
 vi.mock('../composables/useCalculation', () => ({

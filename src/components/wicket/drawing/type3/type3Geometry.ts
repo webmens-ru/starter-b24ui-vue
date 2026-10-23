@@ -1,3 +1,4 @@
+import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { frameSubtypeCapabilities } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
@@ -67,6 +68,7 @@ function rect(x: number, y: number, width: number, height: number): Type3Rect {
 }
 
 export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
+  const fillingOrientation = parseDrawingFillingOrientation(source.raspolozheniyePolotna)
   const width = numberValue(source.widthProyema, 1000, 400, 5000)
   const height = numberValue(source.heightProyema, 2000, 600, 5000)
   const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
@@ -109,7 +111,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     fillArea.height - (upperVisible ? upperSectionHeight + rail : 0) - (lowerVisible ? lowerHeight + rail : 0),
   )
   const count = Math.round(numberValue(source.numberOfSticks, 0, 0, 200))
-  const horizontal = /горизонт/i.test(text(source.raspolozheniyePolotna))
+  const horizontal = fillingOrientation === 'horizontal'
   const picketWidth = numberValue(source.thicknessFacade, 100, 10, 500)
   const span = horizontal ? activeFill.height : activeFill.width
   const visiblePicketWidth = Math.min(picketWidth, count > 0 ? span / count : picketWidth)

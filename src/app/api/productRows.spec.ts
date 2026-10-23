@@ -227,15 +227,16 @@ describe('product row API', () => {
     unsubscribe()
   })
 
-  it('sends numeric filling count instead of legacy caption or readonly diagnostic', async () => {
+  it('sends count and orientation properties without legacy captions or readonly diagnostics', async () => {
     const context = { orderId: 42, productRowId: 7, modelId: '1' }
     api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
     api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
     const { loadWicketData, saveWicketData } = await import('./wicket')
     await loadWicketData(context)
-    await saveWicketData({ ...context, fillSide: 2, fillingSideCountProblem: null })
+    await saveWicketData({ ...context, fillSide: 2, fillingSideCountProblem: null,
+      raspolozheniyePolotna: 'horizontal', fillingOrientationProblem: null })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/data', {
-      ...context, fillingSideCount: 2, lockPenId: null, lockPenColorId: null, lockVersion: 4,
+      ...context, fillingSideCount: 2, fillingOrientationCode: 'horizontal', lockPenId: null, lockPenColorId: null, lockVersion: 4,
     })
   })
 

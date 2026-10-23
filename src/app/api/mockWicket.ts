@@ -727,7 +727,7 @@ export async function mockLoadWicketData(
     heightProyema: '2000',
     clearanceProyema: '20',
     sostoyaniyeProyema: 'Готов',
-    raspolozheniyePolotna: 'Вертикально',
+    fillingOrientationCode: 'vertical',
     shieldType: 'Тип_1',
     colorShieldId: 1,
     heightTopPart: '0',

@@ -2,6 +2,7 @@ import type { WicketSavePayload } from './wicket.types'
 import { isParticipantRole, participantRoleFields } from '../participantRoles'
 import { isFillingMaterialGroup } from '../fillingMaterialGroups'
 import { isFillingSideCount } from '../fillingSideCounts'
+import { isFillingOrientation } from '../fillingOrientations'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -58,6 +59,14 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.fillingOrientationProblem
+  const explicitOrientation = Object.prototype.hasOwnProperty.call(canonicalPayload, 'fillingOrientationCode')
+  const orientation = explicitOrientation ? canonicalPayload.fillingOrientationCode : canonicalPayload.raspolozheniyePolotna
+  delete canonicalPayload.raspolozheniyePolotna
+  if (explicitOrientation || (orientation !== undefined && orientation !== '')) {
+    if (orientation !== null && !isFillingOrientation(orientation)) throw new TypeError('Некорректное направление заполнения: fillingOrientationCode')
+    canonicalPayload.fillingOrientationCode = orientation
+  }
   delete canonicalPayload.fillingSideCountProblem
   const explicitCount = Object.prototype.hasOwnProperty.call(canonicalPayload, 'fillingSideCount')
   const count = explicitCount ? canonicalPayload.fillingSideCount : canonicalPayload.fillSide

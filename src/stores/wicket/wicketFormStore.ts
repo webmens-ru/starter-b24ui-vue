@@ -3,6 +3,7 @@ import { ref, computed, onScopeDispose } from 'vue'
 import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
 import { fillingMaterialGroupLabel } from '../../app/fillingMaterialGroups'
 import { fillingSideCountLabel, isFillingSideCount, type FillingSideCountSelection } from '../../app/fillingSideCounts'
+import { fillingOrientationLabel, isFillingOrientation, type FillingOrientationSelection } from '../../app/fillingOrientations'
 import type { CalcBlock } from './types'
 import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
 import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
@@ -147,7 +148,7 @@ const clearanceProyema  = ref<string>('')
 const sostoyaniyeProyema = ref<string>('Готов')
 
 // Поля шага "Расположение полотна"
-const raspolozheniyePolotna = ref<string>('Вертикально')
+const raspolozheniyePolotna = ref<FillingOrientationSelection>('vertical')
 
 // Поля шага "Тип щита"
 const shieldType       = ref<string>('Тип_1')
@@ -378,7 +379,7 @@ const fieldsFilled = ref<number>(0)
     heightProyema.value = ''
     clearanceProyema.value = ''
     sostoyaniyeProyema.value = 'Готов'
-    raspolozheniyePolotna.value = 'Вертикально'
+    raspolozheniyePolotna.value = 'vertical'
     shieldType.value = 'Тип_1'
     colorShieldId.value = ''
     colorShieldName.value = ''
@@ -612,7 +613,7 @@ const fieldsFilled = ref<number>(0)
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
           break
         case 'page6':
-          completed = notEmpty(raspolozheniyePolotna.value)
+          completed = isFillingOrientation(raspolozheniyePolotna.value)
           break
         case 'page7':
           completed = numGt(widthProyema.value as string | number, 0) && numGt(heightProyema.value as string | number, 0)
@@ -938,7 +939,7 @@ const fieldsFilled = ref<number>(0)
     // Расположение полотна
     blocks.push({
       blockName: 'Расположение полотна',
-      params: [{ name: 'Расположение полотна', value: raspolozheniyePolotna.value }],
+      params: [{ name: 'Расположение полотна', value: fillingOrientationLabel(raspolozheniyePolotna.value) }],
     })
 
     // Тип щита

@@ -14,4 +14,5 @@ export interface WicketSharedNavState {
   lockSetId?: number | null
   widthProyema?: string | number
   heightProyema?: string | number
+  raspolozheniyePolotna?: string | null
 }

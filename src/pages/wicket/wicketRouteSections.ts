@@ -1,5 +1,7 @@
 import type { WicketRouteSection } from './wicketRoute'
 import { isFillingSideCount } from '../../app/fillingSideCounts'
+import { isFillingOrientation } from '../../app/fillingOrientations'
+import type { WicketSharedNavState } from './wicketNavTypes'
 
 const ok = () => ({ valid: true, errors: [] })
 const always = () => true
@@ -88,7 +90,12 @@ export function shieldSection(): WicketRouteSection {
 }
 
 export function canvasSection(): WicketRouteSection {
-  return section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
+  const result = section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
+  const valid = (state: WicketSharedNavState) => state.raspolozheniyePolotna === undefined
+    || isFillingOrientation(state.raspolozheniyePolotna)
+  result.validate = state => valid(state) ? ok() : { valid: false, errors: ['Выберите расположение полотна'] }
+  result.next = (_from, state) => valid(state) ? undefined : 'page6'
+  return result
 }
 
 export function paintingSection(): WicketRouteSection {

@@ -1,3 +1,4 @@
+import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
@@ -137,6 +138,7 @@ export function buildBottomRailPath(rect: DrawingRect): string {
 }
 
 export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGeometry {
+  const fillingOrientation = parseDrawingFillingOrientation(source.raspolozheniyePolotna)
   const openingWidth = numberInRange(source.widthProyema, 1000, 300, 10000)
   const openingHeight = numberInRange(source.heightProyema, 2000, 500, 5000)
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
@@ -325,12 +327,12 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
       image: text(source.colorFacadeImage),
       reverseColor: fillColor(source.colorFacadeReverseHex || '#D7D5C6'),
       reverseImage: text(source.colorFacadeReverseImage),
-      direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
+      direction: fillingOrientation ?? 'horizontal',
     },
     yardFill: {
       color: fillColor(source.colorYardHex),
       image: text(source.colorYardImage),
-      direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
+      direction: fillingOrientation ?? 'horizontal',
     },
     frameColor: frameColorHex(source.colorShieldHex),
   }

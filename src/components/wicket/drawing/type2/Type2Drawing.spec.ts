@@ -53,7 +53,7 @@ const calc = {
   sideGrilleNetImage: ref(''),
   lowerGrilleNetImage: ref(''),
   upperGrilleNetImage: ref(''),
-  raspolozheniyePolotna: ref('Вертикально'),
+  raspolozheniyePolotna: ref('vertical'),
 }
 
 vi.mock('../../../../composables/useCalculation', () => ({

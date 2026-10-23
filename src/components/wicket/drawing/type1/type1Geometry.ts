@@ -1,3 +1,4 @@
+import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
@@ -32,6 +33,7 @@ export function topPath(r:Rect){return`M${r.x},${r.y} L${r.x+r.width},${r.y} L${
 export function bottomPath(r:Rect){return`M${r.x},${r.y+r.height} L${r.x+r.width},${r.y+r.height} L${r.x+r.width-r.height},${r.y} L${r.x+r.height},${r.y} Z`}
 export function computeType1Geometry(s:Type1Source):Type1Geometry{
  const orientation=parseOpeningOrientation(s.openingOrientation)
+ const fillingOrientation = parseDrawingFillingOrientation(s.raspolozheniyePolotna)
  const ow=n(s.widthProyema,1000,300,10000),oh=n(s.heightProyema,2000,500,5000),clear=n(s.clearanceProyema,50,0,500)
  const jumper=parseDrawingPipeProfiles(s,R)
  const has=jumper.hasPosts,pw=jumper.postWidth,right=orientation.hingeSide==='right'
@@ -50,7 +52,7 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
  else if(sub==='type4'){if(meshLeft){net={...rect(gi.x,gi.y,vertical.x-gi.x,gi.height),visible:true};fill=rect(vertical.x+S,gi.y,gi.x+gi.width-vertical.x-S,gi.height)}else{fill=rect(gi.x,gi.y,vertical.x-gi.x,gi.height);net={...rect(vertical.x+S,gi.y,gi.x+gi.width-vertical.x-S,gi.height),visible:true}}framed=rect(fill.x+I,fill.y+I,fill.width-I*2,fill.height-I*2)}
  const inner={top:rect(framed.x-I,framed.y-I,framed.width+I*2,I),bottom:rect(framed.x-I,framed.y+framed.height,framed.width+I*2,I),left:rect(framed.x-I,framed.y,I,framed.height),right:rect(framed.x+framed.width,framed.y,I,framed.height)}
  const center={...rect(framed.x,framed.y+(framed.height-C)/2,framed.width,C),visible:framed.width>0&&framed.height>0},hx=right?gate.x+gate.width-6:gate.x-10
- const horizontalFilling=t(s.raspolozheniyePolotna)==='Горизонтально'
+ const horizontalFilling=fillingOrientation === 'horizontal'
  const lockPipeVisible=(horizontalFilling?fill.height:fill.width)>=500
  const lockPipes=lockPipeVisible
   ?[horizontalFilling
@@ -58,5 +60,5 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
     :rect(fill.x+I,fill.y+(fill.height-C)/2,fill.width-I*2,C)]
   :[]
  const hinges=[gate.y+100,gate.y+gate.height-250].flatMap(y=>[rect(hx,y,16,75),rect(hx,y+75,16,75)]),sx=right?gate.x-25:gate.x+gate.width-15,strip=[14,12,14].map((w,i,a)=>rect(sx+a.slice(0,i).reduce((q,z)=>q+z,0),gate.y,w,gate.height))
-return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,verticalGeometry.postY,pw,postHeight),right:rect(ow-pw,verticalGeometry.postY,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},lockPipes,fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,verticalGeometry.railY,ow,extraSize),visible:verticalGeometry.visible,placement:verticalGeometry.placement},hinges,strip,fill:{color:color(s.colorFacadeHex,''),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},yardFill:{color:color(s.colorYardHex,''),image:t(s.colorYardImage),direction:/вертик/i.test(t(s.raspolozheniyePolotna))?'vertical':'horizontal'},netImage:sub==='type5'?'':sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:capabilities.top?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
+return{drawing:{width:ow,height:drawingHeight},opening:rect(0,0,ow,drawingHeight),gate,gateZone,posts:{visible:has,left:rect(0,verticalGeometry.postY,pw,postHeight),right:rect(ow-pw,verticalGeometry.postY,pw,postHeight)},subtype:sub,frame:{left:rect(gate.x,gate.y,R,gate.height),right:rect(gate.x+gate.width-R,gate.y,R,gate.height)},innerFrame:inner,rails:{lower,upper,vertical,center},lockPipes,fillArea:fill,netArea:net,upperNetArea:upperNet,extraRail:{...rect(0,verticalGeometry.railY,ow,extraSize),visible:verticalGeometry.visible,placement:verticalGeometry.placement},hinges,strip,fill:{color:color(s.colorFacadeHex,''),image:t(s.colorFacadeImage),reverseColor:color(s.colorFacadeReverseHex,'#D7D5C6'),reverseImage:t(s.colorFacadeReverseImage),direction:fillingOrientation ?? 'horizontal'},yardFill:{color:color(s.colorYardHex,''),image:t(s.colorYardImage),direction:fillingOrientation ?? 'horizontal'},netImage:sub==='type5'?'':sub==='type4'?t(s.sideGrilleNetImage):t(s.lowerGrilleNetImage),upperNetImage:capabilities.top?t(s.upperGrilleNetImage):'',frameColor:color(s.colorShieldHex,'#66686c')}
 }

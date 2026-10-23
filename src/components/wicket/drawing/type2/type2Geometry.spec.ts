@@ -43,7 +43,7 @@ describe('computeType2Geometry', () => {
       colorFacadeReverseHex: '#D7D5C6',
       colorFacadeReverseImage: '  /uploads/colors/reverse.webp  ',
       sideGrilleNetImage: '  /uploads/nets/side.webp  ',
-      raspolozheniyePolotna: 'Вертикально',
+      raspolozheniyePolotna: 'vertical',
       jumperProfile: { sizeA: 40, sizeB: 20 }, jumperPlacement: 'behind',
     })
 

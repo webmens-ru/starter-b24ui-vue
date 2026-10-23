@@ -12,7 +12,7 @@ const base = {
   numberOfSticks: 8,
   gapName: 28,
   thicknessFacade: 100,
-  raspolozheniyePolotna: 'Вертикально',
+  raspolozheniyePolotna: 'vertical',
 }
 
 describe('buildType3Geometry', () => {
@@ -65,7 +65,7 @@ describe('buildType3Geometry', () => {
   })
 
   it('builds horizontal pickets when the canvas direction changes', () => {
-    const geometry = buildType3Geometry({ ...base, raspolozheniyePolotna: 'Горизонтально' })
+    const geometry = buildType3Geometry({ ...base, raspolozheniyePolotna: 'horizontal' })
     expect(geometry.facadePickets).toHaveLength(8)
     expect(geometry.facadePickets.every(picket => picket.width > picket.height)).toBe(true)
   })
@@ -130,7 +130,7 @@ describe('buildType3Geometry', () => {
     expect(geometry.facadePickets[0]).toMatchObject({ y: 400, height: 500 })
   })
 
-  it.each(['Вертикально', 'Горизонтально'])('keeps Type 5 %s pickets inside the gate when the upper height exceeds available space', (direction) => {
+  it.each(['vertical', 'horizontal'])('keeps Type 5 %s pickets inside the gate when the upper height exceeds available space', (direction) => {
     const geometry = buildType3Geometry({
       widthProyema: 600,
       heightProyema: 1000,

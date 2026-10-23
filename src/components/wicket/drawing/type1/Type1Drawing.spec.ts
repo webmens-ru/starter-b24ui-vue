@@ -47,7 +47,7 @@ const c = {
   coatingYardHex: ref(''),
   coatingYardImage: ref(''),
   reliefYardImage: ref(''),
-  raspolozheniyePolotna: ref('Вертикально'),
+  raspolozheniyePolotna: ref('vertical'),
   colorShieldHex: ref(''),
   sideGrilleNetImage: ref(''),
   lowerGrilleNetImage: ref(''),
@@ -204,7 +204,7 @@ describe('Type1Drawing', () => {
 
     try {
       c.heightProyema.value = '670'
-      c.raspolozheniyePolotna.value = 'Горизонтально'
+      c.raspolozheniyePolotna.value = 'horizontal'
       const wrapper = mount(Type1Drawing)
 
       expect(wrapper.findAll('[data-testid="type1-lock-pipe"]')).toHaveLength(1)
