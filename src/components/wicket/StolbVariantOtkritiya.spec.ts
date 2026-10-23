@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getOpeningOptions, getPolozhenieJumper, recalculate, saveWicketData } from '../../app/api/wicket'
+import { getAssortmentJumper, getOpeningOptions, getPolozhenieJumper, recalculate, saveWicketData } from '../../app/api/wicket'
 import { useCalculation } from '../../composables/useCalculation'
 import StolbVariantOtkritiya from './StolbVariantOtkritiya.vue'
 
@@ -41,9 +41,14 @@ describe('StolbVariantOtkritiya navigation', () => {
     calc.orderId.value = 42
     calc.productRowId.value = 7
     calc.modelId.value = '1'
+    calc.hasStolby.value = 0
+    calc.peremichkaPolozheniyeId.value = '1733'
+    calc.jumperPlacement.value = 'none'
     vi.mocked(saveWicketData).mockClear()
     vi.mocked(recalculate).mockClear()
-    vi.mocked(getPolozhenieJumper).mockClear()
+    vi.mocked(getPolozhenieJumper).mockReset().mockResolvedValue({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Любая подпись', placement: 'none', hasJumper: false },
+    ] })
     vi.mocked(getOpeningOptions).mockResolvedValue({ options: [
       { id: 819, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_02.jpg', opensOutward: true, hingeSide: 'right' },
       { id: 920, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_04.jpg', opensOutward: false, hingeSide: 'left' },
@@ -211,7 +216,8 @@ describe('StolbVariantOtkritiya navigation', () => {
     await flushPromises()
     expect(saveWicketData).toHaveBeenCalledTimes(1)
     expect(useCalculation().openingOptionId.value).toBe(920)
-    expect(useCalculation().peremichkaPolozheniyeName.value).toBe('Актуальное положение')
+    expect(useCalculation().peremichkaPolozheniyeId.value).toBe('')
+    expect(useCalculation().jumperPlacement.value).toBeNull()
   })
 
   it('does not overwrite another form after unmounting during catalog loading', async () => {
@@ -239,5 +245,170 @@ describe('StolbVariantOtkritiya navigation', () => {
     finish({ availablePolozheniyeJumper: [] })
     await flushPromises()
     expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('does not guess missing posts from a display label', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = null
+    calc.nalichieStolbovName.value = 'Со столбами'
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('persists numeric posts independent of the displayed labels', async () => {
+    useCalculation().openingOptionId.value = 819
+    const wrapper = mountComponent()
+    await flushPromises()
+    await wrapper.get('input[type="radio"][value="1"]').setValue()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ hasStolby: 1 }))
+    await wrapper.get('input[type="radio"][value="0"]').setValue()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ hasStolby: 0 }))
+  })
+
+  it.each([
+    { id: 1, name: 'Без перемычки', placement: 'above' as const, hasJumper: true, visible: true },
+    { id: 2941, name: 'Перемычка за створкой', placement: 'none' as const, hasJumper: false, visible: false },
+  ])('uses properties rather than caption or semantic ID for pipe visibility: $placement', async option => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.peremichkaPolozheniyeId.value = String(option.id)
+    calc.jumperPlacement.value = option.placement
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [option] })
+    const wrapper = mountComponent()
+    await flushPromises()
+    const pipe = wrapper.findAll('.peremichka-select-wrap').find(element => element.text().startsWith('Труба:'))
+    expect(pipe).toBeDefined()
+    expect((pipe!.element as HTMLElement).style.display !== 'none').toBe(option.visible)
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('keeps an unavailable jumper visible and blocks Next and recalculation', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.peremichkaPolozheniyeId.value = '777'
+    calc.peremichkaPolozheniyeName.value = 'Историческая перемычка'
+    calc.jumperPlacementProblem.value = { code: 'inactive', message: 'Перемычка неактивна' }
+    calc.priceRetail.value = 123
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Перемычка неактивна')
+    expect(wrapper.text()).toContain('Историческая перемычка')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(calc.peremichkaPolozheniyeId.value).toBe('777')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it('does not pick the first jumper when there is no saved choice', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.peremichkaPolozheniyeId.value = ''
+    calc.jumperPlacement.value = null
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(calc.peremichkaPolozheniyeId.value).toBe('')
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('blocks Next while the jumper list is loading or failed', async () => {
+    useCalculation().openingOptionId.value = 819
+    let fail!: (error: Error) => void
+    vi.mocked(getPolozhenieJumper).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject }))
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    fail(new Error('offline'))
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('blocks Next when a required jumper pipe is missing', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.jumperPlacement.value = 'above'
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Без перемычки', placement: 'above', hasJumper: true },
+    ] })
+    vi.mocked(getAssortmentJumper).mockResolvedValueOnce({ assortmentJumper: [] })
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('ignores a late opening response after the product-row context changed', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    let finish!: (value: Awaited<ReturnType<typeof getOpeningOptions>>) => void
+    vi.mocked(getOpeningOptions).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    mountComponent()
+    calc.productRowId.value = 8
+    calc.openingOptionName.value = 'Другая позиция'
+    finish({ options: [{ id: 819, name: 'Старый ответ', pathPhoto: null, opensOutward: true, hingeSide: 'right' }], problems: [] })
+    await flushPromises()
+    expect(calc.openingOptionName.value).toBe('Другая позиция')
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('blocks Next while the required pipe list is loading and ignores its result after unmount', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.jumperPlacement.value = 'above'
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Любая подпись', placement: 'above', hasJumper: true },
+    ] })
+    let finish!: (value: Awaited<ReturnType<typeof getAssortmentJumper>>) => void
+    vi.mocked(getAssortmentJumper).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    wrapper.unmount()
+    calc.reset()
+    finish({ assortmentJumper: [{ id: 984, name: 'Новый сортамент' }] })
+    await flushPromises()
+    expect(calc.assortmentJumperId.value).toBeNull()
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('does not advance or recalculate a different product row after a late successful save', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.priceRetail.value = 123
+    const wrapper = mountComponent()
+    await flushPromises()
+    let finish!: (value: { lockVersion: number }) => void
+    vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await getNextButton(wrapper).trigger('click')
+    calc.productRowId.value = 8
+    finish({ lockVersion: 2 })
+    await flushPromises()
+    expect(wrapper.emitted('next')).toBeUndefined()
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(calc.priceRetail.value).toBe(123)
+  })
+
+  it('does not apply a late calculation price to a different product row', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.priceRetail.value = 123
+    const wrapper = mountComponent()
+    await flushPromises()
+    let finish!: (value: Awaited<ReturnType<typeof recalculate>>) => void
+    vi.mocked(recalculate).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await getNextButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(recalculate).toHaveBeenCalledOnce()
+    calc.productRowId.value = 8
+    finish({ priceDealer: '999', priceRetail: '999' })
+    await flushPromises()
+    expect(calc.priceRetail.value).toBe(123)
+    expect(wrapper.emitted('next')).toBeUndefined()
   })
 })
