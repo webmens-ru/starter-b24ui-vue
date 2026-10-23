@@ -371,7 +371,7 @@ describe('StolbVariantOtkritiya navigation', () => {
     expect(await validateBeforeLeave(wrapper)).toBe(false)
     wrapper.unmount()
     calc.reset()
-    finish({ assortmentJumper: [{ id: 984, name: 'Новый сортамент' }] })
+    finish({ assortmentJumper: [{ id: 984, name: 'Новый сортамент', profile: { sizeA: 60, sizeB: 40 }, profileProblem: null, disabled: false }] })
     await flushPromises()
     expect(calc.assortmentJumperId.value).toBeNull()
     expect(saveWicketData).not.toHaveBeenCalled()

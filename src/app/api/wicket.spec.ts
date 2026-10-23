@@ -3,6 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const api = { get: vi.fn(), post: vi.fn() }
 vi.mock('.', () => ({ default: api }))
 
+describe('pipe option response boundary', () => {
+  it.each([
+    ['getAssortmentStolb', 'assortmentPipe', 'get-available-assortment-stolb'],
+    ['getAssortmentJumper', 'assortmentJumper', 'get-available-assortment-jumper'],
+  ] as const)('validates numeric metadata for %s', async (method, key, route) => {
+    const wicket = await import('./wicket')
+    api.get.mockResolvedValue({ data: { data: { [key]: [
+      { id: 707, name: '60/40/2', profile: { sizeA: '60', sizeB: 40 }, profileProblem: null },
+    ] } } })
+    const response = await wicket[method]('1')
+    expect(api.get).toHaveBeenLastCalledWith(`/api/wicket/type1/${route}`)
+    expect(Object.values(response)[0][0]).toMatchObject({ profile: null, profileProblem: { code: 'invalid' }, disabled: true })
+  })
+})
+
 describe('material directory relation requests', () => {
   it('sends numeric foreign keys separately from labels', async () => {
     const wicket = await import('./wicket')

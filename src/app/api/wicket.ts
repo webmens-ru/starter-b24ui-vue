@@ -4,6 +4,8 @@ export type { JumperPlacement, JumperOption, JumperOptionsResponse } from './jum
 import { parseOpeningOrientation } from '../../components/wicket/openingOrientation'
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
+import { parsePipeOptions, type PipeOption } from './pipeProfiles'
+export type { PipeProfile, PipeProfileProblem, PipeOption } from './pipeProfiles'
 import {
   forgetWicketProductRowLockVersion,
   initializeWicketProductRowLockVersion,
@@ -496,10 +498,10 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
 
 export async function getAssortmentStolb(
   modelId: string | number
-): Promise<{ assortmentPipe: SelectItem[] }> {
-  if (isMock) return mockGetAssortmentStolb()
-  const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-stolb`)
-  return data.data
+): Promise<{ assortmentPipe: PipeOption[] }> {
+  const raw: unknown = isMock ? await mockGetAssortmentStolb()
+    : (await api.get(`/api/wicket/type${modelId}/get-available-assortment-stolb`)).data.data
+  return { assortmentPipe: parsePipeOptions(raw, 'assortmentPipe') }
 }
 
 export async function getPolozhenieJumper(
@@ -543,10 +545,10 @@ export async function getOpeningOptions(): Promise<OpeningOptionsResponse> {
 
 export async function getAssortmentJumper(
   modelId: string | number
-): Promise<{ assortmentJumper: SelectItem[] }> {
-  if (isMock) return mockGetAssortmentJumper()
-  const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-jumper`)
-  return data.data
+): Promise<{ assortmentJumper: PipeOption[] }> {
+  const raw: unknown = isMock ? await mockGetAssortmentJumper()
+    : (await api.get(`/api/wicket/type${modelId}/get-available-assortment-jumper`)).data.data
+  return { assortmentJumper: parsePipeOptions(raw, 'assortmentJumper') }
 }
 
 export async function getColorShield(

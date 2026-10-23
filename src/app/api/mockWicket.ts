@@ -1,5 +1,5 @@
+import type { PipeOption } from './pipeProfiles'
 import type {
-  SelectItem,
   OpeningOptionsResponse,
   ColorShieldItem,
   PaintCategory,
@@ -424,11 +424,11 @@ export async function mockGetProfnastilColors(): Promise<{ colors: ProfnastilCol
 
 // ─── Моки столбы / перемычка ─────────────────────────────────────────────────
 
-const MOCK_ASSORTMENT_STOLB: SelectItem[] = [
-  { id: 7,  name: '60/60/2' },
-  { id: 8,  name: '60/40/2' },
-  { id: 9,  name: '60/30/2' },
-  { id: 13, name: '60/40/4' },
+const MOCK_ASSORTMENT_STOLB: Omit<PipeOption, 'disabled'>[] = [
+  { id: 7,  name: '60/60/2', profile: { sizeA: 60, sizeB: 60 }, profileProblem: null },
+  { id: 8,  name: '60/40/2', profile: { sizeA: 60, sizeB: 40 }, profileProblem: null },
+  { id: 9,  name: '60/30/2', profile: { sizeA: 60, sizeB: 30 }, profileProblem: null },
+  { id: 13, name: '60/40/4', profile: { sizeA: 60, sizeB: 40 }, profileProblem: null },
 ]
 
 const MOCK_PEREMICHKA_POLOZHENIYE: import('./jumperProperties').JumperOption[] = [
@@ -437,17 +437,17 @@ const MOCK_PEREMICHKA_POLOZHENIYE: import('./jumperProperties').JumperOption[] =
   { id: 4811, name: 'Перемычка за створкой', placement: 'behind', hasJumper: true },
 ]
 
-const MOCK_ASSORTMENT_JUMPER: SelectItem[] = [
-  { id: 8,  name: '20/20/2' },
-  { id: 9,  name: '25/25/2' },
-  { id: 10, name: '30/30/2' },
-  { id: 11, name: '40/20/2' },
-  { id: 12, name: '40/40/2' },
-  { id: 13, name: '50/25/2' },
-  { id: 14, name: '50/50/2' },
+const MOCK_ASSORTMENT_JUMPER: Omit<PipeOption, 'disabled'>[] = [
+  { id: 8,  name: '20/20/2', profile: { sizeA: 20, sizeB: 20 }, profileProblem: null },
+  { id: 9,  name: '25/25/2', profile: { sizeA: 25, sizeB: 25 }, profileProblem: null },
+  { id: 10, name: '30/30/2', profile: { sizeA: 30, sizeB: 30 }, profileProblem: null },
+  { id: 11, name: '40/20/2', profile: { sizeA: 40, sizeB: 20 }, profileProblem: null },
+  { id: 12, name: '40/40/2', profile: { sizeA: 40, sizeB: 40 }, profileProblem: null },
+  { id: 13, name: '50/25/2', profile: { sizeA: 50, sizeB: 25 }, profileProblem: null },
+  { id: 14, name: '50/50/2', profile: { sizeA: 50, sizeB: 50 }, profileProblem: null },
 ]
 
-export async function mockGetAssortmentStolb(): Promise<{ assortmentPipe: SelectItem[] }> {
+export async function mockGetAssortmentStolb(): Promise<{ assortmentPipe: Omit<PipeOption, 'disabled'>[] }> {
   await delay(100)
   return { assortmentPipe: MOCK_ASSORTMENT_STOLB }
 }
@@ -470,7 +470,7 @@ export async function mockGetPolozhenieJumper(openingOptionId: number): Promise<
     .map(option => ({ ...option })) }
 }
 
-export async function mockGetAssortmentJumper(): Promise<{ assortmentJumper: SelectItem[] }> {
+export async function mockGetAssortmentJumper(): Promise<{ assortmentJumper: Omit<PipeOption, 'disabled'>[] }> {
   await delay(100)
   return { assortmentJumper: MOCK_ASSORTMENT_JUMPER }
 }
