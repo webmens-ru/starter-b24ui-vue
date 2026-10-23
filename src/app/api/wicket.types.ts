@@ -1,5 +1,9 @@
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
 import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
+import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
+
+export type ParticipantRoleProperties = Partial<Record<`${ParticipantRoleField}Code`, ParticipantRole | null>>
+export type ParticipantRoleProblems = Partial<Record<ParticipantRoleField, { code: string; message: string } | null>>
 
 export type { ProductRowContext } from './productRows.types'
 
@@ -24,7 +28,7 @@ export interface OpeningOptionsResponse {
   problems: Array<{ id: number; message: string }>
 }
 
-export interface WicketSavePayload extends ProductRowContext {
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties {
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -422,7 +426,8 @@ export interface CompanyScopedPayload {
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse {
+export interface WicketGetDataResponse extends ParticipantRoleProperties {
+  participantRoleProblems?: ParticipantRoleProblems
   openingOrientation?: OpeningOrientation | null
   openingOrientationProblem?: OpeningOrientationProblem | null
   visitedPages: string[]

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel } from '../../app/participantRoles'
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
@@ -12,20 +13,20 @@ const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const isThereLockName  = ref<string>('Есть')
-const providesLock = ref<string>('Предоставляет изготовитель')
-const lockInstaller = ref<string>('Выполняет изготовитель')
+const providesLock = ref<string>('manufacturer')
+const lockInstaller = ref<string>('manufacturer')
 
 const showLockDetails = computed(() => isThereLockName.value === 'Есть')
 
 // ─── Группы радио ────────────────────────────────────────────────────────────
 const providesOptions = [
-  { value: 'Предоставляет изготовитель', label: 'Замок предоставляет изготовитель' },
-  { value: 'Предоставляет заказчик',     label: 'Замок предоставляет заказчик' },
+  { value: 'manufacturer', label: 'Замок предоставляет изготовитель' },
+  { value: 'customer',     label: 'Замок предоставляет заказчик' },
 ]
 
 const installerOptions = [
-  { value: 'Выполняет изготовитель', label: 'Врезку замка выполняет изготовитель' },
-  { value: 'Выполняет заказчик',     label: 'Врезку замка выполняет заказчик' },
+  { value: 'manufacturer', label: 'Врезку замка выполняет изготовитель' },
+  { value: 'customer',     label: 'Врезку замка выполняет заказчик' },
 ]
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
@@ -52,8 +53,8 @@ function buildBlock() {
     { name: 'Замок есть/нет', value: calc.isThereLockName.value },
   ]
   if (showLockDetails.value) {
-    params.push({ name: 'Замок предоставляет',    value: calc.providesLock.value })
-    params.push({ name: 'Врезку замка выполняет', value: calc.lockInstaller.value })
+    params.push({ name: 'Замок предоставляет',    value: participantRoleLabel('provide', calc.providesLock.value) })
+    params.push({ name: 'Врезку замка выполняет', value: participantRoleLabel('perform', calc.lockInstaller.value) })
   }
   calc.updateOrCreateBlock('Замок', params)
 }
@@ -94,8 +95,8 @@ async function save() {
     calc.lockPenColor.value = previous.lockPenColor
     calc.lockPenColorId.value = previous.lockPenColorId
     isThereLockName.value = previous.isThereLockName
-    providesLock.value = previous.providesLock || 'Предоставляет изготовитель'
-    lockInstaller.value = previous.lockInstaller || 'Выполняет изготовитель'
+    providesLock.value = previous.providesLock
+    lockInstaller.value = previous.lockInstaller
     buildBlock()
     console.warn('saveWicketData:', e)
     return
@@ -122,8 +123,8 @@ onMounted(() => {
   calc.setActivePage('page9')
 
   if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
-  if (calc.providesLock.value)     providesLock.value = calc.providesLock.value
-  if (calc.lockInstaller.value)    lockInstaller.value = calc.lockInstaller.value
+  providesLock.value = calc.providesLock.value
+  lockInstaller.value = calc.lockInstaller.value
 
 })
 </script>
@@ -165,7 +166,7 @@ onMounted(() => {
         <div>
           <div class="option-grid">
             <label v-for="opt in providesOptions" :key="opt.value" class="lock-card">
-              <input v-model="providesLock" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <input v-model="providesLock" name="providesLock" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>
@@ -177,7 +178,7 @@ onMounted(() => {
         <div>
           <div class="option-grid">
             <label v-for="opt in installerOptions" :key="opt.value" class="lock-card">
-              <input v-model="lockInstaller" type="radio" :value="opt.value" class="sr-only" @change="save" />
+              <input v-model="lockInstaller" name="lockInstaller" type="radio" :value="opt.value" class="sr-only" @change="save" />
               <div class="card-content">
                 <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
               </div>

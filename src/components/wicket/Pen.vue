@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel } from '../../app/participantRoles'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getAdditionalPens, saveWicketData, recalculate } from '../../app/api/wicket'
@@ -25,8 +26,8 @@ const calc = useCalculation()
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
 const isTherePenName = ref<string>('Не будет')
-const penProvided = ref<string>('Предоставляет изготовитель')
-const penInstalled = ref<string>('Устанавливает изготовитель')
+const penProvided = ref<string>('manufacturer')
+const penInstalled = ref<string>('manufacturer')
 const selectedPenId = ref<number | null>(null)
 const selectedColor = ref<ColorChoice>(null)
 const colorError = ref('')
@@ -39,7 +40,7 @@ const selectedColorModel = computed<number | 'frame' | undefined>({
 const showDetails = computed(() => isTherePenName.value === 'Будет')
 
 /** Блок выбора ручки показываем только если её предоставляет изготовитель */
-const showPenSelection = computed(() => penProvided.value === 'Предоставляет изготовитель')
+const showPenSelection = computed(() => penProvided.value === 'manufacturer')
 
 /** Цвета для выпадающего списка — из выбранной ручки */
 const colorSelectItems = computed(() => {
@@ -52,12 +53,12 @@ const colorSelectItems = computed(() => {
 })
 
 const providedOptions = [
-  { value: 'Предоставляет изготовитель', label: 'Предоставляет изготовитель' },
-  { value: 'Предоставляет заказчик', label: 'Предоставляет заказчик' },
+  { value: 'manufacturer', label: 'Предоставляет изготовитель' },
+  { value: 'customer', label: 'Предоставляет заказчик' },
 ]
 const installedOptions = [
-  { value: 'Устанавливает изготовитель', label: 'Устанавливает изготовитель' },
-  { value: 'Устанавливает заказчик', label: 'Устанавливает заказчик' },
+  { value: 'manufacturer', label: 'Устанавливает изготовитель' },
+  { value: 'customer', label: 'Устанавливает заказчик' },
 ]
 
 function syncCalcFields() {
@@ -102,8 +103,8 @@ function buildBlock() {
     { name: 'Дополнительная ручка', value: calc.isTherePenName.value },
   ]
   if (showDetails.value) {
-    params.push({ name: 'Ручку предоставляет', value: calc.penProvided.value })
-    params.push({ name: 'Ручку устанавливает', value: calc.penInstalled.value })
+    params.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', calc.penProvided.value) })
+    params.push({ name: 'Ручку устанавливает', value: participantRoleLabel('install', calc.penInstalled.value) })
     if (showPenSelection.value) {
       if (calc.additionalPenId.value != null && calc.additionalPenMarking.value) {
         params.push({ name: 'Модель ручки', value: calc.additionalPenMarking.value })
@@ -251,8 +252,8 @@ onMounted(async () => {
   isRestoringSelection = true
 
   if (calc.isTherePenName.value) isTherePenName.value = calc.isTherePenName.value
-  if (calc.penProvided.value) penProvided.value = calc.penProvided.value
-  if (calc.penInstalled.value) penInstalled.value = calc.penInstalled.value
+  penProvided.value = calc.penProvided.value
+  penInstalled.value = calc.penInstalled.value
   selectedPenId.value = calc.additionalPenId.value
   selectedColor.value = calc.penColorId.value
 
@@ -300,7 +301,7 @@ onMounted(async () => {
         <!-- Кто предоставляет -->
         <div class="option-grid">
           <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
-            <input v-model="penProvided" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="penProvided" name="penProvided" type="radio" :value="opt.value" class="sr-only" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
             </div>
@@ -310,7 +311,7 @@ onMounted(async () => {
         <!-- Кто устанавливает -->
         <div class="option-grid">
           <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-            <input v-model="penInstalled" type="radio" :value="opt.value" class="sr-only" />
+            <input v-model="penInstalled" name="penInstalled" type="radio" :value="opt.value" class="sr-only" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
             </div>

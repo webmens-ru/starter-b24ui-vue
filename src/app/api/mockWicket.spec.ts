@@ -17,6 +17,11 @@ it('hydrates a mock draft with explicit used and unused pipe profiles', async ()
   expect(store.fillingProfileYardProblem).toBeNull()
 })
 
+it('uses explicit participant code properties in mock responses', async () => {
+  const response = await mockLoadWicketData(42)
+  expect(response).toMatchObject({ providesPaintCode: 'manufacturer', providesPrimerCode: 'manufacturer', doesPaintingFrameCode: 'manufacturer' })
+})
+
 it('supplies explicit numeric pipe properties in mock options', async () => {
   const posts = await mockGetAssortmentStolb()
   const jumpers = await mockGetAssortmentJumper()

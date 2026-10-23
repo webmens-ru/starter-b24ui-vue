@@ -39,6 +39,18 @@ function render() {
 }
 
 describe('Окраска', () => {
+  it('does not infer an invalid stored paint supplier code from the selected category on load', async () => {
+    setActivePinia(createPinia())
+    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
+      { id: 1251, name: 'Материал', paintCategoryId: 125, primers: [], paintTypeId: null, paintTypeName: null, consumptionRate: null },
+    ], paintCategories: categoryFixtures })
+    const calc = useCalculation()
+    calc.loadFromApi({ providesPaintCode: 'unknown', colorShieldId: 1251 })
+    const wrapper = render()
+    await flushPromises()
+    expect(calc.providesPaint.value).toBe('')
+    wrapper.unmount()
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()
@@ -50,21 +62,21 @@ describe('Окраска', () => {
 
   it('shows providers first and saves both choices with legacy assembly and painting details', async () => {
     const calc = useCalculation()
-    calc.providesPaint.value = 'Предоставляет заказчик'
+    calc.providesPaint.value = 'customer'
     calc.colorShieldId.value = '1'
-    calc.doesAssembly.value = 'Выполняет заказчик'
+    calc.doesAssembly.value = 'customer'
     const wrapper = render()
     await flushPromises()
     expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Кто осуществляет окраску'])
     expect(wrapper.get('[data-paint-category="71"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('input[value="Предоставляет заказчик"]').exists()).toBe(false)
+    expect(wrapper.find('input[name="providesPrimer"][value="customer"]').exists()).toBe(false)
     expect(saveWicketData).not.toHaveBeenCalled()
     await wrapper.get('[data-testid="paint-primer"]').setValue('10')
-    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'Предоставляет заказчик', doesPaintingFrame: 'Выполняет заказчик',
-      doesAssembly: 'Выполняет заказчик', colorShieldId: '1', primerId: 10,
+      providesPaint: 'customer', doesPaintingFrame: 'customer',
+      doesAssembly: 'customer', colorShieldId: '1', primerId: 10,
     }))
     expect(wrapper.find('[data-testid="paint-primer"]').exists()).toBe(false)
     expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
@@ -72,10 +84,10 @@ describe('Окраска', () => {
     const payload = calc.getFullSavePayload()
     calc.reset()
     calc.loadFromApi(payload)
-    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(calc.providesPaint.value).toBe('customer')
     expect(wrapper.text()).not.toContain('В старом заказе')
-    expect(calc.doesPaintingFrame.value).toBe('Выполняет заказчик')
-    expect(calc.doesAssembly.value).toBe('Выполняет заказчик')
+    expect(calc.doesPaintingFrame.value).toBe('customer')
+    expect(calc.doesAssembly.value).toBe('customer')
     expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
     wrapper.unmount()
   })
@@ -84,11 +96,11 @@ describe('Окраска', () => {
     const calc = useCalculation()
     calc.colorShieldId.value = '2'
     calc.primerId.value = 20
-    calc.providesPrimer.value = 'Предоставляет заказчик'
+    calc.providesPrimer.value = 'customer'
     const wrapper = render()
     await flushPromises()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
     await flushPromises()
     expect(wrapper.findAll('legend').map(item => item.text())).toEqual(['Кто осуществляет окраску'])
     expect(wrapper.find('[aria-label="Категория краски"]').exists()).toBe(false)
@@ -97,10 +109,10 @@ describe('Окраска', () => {
     expect(wrapper.text()).not.toContain('Укажите примечание')
     expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      doesPaintingFrame: 'Выполняет заказчик', colorShieldId: '2', primerId: 20,
-      colorShieldNote: '', providesPrimer: 'Предоставляет заказчик',
+      doesPaintingFrame: 'customer', colorShieldId: '2', primerId: 20,
+      colorShieldNote: '', providesPrimer: 'customer',
     }))
-    await wrapper.get('input[value="Выполняет изготовитель"]').setValue()
+    await wrapper.get('input[name="doesPaintingFrame"][value="manufacturer"]').setValue()
     await flushPromises()
     expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
     expect(wrapper.find('textarea').exists()).toBe(true)
@@ -116,19 +128,19 @@ describe('Окраска', () => {
     if (catalog === 'pending') vi.mocked(getColorShield).mockImplementationOnce(() => new Promise(() => {}))
     const wrapper = render()
     await flushPromises()
-    await wrapper.get('input[value="Выполняет заказчик"]').setValue()
+    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
     await flushPromises()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
     expect(wrapper.text()).not.toContain('Каталог недоступен')
     expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
     expect(wrapper.text()).not.toContain('Загрузка красок')
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ doesPaintingFrame: 'Выполняет заказчик' }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ doesPaintingFrame: 'customer' }))
     wrapper.unmount()
   })
 
   it('restores saved customer painting without changing hidden selections or reporting a valid color unavailable', async () => {
     const calc = useCalculation()
-    calc.doesPaintingFrame.value = 'Выполняет заказчик'
+    calc.doesPaintingFrame.value = 'customer'
     calc.colorShieldId.value = '2'
     calc.colorShieldNote.value = 'По образцу'
     calc.primerId.value = 20
@@ -136,7 +148,7 @@ describe('Окраска', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
     expect(calc.primerId.value).toBe(20)
-    await wrapper.get('input[value="Выполняет изготовитель"]').setValue()
+    await wrapper.get('input[name="doesPaintingFrame"][value="manufacturer"]').setValue()
     await flushPromises()
     expect(wrapper.get('textarea').element.value).toBe('По образцу')
     expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
@@ -204,7 +216,7 @@ describe('Окраска', () => {
     expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
     await wrapper.get('[data-paint-category="71"]').trigger('click')
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'Предоставляет изготовитель' }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'manufacturer' }))
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Индивидуальная эмаль')
     wrapper.unmount()
   })
@@ -226,23 +238,23 @@ describe('Окраска', () => {
     await wrapper.get('[data-testid="paint-primer"]').setValue('20')
     await flushPromises()
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'Предоставляет заказчик', providesPrimer: 'Предоставляет изготовитель',
-      doesPaintingFrame: 'Выполняет изготовитель', primerId: 20,
+      providesPaint: 'customer', providesPrimer: 'manufacturer',
+      doesPaintingFrame: 'manufacturer', primerId: 20,
     }))
-    await wrapper.get('input[value="Предоставляет заказчик"]').setValue()
+    await wrapper.get('input[name="providesPrimer"][value="customer"]').setValue()
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPrimer: 'Предоставляет заказчик' }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPrimer: 'customer' }))
     expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
       .toContainEqual({ name: 'Поставщик грунтовки', value: 'Предоставляет заказчик' })
     const payload = calc.getFullSavePayload()
     calc.reset()
-    expect(calc.providesPrimer.value).toBe('Предоставляет изготовитель')
+    expect(calc.providesPrimer.value).toBe('manufacturer')
     calc.loadFromApi(payload)
-    expect(calc.providesPrimer.value).toBe('Предоставляет заказчик')
-    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(calc.providesPrimer.value).toBe('customer')
+    expect(calc.providesPaint.value).toBe('customer')
     expect(calc.primerId.value).toBe(20)
     calc.loadFromApi({ providesPrimer: null })
-    expect(calc.providesPrimer.value).toBe('Предоставляет изготовитель')
+    expect(calc.providesPrimer.value).toBe('manufacturer')
     await wrapper.get('[data-testid="paint-primer"]').setValue('none')
     await flushPromises()
     expect(wrapper.text()).not.toContain('Поставщик грунтовки')
@@ -272,11 +284,11 @@ describe('Окраска', () => {
     const wrapper = render()
     await flushPromises()
     expect(wrapper.get('[data-paint-category="34"]').attributes('aria-pressed')).toBe('true')
-    expect(calc.providesPaint.value).toBe('Предоставляет заказчик')
+    expect(calc.providesPaint.value).toBe('customer')
     expect(saveWicketData).not.toHaveBeenCalled()
     expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'Предоставляет заказчик', colorShieldId: '8',
+      providesPaint: 'customer', colorShieldId: '8',
     }))
     wrapper.unmount()
   })
@@ -308,12 +320,12 @@ describe('Окраска', () => {
     expect(wrapper.get('[data-testid="paint-color"]').text()).toContain('Второй материал')
     expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Первый материал')
     await wrapper.get('[data-paint-category="407"]').trigger('click')
-    expect(useCalculation().providesPaint.value).toBe('Предоставляет заказчик')
+    expect(useCalculation().providesPaint.value).toBe('customer')
     expect(wrapper.find('textarea').exists()).toBe(true)
     expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
     await wrapper.get('textarea').setValue('По образцу')
     expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', providesPaint: 'Предоставляет заказчик' }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', providesPaint: 'customer' }))
     wrapper.unmount()
   })
 

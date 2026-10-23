@@ -50,6 +50,26 @@ function composition(): WicketAccessoryCompositionResponse {
 describe('wicketFormStore accessory composition', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
+  it('does not complete painting from a selected color when its explicit performer code is invalid', () => {
+    const store = useWicketFormStore()
+    store.loadFromApi({ modelId: '1', widthProyema: 1000, heightProyema: 2000,
+      openingOptionId: 17, colorShieldId: 9, doesPaintingFrameCode: 'unknown', visitedPages: [] })
+    expect(useWicketWizardStore().activePage).toBe('page_painting')
+  })
+
+  it('uses codes for fresh roles and presentation labels for restored independent summary', () => {
+    const store = useWicketFormStore()
+    expect(store.providesMaterial).toBe('manufacturer')
+    store.loadFromApi({ providesPaintCode: 'customer', providesPaint: 'Иная подпись',
+      providesPrimerCode: 'manufacturer', doesPaintingFrameCode: 'customer' })
+    expect(store.providesPaint).toBe('customer')
+    expect(store.providesPrimer).toBe('manufacturer')
+    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Краска', value: 'Предоставляет заказчик' })
+    expect(store.data.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ name: 'Окраска каркаса', value: 'Выполняет заказчик' })
+    store.resetFormFields()
+    expect(store.providesPaint).toBe('manufacturer')
+  })
+
   it.each(Array.from({ length: 11 }, (_, index) => String(index + 1)))('type %s migrates legacy manufacturing progress and relocates restored summary fields', modelId => {
     const store = useWicketFormStore()
     const wizard = useWicketWizardStore()
@@ -70,7 +90,7 @@ describe('wicketFormStore accessory composition', () => {
       { name: 'Краска', value: 'Предоставляет заказчик' },
       { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
     ])
-    expect(store.doesAssembly).toBe('Выполняет заказчик')
+    expect(store.doesAssembly).toBe('customer')
   })
 
   it('uses legacy reachedStep when activePage was omitted', () => {
@@ -83,8 +103,8 @@ describe('wicketFormStore accessory composition', () => {
   it('empty canonical composition leaves root lock-set state unchanged', () => {
     const store = useWicketFormStore()
     store.lockSetId = 7
-    store.providesLock = 'Предоставляет заказчик'
-    store.lockInstaller = 'Выполняет заказчик'
+    store.providesLock = 'customer'
+    store.lockInstaller = 'customer'
     const empty = composition()
     empty.lockComponents = []
     empty.skud = []
@@ -94,17 +114,17 @@ describe('wicketFormStore accessory composition', () => {
     store.applyAccessoryComposition(empty)
 
     expect(store.lockSetId).toBe(7)
-    expect(store.providesLock).toBe('Предоставляет заказчик')
-    expect(store.lockInstaller).toBe('Выполняет заказчик')
+    expect(store.providesLock).toBe('customer')
+    expect(store.lockInstaller).toBe('customer')
     expect(store.addons.doorCloser).toMatchObject({
       isThere: 0,
-      provided: 'Предоставляет изготовитель',
-      installed: 'Устанавливает изготовитель',
+      provided: 'manufacturer',
+      installed: 'manufacturer',
     })
     expect(store.addons.bumper).toMatchObject({
       isThere: 0,
-      provided: 'Предоставляет изготовитель',
-      installed: 'Устанавливает изготовитель',
+      provided: 'manufacturer',
+      installed: 'manufacturer',
     })
   })
 
@@ -115,20 +135,20 @@ describe('wicketFormStore accessory composition', () => {
 
     expect(store.accessoryCompositionLockVersion).toBe(8)
     expect(store.lockComponentIds).toEqual([11, 12])
-    expect(store.lockComponentsInstalled).toBe('Устанавливает изготовитель')
+    expect(store.lockComponentsInstalled).toBe('manufacturer')
     expect(store.addons.skud).toMatchObject({
       isThere: 1,
       itemId: 21,
       itemIds: [21, 22],
-      provided: 'Предоставляет изготовитель',
-      installed: 'Устанавливает изготовитель',
+      provided: 'manufacturer',
+      installed: 'manufacturer',
     })
     expect(store.addons.doorCloser).toMatchObject({
       isThere: 1,
       itemId: 31,
       itemIds: [31],
-      provided: 'Предоставляет изготовитель',
-      installed: 'Устанавливает заказчик',
+      provided: 'manufacturer',
+      installed: 'customer',
     })
     expect(store.addons.bumper.isThere).toBe(0)
   })
@@ -176,8 +196,8 @@ describe('wicketFormStore accessory composition', () => {
   it('round-trips standalone lock, closer, and bumper branches without changing root lock set', () => {
     const store = useWicketFormStore()
     store.lockSetId = 7
-    store.providesLock = 'Предоставляет изготовитель'
-    store.lockInstaller = 'Выполняет заказчик'
+    store.providesLock = 'manufacturer'
+    store.lockInstaller = 'customer'
     const source = composition()
     source.lockComponents = [source.lockComponents[1]]
     source.doorClosers = [{ ...source.doorClosers[0], productType: 'service', rowKind: 'service', relationRole: 'door_closer_installation' }]
@@ -186,17 +206,17 @@ describe('wicketFormStore accessory composition', () => {
     store.applyAccessoryComposition(source)
 
     expect(store.lockSetId).toBe(7)
-    expect(store.providesLock).toBe('Предоставляет изготовитель')
-    expect(store.lockInstaller).toBe('Выполняет заказчик')
+    expect(store.providesLock).toBe('manufacturer')
+    expect(store.lockInstaller).toBe('customer')
     expect(store.addons.doorCloser).toMatchObject({
       itemId: 31,
-      provided: 'Предоставляет заказчик',
-      installed: 'Устанавливает изготовитель',
+      provided: 'customer',
+      installed: 'manufacturer',
     })
     expect(store.addons.bumper).toMatchObject({
       itemId: 41,
-      provided: 'Предоставляет заказчик',
-      installed: 'Устанавливает изготовитель',
+      provided: 'customer',
+      installed: 'manufacturer',
     })
     expect(store.getAccessorySelections()).toMatchObject({
       lockComponents: [{ role: 'lock_component', materialItemId: 11, providedByManufacturer: false, installedByManufacturer: true }],

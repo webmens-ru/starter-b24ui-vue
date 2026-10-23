@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
@@ -67,7 +68,7 @@ function onMaterialYardChange() {
 
 async function save() {
   const params = [
-    { name: 'Материал заполнения', value: calc.providesMaterial.value },
+    { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
     { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
   ]

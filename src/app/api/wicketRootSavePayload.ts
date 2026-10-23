@@ -1,4 +1,5 @@
 import type { WicketSavePayload } from './wicket.types'
+import { isParticipantRole, participantRoleFields } from '../participantRoles'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -54,6 +55,16 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYard
   void _fillingProfileYardProblem
 
+  delete canonicalPayload.participantRoleProblems
+  for (const field of participantRoleFields) {
+    const codeKey = `${field}Code`
+    const explicit = Object.prototype.hasOwnProperty.call(canonicalPayload, codeKey)
+    const value = explicit ? canonicalPayload[codeKey] : canonicalPayload[field]
+    delete canonicalPayload[field]
+    if (!explicit && (value === undefined || value === null || value === '')) continue
+    if (!isParticipantRole(value)) throw new TypeError(`Некорректная роль: ${codeKey}`)
+    canonicalPayload[codeKey] = value
+  }
   return {
     ...canonicalPayload,
     lockPenId: null,

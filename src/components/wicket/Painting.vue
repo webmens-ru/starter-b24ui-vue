@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
 import { computed, onMounted, ref } from 'vue'
@@ -16,14 +17,14 @@ const category = ref<number | null>(null)
 const selectedCategory = computed(() => categories.value.find(item => item.id === category.value))
 const filteredColors = computed(() => colors.value.filter(item => item.paintCategoryId === category.value))
 const legacyCustomerPaint = ref(false)
-const primerProviders = ['Предоставляет изготовитель', 'Предоставляет заказчик']
+const primerProviders = participantRoleOptions('provide')
 const loading = ref(true)
 const submitted = ref(false)
 const error = ref('')
 const catalogError = ref('')
 const calculationWarning = ref('')
 const selectedColor = computed(() => colors.value.find(item => String(item.id) === String(calc.colorShieldId.value)))
-const customerPainting = computed(() => calc.doesPaintingFrame.value === 'Выполняет заказчик')
+const customerPainting = computed(() => calc.doesPaintingFrame.value === 'customer')
 const individual = computed(() => selectedCategory.value?.isFixedColor === false)
 const primers = computed(() => selectedColor.value?.primers ?? [])
 const colorItems = computed(() => {
@@ -42,7 +43,7 @@ async function onCategoryChange(id: number): Promise<void> {
   catalogError.value = ''
   legacyCustomerPaint.value = false
   category.value = id
-  calc.providesPaint.value = selectedCategory.value?.isCustomerSupplied ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
+  calc.providesPaint.value = selectedCategory.value?.isCustomerSupplied ? 'customer' : 'manufacturer'
   if (!filteredColors.value.some(item => String(item.id) === String(calc.colorShieldId.value))) {
     calc.colorShieldId.value = filteredColors.value[0] ? String(filteredColors.value[0].id) : ''
   }
@@ -88,8 +89,8 @@ function syncSelection(): void {
   calc.primerId.value = primer?.id ?? null
   calc.primerName.value = primer?.name ?? ''
   const params = [
-    { name: 'Краска', value: calc.providesPaint.value },
-    { name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
+    { name: 'Краска', value: participantRoleLabel('provide', calc.providesPaint.value) },
+    { name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
     { name: 'Цвет рамы', value: calc.colorShieldName.value },
   ]
   if (individual.value && calc.colorShieldNote.value.trim()) {
@@ -97,7 +98,7 @@ function syncSelection(): void {
   }
   if (primer) params.push(
     { name: 'Грунтовка', value: primer.name },
-    { name: 'Поставщик грунтовки', value: calc.providesPrimer.value },
+    { name: 'Поставщик грунтовки', value: participantRoleLabel('provide', calc.providesPrimer.value) },
   )
   calc.updateOrCreateBlock('Окраска', params)
 }
@@ -114,7 +115,7 @@ async function save(): Promise<boolean> {
     const params = calc.data.value.find(block => block.blockName === 'Окраска')?.params ?? []
     calc.updateOrCreateBlock('Окраска', [
       ...params.filter(param => param.name !== 'Окраска каркаса'),
-      { name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
+      { name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
     ])
   }
   if (!customerPainting.value && individual.value && !calc.colorShieldNote.value.trim()) return false
@@ -158,7 +159,7 @@ async function onColorChange(value: string | number): Promise<void> {
   catalogError.value = ''
   legacyCustomerPaint.value = false
   calc.colorShieldId.value = String(value ?? '')
-  calc.providesPaint.value = selectedCategory.value?.isCustomerSupplied ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
+  calc.providesPaint.value = selectedCategory.value?.isCustomerSupplied ? 'customer' : 'manufacturer'
   syncSelection()
   await save()
 }
@@ -191,15 +192,15 @@ async function load(): Promise<void> {
     }
     if (!customerPainting.value && !calc.colorShieldId.value) {
       const available = categories.value.filter(item => colors.value.some(color => color.paintCategoryId === item.id))
-      const initial = available.find(item => item.isCustomerSupplied === (calc.providesPaint.value === 'Предоставляет заказчик')) ?? available[0] ?? categories.value[0]
+      const initial = available.find(item => item.isCustomerSupplied === (calc.providesPaint.value === 'customer')) ?? available[0] ?? categories.value[0]
       category.value = initial?.id ?? null
       const first = colors.value.find(item => item.paintCategoryId === category.value)
       if (first) calc.colorShieldId.value = String(first.id)
     }
     category.value = selectedColor.value?.paintCategoryId ?? category.value ?? categories.value[0]?.id ?? null
-    legacyCustomerPaint.value = calc.providesPaint.value === 'Предоставляет заказчик'
+    legacyCustomerPaint.value = calc.providesPaint.value === 'customer'
       && !!selectedColor.value && selectedCategory.value?.isCustomerSupplied === false
-    if (!customerPainting.value && selectedCategory.value?.isCustomerSupplied) calc.providesPaint.value = 'Предоставляет заказчик'
+    if (!customerPainting.value && calc.providesPaint.value !== '' && selectedCategory.value?.isCustomerSupplied) calc.providesPaint.value = 'customer'
     if (selectedColor.value) {
       if (!customerPainting.value) syncSelection()
     } else catalogError.value = 'Выбранная краска недоступна. Выберите краску из списка.'
@@ -285,7 +286,7 @@ onMounted(async () => {
         />
         <span v-if="!primers.length" class="text-sm text-gray-500">Для выбранной краски совместимые грунтовки не заданы.</span>
       </label>
-      <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value"
+      <ProviderChoice name="providesPrimer" v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value"
         title="Поставщик грунтовки" :options="primerProviders" :disabled="loading" @change="save" />
     </div>
     </template>

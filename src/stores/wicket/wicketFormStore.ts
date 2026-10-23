@@ -1,5 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
+import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
 import type { CalcBlock } from './types'
 import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
 import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
@@ -34,11 +35,12 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
 
 // Поставщики материала и краски, исполнитель окраски и legacy-сборка
-const providesMaterial    = ref<string>('Предоставляет изготовитель')
-const providesPaint       = ref<string>('Предоставляет изготовитель')
-const providesPrimer = ref<string>('Предоставляет изготовитель')
-const doesPaintingFrame  = ref<string>('Выполняет изготовитель')
-const doesAssembly        = ref<string>('Выполняет изготовитель')
+const providesMaterial    = ref<string>('manufacturer')
+const providesPaint       = ref<string>('manufacturer')
+const providesPrimer = ref<string>('manufacturer')
+const doesPaintingFrame  = ref<string>('manufacturer')
+const doesAssembly        = ref<string>('manufacturer')
+const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 
 // Поля шага "Заполнение"
 const fillSide            = ref<string>('Одна сторона')
@@ -74,8 +76,8 @@ const peremichkaSortamentName   = ref<string | null>(null)
 // Поля шага "Ручка" (дополнительная ручка / скоба)
 const isTherePenName   = ref<string>('Не будет')
 const isTherePen       = ref<number>(0)
-const penProvided        = ref<string>('Предоставляет изготовитель')
-const penInstalled       = ref<string>('Устанавливает изготовитель')
+const penProvided        = ref<string>('manufacturer')
+const penInstalled       = ref<string>('manufacturer')
 const penColor           = ref<string>('')
 const penColorId         = ref<number | null>(null)
 const additionalPenId     = ref<number | null>(null)
@@ -86,7 +88,7 @@ const additionalPenMarking = ref<string>('')
 type AddonKey = 'doorCloser' | 'bumper' | 'skud'
 interface AddonState { isThere: number; provided: string; installed: string; itemId: number | null; marking: string; itemIds: number[] }
 function emptyAddon(): AddonState {
-  return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '', itemIds: [] }
+  return { isThere: 0, provided: 'manufacturer', installed: 'manufacturer', itemId: null, marking: '', itemIds: [] }
 }
 const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
 interface AccessoryCatalogItem {
@@ -131,10 +133,10 @@ const lockComponentIds = ref<number[]>([])
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
 const isThereLock     = ref<number>(1)
-const providesLock      = ref<string>('Предоставляет изготовитель')
-const lockInstaller     = ref<string>('Выполняет изготовитель')
-const lockComponentsProvided = ref<string>('Предоставляет изготовитель')
-const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
+const providesLock      = ref<string>('manufacturer')
+const lockInstaller     = ref<string>('manufacturer')
+const lockComponentsProvided = ref<string>('manufacturer')
+const lockComponentsInstalled = ref<string>('manufacturer')
 
 // Поля шага "Проем"
 const widthProyema      = ref<string>('')
@@ -239,8 +241,8 @@ const fieldsFilled = ref<number>(0)
       { name: 'Замок есть/нет', value: isThereLockName.value },
     ]
     if (isThereLock.value === 1) {
-      params.push({ name: 'Замок предоставляет', value: providesLock.value })
-      params.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
+      params.push({ name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
+      params.push({ name: 'Врезку замка выполняет', value: participantRoleLabel('perform', lockInstaller.value) })
       params.push({ name: 'Тип замка', value: typeLock.value || '' })
     }
     return params
@@ -310,11 +312,12 @@ const fieldsFilled = ref<number>(0)
     data.value = []
     priceRetail.value = ''
     priceDealer.value = ''
-    providesMaterial.value = 'Предоставляет изготовитель'
-    providesPaint.value = 'Предоставляет изготовитель'
-    providesPrimer.value = 'Предоставляет изготовитель'
-    doesPaintingFrame.value = 'Выполняет изготовитель'
-    doesAssembly.value = 'Выполняет изготовитель'
+    providesMaterial.value = 'manufacturer'
+    providesPaint.value = 'manufacturer'
+    providesPrimer.value = 'manufacturer'
+    doesPaintingFrame.value = 'manufacturer'
+    doesAssembly.value = 'manufacturer'
+    participantRoleProblems.value = null
     fillSide.value = 'Одна сторона'
     materialFacadeGlob.value = 'Сайдинг'
     materialYardGlob.value = null
@@ -344,8 +347,8 @@ const fieldsFilled = ref<number>(0)
     peremichkaSortamentName.value = null
     isTherePenName.value = 'Не будет'
     isTherePen.value = 0
-    penProvided.value = 'Предоставляет изготовитель'
-    penInstalled.value = 'Устанавливает изготовитель'
+    penProvided.value = 'manufacturer'
+    penInstalled.value = 'manufacturer'
     penColor.value = ''
     penColorId.value = null
     additionalPenId.value = null
@@ -363,12 +366,12 @@ const fieldsFilled = ref<number>(0)
     lockPenColor.value = ''
     lockPenColorId.value = null
     lockComponentIds.value = []
-    lockComponentsProvided.value = 'Предоставляет изготовитель'
-    lockComponentsInstalled.value = 'Устанавливает изготовитель'
+    lockComponentsProvided.value = 'manufacturer'
+    lockComponentsInstalled.value = 'manufacturer'
     isThereLockName.value = 'Есть'
     isThereLock.value = 1
-    providesLock.value = 'Предоставляет изготовитель'
-    lockInstaller.value = 'Выполняет изготовитель'
+    providesLock.value = 'manufacturer'
+    lockInstaller.value = 'manufacturer'
     widthProyema.value = ''
     heightProyema.value = ''
     clearanceProyema.value = ''
@@ -442,11 +445,11 @@ const fieldsFilled = ref<number>(0)
     state.itemId = first?.materialItemId ?? null
     state.itemIds = ids
     state.provided = !first || first.providedByManufacturer
-      ? 'Предоставляет изготовитель'
-      : 'Предоставляет заказчик'
+      ? 'manufacturer'
+      : 'customer'
     state.installed = !first || selections.some(selection => selection.installedByManufacturer)
-      ? 'Устанавливает изготовитель'
-      : 'Устанавливает заказчик'
+      ? 'manufacturer'
+      : 'customer'
   }
 
   function applyAccessoryComposition(composition: WicketAccessoryCompositionResponse): void {
@@ -464,11 +467,11 @@ const fieldsFilled = ref<number>(0)
     lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
     const hasLockComponents = lockSelections.length > 0
     lockComponentsProvided.value = !hasLockComponents || lockSelections.some(selection => selection.providedByManufacturer)
-      ? 'Предоставляет изготовитель'
-      : 'Предоставляет заказчик'
+      ? 'manufacturer'
+      : 'customer'
     lockComponentsInstalled.value = !hasLockComponents || lockSelections.some(selection => selection.installedByManufacturer)
-      ? 'Устанавливает изготовитель'
-      : 'Устанавливает заказчик'
+      ? 'manufacturer'
+      : 'customer'
     applyAddonSelections('skud', skudSelections)
     applyAddonSelections('doorCloser', doorCloserSelections)
     applyAddonSelections('bumper', bumperSelections)
@@ -600,7 +603,8 @@ const fieldsFilled = ref<number>(0)
           completed = notEmpty(shieldType.value)
           break
         case 'page_painting':
-          completed = doesPaintingFrame.value === 'Выполняет заказчик' || notEmpty(colorShieldId.value)
+          completed = isParticipantRole(doesPaintingFrame.value)
+            && (doesPaintingFrame.value === 'customer' || notEmpty(colorShieldId.value))
           break
         case 'page5':
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
@@ -651,6 +655,7 @@ const fieldsFilled = ref<number>(0)
       providesMaterial,
       providesPaint,
       providesPrimer,
+      participantRoleProblems,
       doesPaintingFrame,
       doesAssembly,
       fillSide,
@@ -855,7 +860,7 @@ const fieldsFilled = ref<number>(0)
 
     // Заполнение
     const fillParams: CalcBlock['params'] = [
-      { name: 'Материал заполнения', value: providesMaterial.value },
+      { name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
       { name: 'Сторона заполнения', value: fillSide.value },
       { name: 'Материал заполнения (фасад)', value: materialFacadeGlob.value },
     ]
@@ -956,14 +961,14 @@ const fieldsFilled = ref<number>(0)
     blocks.push({ blockName: 'Тип щита', params: shieldParams })
 
     const paintingParams: CalcBlock['params'] = [
-      { name: 'Краска', value: providesPaint.value },
-      { name: 'Окраска каркаса', value: doesPaintingFrame.value },
+      { name: 'Краска', value: participantRoleLabel('provide', providesPaint.value) },
+      { name: 'Окраска каркаса', value: participantRoleLabel('perform', doesPaintingFrame.value) },
     ]
     if (colorShieldName.value) paintingParams.push({ name: 'Цвет рамы', value: colorShieldName.value })
     if (colorShieldNote.value) paintingParams.push({ name: 'Примечание к цвету краски', value: colorShieldNote.value })
     if (primerName.value) paintingParams.push(
       { name: 'Грунтовка', value: primerName.value },
-      { name: 'Поставщик грунтовки', value: providesPrimer.value },
+      { name: 'Поставщик грунтовки', value: participantRoleLabel('provide', providesPrimer.value) },
     )
     blocks.push({ blockName: 'Окраска', params: paintingParams })
 
@@ -988,9 +993,9 @@ const fieldsFilled = ref<number>(0)
       { name: 'Дополнительная ручка', value: isTherePenName.value },
     ]
     if (isTherePen.value === 1) {
-      penParams.push({ name: 'Ручку предоставляет', value: penProvided.value })
-      penParams.push({ name: 'Ручку устанавливает', value: penInstalled.value })
-      if (penProvided.value === 'Предоставляет изготовитель') {
+      penParams.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
+      penParams.push({ name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
+      if (penProvided.value === 'manufacturer') {
         if (additionalPenId.value != null && additionalPenMarking.value) {
           penParams.push({ name: 'Модель ручки', value: additionalPenMarking.value })
         }
@@ -1019,6 +1024,7 @@ const fieldsFilled = ref<number>(0)
     providesMaterial,
     providesPaint,
     providesPrimer,
+    participantRoleProblems,
     doesPaintingFrame,
     doesAssembly,
     fillSide,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-defineProps<{ title: string; options: string[]; disabled?: boolean }>()
+import type { ParticipantRoleOption } from '../../app/participantRoles'
+defineProps<{ title: string; options: ParticipantRoleOption[]; disabled?: boolean; name?: string }>()
 const model = defineModel<string>({ required: true })
 const emit = defineEmits<{ change: [] }>()
 </script>
@@ -8,9 +9,9 @@ const emit = defineEmits<{ change: [] }>()
   <fieldset :disabled="disabled" class="min-w-0">
     <legend class="w-full text-center text-xl font-semibold mb-3">{{ title }}</legend>
     <div class="option-grid">
-      <label v-for="option in options" :key="option" class="provider-card">
-        <input v-model="model" type="radio" :value="option" class="sr-only" @change="emit('change')" />
-        <span class="block p-3 text-sm font-semibold text-center">{{ option }}</span>
+      <label v-for="option in options" :key="option.value" class="provider-card">
+        <input v-model="model" :name="name" type="radio" :value="option.value" class="sr-only" @change="emit('change')" />
+        <span class="block p-3 text-sm font-semibold text-center">{{ option.label }}</span>
       </label>
     </div>
   </fieldset>

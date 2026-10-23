@@ -393,15 +393,13 @@ describe('useCalculation', () => {
       })
 
       expect(calc.lockComponentIds.value).toEqual([])
-      expect(calc.lockComponentsInstalled.value).toBe('Устанавливает изготовитель')
+      expect(calc.lockComponentsInstalled.value).toBe('manufacturer')
     })
 
     it('из get-data восстанавливает root-комплект и дополнительную ручку, но не сохраняет legacy-ручку комплекта', () => {
       const retainedKeys = [
         'isTherePen',
         'additionalPenId',
-        'penProvided',
-        'penInstalled',
         'penColorId',
       ] as const
       const furniturePayload = {
@@ -438,11 +436,14 @@ describe('useCalculation', () => {
       expect(Object.fromEntries(retainedKeys.map(key => [key, savedPayload[key]]))).toEqual(
         Object.fromEntries(retainedKeys.map(key => [key, furniturePayload[key]])),
       )
+      expect(savedPayload).toMatchObject({ penProvidedCode: 'manufacturer', penInstalledCode: 'customer' })
+      expect(savedPayload).not.toHaveProperty('penProvided')
+      expect(savedPayload).not.toHaveProperty('penInstalled')
       expect(savedPayload).toMatchObject({ lockPenId: null, lockPenColorId: null })
       expect(savedPayload).toMatchObject({
         lockSetId: 101,
-        providesLock: 'Предоставляет заказчик',
-        lockInstaller: 'Выполняет заказчик',
+        providesLockCode: 'customer',
+        lockInstallerCode: 'customer',
       })
       expect(calc.isThereLock.value).toBe(1)
       expect(calc.isThereLockName.value).toBe('Есть')
@@ -467,8 +468,8 @@ describe('useCalculation', () => {
       expect(calc.lockSetId.value).toBe(7)
       expect(calc.isThereLock.value).toBe(1)
       expect(calc.isThereLockName.value).toBe('Есть')
-      expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-      expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+      expect(calc.providesLock.value).toBe('manufacturer')
+      expect(calc.lockInstaller.value).toBe('customer')
       expect(calc.getAccessorySelections().lockComponents).toEqual([
         { role: 'lock_component', materialItemId: 2, providedByManufacturer: false, installedByManufacturer: true },
       ])
@@ -692,10 +693,10 @@ describe('useCalculation', () => {
       calc.lockSetId.value = 7
       calc.lockPenId.value = 3
       calc.lockPenColorId.value = 5
-      calc.providesLock.value = 'Предоставляет заказчик'
-      calc.lockInstaller.value = 'Выполняет изготовитель'
+      calc.providesLock.value = 'customer'
+      calc.lockInstaller.value = 'manufacturer'
       calc.lockComponentIds.value = [2, 4]
-      calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
+      calc.lockComponentsInstalled.value = 'customer'
       calc.addons.value.doorCloser.isThere = 1
       calc.addons.value.doorCloser.itemId = 9
       calc.addons.value.skud.itemIds = [10, 11]
@@ -709,8 +710,8 @@ describe('useCalculation', () => {
         lockPenId: null,
         lockPenColorId: null,
         lockSetId: 7,
-        providesLock: 'Предоставляет заказчик',
-        lockInstaller: 'Выполняет изготовитель',
+        providesLockCode: 'customer',
+        lockInstallerCode: 'manufacturer',
       })
       const legacyAccessoryKeys = [
         'isThereLock', 'isThereLockName', 'lockComponentIds', 'lockComponentsInstalled',
@@ -732,24 +733,26 @@ describe('useCalculation', () => {
 
       expect(calc.getFullSavePayload()).toMatchObject({
         lockSetId: null,
-        providesLock: null,
-        lockInstaller: null,
       })
+      expect(calc.getFullSavePayload()).not.toHaveProperty('providesLock')
+      expect(calc.getFullSavePayload()).not.toHaveProperty('lockInstaller')
+      expect(calc.getFullSavePayload()).not.toHaveProperty('providesLockCode')
+      expect(calc.getFullSavePayload()).not.toHaveProperty('lockInstallerCode')
     })
 
     it('сериализует полный состав комплектующих только для composition API', () => {
       calc.accessoryCompositionLockVersion.value = 8
       calc.lockSetId.value = 7
       calc.lockComponentIds.value = [2, 4]
-      calc.providesLock.value = 'Предоставляет изготовитель'
-      calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
+      calc.providesLock.value = 'manufacturer'
+      calc.lockComponentsInstalled.value = 'customer'
       calc.addons.value.doorCloser = {
         isThere: 1,
         itemId: 9,
         itemIds: [9],
         marking: '',
-        provided: 'Предоставляет заказчик',
-        installed: 'Устанавливает изготовитель',
+        provided: 'customer',
+        installed: 'manufacturer',
       }
       const form = useWicketFormStore()
       form.replaceAccessorySelectionIds('lock_component', [2, 4])

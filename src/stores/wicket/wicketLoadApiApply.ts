@@ -3,6 +3,8 @@ import { parseJumperSelection, parsePostsSelection } from '../../app/api/jumperP
 import { parsePipeProfileDescriptor } from '../../app/api/pipeProfiles'
 import { parseFillingDrawingDescriptor } from '../../app/api/fillingDrawingProfiles'
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../app/positiveDecimalId'
+import { participantRoleFields } from '../../app/participantRoles'
+import { readParticipantRole } from '../../app/api/legacyParticipantRoles'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -81,11 +83,11 @@ const WICKET_NET_PROVIDER_KEYS = new Set([
 ])
 
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
-  providesMaterial: 'Предоставляет изготовитель',
-  providesPaint: 'Предоставляет изготовитель',
-  providesPrimer: 'Предоставляет изготовитель',
-  doesPaintingFrame: 'Выполняет изготовитель',
-  doesAssembly: 'Выполняет изготовитель',
+  providesMaterial: 'manufacturer',
+  providesPaint: 'manufacturer',
+  providesPrimer: 'manufacturer',
+  doesPaintingFrame: 'manufacturer',
+  doesAssembly: 'manufacturer',
   fillSide: 'Одна сторона',
   materialFacadeGlob: 'Сайдинг',
   nalichieStolbovName: 'Со столбами',
@@ -101,16 +103,16 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   widthSidePart: '0',
   isThereLockName: 'Есть',
   isThereLock: 1,
-  providesLock: 'Предоставляет изготовитель',
-  lockInstaller: 'Выполняет изготовитель',
+  providesLock: 'manufacturer',
+  lockInstaller: 'manufacturer',
   typeLock: 'Тип_1',
   lockSetId: null,
   lockPenColor: '',
   lockPenColorId: null,
   isTherePenName: 'Не будет',
   isTherePen: 0,
-  penProvided: 'Предоставляет изготовитель',
-  penInstalled: 'Устанавливает изготовитель',
+  penProvided: 'manufacturer',
+  penInstalled: 'manufacturer',
   penColor: '',
   penColorId: null,
   additionalPenId: null,
@@ -170,6 +172,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (participantRoleFields.some(field => key === field || key === `${field}Code`)) continue
     if (key === 'fillingProfileFacade' || key === 'fillingProfileFacadeProblem'
       || key === 'fillingProfileYard' || key === 'fillingProfileYardProblem') continue
     if (key === 'postProfile' || key === 'postProfileProblem'
@@ -179,6 +182,11 @@ export function applyWicketApiFieldMappings(
       || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
     if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
+  }
+  for (const field of participantRoleFields) {
+    if (refMap[field] && (Object.prototype.hasOwnProperty.call(apiData, field) || Object.prototype.hasOwnProperty.call(apiData, `${field}Code`))) {
+      refMap[field].value = readParticipantRole(apiData, field)
+    }
   }
   const openingReference = Object.prototype.hasOwnProperty.call(apiData, 'openingOptionId')
     ? apiData.openingOptionId : refMap.openingOptionId?.value

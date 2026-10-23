@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
@@ -28,7 +29,7 @@ async function save() {
   clearYardSelection()
 
   calc.updateOrCreateBlock('Заполнение', [
-    { name: 'Материал заполнения', value: calc.providesMaterial.value },
+    { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
     { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
   ])

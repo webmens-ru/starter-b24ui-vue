@@ -418,16 +418,16 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.lockSetId.value).toBe(9)
     expect(calc.isThereLock.value).toBe(1)
     expect(calc.isThereLockName.value).toBe('Есть')
-    expect(calc.providesLock.value).toBe('Предоставляет заказчик')
-    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    expect(calc.providesLock.value).toBe('customer')
+    expect(calc.lockInstaller.value).toBe('manufacturer')
     expect(calc.lockComponentIds.value).toEqual([11])
     expect(calc.getAccessorySelections().lockComponents).toEqual([
       { role: 'lock_component', materialItemId: 11, providedByManufacturer: true, installedByManufacturer: false },
     ])
     expect(calc.addons.value.doorCloser).toMatchObject({
       itemId: 31,
-      provided: 'Предоставляет заказчик',
-      installed: 'Устанавливает изготовитель',
+      provided: 'customer',
+      installed: 'manufacturer',
     })
   })
 
@@ -451,8 +451,8 @@ describe('WicketWizardPage mobile summary', () => {
     expect(calc.lockSetId.value).toBe(9)
     expect(calc.isThereLock.value).toBe(1)
     expect(calc.isThereLockName.value).toBe('Есть')
-    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+    expect(calc.providesLock.value).toBe('manufacturer')
+    expect(calc.lockInstaller.value).toBe('customer')
     expect(calc.getAccessorySelections().lockComponents).toEqual([])
   })
 

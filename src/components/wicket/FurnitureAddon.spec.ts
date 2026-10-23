@@ -97,8 +97,8 @@ describe('FurnitureAddon', () => {
     ]
     form.addons.skud = {
       isThere: 1,
-      provided: 'Предоставляет заказчик',
-      installed: 'Устанавливает заказчик',
+      provided: 'customer',
+      installed: 'customer',
       itemId: 110,
       marking: 'SKUD-10, SKUD-11',
       itemIds: [110, 111],
@@ -111,7 +111,7 @@ describe('FurnitureAddon', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').exists()).toBe(true)
+    expect(wrapper.find('input[type="radio"][name="provided"][value="customer"]').exists()).toBe(true)
     const secondCheckbox = wrapper.findAll('input[type="checkbox"]')[1]
     await secondCheckbox.setValue(false)
     await flushPromises()
@@ -128,8 +128,8 @@ describe('FurnitureAddon', () => {
     form.addonItems.doorCloser = [{ id: 31, name: 'DC-31', article: 'DC-31', imageUrls: [] }]
     form.addons.doorCloser = {
       isThere: 1,
-      provided: 'Предоставляет заказчик',
-      installed: 'Устанавливает изготовитель',
+      provided: 'customer',
+      installed: 'manufacturer',
       itemId: 31,
       marking: 'DC-31',
       itemIds: [31],
@@ -144,7 +144,7 @@ describe('FurnitureAddon', () => {
     })
     await flushPromises()
 
-    const customerInstall = wrapper.find('input[type="radio"][value="Устанавливает заказчик"]')
+    const customerInstall = wrapper.find('input[type="radio"][name="installed"][value="customer"]')
     await customerInstall.setValue()
     await flushPromises()
 
@@ -167,9 +167,9 @@ describe('FurnitureAddon', () => {
         global: { stubs: { B24Button: true, ImageViewer: true } },
       })
       await wrapper.find('input[type="radio"][value="Будет"]').setValue()
-      await wrapper.find('input[type="radio"][value="Предоставляет заказчик"]').setValue()
-      expect(form.addons[key].provided).toBe('Предоставляет заказчик')
-      expect(form.addons[key].installed).toBe('Устанавливает изготовитель')
+      await wrapper.find('input[type="radio"][name="provided"][value="customer"]').setValue()
+      expect(form.addons[key].provided).toBe('customer')
+      expect(form.addons[key].installed).toBe('manufacturer')
       const material = wrapper.find(`input[type="radio"][value="${materialItemId}"]`)
       expect(material.exists()).toBe(true)
       await material.setValue()
@@ -211,8 +211,8 @@ describe('FurnitureAddon', () => {
       })
       await flushPromises()
 
-      const provider = providedByManufacturer ? 'Предоставляет изготовитель' : 'Предоставляет заказчик'
-      const installer = installedByManufacturer ? 'Устанавливает изготовитель' : 'Устанавливает заказчик'
+      const provider = providedByManufacturer ? 'manufacturer' : 'customer'
+      const installer = installedByManufacturer ? 'manufacturer' : 'customer'
       expect(wrapper.find(`input[value="${provider}"]:checked`).exists()).toBe(true)
       expect(wrapper.find(`input[value="${installer}"]:checked`).exists()).toBe(true)
       await wrapper.find(`input[value="${provider}"]`).trigger('change')

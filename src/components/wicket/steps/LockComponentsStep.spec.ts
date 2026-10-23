@@ -32,7 +32,7 @@ describe('LockComponentsStep', () => {
     calc.productRowId.value = 7
     calc.accessoryCompositionLockVersion.value = 1
     calc.lockComponentIds.value = [202]
-    calc.lockComponentsInstalled.value = 'Устанавливает заказчик'
+    calc.lockComponentsInstalled.value = 'customer'
 
     const wrapper = mount(LockComponentsStep, {
       global: { stubs: { B24Button: true } },
@@ -63,7 +63,7 @@ describe('LockComponentsStep', () => {
     await new Promise(r => setTimeout(r, 100))
     vi.mocked(api.saveWicketAccessoryComposition).mockClear()
 
-    const customerRadio = wrapper.find('input[type="radio"][value="Устанавливает заказчик"]')
+    const customerRadio = wrapper.find('input[type="radio"][name="installed"][value="customer"]')
     await customerRadio.setValue()
     await new Promise(r => setTimeout(r, 100))
 
@@ -78,8 +78,8 @@ describe('LockComponentsStep', () => {
     calc.productRowId.value = 7
     calc.accessoryCompositionLockVersion.value = 1
     calc.lockSetId.value = 7
-    calc.providesLock.value = 'Предоставляет изготовитель'
-    calc.lockInstaller.value = 'Выполняет заказчик'
+    calc.providesLock.value = 'manufacturer'
+    calc.lockInstaller.value = 'customer'
     calc.applyAccessoryComposition({
       lockVersion: 1,
       lockComponents: [{ materialItemId: 202, relationRole: 'lock_component_installation' }] as never,
@@ -92,13 +92,13 @@ describe('LockComponentsStep', () => {
     })
     await new Promise(r => setTimeout(r, 100))
 
-    expect(wrapper.find('input[value="Предоставляет заказчик"]:checked').exists()).toBe(true)
-    expect(wrapper.find('input[value="Устанавливает изготовитель"]:checked').exists()).toBe(true)
-    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+    expect(wrapper.find('input[name="provided"][value="customer"]:checked').exists()).toBe(true)
+    expect(wrapper.find('input[name="installed"][value="manufacturer"]:checked').exists()).toBe(true)
+    expect(calc.providesLock.value).toBe('manufacturer')
+    expect(calc.lockInstaller.value).toBe('customer')
 
     vi.mocked(api.saveWicketAccessoryComposition).mockClear()
-    await wrapper.find('input[value="Предоставляет изготовитель"]').setValue()
+    await wrapper.find('input[name="provided"][value="manufacturer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     const calls = vi.mocked(api.saveWicketAccessoryComposition).mock.calls
@@ -108,7 +108,7 @@ describe('LockComponentsStep', () => {
       providedByManufacturer: true,
       installedByManufacturer: true,
     }])
-    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-    expect(calc.lockInstaller.value).toBe('Выполняет заказчик')
+    expect(calc.providesLock.value).toBe('manufacturer')
+    expect(calc.lockInstaller.value).toBe('customer')
   })
 })

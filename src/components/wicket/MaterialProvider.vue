@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { participantRoleOptions } from '../../app/participantRoles'
 import { useCalculation } from '../../composables/useCalculation'
 import ProviderChoice from './ProviderChoice.vue'
 const calc = useCalculation()
 const emit = defineEmits<{ change: [] }>()
-const options = ['Предоставляет изготовитель', 'Предоставляет заказчик']
+const options = participantRoleOptions('provide')
 </script>
 
 <template>
-  <ProviderChoice v-model="calc.providesMaterial.value" title="Материал заполнения" :options="options" @change="emit('change')" />
+  <ProviderChoice name="providesMaterial" v-model="calc.providesMaterial.value" title="Материал заполнения" :options="options" @change="emit('change')" />
 </template>

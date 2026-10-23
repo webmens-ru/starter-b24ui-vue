@@ -1,6 +1,24 @@
 import { expect, it } from 'vitest'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 
+it('serializes independent code properties and strips legacy captions and derived diagnostics', () => {
+  const source = { orderId: 42, productRowId: 7, modelId: '1', providesPaint: 'customer',
+    providesPrimer: 'manufacturer', doesPaintingFrame: 'manufacturer',
+    penProvided: '', participantRoleProblems: { providesPaint: null } }
+  const payload = canonicalizeWicketRootSavePayload(source)
+  expect(payload).toMatchObject({ providesPaintCode: 'customer', providesPrimerCode: 'manufacturer', doesPaintingFrameCode: 'manufacturer' })
+  for (const key of ['providesPaint', 'providesPrimer', 'doesPaintingFrame', 'penProvided', 'participantRoleProblems']) expect(payload).not.toHaveProperty(key)
+  expect(payload).not.toHaveProperty('penProvidedCode')
+  expect(source.providesPaint).toBe('customer')
+})
+
+it('explicit valid code dominates a stale caption; invalid nonempty choices are never guessed', () => {
+  const base = { orderId: 42, productRowId: 7, modelId: '1' }
+  expect(canonicalizeWicketRootSavePayload({ ...base, providesPaintCode: 'customer', providesPaint: 'Старая подпись' }).providesPaintCode).toBe('customer')
+  expect(() => canonicalizeWicketRootSavePayload({ ...base, providesPaintCode: 'unknown' } as never)).toThrow()
+  expect(() => canonicalizeWicketRootSavePayload({ ...base, providesPaint: 'Предоставляет изготовитель' })).toThrow()
+})
+
 it('submits material FKs but strips both sides of server-owned filling metadata without changing the source', () => {
   const source = { orderId: 42, productRowId: 7, modelId: '1', idFacade: 725, idYard: 819,
     fillingProfileFacade: { kind: 'logSiding' }, fillingProfileFacadeProblem: null,

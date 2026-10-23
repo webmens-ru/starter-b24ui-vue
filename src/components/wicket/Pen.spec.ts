@@ -44,6 +44,23 @@ function getNextButton(wrapper: VueWrapper) {
 }
 
 describe('Pen frame color capability', () => {
+  it('does not promote an invalid stored supplier or installer code to manufacturer on mount', async () => {
+    setActivePinia(createPinia())
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [] })
+    const calc = useCalculation()
+    calc.orderId.value = 42
+    calc.productRowId.value = 7
+    calc.loadFromApi({ isTherePen: 1, isTherePenName: 'Будет', penProvided: 'Предоставляет изготовитель', penProvidedCode: 'unknown',
+      penInstalled: 'Устанавливает изготовитель', penInstalledCode: 'unknown' })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(wrapper.findAll('input[name="penProvided"]')).toHaveLength(2)
+    expect(wrapper.find('input[name="penProvided"]:checked').exists()).toBe(false)
+    expect(wrapper.find('input[name="penInstalled"]:checked').exists()).toBe(false)
+    expect(calc.penProvided.value).toBe('')
+    expect(calc.penInstalled.value).toBe('')
+    wrapper.unmount()
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -53,8 +70,8 @@ describe('Pen frame color capability', () => {
     calc.productRowId.value = 7
     calc.modelId.value = '1'
     calc.isTherePenName.value = 'Будет'
-    calc.penProvided.value = 'Предоставляет изготовитель'
-    calc.penInstalled.value = 'Устанавливает изготовитель'
+    calc.penProvided.value = 'manufacturer'
+    calc.penInstalled.value = 'manufacturer'
   })
 
   it('offers frame color together with explicit colors and saves it as null', async () => {

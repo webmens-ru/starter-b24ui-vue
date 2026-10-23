@@ -26,15 +26,15 @@ describe('material provider in filling', () => {
   it.each(cases)('type %s restores and saves the provider before the existing filling fields', async (modelId, component) => {
     const calc = useCalculation()
     calc.modelId.value = modelId
-    calc.providesMaterial.value = 'Предоставляет заказчик'
+    calc.providesMaterial.value = 'customer'
     const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
     await flushPromises()
     expect(wrapper.get('fieldset legend').text()).toBe('Материал заполнения')
-    expect(wrapper.get<HTMLInputElement>('input[value="Предоставляет заказчик"]').element.checked).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesMaterial: 'Предоставляет заказчик' }))
-    await wrapper.get('input[value="Предоставляет изготовитель"]').setValue()
+    expect(wrapper.get<HTMLInputElement>('input[value="customer"]').element.checked).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesMaterial: 'customer' }))
+    await wrapper.get('input[value="manufacturer"]').setValue()
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesMaterial: 'Предоставляет изготовитель' }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesMaterial: 'manufacturer' }))
     expect(calc.data.value.find(block => block.blockName === 'Заполнение')?.params[0]).toEqual({
       name: 'Материал заполнения', value: 'Предоставляет изготовитель',
     })

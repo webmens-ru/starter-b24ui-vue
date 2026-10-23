@@ -23,10 +23,10 @@ describe('type8Navigation', () => {
       expect(getNextPage('page2_facade_sheet', state())).toBe('page5')
     })
     it('Замок есть + изготовитель → page_lock_type', () => {
-      expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+      expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
     })
     it('Замок есть + заказчик → page10', () => {
-        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
+        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
     })
     it('Замок нет → page10', () => {
       expect(getNextPage('page9', state({ isThereLock: 0 }))).toBe('page10')
@@ -56,10 +56,10 @@ describe('type8Navigation', () => {
       expect(getPrevPage('page_lock_type', state())).toBe('page9')
     })
     it('page10, замок есть + изготовитель → page_lock_type', () => {
-      expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+      expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
     })
     it('page10, замок есть + заказчик → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
     })
     it('page10, замок нет → page9', () => {
       expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')

@@ -106,7 +106,7 @@ describe('product row API', () => {
     await saveWicketData({
       ...context,
       lockSetId: Number(loaded.lockSetId),
-      providesLock: 'Предоставляет заказчик',
+      providesLock: 'customer',
       lockPenId: loaded.lockPenId,
       lockPenColorId: loaded.lockPenColorId,
       additionalPenId: 9,
@@ -116,7 +116,7 @@ describe('product row API', () => {
     expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/data', {
       ...context,
       lockSetId: 7,
-      providesLock: 'Предоставляет заказчик',
+      providesLockCode: 'customer',
       lockPenId: null,
       lockPenColorId: null,
       additionalPenId: 9,
