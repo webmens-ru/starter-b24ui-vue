@@ -144,13 +144,21 @@ const jumperDescriptor = computed(() => pipeDescriptor(sortamentOptions.value, a
 const postProfileProblem = computed(() => postsChoice.value === 1 && !stolbLoading.value && !stolbError.value ? postDescriptor.value.profileProblem?.message ?? '' : '')
 const jumperProfileProblem = computed(() => showSortament.value && !sortamentLoading.value && !sortamentError.value ? jumperDescriptor.value.profileProblem?.message ?? '' : '')
 
-function syncPipeProfiles() {
+function syncPostProfile() {
   const post = postsChoice.value === 1 ? postDescriptor.value : { profile: null, profileProblem: null }
-  const jumper = showSortament.value ? jumperDescriptor.value : { profile: null, profileProblem: null }
   calc.postProfile.value = post.profile
   calc.postProfileProblem.value = post.profileProblem
+}
+
+function syncJumperProfile() {
+  const jumper = showSortament.value ? jumperDescriptor.value : { profile: null, profileProblem: null }
   calc.jumperProfile.value = jumper.profile
   calc.jumperProfileProblem.value = jumper.profileProblem
+}
+
+function syncPipeProfiles() {
+  syncPostProfile()
+  syncJumperProfile()
 }
 
 // ─── Загрузка данных ─────────────────────────────────────────────────────────
@@ -208,14 +216,14 @@ async function onNalichieChange() {
   if (!isCurrent()) return
   ++editVersion
   calc.postsPresenceProblem.value = null
-  syncCalcFields()
+  syncPostFields()
   await save()
 }
 
 async function onStolbChange() {
   if (!isCurrent()) return
   ++editVersion
-  syncCalcFields()
+  syncPostFields()
   await save()
 }
 
@@ -250,7 +258,7 @@ async function onPolozhenieChange() {
   sortamentError.value = ''
   sortamentOptions.value = []
   assortmentJumperId.value = ''
-  syncCalcFields()
+  syncJumperFields()
   if (showSortament.value) {
     if (!await loadSortamentOptions()) return
   }
@@ -260,12 +268,12 @@ async function onPolozhenieChange() {
 async function onSortamentChange() {
   if (!isCurrent()) return
   ++editVersion
-  syncCalcFields()
+  syncJumperFields()
   await save()
 }
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
-function syncCalcFields() {
+function syncPostFields() {
   calc.hasStolby.value = postsChoice.value
   calc.nalichieStolbovName.value = postsChoice.value === 1 ? 'Со столбами' : postsChoice.value === 0 ? 'Без столбов' : ''
 
@@ -279,8 +287,10 @@ function syncCalcFields() {
     calc.stolbName.value = ''
   }
 
-  syncOpeningFields()
+  syncPostProfile()
+}
 
+function syncJumperFields() {
   calc.peremichkaPolozheniyeId.value = peremichkaPolozheniyeId.value
   const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichkaPolozheniyeId.value)
   calc.peremichkaPolozheniyeName.value = polItem?.name ?? ''
@@ -296,7 +306,13 @@ function syncCalcFields() {
     calc.assortmentJumperId.value       = null
     calc.peremichkaSortamentName.value = null
   }
-  syncPipeProfiles()
+  syncJumperProfile()
+}
+
+function syncCalcFields() {
+  syncPostFields()
+  syncOpeningFields()
+  syncJumperFields()
 }
 
 function buildBlock() {
@@ -333,7 +349,6 @@ function isComplete(): boolean {
 
 async function save(version = editVersion): Promise<boolean> {
   if (!isCurrent() || version !== editVersion) return false
-  syncPipeProfiles()
   const problem = selectionProblem()
   if (problem) {
     openModal(problem)

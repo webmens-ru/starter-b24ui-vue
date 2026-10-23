@@ -105,6 +105,10 @@ describe('StolbVariantOtkritiya navigation', () => {
     calc.hasStolby.value = 1
     calc.stolbId.value = 111
     calc.postProfile.value = { sizeA: 60, sizeB: 60 }
+    calc.jumperPlacement.value = 'above'
+    calc.assortmentJumperId.value = 984
+    calc.peremichkaSortamentName.value = 'Сохранённая перемычка'
+    calc.jumperProfile.value = { sizeA: 60, sizeB: 40 }
     vi.mocked(getAssortmentStolb).mockResolvedValueOnce({ assortmentPipe: [
       { id: 985, name: 'Новая труба', profile: { sizeA: 80, sizeB: 40 }, profileProblem: null, disabled: false },
     ] })
@@ -116,6 +120,9 @@ describe('StolbVariantOtkritiya navigation', () => {
     expect(calc.stolbId.value).toBe('985')
     expect(calc.stolbName.value).toBe('Новая труба')
     expect(calc.postProfile.value).toEqual({ sizeA: 80, sizeB: 40 })
+    expect(calc.assortmentJumperId.value).toBe(984)
+    expect(calc.peremichkaSortamentName.value).toBe('Сохранённая перемычка')
+    expect(calc.jumperProfile.value).toEqual({ sizeA: 60, sizeB: 40 })
     expect(saveWicketData).not.toHaveBeenCalled()
     wrapper.unmount()
     finish({ availablePolozheniyeJumper: [] })
