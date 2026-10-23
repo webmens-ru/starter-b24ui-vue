@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 import { useCalculation } from '../../composables/useCalculation'
 import {
   getAssortmentStolb,
+  getOpeningOptions,
   getPolozhenieJumper,
   getAssortmentJumper,
   saveWicketData,
   recalculate,
 } from '../../app/api/wicket'
-import type { SelectItem } from '../../app/api/wicket'
+import type { OpeningOption, SelectItem } from '../../app/api/wicket'
+import { parseOpeningOrientation } from './openingOrientation'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 const emit = defineEmits<{
@@ -18,6 +20,8 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+let disposed = false
+onBeforeUnmount(() => { disposed = true })
 
 // ─── Модальное окно ───────────────────────────────────────────────────────────
 const showModal  = ref(false)
@@ -37,15 +41,50 @@ const stolbId          = ref<string>('')
 const showStolbList     = computed(() => nalichieStolbovName.value === 'Со столбами')
 
 // ─── Вариант открытия ────────────────────────────────────────────────────────
-const openingOptions = computed(() => {
-  return [
-    { label: 'Наружу / Правая', id: 1, img: '/img/wicket_opening_diagram_02.jpg' },
-    { label: 'Наружу / Левая',  id: 3, img: '/img/wicket_opening_diagram_01.jpg' },
-    { label: 'Внутрь / Левая',  id: 2, img: '/img/wicket_opening_diagram_03.jpg' },
-    { label: 'Внутрь / Правая', id: 4, img: '/img/wicket_opening_diagram_04.jpg' },
-  ]
-})
 const openingOptionId = ref<number | null>(null)
+const availableOpeningOptions = ref<OpeningOption[]>([])
+const openingCatalogProblems = ref<Array<{ id: number; message: string }>>([])
+const openingLoading = ref(true)
+const openingLoadError = ref('')
+const selectedOpening = computed(() => availableOpeningOptions.value.find(option => option.id === openingOptionId.value))
+const openingProblem = computed(() => {
+  if (openingLoading.value) return 'Варианты открытия загружаются.'
+  if (openingLoadError.value) return openingLoadError.value
+  if (openingOptionId.value === null || selectedOpening.value) return ''
+  return calc.openingOrientationProblem.value?.message
+    || openingCatalogProblems.value.find(problem => problem.id === openingOptionId.value)?.message
+    || 'Выбранный вариант открытия недоступен. Выберите действующий вариант.'
+})
+const openingOptions = computed(() => {
+  const items = availableOpeningOptions.value.map(option => ({ id: option.id, label: option.name, img: option.pathPhoto, available: true }))
+  if (openingOptionId.value !== null && !selectedOpening.value) {
+    items.push({ id: openingOptionId.value, label: calc.openingOptionName.value || 'Сохранённый вариант открытия', img: calc.openingOptionPathPhoto.value, available: false })
+  }
+  return items
+})
+
+function syncOpeningFields() {
+  const option = selectedOpening.value
+  calc.openingOptionId.value = openingOptionId.value
+  calc.openingOptionName.value = option?.name ?? ''
+  calc.openingOptionPathPhoto.value = option?.pathPhoto ?? ''
+  calc.openingOrientation.value = option ? parseOpeningOrientation(option) : null
+  calc.openingOrientationProblem.value = null
+}
+
+async function loadOpeningOptions() {
+  try {
+    const response = await getOpeningOptions()
+    if (disposed) return
+    availableOpeningOptions.value = response.options
+    openingCatalogProblems.value = response.problems
+    if (selectedOpening.value) syncOpeningFields()
+  } catch {
+    openingLoadError.value = 'Не удалось загрузить варианты открытия. Повторите загрузку страницы.'
+  } finally {
+    openingLoading.value = false
+  }
+}
 
 // ─── Перемычка ───────────────────────────────────────────────────────────────
 const showPeremichka         = ref(false)
@@ -75,15 +114,20 @@ async function loadStolbOptions() {
   }
 }
 
-async function loadPolozhenieOptions(openingId: number) {
+let openingRequestVersion = 0
+async function loadPolozhenieOptions(openingId: number): Promise<boolean> {
+  const version = ++openingRequestVersion
   try {
     const res = await getPolozhenieJumper(calc.modelId.value, openingId)
+    if (disposed || version !== openingRequestVersion || openingId !== openingOptionId.value) return false
     peremichkaOptions.value = res.availablePolozheniyeJumper
     if (!peremichkaPolozheniyeId.value) {
       peremichkaPolozheniyeId.value = String(peremichkaOptions.value[0]?.id ?? '')
     }
+    return true
   } catch (e) {
     console.warn('getPolozhenieJumper:', e)
+    return false
   }
 }
 
@@ -111,7 +155,8 @@ async function onStolbChange() {
 }
 
 async function onOpeningOptionChange() {
-  if (openingOptionId.value === null) return
+  if (openingOptionId.value === null || openingProblem.value) return
+  syncOpeningFields()
   showPeremichka.value = true
   showSortament.value  = false
   assortmentJumperId.value = ''
@@ -122,7 +167,7 @@ async function onOpeningOptionChange() {
   calc.assortmentJumperId.value         = null
   calc.peremichkaSortamentName.value   = null
   peremichkaPolozheniyeId.value = ''
-  await loadPolozhenieOptions(openingOptionId.value)
+  if (!await loadPolozhenieOptions(openingOptionId.value)) return
   await save()
 }
 
@@ -154,10 +199,7 @@ function syncCalcFields() {
     calc.stolbName.value = ''
   }
 
-  const openingItem = openingOptions.value.find(o => o.id === openingOptionId.value)
-  calc.openingOptionName.value       = openingItem?.label ?? ''
-  calc.openingOptionId.value         = openingOptionId.value
-  calc.openingOptionPathPhoto.value = openingItem?.img ?? ''
+  syncOpeningFields()
 
   calc.peremichkaPolozheniyeId.value = peremichkaPolozheniyeId.value
   const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichkaPolozheniyeId.value)
@@ -192,7 +234,12 @@ function buildBlock() {
   calc.updateOrCreateBlock('Столбы / вариант открытия / перемычка', params)
 }
 
-async function save() {
+async function save(): Promise<boolean> {
+  if (disposed) return false
+  if (openingProblem.value) {
+    openModal(openingProblem.value)
+    return false
+  }
   syncCalcFields()
   buildBlock()
 
@@ -213,9 +260,11 @@ async function save() {
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
+    openModal('Не удалось сохранить выбранный вариант открытия. Повторите попытку.')
+    return false
   }
 
-  if (calc.priceRetail.value) {
+  if (!disposed && calc.priceRetail.value && selectedOpening.value) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -229,16 +278,20 @@ async function save() {
       console.warn('recalculate:', e)
     }
   }
+  return true
 }
 
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
 async function validateAndSave(): Promise<boolean> {
+  if (openingProblem.value) {
+    openModal(openingProblem.value)
+    return false
+  }
   if (openingOptionId.value === null) {
     openModal('Выберите вариант открытия')
     return false
   }
-  await save()
-  return true
+  return await save()
 }
 
 const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
@@ -262,16 +315,16 @@ onMounted(async () => {
     openingOptionId.value = calc.openingOptionId.value
   }
 
-  await loadStolbOptions()
+  await Promise.all([loadStolbOptions(), loadOpeningOptions()])
 
   // Восстанавливаем stolbId после загрузки списка
   if (calc.stolbId.value) {
     stolbId.value = String(calc.stolbId.value)
   }
 
-  if (openingOptionId.value !== null) {
+  if (selectedOpening.value && !openingProblem.value) {
     showPeremichka.value = true
-    await loadPolozhenieOptions(openingOptionId.value)
+    await loadPolozhenieOptions(selectedOpening.value.id)
     if (calc.peremichkaPolozheniyeId.value) {
       peremichkaPolozheniyeId.value = String(calc.peremichkaPolozheniyeId.value)
     }
@@ -284,7 +337,6 @@ onMounted(async () => {
     }
   }
 
-  await save()
 })
 </script>
 
@@ -354,6 +406,7 @@ onMounted(async () => {
       </div>
 
       <!-- Вариант открытия -->
+      <p v-if="openingProblem" role="alert" class="text-red-600">{{ openingProblem }}</p>
       <div class="opening-grid">
         <label
           v-for="opt in openingOptions"
@@ -364,11 +417,13 @@ onMounted(async () => {
             v-model="openingOptionId"
             type="radio"
             :value="opt.id"
+            :disabled="openingLoading || !opt.available"
             class="sr-only"
             @change="onOpeningOptionChange"
           />
           <div class="card-content">
             <img
+              v-if="opt.img"
               :src="opt.img"
               :alt="opt.label"
               class="w-full h-[140px] object-contain mb-2"

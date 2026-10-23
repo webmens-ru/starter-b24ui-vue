@@ -1,13 +1,14 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { saveWicketData } from '../../app/api/wicket'
+import { getOpeningOptions, getPolozhenieJumper, recalculate, saveWicketData } from '../../app/api/wicket'
 import { useCalculation } from '../../composables/useCalculation'
 import StolbVariantOtkritiya from './StolbVariantOtkritiya.vue'
 
 vi.mock('../../app/api/wicket', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../app/api/wicket')>()),
   getAssortmentStolb: vi.fn().mockResolvedValue({ assortmentPipe: [] }),
+  getOpeningOptions: vi.fn(),
   getPolozhenieJumper: vi.fn().mockResolvedValue({ availablePolozheniyeJumper: [] }),
   getAssortmentJumper: vi.fn().mockResolvedValue({ assortmentJumper: [] }),
   saveWicketData: vi.fn().mockResolvedValue(undefined),
@@ -41,17 +42,24 @@ describe('StolbVariantOtkritiya navigation', () => {
     calc.productRowId.value = 7
     calc.modelId.value = '1'
     vi.mocked(saveWicketData).mockClear()
+    vi.mocked(recalculate).mockClear()
+    vi.mocked(getPolozhenieJumper).mockClear()
+    vi.mocked(getOpeningOptions).mockResolvedValue({ options: [
+      { id: 819, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_02.jpg', opensOutward: true, hingeSide: 'right' },
+      { id: 920, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_04.jpg', opensOutward: false, hingeSide: 'left' },
+    ], problems: [] })
   })
 
-  it('loads opening diagrams from the public image root', () => {
+  it('loads opening diagrams and arbitrary references from the API', async () => {
     const wrapper = mountComponent()
+    await flushPromises()
 
     expect(wrapper.findAll('img').map(image => image.attributes('src'))).toEqual([
       '/img/wicket_opening_diagram_02.jpg',
-      '/img/wicket_opening_diagram_01.jpg',
-      '/img/wicket_opening_diagram_03.jpg',
       '/img/wicket_opening_diagram_04.jpg',
     ])
+    expect(wrapper.findAll('input[type="radio"]').map(input => input.attributes('value'))).toContain('819')
+    expect(getOpeningOptions).toHaveBeenCalledOnce()
   })
 
   it('rejects a missing opening option and keeps the existing modal message', async () => {
@@ -68,7 +76,7 @@ describe('StolbVariantOtkritiya navigation', () => {
   })
 
   it('awaits saving a selected opening option and allows Next once', async () => {
-    useCalculation().openingOptionId.value = 1
+    useCalculation().openingOptionId.value = 819
     const wrapper = mountComponent()
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
@@ -91,7 +99,7 @@ describe('StolbVariantOtkritiya navigation', () => {
   })
 
   it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
-    useCalculation().openingOptionId.value = 1
+    useCalculation().openingOptionId.value = 819
     const wrapper = mountComponent()
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
@@ -109,5 +117,127 @@ describe('StolbVariantOtkritiya navigation', () => {
     finishSave({ lockVersion: 1 })
     await flushPromises()
     expect(wrapper.emitted('next')).toHaveLength(1)
+  })
+
+  it('does not save or recalculate while restoring a saved selection', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.priceRetail.value = 123
+    mountComponent()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(calc.openingOrientation.value).toEqual({ opensOutward: true, hingeSide: 'right' })
+  })
+
+  it('selects duplicate captions by FK and properties, never by the caption', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    await wrapper.get('input[type="radio"][value="920"]').setValue()
+    await flushPromises()
+    const calc = useCalculation()
+    expect(calc.openingOptionId.value).toBe(920)
+    expect(calc.openingOrientation.value).toEqual({ opensOutward: false, hingeSide: 'left' })
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ openingOptionId: 920 }))
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('openingOrientation')
+  })
+
+  it('keeps unavailable historical selection visible and blocks writes, Next and recalculation', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 777
+    calc.openingOptionName.value = 'Исторический вариант'
+    calc.openingOrientation.value = { opensOutward: false, hingeSide: 'right' }
+    calc.openingOrientationProblem.value = { code: 'inactive', message: 'Вариант неактивен' }
+    calc.priceRetail.value = 123
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Исторический вариант')
+    expect(wrapper.text()).toContain('Вариант неактивен')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(getPolozhenieJumper).not.toHaveBeenCalled()
+    expect(calc.openingOptionId.value).toBe(777)
+  })
+
+  it('blocks a saved selection on catalog load error without inventing options', async () => {
+    vi.mocked(getOpeningOptions).mockRejectedValueOnce(new Error('offline'))
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.openingOptionName.value = 'Сохранённый вариант'
+    const wrapper = mountComponent()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(wrapper.text()).toContain('Не удалось загрузить варианты открытия')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it('does not advance or recalculate when saving is rejected', async () => {
+    useCalculation().openingOptionId.value = 819
+    const wrapper = mountComponent()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('HTTP 422'))
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it('blocks Next until the opening catalog has finished loading', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof getOpeningOptions>>) => void
+    vi.mocked(getOpeningOptions).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    useCalculation().openingOptionId.value = 819
+    const wrapper = mountComponent()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    finish({ options: [{ id: 819, name: 'Переименовано', pathPhoto: null, opensOutward: false, hingeSide: 'right' }], problems: [] })
+    await flushPromises()
+    expect(useCalculation().openingOrientation.value).toEqual({ opensOutward: false, hingeSide: 'right' })
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('does not let a stale dependent-list response save or overwrite the newest choice', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    let finishOld!: (value: Awaited<ReturnType<typeof getPolozhenieJumper>>) => void
+    let finishNew!: (value: Awaited<ReturnType<typeof getPolozhenieJumper>>) => void
+    vi.mocked(getPolozhenieJumper)
+      .mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))
+      .mockImplementationOnce(() => new Promise(resolve => { finishNew = resolve }))
+    await wrapper.get('input[type="radio"][value="819"]').setValue()
+    await wrapper.get('input[type="radio"][value="920"]').setValue()
+    finishNew({ availablePolozheniyeJumper: [{ id: 55, name: 'Актуальное положение' }] })
+    await flushPromises()
+    finishOld({ availablePolozheniyeJumper: [{ id: 66, name: 'Устаревшее положение' }] })
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenCalledTimes(1)
+    expect(useCalculation().openingOptionId.value).toBe(920)
+    expect(useCalculation().peremichkaPolozheniyeName.value).toBe('Актуальное положение')
+  })
+
+  it('does not overwrite another form after unmounting during catalog loading', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof getOpeningOptions>>) => void
+    vi.mocked(getOpeningOptions).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    const wrapper = mountComponent()
+    wrapper.unmount()
+    calc.reset()
+    finish({ options: [{ id: 819, name: 'Старый ответ', pathPhoto: null, opensOutward: true, hingeSide: 'right' }], problems: [] })
+    await flushPromises()
+    expect(calc.openingOptionId.value).toBeNull()
+    expect(calc.openingOrientation.value).toBeNull()
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('does not save after unmounting during a dependent-list request', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    let finish!: (value: Awaited<ReturnType<typeof getPolozhenieJumper>>) => void
+    vi.mocked(getPolozhenieJumper).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await wrapper.get('input[type="radio"][value="819"]').setValue()
+    wrapper.unmount()
+    finish({ availablePolozheniyeJumper: [] })
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
   })
 })
