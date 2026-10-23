@@ -1,6 +1,21 @@
 import { expect, it } from 'vitest'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 
+it('sends pipe references but strips all server-derived pipe profiles and diagnostics', () => {
+  const source = {
+    orderId: 42, productRowId: 7, modelId: '1', stolbId: 707, assortmentJumperId: 819,
+    postProfile: { sizeA: 999, sizeB: 999 }, jumperProfile: null,
+    postProfileProblem: { code: 'invalid', message: 'Ошибка' }, jumperProfileProblem: null,
+  }
+  const payload = canonicalizeWicketRootSavePayload(source)
+  expect(payload.stolbId).toBe(707)
+  expect(payload.assortmentJumperId).toBe(819)
+  for (const key of ['postProfile', 'postProfileProblem', 'jumperProfile', 'jumperProfileProblem']) {
+    expect(payload).not.toHaveProperty(key)
+  }
+  expect(source.postProfile).toEqual({ sizeA: 999, sizeB: 999 })
+})
+
 it('sends the selected reference but never derived opening properties', () => {
   const payload = canonicalizeWicketRootSavePayload({
     orderId: 42, productRowId: 7, modelId: '1', openingOptionId: 819,

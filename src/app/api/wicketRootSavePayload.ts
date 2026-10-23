@@ -1,6 +1,6 @@
 import type { WicketSavePayload } from './wicket.types'
 
-/** Remove legacy handles, retired fields and server-derived opening properties. */
+/** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
   payload: WicketSavePayload,
 ): WicketSavePayload {
@@ -20,6 +20,10 @@ export function canonicalizeWicketRootSavePayload(
     jumperPlacementProblem: _jumperPlacementProblem,
     postsPresenceProblem: _postsPresenceProblem,
     hasJumper: _hasJumper,
+    postProfile: _postProfile,
+    postProfileProblem: _postProfileProblem,
+    jumperProfile: _jumperProfile,
+    jumperProfileProblem: _jumperProfileProblem,
     ...canonicalPayload
   } = payload
   void _calculationName
@@ -37,6 +41,10 @@ export function canonicalizeWicketRootSavePayload(
   void _jumperPlacementProblem
   void _postsPresenceProblem
   void _hasJumper
+  void _postProfile
+  void _postProfileProblem
+  void _jumperProfile
+  void _jumperProfileProblem
 
   return {
     ...canonicalPayload,
