@@ -1,4 +1,5 @@
 import { parseOpeningSelection } from '../../components/wicket/openingOrientation'
+import { parseJumperSelection, parsePostsSelection } from '../../app/api/jumperProperties'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -14,7 +15,6 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'sidingFormFacadeId',
   'sidingFormYardId',
   'productRowId',
-  'hasStolby',
   'openingOptionId',
   'isTherePen',
   'isThereLock',
@@ -86,7 +86,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   fillSide: 'Одна сторона',
   materialFacadeGlob: 'Сайдинг',
   nalichieStolbovName: 'Со столбами',
-  hasStolby: 1,
   raspolozheniyePolotna: 'Вертикально',
   sostoyaniyeProyema: 'Готов',
   shieldType: 'Тип_1',
@@ -169,6 +168,8 @@ export function applyWicketApiFieldMappings(
 
   for (const [key, value] of Object.entries(apiData)) {
     if (key === 'openingOrientation' || key === 'openingOrientationProblem') continue
+    if (key === 'hasStolby' || key === 'postsPresenceProblem'
+      || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
     if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
   }
@@ -176,6 +177,15 @@ export function applyWicketApiFieldMappings(
     ? apiData.openingOptionId : refMap.openingOptionId?.value
   const selection = parseOpeningSelection(openingReference, apiData.openingOrientation, apiData.openingOrientationProblem)
   for (const [key, value] of Object.entries(selection)) {
+    if (refMap[key]) refMap[key].value = value
+  }
+  const jumperReference = Object.prototype.hasOwnProperty.call(apiData, 'peremichkaPolozheniyeId')
+    ? apiData.peremichkaPolozheniyeId : refMap.peremichkaPolozheniyeId?.value
+  const properties = {
+    ...parseJumperSelection(jumperReference, apiData.jumperPlacement, apiData.jumperPlacementProblem),
+    ...parsePostsSelection(apiData.hasStolby, apiData.postsPresenceProblem),
+  }
+  for (const [key, value] of Object.entries(properties)) {
     if (refMap[key]) refMap[key].value = value
   }
 }

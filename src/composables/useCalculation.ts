@@ -82,7 +82,7 @@ export function useCalculation() {
       fillSide: form.fillSide,
       materialFacadeGlob: form.materialFacadeGlob,
       materialYardGlob: form.materialYardGlob,
-      hasStolby: form.hasStolby,
+      ...(form.hasStolby === null ? {} : { hasStolby: form.hasStolby }),
       stolbId: form.stolbId || null,
       openingOptionId: form.openingOptionId,
       peremichkaPolozheniyeId: form.peremichkaPolozheniyeId || null,

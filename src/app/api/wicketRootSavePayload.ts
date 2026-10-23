@@ -16,6 +16,10 @@ export function canonicalizeWicketRootSavePayload(
     countryCode: _countryCode,
     openingOrientation: _openingOrientation,
     openingOrientationProblem: _openingOrientationProblem,
+    jumperPlacement: _jumperPlacement,
+    jumperPlacementProblem: _jumperPlacementProblem,
+    postsPresenceProblem: _postsPresenceProblem,
+    hasJumper: _hasJumper,
     ...canonicalPayload
   } = payload
   void _calculationName
@@ -29,6 +33,10 @@ export function canonicalizeWicketRootSavePayload(
   void _countryCode
   void _openingOrientation
   void _openingOrientationProblem
+  void _jumperPlacement
+  void _jumperPlacementProblem
+  void _postsPresenceProblem
+  void _hasJumper
 
   return {
     ...canonicalPayload,

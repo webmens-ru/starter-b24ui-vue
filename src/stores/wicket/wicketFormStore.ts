@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import type { CalcBlock } from './types'
+import type { JumperPlacement, JumperPlacementProblem } from '../../app/api/jumperProperties'
 import type {
   WicketAccessoryCompositionResponse,
   WicketAccessoryRole,
@@ -44,7 +45,10 @@ const materialYardGlob   = ref<string | null>(null)
 
 // Поля шага "Столбы / Вариант открытия / Перемычка"
 const nalichieStolbovName       = ref<string>('Со столбами')
-const hasStolby                  = ref<number>(1)
+const hasStolby                  = ref<0 | 1 | null>(null)
+const postsPresenceProblem = ref<JumperPlacementProblem | null>(null)
+const jumperPlacement = ref<JumperPlacement | null>(null)
+const jumperPlacementProblem = ref<JumperPlacementProblem | null>(null)
 const stolbId                    = ref<string | number>('')
 const stolbName                  = ref<string>('')
 const openingOptionName         = ref<string>('')
@@ -301,7 +305,10 @@ const fieldsFilled = ref<number>(0)
     materialFacadeGlob.value = 'Сайдинг'
     materialYardGlob.value = null
     nalichieStolbovName.value = 'Со столбами'
-    hasStolby.value = 1
+    hasStolby.value = null
+    postsPresenceProblem.value = null
+    jumperPlacement.value = null
+    jumperPlacementProblem.value = null
     stolbId.value = ''
     stolbName.value = ''
     openingOptionName.value = ''
@@ -629,6 +636,9 @@ const fieldsFilled = ref<number>(0)
       materialYardGlob,
       nalichieStolbovName,
       hasStolby,
+      postsPresenceProblem,
+      jumperPlacement,
+      jumperPlacementProblem,
       stolbId,
       stolbName,
       openingOptionName,
@@ -986,6 +996,9 @@ const fieldsFilled = ref<number>(0)
     materialYardGlob,
     nalichieStolbovName,
     hasStolby,
+    postsPresenceProblem,
+    jumperPlacement,
+    jumperPlacementProblem,
     stolbId,
     stolbName,
     openingOptionName,
