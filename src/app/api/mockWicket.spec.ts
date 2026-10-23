@@ -11,6 +11,10 @@ it('hydrates a mock draft with explicit used and unused pipe profiles', async ()
   expect(store.postProfileProblem).toBeNull()
   expect(store.jumperProfile).toBeNull()
   expect(store.jumperProfileProblem).toBeNull()
+  expect(store.fillingProfileFacade).toEqual({ kind: 'logSiding' })
+  expect(store.fillingProfileFacadeProblem).toBeNull()
+  expect(store.fillingProfileYard).toBeNull()
+  expect(store.fillingProfileYardProblem).toBeNull()
 })
 
 it('supplies explicit numeric pipe properties in mock options', async () => {
@@ -35,6 +39,7 @@ describe('mock wicket filling API', () => {
 
     expect(result.table[0]).not.toHaveProperty('company')
     expect(result.table[0]).not.toHaveProperty('color')
+    expect(result.table[0]).toMatchObject({ drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null })
   })
 
   it('возвращает справочники внешнего вида отдельно от строк сайдинга', async () => {

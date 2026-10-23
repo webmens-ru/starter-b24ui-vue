@@ -43,6 +43,8 @@ const WizardStub = defineComponent({
 })
 
 const row: SidingRow = {
+  drawingProfile: { kind: 'logSiding' },
+  drawingProfileProblem: null,
   id: 27,
   material: 'Бревно Type 2',
   form: 'Гладкая',

@@ -2,6 +2,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import type { CalcBlock } from './types'
 import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
+import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
 import type { JumperPlacement, JumperPlacementProblem } from '../../app/api/jumperProperties'
 import type {
   WicketAccessoryCompositionResponse,
@@ -43,6 +44,10 @@ const doesAssembly        = ref<string>('Выполняет изготовите
 const fillSide            = ref<string>('Одна сторона')
 const materialFacadeGlob = ref<string>('Сайдинг')
 const materialYardGlob   = ref<string | null>(null)
+const fillingProfileFacade = ref<FillingDrawingProfile | null>(null)
+const fillingProfileFacadeProblem = ref<FillingDrawingProfileProblem | null>(null)
+const fillingProfileYard = ref<FillingDrawingProfile | null>(null)
+const fillingProfileYardProblem = ref<FillingDrawingProfileProblem | null>(null)
 
 // Поля шага "Столбы / Вариант открытия / Перемычка"
 const nalichieStolbovName       = ref<string>('Со столбами')
@@ -251,6 +256,8 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetFacadeFilling(): void {
+    fillingProfileFacade.value = null
+    fillingProfileFacadeProblem.value = null
     profileTypeFacadeId.value = null
     typeOfCoatingFacadeId.value = null
     sidingFormFacadeId.value = null
@@ -276,6 +283,8 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    fillingProfileYard.value = null
+    fillingProfileYardProblem.value = null
     profileTypeYardId.value = null
     typeOfCoatingYardId.value = null
     sidingFormYardId.value = null
@@ -316,6 +325,10 @@ const fieldsFilled = ref<number>(0)
     jumperPlacementProblem.value = null
     stolbId.value = ''
     postProfile.value = null
+    fillingProfileFacade.value = null
+    fillingProfileFacadeProblem.value = null
+    fillingProfileYard.value = null
+    fillingProfileYardProblem.value = null
     postProfileProblem.value = null
     jumperProfile.value = null
     jumperProfileProblem.value = null
@@ -643,6 +656,10 @@ const fieldsFilled = ref<number>(0)
       fillSide,
       materialFacadeGlob,
       materialYardGlob,
+      fillingProfileFacade,
+      fillingProfileFacadeProblem,
+      fillingProfileYard,
+      fillingProfileYardProblem,
       nalichieStolbovName,
       hasStolby,
       postsPresenceProblem,
@@ -1014,6 +1031,10 @@ const fieldsFilled = ref<number>(0)
     jumperPlacementProblem,
     stolbId,
     postProfile,
+    fillingProfileFacade,
+    fillingProfileFacadeProblem,
+    fillingProfileYard,
+    fillingProfileYardProblem,
     postProfileProblem,
     jumperProfile,
     jumperProfileProblem,

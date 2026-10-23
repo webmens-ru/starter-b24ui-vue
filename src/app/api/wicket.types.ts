@@ -1,4 +1,5 @@
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
+import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
 
 export type { ProductRowContext } from './productRows.types'
 
@@ -172,7 +173,7 @@ export interface SidingFilters {
   typeOfCoating: string[]
 }
 
-export interface SidingRow {
+export interface SidingRow extends FillingDrawingMetadata {
   id: string | number
   sidingFormId?: number
   typeOfCoatingId?: number
@@ -204,7 +205,7 @@ export interface ProfnastilFilters {
   typeOfCoating: string[]
 }
 
-export interface ProfnastilRow {
+export interface ProfnastilRow extends FillingDrawingMetadata {
   id: string | number
   profileTypeId?: number
   typeOfCoatingId?: number
@@ -230,7 +231,7 @@ export interface ProfnastilFormOption {
   name: string
 }
 
-export interface ProfnastilCoatingOption extends ProfnastilFormOption {
+export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDrawingMetadata {
   id: number
   colorInputMode: 'list' | 'combobox' | 'none'
   isDoubleSided: boolean

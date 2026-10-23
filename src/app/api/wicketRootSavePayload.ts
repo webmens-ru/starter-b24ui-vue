@@ -24,6 +24,10 @@ export function canonicalizeWicketRootSavePayload(
     postProfileProblem: _postProfileProblem,
     jumperProfile: _jumperProfile,
     jumperProfileProblem: _jumperProfileProblem,
+    fillingProfileFacade: _fillingProfileFacade,
+    fillingProfileFacadeProblem: _fillingProfileFacadeProblem,
+    fillingProfileYard: _fillingProfileYard,
+    fillingProfileYardProblem: _fillingProfileYardProblem,
     ...canonicalPayload
   } = payload
   void _calculationName
@@ -45,6 +49,10 @@ export function canonicalizeWicketRootSavePayload(
   void _postProfileProblem
   void _jumperProfile
   void _jumperProfileProblem
+  void _fillingProfileFacade
+  void _fillingProfileFacadeProblem
+  void _fillingProfileYard
+  void _fillingProfileYardProblem
 
   return {
     ...canonicalPayload,

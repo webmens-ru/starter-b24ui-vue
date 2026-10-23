@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import {
   getType2ProfnastilFormOptions,
   saveWicketData,
   type ProfnastilFormOptions,
 } from '../../../app/api/wicket'
+import type { ProfnastilCoatingOption } from '../../../app/api/wicket.types'
+import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
@@ -21,6 +23,11 @@ const loaded = ref(false)
 const loadError = ref('')
 const selectionEdited = ref(false)
 const submitted = ref(false)
+let requestRevision = 0
+let disposed = false
+const contextKey = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, props.side,
+  props.side === 'facade' ? calc.materialFacadeGlob.value : calc.materialYardGlob.value]))
+onBeforeUnmount(() => { disposed = true; requestRevision++ })
 
 const isFacade = computed(() => props.side === 'facade')
 const profile = computed({
@@ -133,17 +140,42 @@ const valid = computed(() =>
 )
 
 async function load(profileValue: number | null, coatingValue: number | null) {
+  const revision = ++requestRevision
+  const context = contextKey.value
+  const current = () => !disposed && revision === requestRevision && context === contextKey.value
   loading.value = true
   loadError.value = ''
   try {
-    options.value = await getType2ProfnastilFormOptions(profileValue ?? undefined, coatingValue ?? undefined)
+    const result = await getType2ProfnastilFormOptions(profileValue ?? undefined, coatingValue ?? undefined)
+    if (!current()) return false
+    options.value = result
     loaded.value = true
     return true
   } catch (error) {
+    if (!current()) return false
     loadError.value = error instanceof Error ? error.message : 'Не удалось загрузить справочник покрытий.'
     return false
   } finally {
-    loading.value = false
+    if (current()) loading.value = false
+  }
+}
+
+watch(contextKey, () => {
+  requestRevision++
+  options.value = { profiles: [], coatings: [], manufacturers: [], colors: [] }
+  loaded.value = false
+  void load(profile.value, coating.value)
+})
+
+function setDrawingProfile(material: ProfnastilCoatingOption | null) {
+  const descriptor = material === null ? { profile: null, problem: null }
+    : parseFillingDrawingDescriptor(material.drawingProfile, material.drawingProfileProblem)
+  if (isFacade.value) {
+    calc.fillingProfileFacade.value = descriptor.profile
+    calc.fillingProfileFacadeProblem.value = descriptor.problem
+  } else {
+    calc.fillingProfileYard.value = descriptor.profile
+    calc.fillingProfileYardProblem.value = descriptor.problem
   }
 }
 
@@ -160,6 +192,7 @@ function clearColor() {
 }
 
 async function onProfileChange() {
+  setDrawingProfile(null)
   coating.value = null
   clearColor()
   if (isFacade.value) calc.idFacade.value = ''
@@ -192,34 +225,37 @@ async function onCoatingSelectChange(value: string | number | undefined) {
   if (!material) return
   selectionEdited.value = true
   coating.value = material.id
-  if (isFacade.value) calc.idFacade.value = material.profnastilId
-  else calc.idYard.value = material.profnastilId
+  applyMaterial(material)
+  clearColor()
   if (await load(profile.value, coating.value)) await onCoatingChange()
+}
+
+function applyMaterial(selected: ProfnastilCoatingOption) {
+  setDrawingProfile(selected)
+  const profileName = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''
+  if (isFacade.value) {
+    calc.materialFacade.value = profileName
+    calc.typeOfCoatingFacade.value = selected.name
+    calc.idFacade.value = selected.profnastilId
+    calc.thicknessFacade.value = String(selected.thickness)
+    calc.coatingFacadeHex.value = selected.coatingHex ?? ''
+    calc.coatingFacadeImage.value = selected.coatingImage ?? ''
+    calc.reliefFacadeImage.value = selected.reliefImage ?? ''
+  } else {
+    calc.materialYard.value = profileName
+    calc.typeOfCoatingYard.value = selected.name
+    calc.idYard.value = selected.profnastilId
+    calc.thicknessYard.value = String(selected.thickness)
+    calc.coatingYardHex.value = selected.coatingHex ?? ''
+    calc.coatingYardImage.value = selected.coatingImage ?? ''
+    calc.reliefYardImage.value = selected.reliefImage ?? ''
+  }
 }
 
 async function onCoatingChange() {
   clearColor()
   const selected = selectedMaterial.value
-  if (selected) {
-    const profileName = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''
-    if (isFacade.value) {
-      calc.materialFacade.value = profileName
-      calc.typeOfCoatingFacade.value = selected.name
-      calc.idFacade.value = selected.profnastilId
-      calc.thicknessFacade.value = String(selected.thickness)
-      calc.coatingFacadeHex.value = selected.coatingHex ?? ''
-      calc.coatingFacadeImage.value = selected.coatingImage ?? ''
-      calc.reliefFacadeImage.value = selected.reliefImage ?? ''
-    } else {
-      calc.materialYard.value = profileName
-      calc.typeOfCoatingYard.value = selected.name
-      calc.idYard.value = selected.profnastilId
-      calc.thicknessYard.value = String(selected.thickness)
-      calc.coatingYardHex.value = selected.coatingHex ?? ''
-      calc.coatingYardImage.value = selected.coatingImage ?? ''
-      calc.reliefYardImage.value = selected.reliefImage ?? ''
-    }
-  }
+  if (selected) applyMaterial(selected)
   // A list/combobox choice is only persisted once its required color is complete.
   if (valid.value) await save()
 }

@@ -1,6 +1,18 @@
 import { expect, it } from 'vitest'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 
+it('submits material FKs but strips both sides of server-owned filling metadata without changing the source', () => {
+  const source = { orderId: 42, productRowId: 7, modelId: '1', idFacade: 725, idYard: 819,
+    fillingProfileFacade: { kind: 'logSiding' }, fillingProfileFacadeProblem: null,
+    fillingProfileYard: null, fillingProfileYardProblem: { code: 'missing', message: 'Не настроен' } }
+  const payload = canonicalizeWicketRootSavePayload(source)
+  expect(payload).toMatchObject({ idFacade: 725, idYard: 819 })
+  for (const key of ['fillingProfileFacade', 'fillingProfileFacadeProblem', 'fillingProfileYard', 'fillingProfileYardProblem']) {
+    expect(payload).not.toHaveProperty(key)
+  }
+  expect(source.fillingProfileFacade).toEqual({ kind: 'logSiding' })
+})
+
 it('sends pipe references but strips all server-derived pipe profiles and diagnostics', () => {
   const source = {
     orderId: 42, productRowId: 7, modelId: '1', stolbId: 707, assortmentJumperId: 819,

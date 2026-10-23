@@ -48,7 +48,7 @@ const ButtonStub = defineComponent({
 
 const rows: SidingRow[] = [
   {
-    id: 7,
+    id: 7, drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null,
     material: 'Бревно',
     form: 'Гладкая',
     typeOfCoating: 'Глянец',
@@ -57,7 +57,7 @@ const rows: SidingRow[] = [
     reliefImage: '/reliefs/log.webp',
   },
   {
-    id: 11,
+    id: 11, drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null,
     material: 'Корабельная доска',
     form: 'Трапеция',
     typeOfCoating: 'Матовый',
@@ -81,6 +81,37 @@ function mountFacade() {
 }
 
 describe('SidingFacade', () => {
+  it('ignores a late material catalog response after the product row context changes', async () => {
+    let resolve!: (value: unknown) => void
+    apiMocks.getSidingTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const wrapper = mountFacade()
+    const calc = useCalculation()
+    calc.productRowId.value = 99
+    calc.fillingProfileFacade.value = { kind: 'mp20' }
+    await flushPromises()
+    resolve({ table: [{ id: 997, name: 'Просроченный каталог', material: 'Просроченный каталог', form: 'Форма', thickness: '0.45', typeOfCoating: 'Покрытие', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null }],
+      pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Просроченный каталог')
+    expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp20' })
+    wrapper.unmount()
+  })
+
+  it('selects and clears explicit profile metadata atomically without affecting the other side', async () => {
+    const calc = useCalculation()
+    calc.fillingProfileYard.value = { kind: 'mp20' }
+    const wrapper = mountFacade()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(calc.fillingProfileFacade.value).toEqual({ kind: 'logSiding' })
+    expect(calc.fillingProfileFacadeProblem.value).toBeNull()
+    calc.resetFacadeFilling()
+    expect(calc.fillingProfileFacade.value).toBeNull()
+    expect(calc.fillingProfileFacadeProblem.value).toBeNull()
+    expect(calc.fillingProfileYard.value).toEqual({ kind: 'mp20' })
+  })
+
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()

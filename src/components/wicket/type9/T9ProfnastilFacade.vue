@@ -77,6 +77,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idFacade.value) return null
   return {
     id:            calc.idFacade.value,
+    drawingProfile: calc.fillingProfileFacade.value,
+    drawingProfileProblem: calc.fillingProfileFacadeProblem.value,
     name:          calc.materialFacade.value,
     material:      calc.materialFacade.value,
     thickness:     calc.thicknessFacade.value,

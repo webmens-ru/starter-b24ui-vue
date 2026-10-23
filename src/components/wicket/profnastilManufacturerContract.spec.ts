@@ -37,7 +37,7 @@ describe('shared profnastil contract', () => {
     const profnastilRows = mock.match(/const PROFNASTIL_ROWS:[\s\S]*?\n\]/)?.[0] ?? ''
     const profnastilTable = mock.match(/mockGetProfnastilTable[\s\S]*?return \{ table, pagination/)?.[0] ?? ''
     const profnastilFilters = types.match(/interface ProfnastilFilters \{([\s\S]*?)\}/)?.[1] ?? ''
-    const profnastilRow = types.match(/interface ProfnastilRow \{([\s\S]*?)\}/)?.[1] ?? ''
+    const profnastilRow = types.match(/interface ProfnastilRow(?: extends FillingDrawingMetadata)? \{([\s\S]*?)\}/)?.[1] ?? ''
 
     expect(profnastilFilters).not.toContain('companies')
     expect(profnastilFilters).not.toContain('colors')

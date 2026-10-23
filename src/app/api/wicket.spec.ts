@@ -19,6 +19,25 @@ describe('pipe option response boundary', () => {
 })
 
 describe('material directory relation requests', () => {
+  it.each(['siding', 'profnastil', 'coatings'] as const)('normalizes filling profile metadata on %s without dropping material rows', async route => {
+    const wicket = await import('./wicket')
+    const raw = [
+      { id: 725, name: 'Одинаковая подпись', drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null },
+      { id: 819, name: 'Одинаковая подпись', drawingProfile: { kind: 'unknown' }, drawingProfileProblem: null },
+    ]
+    api.post.mockResolvedValue({ data: { data: route === 'coatings'
+      ? { profiles: [], coatings: raw, manufacturers: [], colors: [] }
+      : { table: raw, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } } } })
+    const rows = route === 'siding'
+      ? (await wicket.getSidingTable('1', { materials: [], form: [], typeOfCoating: [] })).table
+      : route === 'profnastil' ? (await wicket.getProfnastilTable('1', { materials: [], typeOfCoating: [] })).table
+        : (await wicket.getType2ProfnastilFormOptions(31)).coatings
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ id: 725, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null })
+    expect(rows[1]).toMatchObject({ id: 819, drawingProfile: null, drawingProfileProblem: { code: 'invalid' } })
+    expect(raw[1].drawingProfile).toEqual({ kind: 'unknown' })
+  })
+
   it('sends numeric foreign keys separately from labels', async () => {
     const wicket = await import('./wicket')
     api.post.mockResolvedValue({ data: { data: { table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 } } } })

@@ -1,6 +1,7 @@
 import { parseOpeningSelection } from '../../components/wicket/openingOrientation'
 import { parseJumperSelection, parsePostsSelection } from '../../app/api/jumperProperties'
 import { parsePipeProfileDescriptor } from '../../app/api/pipeProfiles'
+import { parseFillingDrawingDescriptor } from '../../app/api/fillingDrawingProfiles'
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
 /**
@@ -169,6 +170,8 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'fillingProfileFacade' || key === 'fillingProfileFacadeProblem'
+      || key === 'fillingProfileYard' || key === 'fillingProfileYardProblem') continue
     if (key === 'postProfile' || key === 'postProfileProblem'
       || key === 'jumperProfile' || key === 'jumperProfileProblem') continue
     if (key === 'openingOrientation' || key === 'openingOrientationProblem') continue
@@ -211,5 +214,18 @@ export function applyWicketApiFieldMappings(
       : parsePipeProfileDescriptor(apiData[`${prefix}Profile`], apiData[`${prefix}ProfileProblem`], used)
     if (refMap[`${prefix}Profile`]) refMap[`${prefix}Profile`].value = descriptor.profile
     if (refMap[`${prefix}ProfileProblem`]) refMap[`${prefix}ProfileProblem`].value = descriptor.profileProblem
+  }
+  for (const side of ['Facade', 'Yard'] as const) {
+    const rawId = apiData[`id${side}`]
+    const validId = isPositiveSafeInteger(rawId) || parsePositiveDecimalId(rawId).kind === 'valid'
+    const absent = rawId === null || rawId === undefined || rawId === ''
+    let descriptor = absent ? { profile: null, problem: null }
+      : validId ? parseFillingDrawingDescriptor(apiData[`fillingProfile${side}`], apiData[`fillingProfile${side}Problem`])
+        : parseFillingDrawingDescriptor(undefined, null)
+    if (validId && descriptor.profile === null && descriptor.problem === null) {
+      descriptor = { profile: null, problem: { code: 'missing', message: 'Для выбранного материала не настроен профиль отрисовки.' } }
+    }
+    if (refMap[`fillingProfile${side}`]) refMap[`fillingProfile${side}`].value = descriptor.profile
+    if (refMap[`fillingProfile${side}Problem`]) refMap[`fillingProfile${side}Problem`].value = descriptor.problem
   }
 }

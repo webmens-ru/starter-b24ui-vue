@@ -45,8 +45,8 @@ beforeEach(() => {
   response = {
     profiles: [{ id: 901, name: 'Профиль' }, { id: 902, name: 'Профиль' }],
     coatings: [
-      { id: 707, name: 'Любое покрытие', profnastilId: 21, thickness: '0.45', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
-      { id: 707, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 21, thickness: '0.45', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
     ],
     manufacturers: [],
     colors: [{ id: 604, name: 'Цвет', hex: '#000000', image: null }, { id: 603, name: 'Цвет', hex: '#ffffff', image: null }],
@@ -57,6 +57,30 @@ beforeEach(() => {
 function render(side: 'facade' | 'yard' = 'facade') {
   return mount(T2ProfnastilForm, { props: { side }, global: { stubs: { B24SelectMenu: Select, SelectMenu: Select, B24InputMenu: Input, InputMenu: Input } } })
 }
+
+it.each(['context', 'unmount'] as const)('updates profile before awaiting options and ignores stale continuation after %s', async mode => {
+  const wrapper = render()
+  await flushPromises()
+  let resolve!: (value: ProfnastilFormOptions) => void
+  vi.mocked(getType2ProfnastilFormOptions).mockReturnValueOnce(new Promise(done => { resolve = done }))
+  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  await flushPromises()
+  const calc = useCalculation()
+  expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp10' })
+  expect(calc.thicknessFacade.value).toBe('0.45')
+  expect(calc.typeOfCoatingFacade.value).toBe('Любое покрытие')
+  if (mode === 'context') calc.productRowId.value = 99
+  else wrapper.unmount()
+  calc.idFacade.value = 999
+  calc.fillingProfileFacade.value = { kind: 'mp20' }
+  calc.colorFacade.value = 'Новый цвет'
+  resolve(response)
+  await flushPromises()
+  expect(calc.idFacade.value).toBe(999)
+  expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp20' })
+  expect(calc.colorFacade.value).toBe('Новый цвет')
+  expect(saveWicketData).not.toHaveBeenCalled()
+})
 
 it('restores profile and thickness variant by IDs despite stale or duplicate names', async () => {
   const wrapper = render()
@@ -70,6 +94,52 @@ it('restores profile and thickness variant by IDs despite stale or duplicate nam
   ])
 })
 
+it.each(['facade', 'yard'] as const)('keeps %s profile selection and reset independent of the opposite side', async side => {
+  const calc = useCalculation()
+  calc.profileTypeYardId.value = 901
+  calc.typeOfCoatingYardId.value = 707
+  calc.materialYardGlob.value = 'Профлист'
+  const target = side === 'facade' ? calc.fillingProfileFacade : calc.fillingProfileYard
+  const opposite = side === 'facade' ? calc.fillingProfileYard : calc.fillingProfileFacade
+  opposite.value = { kind: 'mp20' }
+  const wrapper = render(side)
+  await flushPromises()
+  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  await flushPromises()
+  expect(target.value).toEqual({ kind: 'mp10' })
+  expect(opposite.value).toEqual({ kind: 'mp20' })
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 902)
+  await flushPromises()
+  expect(target.value).toBeNull()
+  expect(opposite.value).toEqual({ kind: 'mp20' })
+  wrapper.unmount()
+})
+
+it('can select yard metadata while a facade catalog request is still pending', async () => {
+  const calc = useCalculation()
+  calc.profileTypeYardId.value = 901
+  calc.typeOfCoatingYardId.value = 707
+  calc.materialYardGlob.value = 'Профлист'
+  const facade = render()
+  await flushPromises()
+  let resolve!: (value: ProfnastilFormOptions) => void
+  vi.mocked(getType2ProfnastilFormOptions).mockReturnValueOnce(new Promise(done => { resolve = done }))
+  facade.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 22)
+  await flushPromises()
+  const yard = render('yard')
+  await flushPromises()
+  yard.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  await flushPromises()
+  expect(calc.fillingProfileYard.value).toEqual({ kind: 'mp10' })
+  expect(calc.fillingProfileFacade.value).toEqual({ kind: 'c20' })
+  resolve(response)
+  await flushPromises()
+  expect(calc.fillingProfileYard.value).toEqual({ kind: 'mp10' })
+  expect(calc.fillingProfileFacade.value).toEqual({ kind: 'c20' })
+  facade.unmount()
+  yard.unmount()
+})
+
 it('selects a material variant without confusing the shared coating ID', async () => {
   const wrapper = render()
   await flushPromises()
@@ -77,6 +147,8 @@ it('selects a material variant without confusing the shared coating ID', async (
   await flushPromises()
   const calc = useCalculation()
   expect(calc.idFacade.value).toBe(21)
+  expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp10' })
+  expect(calc.fillingProfileFacadeProblem.value).toBeNull()
   expect(calc.thicknessFacade.value).toBe('0.45')
   expect(calc.typeOfCoatingFacade.value).toBe('Любое покрытие')
   expect(saveWicketData).not.toHaveBeenCalled()

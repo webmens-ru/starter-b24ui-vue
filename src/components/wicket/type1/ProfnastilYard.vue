@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
+import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import {
   getProfnastilTable,
   saveWicketData,
@@ -44,6 +45,16 @@ const filters = reactive({
 const rows         = ref<ProfnastilRow[]>([])
 const selectedRow  = ref<ProfnastilRow | null>(null)
 const tableLoading = ref(false)
+let tableRevision = 0
+let disposed = false
+const catalogContext = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, calc.materialYardGlob.value]))
+onBeforeUnmount(() => { disposed = true; tableRevision++ })
+watch(catalogContext, () => {
+  tableRevision++
+  rows.value = []
+  selectedRow.value = null
+  void loadTable(1)
+})
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'yard')
@@ -52,17 +63,22 @@ const appearanceSaving = appearanceSave.saving
 const appearanceSaveFailed = appearanceSave.failed
 
 async function loadTable(page = currentPage.value) {
+  const revision = ++tableRevision
+  const context = catalogContext.value
+  const current = () => !disposed && revision === tableRevision && context === catalogContext.value
   tableLoading.value = true
   try {
     const result = await getProfnastilTable(calc.modelId.value, filters, page)
+    if (!current()) return
     rows.value        = result.table
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
+    if (!current()) return
     console.warn('getProfnastilTable недоступен:', e)
     rows.value = []
   } finally {
-    tableLoading.value = false
+    if (current()) tableLoading.value = false
   }
 }
 
@@ -90,6 +106,9 @@ function buildSummaryParams() {
 }
 
 async function save(row: ProfnastilRow): Promise<boolean> {
+  const descriptor = parseFillingDrawingDescriptor(row.drawingProfile, row.drawingProfileProblem)
+  calc.fillingProfileYard.value = descriptor.profile
+  calc.fillingProfileYardProblem.value = descriptor.problem
   calc.profileTypeYardId.value = row.profileTypeId ?? null
   calc.typeOfCoatingYardId.value = row.typeOfCoatingId ?? null
   calc.sidingFormYardId.value = null
@@ -213,6 +232,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    drawingProfile: calc.fillingProfileYard.value,
+    drawingProfileProblem: calc.fillingProfileYardProblem.value,
     name:          calc.materialYard.value,
     material:      calc.materialYard.value,
     thickness:     calc.thicknessYard.value,

@@ -5,6 +5,7 @@ import { parseOpeningOrientation } from '../../components/wicket/openingOrientat
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
 import { parsePipeOptions, type PipeOption } from './pipeProfiles'
+import { parseFillingDrawingRow } from './fillingDrawingProfiles'
 export type { PipeProfile, PipeProfileProblem, PipeOption } from './pipeProfiles'
 import {
   forgetWicketProductRowLockVersion,
@@ -286,14 +287,14 @@ export async function getSidingTable(
   filters: SidingFilters,
   page = 1,
 ): Promise<SidingTableResponse> {
-  if (isMock) return mockGetSidingTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-siding`, {
+  const result: SidingTableResponse = isMock ? await mockGetSidingTable(filters, page)
+    : (await api.post(`/api/wicket/type${modelId}/get-filling-siding`, {
     materials: filters.materials,
     sidingFormIds: directoryFilterIds(filters.form),
     typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
     page,
-  })
-  return data.data
+  })).data.data
+  return { ...result, table: result.table.map(parseFillingDrawingRow) }
 }
 
 export async function getFillingAppearanceOptions(
@@ -313,14 +314,13 @@ export async function getProfnastilTable(
   filters: ProfnastilFilters,
   page = 1,
 ): Promise<Required<ProfnastilTableResponse>> {
-  if (isMock) return mockGetProfnastilTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, {
+  const result: ProfnastilTableResponse = isMock ? await mockGetProfnastilTable(filters, page)
+    : await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, {
     profileTypeIds: directoryFilterIds(filters.materials),
     typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
     page,
-  })
-  const result: ProfnastilTableResponse = data.data ?? data
-  const table = result.table ?? []
+  }).then(({ data }) => data.data ?? data)
+  const table = (result.table ?? []).map(parseFillingDrawingRow)
   const pagination = result.pagination ?? {
     page:       1,
     pageSize:   table.length,
@@ -342,8 +342,9 @@ export async function getType2ProfnastilFormOptions(
   profileTypeId?: number,
   typeOfCoatingId?: number,
 ): Promise<ProfnastilFormOptions> {
+  let result: ProfnastilFormOptions
   if (isMock) {
-    return {
+    result = {
       profiles: [{ id: 1, name: 'С-8' }],
       coatings: profileTypeId
         ? [{
@@ -356,6 +357,8 @@ export async function getType2ProfnastilFormOptions(
             coatingHex: null,
             coatingImage: null,
             reliefImage: null,
+            drawingProfile: { kind: 'c8' },
+            drawingProfileProblem: null,
           }]
         : [],
       manufacturers: [],
@@ -363,12 +366,14 @@ export async function getType2ProfnastilFormOptions(
         ? [{ id: 1, name: 'RAL 7016', hex: '#383E42', image: null }]
         : [],
     }
+  } else {
+    const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
+      profileTypeId: profileTypeId ?? null,
+      typeOfCoatingId: typeOfCoatingId ?? null,
+    })
+    result = data.data
   }
-  const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
-    profileTypeId: profileTypeId ?? null,
-    typeOfCoatingId: typeOfCoatingId ?? null,
-  })
-  return data.data
+  return { ...result, coatings: result.coatings.map(parseFillingDrawingRow) }
 }
 
 export async function getZhalyuziTable(
