@@ -35,6 +35,19 @@ async function fillValidOpening(wrapper: ReturnType<typeof mountComponent>) {
 }
 
 describe('RazmeryProyema', () => {
+  it('rejects height 1499 before saving and accepts 1500', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    await fillValidOpening(wrapper)
+    await wrapper.get('#height').setValue('1499')
+    vi.mocked(saveWicketData).mockClear()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('От 1500 до 2500 мм')
+    await wrapper.get('#height').setValue('1500')
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    wrapper.unmount()
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()
@@ -47,7 +60,7 @@ describe('RazmeryProyema', () => {
 
   it.each([
     ['width', '1201', 'От 700 до 1200 мм'],
-    ['height', '2501', 'От 1000 до 2500 мм'],
+    ['height', '2501', 'От 1500 до 2500 мм'],
   ])('блокирует переход при превышении максимума поля %s', async (field, value, message) => {
     const wrapper = mountComponent()
     await flushPromises()
@@ -64,7 +77,7 @@ describe('RazmeryProyema', () => {
     const wrapper = mountComponent()
     await flushPromises()
     expect(wrapper.get('#width').attributes('placeholder')).toBe('Введите ширину (700–1200)')
-    expect(wrapper.get('#height').attributes('placeholder')).toBe('Введите высоту (1000–2500)')
+    expect(wrapper.get('#height').attributes('placeholder')).toBe('Введите высоту (1500–2500)')
     await wrapper.get('#width').setValue('1200')
     await wrapper.get('#height').setValue('2500')
     await wrapper.get('#clearance').setValue('50')
@@ -86,11 +99,11 @@ describe('RazmeryProyema', () => {
     expect(saveWicketData).not.toHaveBeenCalled()
   })
 
-  it('accepts 700x1000 with valid clearance and saves before leaving', async () => {
+  it('accepts 700x1500 with valid clearance and saves before leaving', async () => {
     const wrapper = mountComponent()
     await flushPromises()
     await wrapper.get('#width').setValue('700')
-    await wrapper.get('#height').setValue('1000')
+    await wrapper.get('#height').setValue('1500')
     await wrapper.get('#clearance').setValue('10')
     vi.mocked(saveWicketData).mockClear()
 
@@ -102,7 +115,7 @@ describe('RazmeryProyema', () => {
     const wrapper = mountComponent()
     await flushPromises()
     await wrapper.get('#width').setValue('700')
-    await wrapper.get('#height').setValue('1000')
+    await wrapper.get('#height').setValue('1500')
     await wrapper.get('#clearance').setValue('10')
     vi.mocked(saveWicketData).mockClear()
     let finishSave!: (response: { lockVersion: number }) => void
