@@ -1,5 +1,7 @@
 import { parseOpeningSelection } from '../../components/wicket/openingOrientation'
 import { parseJumperSelection, parsePostsSelection } from '../../app/api/jumperProperties'
+import { parsePipeProfileDescriptor } from '../../app/api/pipeProfiles'
+import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../app/positiveDecimalId'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -167,6 +169,8 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'postProfile' || key === 'postProfileProblem'
+      || key === 'jumperProfile' || key === 'jumperProfileProblem') continue
     if (key === 'openingOrientation' || key === 'openingOrientationProblem') continue
     if (key === 'hasStolby' || key === 'postsPresenceProblem'
       || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
@@ -187,5 +191,25 @@ export function applyWicketApiFieldMappings(
   }
   for (const [key, value] of Object.entries(properties)) {
     if (refMap[key]) refMap[key].value = value
+  }
+  const postUsed = properties.postsPresenceProblem === null && properties.hasStolby !== null
+    ? properties.hasStolby === 1 : null
+  const jumperUsed = properties.jumperPlacementProblem === null && properties.jumperPlacement !== null
+    ? properties.jumperPlacement !== 'none' : null
+  for (const [prefix, fk, used] of [
+    ['post', 'stolbId', postUsed],
+    ['jumper', 'assortmentJumperId', jumperUsed],
+  ] as const) {
+    // Validate the original FK, never its general numeric mapping or a caption.
+    const rawId = apiData[fk]
+    const validId = isPositiveSafeInteger(rawId) || parsePositiveDecimalId(rawId).kind === 'valid'
+    const missingId = rawId === null || rawId === undefined || rawId === ''
+    const descriptor = used === true && !validId
+      ? { profile: null, profileProblem: missingId
+        ? { code: 'missing', message: 'Необходимо выбрать трубу.' }
+        : { code: 'invalid', message: 'Некорректный идентификатор выбранной трубы.' } }
+      : parsePipeProfileDescriptor(apiData[`${prefix}Profile`], apiData[`${prefix}ProfileProblem`], used)
+    if (refMap[`${prefix}Profile`]) refMap[`${prefix}Profile`].value = descriptor.profile
+    if (refMap[`${prefix}ProfileProblem`]) refMap[`${prefix}ProfileProblem`].value = descriptor.profileProblem
   }
 }

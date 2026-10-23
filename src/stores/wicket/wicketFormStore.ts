@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import type { CalcBlock } from './types'
+import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
 import type { JumperPlacement, JumperPlacementProblem } from '../../app/api/jumperProperties'
 import type {
   WicketAccessoryCompositionResponse,
@@ -50,6 +51,10 @@ const postsPresenceProblem = ref<JumperPlacementProblem | null>(null)
 const jumperPlacement = ref<JumperPlacement | null>(null)
 const jumperPlacementProblem = ref<JumperPlacementProblem | null>(null)
 const stolbId                    = ref<string | number>('')
+const postProfile = ref<PipeProfile | null>(null)
+const postProfileProblem = ref<PipeProfileProblem | null>(null)
+const jumperProfile = ref<PipeProfile | null>(null)
+const jumperProfileProblem = ref<PipeProfileProblem | null>(null)
 const stolbName                  = ref<string>('')
 const openingOptionName         = ref<string>('')
 const openingOptionId           = ref<number | null>(null)
@@ -310,6 +315,10 @@ const fieldsFilled = ref<number>(0)
     jumperPlacement.value = null
     jumperPlacementProblem.value = null
     stolbId.value = ''
+    postProfile.value = null
+    postProfileProblem.value = null
+    jumperProfile.value = null
+    jumperProfileProblem.value = null
     stolbName.value = ''
     openingOptionName.value = ''
     openingOptionId.value = null
@@ -640,6 +649,10 @@ const fieldsFilled = ref<number>(0)
       jumperPlacement,
       jumperPlacementProblem,
       stolbId,
+      postProfile,
+      postProfileProblem,
+      jumperProfile,
+      jumperProfileProblem,
       stolbName,
       openingOptionName,
       openingOptionId,
@@ -1000,6 +1013,10 @@ const fieldsFilled = ref<number>(0)
     jumperPlacement,
     jumperPlacementProblem,
     stolbId,
+    postProfile,
+    postProfileProblem,
+    jumperProfile,
+    jumperProfileProblem,
     stolbName,
     openingOptionName,
     openingOptionId,
