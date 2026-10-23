@@ -244,7 +244,7 @@ describe('useCalculation', () => {
       expect(calc.isThereLock.value).toBe(0)
       expect(calc.isThereLockName.value).toBe('Нет')
       expect(calc.widthProyema.value).toBe('1100')
-      expect(calc.shieldType.value).toBe('Тип_3')
+      expect(calc.shieldType.value).toBe('upperAndLowerNet')
       expect(calc.heightTopPart.value).toBe('150')
       expect(calc.assortmentHeightUpperNetId.value).toBe(11)
       expect(calc.assortmentHeightLowerNetId.value).toBe(12)

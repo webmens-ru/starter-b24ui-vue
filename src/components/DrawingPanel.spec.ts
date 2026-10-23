@@ -18,7 +18,7 @@ const calc = {
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref({ opensOutward: true, hingeSide: 'left' }),
-  shieldType: ref('Тип_1'),
+  shieldType: ref('noNet'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
   widthSidePart: ref('300'),

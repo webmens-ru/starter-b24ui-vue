@@ -56,12 +56,55 @@ describe('ShieldType top-only subtype', () => {
     calc.number.value = 42
     calc.productRowId.value = 7
     calc.modelId.value = '1'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
     vi.mocked(saveWicketData).mockClear()
+  })
+
+  it('does not save, calculate or clear nets for unresolved hydrated subtype', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = ''
+    calc.heightTopPart.value = '150'
+    calc.assortmentHeightUpperNetId.value = 31
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.shieldType.value).toBe('')
+    expect(calc.heightTopPart.value).toBe('150')
+    expect(calc.assortmentHeightUpperNetId.value).toBe(31)
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.find('input[value="upperNet"]').setValue(true)
+    await flushPromises()
+    expect(calc.shieldType.value).toBe('upperNet')
+    expect(calc.heightTopPart.value).toBe('150')
+    expect(calc.assortmentHeightUpperNetId.value).toBe(31)
+    expect(saveWicketData).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it.each([['right', 'g'], ['left', 'v']] as const)('chooses images from %s hinge property, never opening ID', async (hingeSide, suffix) => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.openingOrientation.value = { opensOutward: false, hingeSide }
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(wrapper.find('img[alt="Без сеток"]').attributes('src')).toContain(`/w_${suffix}_1.1.png`)
+    wrapper.unmount()
+  })
+
+  it('does not guess image direction without opening properties', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 1
+    calc.openingOrientation.value = null
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(wrapper.find('img[alt="Без сеток"]').exists()).toBe(false)
+    wrapper.unmount()
   })
 
   it('rejects an invalid visible upper mesh and blocks Next', async () => {
     const calc = useCalculation()
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '0'
     const wrapper = mountShieldType()
     await flushPromises()
@@ -77,7 +120,7 @@ describe('ShieldType top-only subtype', () => {
 
   it('saves valid upper mesh and emits Next once', async () => {
     const calc = useCalculation()
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '150'
     calc.assortmentHeightUpperNetId.value = 31
     const wrapper = mountShieldType()
@@ -93,7 +136,7 @@ describe('ShieldType top-only subtype', () => {
 
   it('explicitly clears the upper net assortment when the customer provides it', async () => {
     const calc = useCalculation()
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '150'
     calc.netWidthProviderTop.value = 'customer'
     calc.assortmentHeightUpperNetId.value = 31
@@ -110,7 +153,7 @@ describe('ShieldType top-only subtype', () => {
 
   it('allows only one Next attempt while saving and rejects an overlapping guard call', async () => {
     const calc = useCalculation()
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '150'
     calc.assortmentHeightUpperNetId.value = 31
     const wrapper = mountShieldType()
@@ -137,11 +180,11 @@ describe('ShieldType top-only subtype', () => {
     await flushPromises()
 
     expect(wrapper.findAll('.shield-grid input').map(input => input.attributes('value'))).toEqual([
-      'Тип_1',
-      'Тип_2',
-      'Тип_5',
-      'Тип_3',
-      'Тип_4',
+      'noNet',
+      'lowerNet',
+      'upperNet',
+      'upperAndLowerNet',
+      'sideNet',
     ])
     expect(wrapper.findAll('.shield-grid img').map(image => image.attributes('alt'))).toEqual([
       'Без сеток',
@@ -155,7 +198,7 @@ describe('ShieldType top-only subtype', () => {
 
   it('keeps upper mesh and clears stale lower and side values on selection', async () => {
     const calc = useCalculation()
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.heightTopPart.value = '150'
     calc.assortmentHeightUpperNetId.value = 31
     calc.heightLowerPart.value = '200'
@@ -167,8 +210,8 @@ describe('ShieldType top-only subtype', () => {
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    expect(wrapper.find('input[value="Тип_5"]').exists()).toBe(true)
-    await wrapper.get('input[value="Тип_5"]').setValue(true)
+    expect(wrapper.find('input[value="upperNet"]').exists()).toBe(true)
+    await wrapper.get('input[value="upperNet"]').setValue(true)
     await flushPromises()
 
     expect(wrapper.text()).toContain('Высота сетки верхней части')
@@ -176,7 +219,7 @@ describe('ShieldType top-only subtype', () => {
     expect(wrapper.text()).not.toContain('Ширина сетки боковой решётки')
     expect(wrapper.get('img[alt="Сетка сверху"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
     expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({
-      shieldType: 'Тип_5',
+      shieldType: 'upperNet',
       heightTopPart: '150',
       heightLowerPart: '0',
       widthSidePart: '0',
@@ -196,7 +239,7 @@ describe('ShieldType top-only subtype', () => {
   it('restores Type 5 upper mesh and uses the shared preview directory for another model', async () => {
     const calc = useCalculation()
     calc.modelId.value = '11'
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '150'
     calc.assortmentHeightUpperNetId.value = 31
     calc.netWidthProviderTop.value = 'executor'
@@ -204,13 +247,13 @@ describe('ShieldType top-only subtype', () => {
     const wrapper = mountShieldType()
     await flushPromises()
 
-    expect((wrapper.get('input[value="Тип_5"]').element as HTMLInputElement).checked).toBe(true)
+    expect((wrapper.get('input[value="upperNet"]').element as HTMLInputElement).checked).toBe(true)
     expect(wrapper.text()).toContain('Высота сетки верхней части')
     expect(wrapper.find('#heightTopPart').exists()).toBe(true)
     expect(calc.heightTopPart.value).toBe('150')
     expect(wrapper.get('img[alt="Сетка сверху"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
     expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({
-      shieldType: 'Тип_5',
+      shieldType: 'upperNet',
       heightTopPart: '150',
       assortmentHeightUpperNetId: 31,
     })

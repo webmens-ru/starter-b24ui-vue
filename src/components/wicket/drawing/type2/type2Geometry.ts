@@ -147,7 +147,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const postWidth = jumper.postWidth
   const { hingeSide } = parseOpeningOrientation(source.openingOrientation)
   const gateSubtype = resolveFrameSubtype(source.shieldType)
-  const capabilities = frameSubtypeCapabilities(gateSubtype)
+  const capabilities = frameSubtypeCapabilities(source.shieldType)
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)
   const upperPartHeight = numberInRange(source.heightTopPart, 300, 0, 1000)
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)

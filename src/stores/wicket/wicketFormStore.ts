@@ -20,6 +20,7 @@ import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
 import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
+import { frameSubtypeLabel, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -151,7 +152,7 @@ const sostoyaniyeProyema = ref<string>('Готов')
 const raspolozheniyePolotna = ref<FillingOrientationSelection>('vertical')
 
 // Поля шага "Тип щита"
-const shieldType       = ref<string>('Тип_1')
+const shieldType       = ref<FrameSubtypeSelection>('noNet')
 const colorShieldId   = ref<string | number>('')
 const colorShieldName = ref<string>('')
 const colorShieldHex  = ref<string>('')
@@ -380,7 +381,7 @@ const fieldsFilled = ref<number>(0)
     clearanceProyema.value = ''
     sostoyaniyeProyema.value = 'Готов'
     raspolozheniyePolotna.value = 'vertical'
-    shieldType.value = 'Тип_1'
+    shieldType.value = 'noNet'
     colorShieldId.value = ''
     colorShieldName.value = ''
     colorShieldHex.value = ''
@@ -603,7 +604,7 @@ const fieldsFilled = ref<number>(0)
           completed = !!(idFacade.value && String(idFacade.value))
           break
         case 'page3':
-          completed = notEmpty(shieldType.value)
+          completed = isFrameSubtypeCode(shieldType.value)
           break
         case 'page_painting':
           completed = isParticipantRole(doesPaintingFrame.value)
@@ -944,7 +945,7 @@ const fieldsFilled = ref<number>(0)
 
     // Тип щита
     const shieldParams: CalcBlock['params'] = [
-      { name: 'Тип щита', value: shieldType.value },
+      { name: 'Тип щита', value: frameSubtypeLabel(shieldType.value) },
     ]
     const shieldCapabilities = frameSubtypeCapabilities(shieldType.value)
     if (shieldCapabilities.top && heightTopPart.value && heightTopPart.value !== '0') {

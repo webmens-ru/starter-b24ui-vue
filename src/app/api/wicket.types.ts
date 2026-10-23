@@ -4,6 +4,10 @@ import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
 import type { FillingMaterialGroup, FillingSide } from '../fillingMaterialGroups'
 import type { FillingSideCount } from '../fillingSideCounts'
 import type { FillingOrientation } from '../fillingOrientations'
+import type { FrameSubtypeCode } from '../frameSubtypes'
+
+export interface FrameSubtypeProperties { frameSubtypeCode?: FrameSubtypeCode | null }
+export interface FrameSubtypeProblem { code: 'missing' | 'invalid'; message: string }
 
 export interface FillingOrientationProperties { fillingOrientationCode?: FillingOrientation | null }
 export interface FillingOrientationProblem { code: 'missing' | 'invalid'; message: string }
@@ -43,7 +47,7 @@ export interface OpeningOptionsResponse {
   problems: Array<{ id: number; message: string }>
 }
 
-export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties {
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties {
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -441,7 +445,8 @@ export interface CompanyScopedPayload {
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties {
+export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties {
+  frameSubtypeProblem?: FrameSubtypeProblem | null
   fillingOrientationProblem?: FillingOrientationProblem | null
   fillingSideCountProblem?: FillingSideCountProblem | null
   fillingGroupProblems?: FillingGroupProblems

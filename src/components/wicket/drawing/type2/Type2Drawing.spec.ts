@@ -18,7 +18,7 @@ const calc = {
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
-  shieldType: ref('Тип_1'),
+  shieldType: ref('noNet'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
   widthSidePart: ref('300'),
@@ -193,7 +193,7 @@ describe('Type2Drawing', () => {
     calc.postProfile.value = { sizeA: 50, sizeB: 50 }
     calc.openingOptionName.value = 'Наружу / Левая'
     calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
     calc.fillingProfileFacade.value = { kind: 'c8' }
@@ -262,7 +262,7 @@ describe('Type2Drawing', () => {
   })
 
   it('вставляет картинку выбранной сетки только в боковую область подтипа 4', async () => {
-    calc.shieldType.value = 'Тип_4'
+    calc.shieldType.value = 'sideNet'
     calc.widthSidePart.value = '300'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -279,14 +279,14 @@ describe('Type2Drawing', () => {
     expect(Number(netPattern?.getAttribute('height'))).toBeGreaterThan(0)
     expect(net.attributes('fill')).toMatch(/^url\(#type2-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="type2-drawing-net"]').exists()).toBe(false)
 
     calc.sideGrilleNetImage.value = ''
   })
 
-  it.each(['Тип_2', 'Тип_3'])('замощает нижнюю сетку слева направо для %s', (shieldType) => {
+  it.each(['lowerNet', 'upperAndLowerNet'])('замощает нижнюю сетку слева направо для %s', (shieldType) => {
     calc.shieldType.value = shieldType
     calc.heightLowerPart.value = '300'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
@@ -302,12 +302,12 @@ describe('Type2Drawing', () => {
     expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
     expect(net.attributes('fill')).toMatch(/^url\(#type2-lower-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
   })
 
   it('замощает верхнюю сетку слева направо для подтипа 3', async () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.heightTopPart.value = '300'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -321,18 +321,18 @@ describe('Type2Drawing', () => {
     expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
     expect(net.attributes('fill')).toMatch(/^url\(#type2-upper-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_2'
+    calc.shieldType.value = 'lowerNet'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="type2-drawing-upper-net"]').exists()).toBe(false)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.upperGrilleNetImage.value = ''
   })
 
-  it('рисует только верхнюю сетку Тип_5 при 600×1000', () => {
+  it('рисует только верхнюю сетку upperNet при 600×1000', () => {
     calc.widthProyema.value = '600'
     calc.heightProyema.value = '1000'
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '300'
     calc.upperGrilleNetImage.value = '/u.png'
     calc.lowerGrilleNetImage.value = '/l.png'
@@ -347,7 +347,7 @@ describe('Type2Drawing', () => {
     expect(wrapper.find('[data-testid="type2-drawing-net-image"]').exists()).toBe(false)
   })
 
-  it.each(['Тип_2', 'Тип_4'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {
+  it.each(['lowerNet', 'sideNet'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {
     calc.shieldType.value = shieldType
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
@@ -363,13 +363,13 @@ describe('Type2Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.sideGrilleNetImage.value = ''
   })
 
   it('рисует фон верхней сетки перед PNG с той же геометрией', () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -384,13 +384,13 @@ describe('Type2Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
   })
 
   it('использует схематичный цвет для фонов сеток', async () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -400,13 +400,13 @@ describe('Type2Drawing', () => {
     expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
     expect(wrapper.get('[data-testid="type2-drawing-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
 
-    calc.shieldType.value = 'Тип_4'
+    calc.shieldType.value = 'sideNet'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
     await wrapper.vm.$nextTick()
 
     expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
     calc.sideGrilleNetImage.value = ''

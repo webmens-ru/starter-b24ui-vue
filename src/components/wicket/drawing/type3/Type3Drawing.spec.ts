@@ -137,7 +137,7 @@ describe('Type3Drawing', () => {
     expect(wrapper.find('[data-testid="type3-jumper-background"]').exists()).toBe(false)
   })
 
-  it.each(['Тип_3', 'Тип_5'])('рисует верхнюю сетку %s за рамой и сохраняет её при скрытии штакетин', async (shieldType) => {
+  it.each(['upperAndLowerNet', 'upperNet'] as const)('рисует верхнюю сетку %s за рамой и сохраняет её при скрытии штакетин', async (shieldType) => {
     const store = useWicketFormStore()
     store.widthProyema = '600'
     store.heightProyema = '1000'
@@ -165,7 +165,7 @@ describe('Type3Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(html.indexOf('data-testid="type3-upper-net-background"')).toBeLessThan(html.indexOf('data-testid="type3-upper-net"'))
     expect(html.indexOf('data-testid="type3-upper-net"')).toBeLessThan(html.indexOf('data-testid="type3-frame"'))
-    expect(wrapper.find('[data-testid="type3-lower-rail"]').exists()).toBe(shieldType === 'Тип_3')
+    expect(wrapper.find('[data-testid="type3-lower-rail"]').exists()).toBe(shieldType === 'upperAndLowerNet')
 
     await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
     expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
@@ -177,7 +177,7 @@ describe('Type3Drawing', () => {
 
   it('uses a different upper net pattern ID for each drawing instance', () => {
     const store = useWicketFormStore()
-    store.shieldType = 'Тип_5'
+    store.shieldType = 'upperNet'
     store.heightTopPart = '300'
     store.upperGrilleNetImage = '/upper.png'
 
@@ -201,7 +201,7 @@ describe('Type3Drawing', () => {
     }
     vi.stubGlobal('Image', NetImage)
     const store = useWicketFormStore()
-    store.shieldType = 'Тип_5'
+    store.shieldType = 'upperNet'
     store.heightTopPart = '300'
     store.upperGrilleNetImage = '/old.png'
     const wrapper = mount(Type3Drawing)

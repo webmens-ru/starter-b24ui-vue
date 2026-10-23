@@ -6,7 +6,7 @@ import { buildType3Geometry as computeType3Geometry } from './type3/type3Geometr
 const base = { widthProyema: 1000, heightProyema: 2000, hasStolby: 0,
   openingOrientation: { opensOutward: true, hingeSide: 'left' as const },
   jumperPlacement: 'none' as const, postProfile: null, jumperProfile: null,
-  shieldType: 'Тип_1', fillSide: 1, numberOfSticks: 4, thicknessFacade: 100 }
+  shieldType: 'noNet', fillSide: 1, numberOfSticks: 4, thicknessFacade: 100 }
 
 describe('current drawings use explicit filling direction', () => {
   it.each(['horizontal', 'vertical'] as const)('uses %s for textures without parsing translated labels', code => {

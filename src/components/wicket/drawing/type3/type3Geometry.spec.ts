@@ -8,7 +8,7 @@ const base = {
   clearanceProyema: 100,
   postProfile: { sizeA: 80, sizeB: 80 }, hasStolby: 1,
   stolbName: '80/80/3',
-  shieldType: 'Тип_1',
+  shieldType: 'noNet',
   numberOfSticks: 8,
   gapName: 28,
   thicknessFacade: 100,
@@ -80,11 +80,11 @@ describe('buildType3Geometry', () => {
   })
 
   it.each([
-    ['Тип_1', false, false, false],
-    ['Тип_2', true, false, false],
-    ['Тип_3', true, true, false],
-    ['Тип_4', false, false, true],
-    ['Тип_5', false, true, false],
+    ['noNet', false, false, false],
+    ['lowerNet', true, false, false],
+    ['upperAndLowerNet', true, true, false],
+    ['sideNet', false, false, true],
+    ['upperNet', false, true, false],
   ] as const)('maps %s to its internal rails', (shieldType, lower, upper, vertical) => {
     const rails = buildType3Geometry({ ...base, shieldType }).rails
     expect(rails.lower.visible).toBe(lower)
@@ -92,7 +92,7 @@ describe('buildType3Geometry', () => {
     expect(rails.vertical.visible).toBe(vertical)
   })
 
-  it.each(['Тип_3', 'Тип_5'])('places the %s upper net above its rail and pickets below it', (shieldType) => {
+  it.each(['upperAndLowerNet', 'upperNet'])('places the %s upper net above its rail and pickets below it', (shieldType) => {
     const geometry = buildType3Geometry({
       widthProyema: 600,
       heightProyema: 1000,
@@ -117,7 +117,7 @@ describe('buildType3Geometry', () => {
       widthProyema: 600,
       heightProyema: 1000,
       clearanceProyema: 50,
-      shieldType: 'Тип_5',
+      shieldType: 'upperNet',
       heightTopPart: 300,
       heightLowerPart: 200,
       numberOfSticks: 4,
@@ -135,7 +135,7 @@ describe('buildType3Geometry', () => {
       widthProyema: 600,
       heightProyema: 1000,
       clearanceProyema: 50,
-      shieldType: 'Тип_5',
+      shieldType: 'upperNet',
       heightTopPart: 900,
       numberOfSticks: 4,
       raspolozheniyePolotna: direction,
@@ -155,7 +155,7 @@ describe('buildType3Geometry', () => {
   })
 
   it('does not expose an upper net for a subtype without a top region', () => {
-    const geometry = buildType3Geometry({ ...base, shieldType: 'Тип_2', upperGrilleNetImage: '/upper.png' })
+    const geometry = buildType3Geometry({ ...base, shieldType: 'lowerNet', upperGrilleNetImage: '/upper.png' })
 
     expect(geometry.upperNetArea.visible).toBe(false)
     expect(geometry.upperNetImage).toBe('')

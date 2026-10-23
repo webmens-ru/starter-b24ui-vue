@@ -8,6 +8,7 @@ import { readParticipantRole } from '../../app/api/legacyParticipantRoles'
 import { readFillingMaterialGroup } from '../../app/api/legacyFillingMaterialGroups'
 import { readFillingSideCount } from '../../app/api/legacyFillingSideCounts'
 import { readFillingOrientation } from '../../app/api/legacyFillingOrientations'
+import { readFrameSubtype } from '../../app/api/legacyFrameSubtypes'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -93,7 +94,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   doesAssembly: 'manufacturer',
   nalichieStolbovName: 'Со столбами',
   sostoyaniyeProyema: 'Готов',
-  shieldType: 'Тип_1',
   grilleLocation: 'Возле петель',
   netWidthProviderTop: 'executor',
   netWidthProviderLower: 'executor',
@@ -172,6 +172,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'shieldType' || key === 'frameSubtypeCode' || key === 'frameSubtypeProblem') continue
     if (key === 'raspolozheniyePolotna' || key === 'fillingOrientationCode' || key === 'fillingOrientationProblem') continue
     if (key === 'fillSide' || key === 'fillingSideCount' || key === 'fillingSideCountProblem') continue
     if (key === 'materialFacadeGlob' || key === 'materialYardGlob'
@@ -186,6 +187,10 @@ export function applyWicketApiFieldMappings(
       || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
     if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
+  }
+  if (refMap.shieldType && (Object.prototype.hasOwnProperty.call(apiData, 'shieldType')
+    || Object.prototype.hasOwnProperty.call(apiData, 'frameSubtypeCode'))) {
+    refMap.shieldType.value = readFrameSubtype(apiData)
   }
   if (refMap.raspolozheniyePolotna && (Object.prototype.hasOwnProperty.call(apiData, 'raspolozheniyePolotna')
     || Object.prototype.hasOwnProperty.call(apiData, 'fillingOrientationCode'))) {

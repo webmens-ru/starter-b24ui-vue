@@ -559,12 +559,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 0))
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.find('input[value="Тип_2"]').setValue(true)
+    await wrapper.find('input[value="lowerNet"]').setValue(true)
     await new Promise(r => setTimeout(r, 0))
 
     const saveCalls = vi.mocked(saveWicketData).mock.calls
     expect(saveCalls[saveCalls.length - 1]?.[0]).toMatchObject({
-      shieldType: 'Тип_2',
+      shieldType: 'lowerNet',
     })
     expect(calc.colorShieldId.value).toBe('7')
     expect(calc.colorShieldName.value).toBe('Сохранённый цвет')

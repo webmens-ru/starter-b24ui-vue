@@ -1,5 +1,5 @@
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
-import { frameSubtypeCapabilities } from '../../frameSubtype'
+import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 
@@ -87,6 +87,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
+  resolveFrameSubtype(source.shieldType)
   const capabilities = frameSubtypeCapabilities(source.shieldType)
   const lowerVisible = capabilities.lower
   const upperVisible = capabilities.top

@@ -3,6 +3,7 @@ import { isParticipantRole, participantRoleFields } from '../participantRoles'
 import { isFillingMaterialGroup } from '../fillingMaterialGroups'
 import { isFillingSideCount } from '../fillingSideCounts'
 import { isFillingOrientation } from '../fillingOrientations'
+import { isFrameSubtypeCode } from '../frameSubtypes'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -59,6 +60,14 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.frameSubtypeProblem
+  const explicitSubtype = Object.prototype.hasOwnProperty.call(canonicalPayload, 'frameSubtypeCode')
+  const subtype = explicitSubtype ? canonicalPayload.frameSubtypeCode : canonicalPayload.shieldType
+  delete canonicalPayload.shieldType
+  if (explicitSubtype || (subtype !== undefined && subtype !== '')) {
+    if (subtype !== null && !isFrameSubtypeCode(subtype)) throw new TypeError('Некорректный тип щита: frameSubtypeCode')
+    canonicalPayload.frameSubtypeCode = subtype
+  }
   delete canonicalPayload.fillingOrientationProblem
   const explicitOrientation = Object.prototype.hasOwnProperty.call(canonicalPayload, 'fillingOrientationCode')
   const orientation = explicitOrientation ? canonicalPayload.fillingOrientationCode : canonicalPayload.raspolozheniyePolotna

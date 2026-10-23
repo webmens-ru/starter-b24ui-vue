@@ -30,7 +30,7 @@ describe('computeType2Geometry', () => {
       stolbName: 'Труба 60×60×2',
       openingOptionName: 'Произвольная подпись',
       openingOrientation: { opensOutward: false, hingeSide: 'right' },
-      shieldType: 'Тип_4',
+      shieldType: 'sideNet',
       heightLowerPart: '410',
       heightTopPart: '275',
       widthSidePart: '360',
@@ -147,10 +147,10 @@ describe('computeType2Geometry', () => {
   })
 
   it.each([
-    ['Тип_1', 'type1'],
-    ['Тип_2', 'type2'],
-    ['Тип_3', 'type3'],
-    ['Тип_4', 'type4'],
+    ['noNet', 'type1'],
+    ['lowerNet', 'type2'],
+    ['upperAndLowerNet', 'type3'],
+    ['sideNet', 'type4'],
   ] as const)('строит геометрию подтипа %s', (shieldType, subtype) => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, shieldType , jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 })
 
@@ -166,7 +166,7 @@ describe('computeType2Geometry', () => {
     }
   })
 
-  it.each(['Тип_2', 'Тип_3'])('выделяет нижнюю область сетки для %s', (shieldType) => {
+  it.each(['lowerNet', 'upperAndLowerNet'])('выделяет нижнюю область сетки для %s', (shieldType) => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       shieldType,
       heightLowerPart: '300',
@@ -182,11 +182,11 @@ describe('computeType2Geometry', () => {
     expect(geometry.netImage).toBe('/uploads/nets/lower.webp')
   })
 
-  it('строит только верхнюю сетку и положительное заполнение Тип_5 при 600×1000', () => {
+  it('строит только верхнюю сетку и положительное заполнение upperNet при 600×1000', () => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       widthProyema: 600,
       heightProyema: 1000,
-      shieldType: 'Тип_5',
+      shieldType: 'upperNet',
       heightTopPart: 300,
       upperGrilleNetImage: '/u.png',
       lowerGrilleNetImage: '/l.png',
@@ -209,7 +209,7 @@ describe('computeType2Geometry', () => {
 
   it('выделяет верхнюю область сетки для подтипа 3', () => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
-      shieldType: 'Тип_3',
+      shieldType: 'upperAndLowerNet',
       heightTopPart: '300',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
       jumperProfile: null, jumperPlacement: 'none',
@@ -223,7 +223,7 @@ describe('computeType2Geometry', () => {
     expect(geometry.upperNetImage).toBe('/uploads/nets/upper.webp')
 
     expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
-      shieldType: 'Тип_2',
+      shieldType: 'lowerNet',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
      jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 }).upperNetArea.visible).toBe(false)
   })

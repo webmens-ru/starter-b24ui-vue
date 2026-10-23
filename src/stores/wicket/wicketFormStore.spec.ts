@@ -388,18 +388,18 @@ describe('wicketFormStore restored shield summary', () => {
 
   describe.each(['1', '11'])('model %s', modelId => {
     it.each([
-      ['Тип_1', []],
-      ['Тип_2', [{ name: 'Высота нижней части', value: '200' }]],
-      ['Тип_3', [
+      ['Тип_1', 'Без сеток', []],
+      ['Тип_2', 'Сетка снизу', [{ name: 'Высота нижней части', value: '200' }]],
+      ['Тип_3', 'Сетка снизу и сверху', [
         { name: 'Высота верхней части', value: '300' },
         { name: 'Высота нижней части', value: '200' },
       ]],
-      ['Тип_4', [
+      ['Тип_4', 'Сетка сбоку', [
         { name: 'Ширина боковой части', value: '100' },
         { name: 'Расположение решётки', value: 'Возле замка' },
       ]],
-      ['Тип_5', [{ name: 'Высота верхней части', value: '300' }]],
-    ] as const)('restores %s zone summary without mounting the form', (shieldType, zones) => {
+      ['Тип_5', 'Сетка сверху', [{ name: 'Высота верхней части', value: '300' }]],
+    ] as const)('restores %s zone summary without mounting the form', (shieldType, label, zones) => {
       const store = useWicketFormStore()
       store.loadFromApi({
         modelId,
@@ -416,7 +416,7 @@ describe('wicketFormStore restored shield summary', () => {
 
       const shieldSummary = store.data.find(block => block.blockName === 'Тип щита')
       expect(shieldSummary?.params).toEqual([
-        { name: 'Тип щита', value: shieldType },
+        { name: 'Тип щита', value: label },
         ...zones,
       ])
     })

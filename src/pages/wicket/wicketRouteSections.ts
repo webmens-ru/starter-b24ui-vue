@@ -1,6 +1,7 @@
 import type { WicketRouteSection } from './wicketRoute'
 import { isFillingSideCount } from '../../app/fillingSideCounts'
 import { isFillingOrientation } from '../../app/fillingOrientations'
+import { isFrameSubtypeCode } from '../../app/frameSubtypes'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 const ok = () => ({ valid: true, errors: [] })
@@ -86,7 +87,11 @@ export function postsSection(): WicketRouteSection {
 }
 
 export function shieldSection(): WicketRouteSection {
-  return section('page3', 'Тип щита', 'shield-type')
+  const result = section('page3', 'Тип щита', 'shield-type')
+  const valid = (state: WicketSharedNavState) => state.shieldType === undefined || isFrameSubtypeCode(state.shieldType)
+  result.validate = state => valid(state) ? ok() : { valid: false, errors: ['Выберите тип щита'] }
+  result.next = (_from, state) => valid(state) ? undefined : 'page3'
+  return result
 }
 
 export function canvasSection(): WicketRouteSection {

@@ -18,7 +18,7 @@ const c = {
   stolbName: ref('60/60/2'),
   openingOptionName: ref('Наружу / Левая'),
   openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
-  shieldType: ref('Тип_1'),
+  shieldType: ref('noNet'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
   widthSidePart: ref('300'),
@@ -220,7 +220,7 @@ describe('Type1Drawing', () => {
     }
   })
 
-  it.each(['Тип_2', 'Тип_4'])('рисует фон нижней сетки %s перед PNG с той же геометрией', (subtype) => {
+  it.each(['lowerNet', 'sideNet'])('рисует фон нижней сетки %s перед PNG с той же геометрией', (subtype) => {
     c.shieldType.value = subtype
     c.lowerGrilleNetImage.value = '/uploads/nets/lower.webp'
     c.sideGrilleNetImage.value = '/uploads/nets/side.webp'
@@ -233,13 +233,13 @@ describe('Type1Drawing', () => {
     expect(background.attributes('width')).toBe(net.attributes('width'))
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
-    c.shieldType.value = 'Тип_1'
+    c.shieldType.value = 'noNet'
     c.lowerGrilleNetImage.value = ''
     c.sideGrilleNetImage.value = ''
   })
 
   it('рисует фон верхней сетки подтипа 3 перед PNG с той же геометрией', () => {
-    c.shieldType.value = 'Тип_3'
+    c.shieldType.value = 'upperAndLowerNet'
     c.lowerGrilleNetImage.value = '/uploads/nets/lower.webp'
     c.upperGrilleNetImage.value = '/uploads/nets/upper.webp'
     const w = mount(Type1Drawing)
@@ -251,17 +251,17 @@ describe('Type1Drawing', () => {
     expect(background.attributes('width')).toBe(net.attributes('width'))
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
-    c.shieldType.value = 'Тип_1'
+    c.shieldType.value = 'noNet'
     c.lowerGrilleNetImage.value = ''
     c.upperGrilleNetImage.value = ''
   })
 
-  it('рисует только верхнюю сетку Тип_5 при 600×1000', () => {
+  it('рисует только верхнюю сетку upperNet при 600×1000', () => {
     const previous = { width: c.widthProyema.value, height: c.heightProyema.value, subtype: c.shieldType.value, upper: c.upperGrilleNetImage.value, lower: c.lowerGrilleNetImage.value }
     try {
       c.widthProyema.value = '600'
       c.heightProyema.value = '1000'
-      c.shieldType.value = 'Тип_5'
+      c.shieldType.value = 'upperNet'
       c.heightTopPart.value = '300'
       c.upperGrilleNetImage.value = '/u.png'
       c.lowerGrilleNetImage.value = '/l.png'
@@ -283,7 +283,7 @@ describe('Type1Drawing', () => {
   })
 
   it('использует схематичные цвета для сеток и заполнения', async () => {
-    c.shieldType.value = 'Тип_3'
+    c.shieldType.value = 'upperAndLowerNet'
     c.lowerGrilleNetImage.value = '/uploads/nets/lower.webp'
     c.upperGrilleNetImage.value = '/uploads/nets/upper.webp'
     const w = mount(Type1Drawing)
@@ -291,7 +291,7 @@ describe('Type1Drawing', () => {
     expect(w.get('[data-testid="type1-net-background"]').attributes('fill')).toBe('#d1d5db')
     expect(w.get('[data-testid="type1-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
     expect(w.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#bfdbfe')
-    c.shieldType.value = 'Тип_1'
+    c.shieldType.value = 'noNet'
     c.lowerGrilleNetImage.value = ''
     c.upperGrilleNetImage.value = ''
   })
