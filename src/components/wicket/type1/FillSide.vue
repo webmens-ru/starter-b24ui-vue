@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { computed, onMounted, watch } from 'vue'
@@ -17,16 +18,13 @@ const fillSideOptions = [
   { label: 'Две стороны',  value: 'Две стороны' },
 ]
 
-const materialOptions = [
-  { label: 'Сайдинг',   value: 'Сайдинг' },
-  { label: 'Профлист',  value: 'Профлист' },
-]
+const materialOptions = fillingMaterialGroupOptions(['siding', 'profnastil'])
 
 /** Калитка тип 1: первая сторона (фасад) — только сайдинг (см. бэкенд Type1). */
 const isType1 = computed(() => String(calc.modelId.value) === '1')
 
 const materialFacadeOptions = computed(() =>
-  isType1.value ? [{ label: 'Сайдинг', value: 'Сайдинг' }] : materialOptions,
+  isType1.value ? fillingMaterialGroupOptions(['siding']) : materialOptions,
 )
 
 function clearFacadeSelection() {
@@ -55,10 +53,10 @@ function onMaterialFacadeChange() {
 
 /** Старые расчёты / API могли вернуть профлист на фасаде — для типа 1 недопустимо. */
 function coerceType1FacadeToSiding(): void {
-  if (!isType1.value || calc.materialFacadeGlob.value !== 'Профлист') {
+  if (!isType1.value || calc.materialFacadeGlob.value !== 'profnastil') {
     return
   }
-  calc.materialFacadeGlob.value = 'Сайдинг'
+  calc.materialFacadeGlob.value = 'siding'
   clearFacadeSelection()
   // Двор (вторая сторона) для типа 1 по-прежнему может быть профлистом — не трогаем materialYardGlob.
 }
@@ -76,10 +74,10 @@ async function save() {
   const params = [
     { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
-    { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
+    { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ]
   if (calc.fillSide.value === 'Две стороны') {
-    params.push({ name: 'Материал заполнения (двор)', value: calc.materialYardGlob.value ?? '' })
+    params.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
   }
   calc.updateOrCreateBlock('Заполнение', params)
 
@@ -128,6 +126,8 @@ async function save() {
 }
 
 onMounted(async () => {
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
+  if (calc.materialFacadeGlob.value === null) calc.materialFacadeGlob.value = 'siding'
   coerceType1FacadeToSiding()
   calc.setActivePage('page2')
   await save()

@@ -1,5 +1,6 @@
 import type { WicketSavePayload } from './wicket.types'
 import { isParticipantRole, participantRoleFields } from '../participantRoles'
+import { isFillingMaterialGroup } from '../fillingMaterialGroups'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -56,6 +57,17 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.fillingGroupProblems
+  for (const prefix of ['materialFacade', 'materialYard']) {
+    const codeKey = `${prefix}GroupCode`
+    const oldKey = `${prefix}Glob`
+    const explicit = Object.prototype.hasOwnProperty.call(canonicalPayload, codeKey)
+    const value = explicit ? canonicalPayload[codeKey] : canonicalPayload[oldKey]
+    delete canonicalPayload[oldKey]
+    if (!explicit && (value === undefined || value === '')) continue
+    if (value !== null && !isFillingMaterialGroup(value)) throw new TypeError(`Некорректная группа заполнения: ${codeKey}`)
+    canonicalPayload[codeKey] = value
+  }
   for (const field of participantRoleFields) {
     const codeKey = `${field}Code`
     const explicit = Object.prototype.hasOwnProperty.call(canonicalPayload, codeKey)

@@ -287,7 +287,8 @@ export async function mockGetFillingAppearanceOptions(
   materialGroup: string,
 ): Promise<FillingAppearanceOptions> {
   await delay(150)
-  const isSiding = materialGroup === 'Сайдинг'
+  if (materialGroup !== 'siding' && materialGroup !== 'profnastil') throw new TypeError('Invalid filling group')
+  const isSiding = materialGroup === 'siding'
   return {
     manufacturers: isSiding
       ? [{ id: 1, name: 'Кровельный центр' }]
@@ -694,8 +695,8 @@ export async function mockLoadWicketData(
     penProvidedCode: 'manufacturer',
     penInstalledCode: 'manufacturer',
     fillSide: 'Одна сторона',
-    materialFacadeGlob: 'Сайдинг',
-    materialYardGlob: null,
+    materialFacadeGroupCode: 'siding',
+    materialYardGroupCode: null,
     nalichieStolbovName: 'Со столбами',
     hasStolby: 1,
     stolbId: 7,

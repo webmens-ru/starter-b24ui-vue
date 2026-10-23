@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { onMounted } from 'vue'
@@ -17,9 +18,7 @@ const fillSideOptions = [
   { label: 'Две стороны',  value: 'Две стороны' },
 ]
 
-const materialOptions = [
-  { label: 'SP сайдинг', value: 'SP сайдинг' },
-]
+const materialOptions = fillingMaterialGroupOptions(['spSiding'])
 
 function clearFacadeSelection() {
   calc.idFacade.value = ''
@@ -70,10 +69,10 @@ async function save() {
   const params = [
     { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
-    { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
+    { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ]
   if (calc.fillSide.value === 'Две стороны') {
-    params.push({ name: 'Материал заполнения (двор)', value: calc.materialYardGlob.value ?? '' })
+    params.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
   }
   calc.updateOrCreateBlock('Заполнение', params)
 
@@ -118,13 +117,14 @@ async function save() {
 }
 
 onMounted(async () => {
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   calc.setActivePage('page2')
   // Дефолт материала «SP сайдинг» (единственная опция) — выставляем, если ещё не выбран
   if (!calc.materialFacadeGlob.value) {
-    calc.materialFacadeGlob.value = 'SP сайдинг'
+    calc.materialFacadeGlob.value = 'spSiding'
   }
   if (calc.fillSide.value === 'Две стороны' && !calc.materialYardGlob.value) {
-    calc.materialYardGlob.value = 'SP сайдинг'
+    calc.materialYardGlob.value = 'spSiding'
   }
   await save()
 })

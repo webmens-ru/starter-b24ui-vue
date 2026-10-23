@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { onMounted } from 'vue'
@@ -22,16 +23,26 @@ function clearYardSelection() {
   calc.colorYard.value = ''
 }
 
+async function chooseMaterialGroup() {
+  calc.materialFacadeGlob.value = 'sheet'
+  calc.materialYardGlob.value = null
+  await save()
+}
+
 async function save() {
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
+    await saveWicketData({ ...calc.getBaseSavePayload(), providesMaterial: calc.providesMaterial.value })
+    return
+  }
   calc.fillSide.value = 'Одна сторона'
-  calc.materialFacadeGlob.value = 'Лист'
+  calc.materialFacadeGlob.value = 'sheet'
   calc.materialYardGlob.value = null
   clearYardSelection()
 
   calc.updateOrCreateBlock('Заполнение', [
     { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { name: 'Сторона заполнения',          value: calc.fillSide.value },
-    { name: 'Материал заполнения (фасад)', value: calc.materialFacadeGlob.value },
+    { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ])
 
   await saveWicketData({
@@ -67,6 +78,7 @@ async function save() {
 }
 
 onMounted(async () => {
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
   calc.setActivePage('page2')
   await save()
 })
@@ -103,11 +115,12 @@ onMounted(async () => {
       <div>
         <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (фасад)</h2>
         <div class="option-grid">
-          <div class="lock-card selected">
+          <label class="lock-card" :class="{ selected: calc.materialFacadeGlob.value === 'sheet' }">
+            <input v-model="calc.materialFacadeGlob.value" type="radio" name="materialFacadeGroup" value="sheet" class="sr-only" @click="chooseMaterialGroup" />
             <div class="card-content">
               <span class="block text-sm font-semibold text-center">Лист металлический</span>
             </div>
-          </div>
+          </label>
         </div>
       </div>
 

@@ -106,7 +106,7 @@ describe('ProfnastilYard', () => {
     calc.orderId.value = 42
     calc.productRowId.value = 70
     calc.modelId.value = '1'
-    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYardGlob.value = 'profnastil'
     apiMocks.getProfnastilTable.mockReset()
     apiMocks.getProfnastilTable.mockResolvedValue({
       table: rows,
@@ -139,7 +139,7 @@ describe('ProfnastilYard', () => {
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'Профлист')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'profnastil')
     const payload = apiMocks.saveWicketData.mock.lastCall?.[0]
     expect(payload).toMatchObject({
       idYard: 17,

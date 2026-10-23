@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type6NavState, type6Route } from './type
 function state(overrides: Partial<Type6NavState> = {}): Type6NavState {
   return {
     modelId: '6',
-    materialFacadeGlob: 'Жалюзи',
+    materialFacadeGlob: 'louver',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,

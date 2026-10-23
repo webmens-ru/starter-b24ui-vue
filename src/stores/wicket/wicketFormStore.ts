@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
+import { fillingMaterialGroupLabel } from '../../app/fillingMaterialGroups'
 import type { CalcBlock } from './types'
 import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
 import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
@@ -44,7 +45,7 @@ const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 
 // Поля шага "Заполнение"
 const fillSide            = ref<string>('Одна сторона')
-const materialFacadeGlob = ref<string>('Сайдинг')
+const materialFacadeGlob = ref<string | null>('siding')
 const materialYardGlob   = ref<string | null>(null)
 const fillingProfileFacade = ref<FillingDrawingProfile | null>(null)
 const fillingProfileFacadeProblem = ref<FillingDrawingProfileProblem | null>(null)
@@ -319,7 +320,7 @@ const fieldsFilled = ref<number>(0)
     doesAssembly.value = 'manufacturer'
     participantRoleProblems.value = null
     fillSide.value = 'Одна сторона'
-    materialFacadeGlob.value = 'Сайдинг'
+    materialFacadeGlob.value = 'siding'
     materialYardGlob.value = null
     nalichieStolbovName.value = 'Со столбами'
     hasStolby.value = null
@@ -862,16 +863,16 @@ const fieldsFilled = ref<number>(0)
     const fillParams: CalcBlock['params'] = [
       { name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
       { name: 'Сторона заполнения', value: fillSide.value },
-      { name: 'Материал заполнения (фасад)', value: materialFacadeGlob.value },
+      { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(materialFacadeGlob.value) },
     ]
     if (fillSide.value === 'Две стороны') {
-      fillParams.push({ name: 'Материал заполнения (двор)', value: materialYardGlob.value ?? '' })
+      fillParams.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
     }
     blocks.push({ blockName: 'Заполнение', params: fillParams })
 
     // Заполнение (фасад) — сайдинг или профлист
     if (idFacade.value || materialFacade.value) {
-      const isProfnastil = materialFacadeGlob.value === 'Профлист'
+      const isProfnastil = materialFacadeGlob.value === 'profnastil'
       blocks.push({
         blockName: 'Заполнение (фасад)',
         params: isProfnastil
@@ -894,7 +895,7 @@ const fieldsFilled = ref<number>(0)
 
     // Заполнение (двор) — только при "Две стороны"
     if (fillSide.value === 'Две стороны' && (idYard.value || materialYard.value)) {
-      const isProfnastil = materialYardGlob.value === 'Профлист'
+      const isProfnastil = materialYardGlob.value === 'profnastil'
       blocks.push({
         blockName: 'Заполнение (двор)',
         params: isProfnastil

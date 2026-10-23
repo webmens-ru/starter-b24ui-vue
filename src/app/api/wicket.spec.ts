@@ -131,10 +131,10 @@ describe('wicket accessory composition API', () => {
     api.post.mockResolvedValueOnce({ data: { data: response } })
     const { getFillingAppearanceOptions } = await import('./wicket')
 
-    await expect(getFillingAppearanceOptions(1, 'Сайдинг')).resolves.toEqual(response)
+    await expect(getFillingAppearanceOptions(1, 'siding')).resolves.toEqual(response)
     expect(api.post).toHaveBeenCalledWith(
       '/api/wicket/type1/get-filling-appearance-options',
-      { materialGroup: 'Сайдинг' },
+      { materialGroupCode: 'siding' },
     )
   })
 

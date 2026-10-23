@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type5NavState, type5Route } from './type
 function state(overrides: Partial<Type5NavState> = {}): Type5NavState {
   return {
     modelId: '5',
-    materialFacadeGlob: 'SP сайдинг',
+    materialFacadeGlob: 'spSiding',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,
@@ -29,7 +29,7 @@ describe('type5Navigation', () => {
       it('Две стороны → page2_yard_sp', () => {
         expect(getNextPage('page2_facade_sp', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'SP сайдинг',
+          materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })
     })
@@ -88,7 +88,7 @@ describe('type5Navigation', () => {
       it('Две стороны → page2_yard_sp', () => {
         expect(getPrevPage('page5', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'SP сайдинг',
+          materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })
     })

@@ -5,6 +5,7 @@ import { parseFillingDrawingDescriptor } from '../../app/api/fillingDrawingProfi
 import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { participantRoleFields } from '../../app/participantRoles'
 import { readParticipantRole } from '../../app/api/legacyParticipantRoles'
+import { readFillingMaterialGroup } from '../../app/api/legacyFillingMaterialGroups'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -89,7 +90,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   doesPaintingFrame: 'manufacturer',
   doesAssembly: 'manufacturer',
   fillSide: 'Одна сторона',
-  materialFacadeGlob: 'Сайдинг',
   nalichieStolbovName: 'Со столбами',
   raspolozheniyePolotna: 'Вертикально',
   sostoyaniyeProyema: 'Готов',
@@ -172,6 +172,8 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'materialFacadeGlob' || key === 'materialYardGlob'
+      || key === 'materialFacadeGroupCode' || key === 'materialYardGroupCode' || key === 'fillingGroupProblems') continue
     if (participantRoleFields.some(field => key === field || key === `${field}Code`)) continue
     if (key === 'fillingProfileFacade' || key === 'fillingProfileFacadeProblem'
       || key === 'fillingProfileYard' || key === 'fillingProfileYardProblem') continue
@@ -186,6 +188,14 @@ export function applyWicketApiFieldMappings(
   for (const field of participantRoleFields) {
     if (refMap[field] && (Object.prototype.hasOwnProperty.call(apiData, field) || Object.prototype.hasOwnProperty.call(apiData, `${field}Code`))) {
       refMap[field].value = readParticipantRole(apiData, field)
+    }
+  }
+  for (const side of ['facade', 'yard'] as const) {
+    const prefix = side === 'facade' ? 'materialFacade' : 'materialYard'
+    const field = `${prefix}Glob`
+    if (refMap[field] && (Object.prototype.hasOwnProperty.call(apiData, field)
+      || Object.prototype.hasOwnProperty.call(apiData, `${prefix}GroupCode`))) {
+      refMap[field].value = readFillingMaterialGroup(apiData, side)
     }
   }
   const openingReference = Object.prototype.hasOwnProperty.call(apiData, 'openingOptionId')

@@ -235,8 +235,8 @@ describe('useCalculation', () => {
 
       expect(calc.number.value).toBe(42)
       expect(calc.fillSide.value).toBe('Две стороны')
-      expect(calc.materialFacadeGlob.value).toBe('Профлист')
-      expect(calc.materialYardGlob.value).toBe('Сайдинг')
+      expect(calc.materialFacadeGlob.value).toBe('profnastil')
+      expect(calc.materialYardGlob.value).toBe('siding')
       expect(calc.hasStolby.value).toBe(1)
       expect(calc.openingOptionId.value).toBe(2)
       expect(calc.assortmentJumperId.value).toBe(11)

@@ -48,7 +48,7 @@ describe('mock wicket filling API', () => {
   })
 
   it('возвращает справочники внешнего вида отдельно от строк сайдинга', async () => {
-    await expect(mockGetFillingAppearanceOptions('Сайдинг')).resolves.toEqual({
+    await expect(mockGetFillingAppearanceOptions('siding')).resolves.toEqual({
       manufacturers: expect.arrayContaining([
         expect.objectContaining({ id: expect.any(Number), name: expect.any(String) }),
       ]),

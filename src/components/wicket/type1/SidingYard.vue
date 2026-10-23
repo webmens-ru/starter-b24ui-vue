@@ -254,7 +254,7 @@ defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
-  const page = calc.materialYardGlob.value === 'Профлист'
+  const page = calc.materialYardGlob.value === 'profnastil'
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
   calc.setActivePage(page)
@@ -314,7 +314,7 @@ onMounted(async () => {
       v-if="selectedRow"
       ref="appearanceFields"
       :model-id="calc.modelId.value"
-      material-group="Сайдинг"
+      material-group="siding"
       side="yard"
       @change="saveAppearance"
     />

@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type1NavState, type1Route } from './type
 function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
   return {
     modelId: '2',
-    materialFacadeGlob: 'Сайдинг',
+    materialFacadeGlob: 'siding',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,
@@ -15,16 +15,20 @@ function state(overrides: Partial<Type1NavState> = {}): Type1NavState {
 }
 
 describe('type1Navigation', () => {
+  it.each([null, '', 'unknown', 'sheet'])('does not choose a material family for unresolved group %s', materialFacadeGlob => {
+    expect(getNextPage('page2', state({ materialFacadeGlob }))).toBe('page2')
+    expect(getNextPage('page2_facade_siding', state({ fillSide: 'Две стороны', materialYardGlob: materialFacadeGlob }))).toBe('page2')
+  })
   describe('getNextPage — все ветки переключений', () => {
     describe('page2 → facade (материал фасада)', () => {
       it('Сайдинг → page2_facade_siding', () => {
-        expect(getNextPage('page2', state({ materialFacadeGlob: 'Сайдинг' }))).toBe('page2_facade_siding')
+        expect(getNextPage('page2', state({ materialFacadeGlob: 'siding' }))).toBe('page2_facade_siding')
       })
       it('Профлист → page2_facade_profnastil', () => {
-        expect(getNextPage('page2', state({ materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_profnastil')
+        expect(getNextPage('page2', state({ materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_profnastil')
       })
       it('тип 1: даже при Профлист в данных — только page2_facade_siding (фасад только сайдинг)', () => {
-        expect(getNextPage('page2', state({ modelId: '1', materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_siding')
+        expect(getNextPage('page2', state({ modelId: '1', materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_siding')
       })
     })
 
@@ -36,17 +40,17 @@ describe('type1Navigation', () => {
       it('Две стороны + Сайдинг двор → page2_yard_siding', () => {
         expect(getNextPage('page2_facade_siding', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Сайдинг',
+          materialYardGlob: 'siding',
         }))).toBe('page2_yard_siding')
       })
       it('Две стороны + Профлист двор → page2_yard_profnastil', () => {
         expect(getNextPage('page2_facade_siding', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Профлист',
+          materialYardGlob: 'profnastil',
         }))).toBe('page2_yard_profnastil')
         expect(getNextPage('page2_facade_profnastil', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Профлист',
+          materialYardGlob: 'profnastil',
         }))).toBe('page2_yard_profnastil')
       })
     })
@@ -100,32 +104,32 @@ describe('type1Navigation', () => {
 
     describe('yard → facade (по материалу)', () => {
       it('page2_yard_siding, facade=Сайдинг → page2_facade_siding', () => {
-        expect(getPrevPage('page2_yard_siding', state({ materialFacadeGlob: 'Сайдинг' }))).toBe('page2_facade_siding')
+        expect(getPrevPage('page2_yard_siding', state({ materialFacadeGlob: 'siding' }))).toBe('page2_facade_siding')
       })
       it('page2_yard_profnastil, facade=Профлист → page2_facade_profnastil', () => {
-        expect(getPrevPage('page2_yard_profnastil', state({ materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_profnastil')
+        expect(getPrevPage('page2_yard_profnastil', state({ materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_profnastil')
       })
       it('тип 1: с yard → всегда page2_facade_siding', () => {
-        expect(getPrevPage('page2_yard_profnastil', state({ modelId: '1', materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_siding')
+        expect(getPrevPage('page2_yard_profnastil', state({ modelId: '1', materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_siding')
       })
     })
 
     describe('page5 → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_*', () => {
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона', materialFacadeGlob: 'Сайдинг' }))).toBe('page2_facade_siding')
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона', materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_profnastil')
+        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона', materialFacadeGlob: 'siding' }))).toBe('page2_facade_siding')
+        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона', materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_profnastil')
       })
       it('тип 1: одна сторона → всегда page2_facade_siding', () => {
-        expect(getPrevPage('page5', state({ modelId: '1', fillSide: 'Одна сторона', materialFacadeGlob: 'Профлист' }))).toBe('page2_facade_siding')
+        expect(getPrevPage('page5', state({ modelId: '1', fillSide: 'Одна сторона', materialFacadeGlob: 'profnastil' }))).toBe('page2_facade_siding')
       })
       it('Две стороны → page2_yard_*', () => {
         expect(getPrevPage('page5', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Сайдинг',
+          materialYardGlob: 'siding',
         }))).toBe('page2_yard_siding')
         expect(getPrevPage('page5', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Профлист',
+          materialYardGlob: 'profnastil',
         }))).toBe('page2_yard_profnastil')
       })
     })

@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type4NavState, type4Route } from './type
 function state(overrides: Partial<Type4NavState> = {}): Type4NavState {
   return {
     modelId: '4',
-    materialFacadeGlob: 'Ламель',
+    materialFacadeGlob: 'lamella',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,
@@ -29,7 +29,7 @@ describe('type4Navigation', () => {
       it('Две стороны → page2_yard_lamel', () => {
         expect(getNextPage('page2_facade_lamel', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Ламель',
+          materialYardGlob: 'lamella',
         }))).toBe('page2_yard_lamel')
       })
     })
@@ -88,7 +88,7 @@ describe('type4Navigation', () => {
       it('Две стороны → page2_yard_lamel', () => {
         expect(getPrevPage('page5', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Ламель',
+          materialYardGlob: 'lamella',
         }))).toBe('page2_yard_lamel')
       })
     })

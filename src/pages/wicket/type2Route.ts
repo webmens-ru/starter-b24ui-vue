@@ -7,13 +7,15 @@ import {
 } from './wicketRouteSections'
 
 function facadePage(state: WicketSharedNavState): string {
-  return state.materialFacadeGlob === 'Сайдинг'
+  if (state.materialFacadeGlob !== 'siding' && state.materialFacadeGlob !== 'profnastil') return 'page2'
+  return state.materialFacadeGlob === 'siding'
     ? 'page2_facade_siding'
     : 'page2_facade_profnastil'
 }
 
 function yardPage(state: WicketSharedNavState): string {
-  return state.materialYardGlob === 'Сайдинг'
+  if (state.materialYardGlob !== 'siding' && state.materialYardGlob !== 'profnastil') return 'page2'
+  return state.materialYardGlob === 'siding'
     ? 'page2_yard_siding'
     : 'page2_yard_profnastil'
 }

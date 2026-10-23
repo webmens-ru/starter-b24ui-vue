@@ -114,14 +114,14 @@ describe('saveWicketData — данные передаются на бэк', () 
       modelId: '1',
       reachedStep: 'page2',
       fillSide: 'Одна сторона',
-      materialFacadeGlob: 'Сайдинг',
+      materialFacadeGlob: 'siding',
       materialYardGlob: null,
     })
   })
 
   it('FillSide при "Две стороны" передаёт materialYardGlob', async () => {
     calc.fillSide.value = 'Две стороны'
-    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYardGlob.value = 'profnastil'
 
     mount(FillSide, {
       global: {
@@ -133,13 +133,13 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload.materialYardGlob).toBe('Профлист')
+    expect(payload.materialYardGlob).toBe('profnastil')
   })
 
   it('FillSide сбрасывает все поля двора при переходе с сайдинга на профлист', async () => {
     calc.fillSide.value = 'Две стороны'
-    calc.materialFacadeGlob.value = 'Сайдинг'
-    calc.materialYardGlob.value = 'Сайдинг'
+    calc.materialFacadeGlob.value = 'siding'
+    calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
     calc.formYard.value = 'Гладкая'
@@ -156,10 +156,10 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Профлист"]').setValue(true)
+    await wrapper.get('input[value="profnastil"]').setValue(true)
     await flushPromises()
 
-    expect(calc.materialYardGlob.value).toBe('Профлист')
+    expect(calc.materialYardGlob.value).toBe('profnastil')
     expect({
       id: calc.idYard.value,
       manufacturerId: calc.manufacturerYardId.value,
@@ -176,7 +176,7 @@ describe('saveWicketData — данные передаются на бэк', () 
       color: '',
     })
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      materialYardGlob: 'Профлист',
+      materialYardGlob: 'profnastil',
       idYard: null,
       manufacturerYardId: null,
       colorYardId: null,
@@ -186,7 +186,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
   it('FillSide сохраняет явные null после перехода с двух сторон на одну', async () => {
     calc.fillSide.value = 'Две стороны'
-    calc.materialYardGlob.value = 'Сайдинг'
+    calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
     calc.manufacturerYardId.value = 4
@@ -218,7 +218,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   it('FillSide не изменяет настроенный двор при выборе материала фасада', async () => {
     calc.fillSide.value = 'Две стороны'
     calc.materialFacadeGlob.value = ''
-    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYardGlob.value = 'profnastil'
     calc.idYard.value = 27
     calc.materialYard.value = 'МП-10'
     calc.formYard.value = 'Трапеция'
@@ -235,7 +235,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Сайдинг"]').setValue(true)
+    await wrapper.get('input[value="siding"]').setValue(true)
     await flushPromises()
 
     expect({
@@ -250,7 +250,7 @@ describe('saveWicketData — данные передаются на бэк', () 
       colorId: calc.colorYardId.value,
       color: calc.colorYard.value,
     }).toEqual({
-      materialGroup: 'Профлист',
+      materialGroup: 'profnastil',
       id: 27,
       material: 'МП-10',
       form: 'Трапеция',
@@ -262,8 +262,8 @@ describe('saveWicketData — данные передаются на бэк', () 
       color: 'RAL 7016',
     })
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      materialFacadeGlob: 'Сайдинг',
-      materialYardGlob: 'Профлист',
+      materialFacadeGlob: 'siding',
+      materialYardGlob: 'profnastil',
       idYard: 27,
       manufacturerYardId: 14,
       colorYardId: 19,

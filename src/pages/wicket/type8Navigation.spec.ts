@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type8NavState, type8Route } from './type
 function state(overrides: Partial<Type8NavState> = {}): Type8NavState {
   return {
     modelId: '8',
-    materialFacadeGlob: 'Лист',
+    materialFacadeGlob: 'sheet',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,

@@ -1,6 +1,13 @@
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
 import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
 import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
+import type { FillingMaterialGroup, FillingSide } from '../fillingMaterialGroups'
+
+export interface FillingGroupProperties {
+  materialFacadeGroupCode?: FillingMaterialGroup | null
+  materialYardGroupCode?: FillingMaterialGroup | null
+}
+export type FillingGroupProblems = Partial<Record<FillingSide, { code: string; message: string } | null>>
 
 export type ParticipantRoleProperties = Partial<Record<`${ParticipantRoleField}Code`, ParticipantRole | null>>
 export type ParticipantRoleProblems = Partial<Record<ParticipantRoleField, { code: string; message: string } | null>>
@@ -28,7 +35,7 @@ export interface OpeningOptionsResponse {
   problems: Array<{ id: number; message: string }>
 }
 
-export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties {
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties {
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -426,7 +433,8 @@ export interface CompanyScopedPayload {
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse extends ParticipantRoleProperties {
+export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties {
+  fillingGroupProblems?: FillingGroupProblems
   participantRoleProblems?: ParticipantRoleProblems
   openingOrientation?: OpeningOrientation | null
   openingOrientationProblem?: OpeningOrientationProblem | null

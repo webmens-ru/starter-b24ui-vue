@@ -4,7 +4,7 @@ import { getNextPage, getPrevPage, type Type3NavState, type3Route } from './type
 function state(overrides: Partial<Type3NavState> = {}): Type3NavState {
   return {
     modelId: '3',
-    materialFacadeGlob: 'Штакетник',
+    materialFacadeGlob: 'fence',
     fillSide: 'Одна сторона',
     materialYardGlob: null,
     isThereLock: 1,
@@ -29,7 +29,7 @@ describe('type3Navigation', () => {
       it('Две стороны → page2_yard_fence', () => {
         expect(getNextPage('page2_facade_fence', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Штакетник',
+          materialYardGlob: 'fence',
         }))).toBe('page2_yard_fence')
       })
     })
@@ -88,7 +88,7 @@ describe('type3Navigation', () => {
       it('Две стороны → page2_yard_fence', () => {
         expect(getPrevPage('page5', state({
           fillSide: 'Две стороны',
-          materialYardGlob: 'Штакетник',
+          materialYardGlob: 'fence',
         }))).toBe('page2_yard_fence')
       })
     })

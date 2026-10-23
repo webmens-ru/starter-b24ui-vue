@@ -302,10 +302,11 @@ export async function getFillingAppearanceOptions(
   modelId: string | number,
   materialGroup: string,
 ): Promise<FillingAppearanceOptions> {
+  if (materialGroup !== 'siding' && materialGroup !== 'profnastil') throw new TypeError('Некорректная группа заполнения')
   if (isMock) return mockGetFillingAppearanceOptions(materialGroup)
   const { data } = await api.post(
     `/api/wicket/type${modelId}/get-filling-appearance-options`,
-    { materialGroup },
+    { materialGroupCode: materialGroup },
   )
   return data.data
 }

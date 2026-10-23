@@ -311,7 +311,7 @@ onMounted(async () => {
       v-if="selectedRow"
       ref="appearanceFields"
       :model-id="calc.modelId.value"
-      material-group="Сайдинг"
+      material-group="siding"
       side="facade"
       @change="saveAppearance"
     />
