@@ -9,6 +9,7 @@ const calc = {
   hasStolby: ref(1),
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
+  openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
   shieldType: ref('Тип_1'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
@@ -48,11 +49,54 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  it.each([
+    { opensOutward: true, hingeSide: 'left' as const, x: '44' },
+    { opensOutward: true, hingeSide: 'right' as const, x: '940' },
+    { opensOutward: false, hingeSide: 'left' as const, x: '44' },
+    { opensOutward: false, hingeSide: 'right' as const, x: '940' },
+  ])('зеркалит один раз без перестановки физических петель: $opensOutward / $hingeSide', async ({ opensOutward, hingeSide, x }) => {
+    calc.openingOrientation.value = { opensOutward, hingeSide }
+    const wrapper = mount(Type2Drawing)
+    try {
+      const hinges = () => wrapper.get('[data-testid="type2-drawing-hinges"] rect')
+      const behind = () => wrapper.html().indexOf('data-testid="type2-drawing-hinges"') < wrapper.html().indexOf('data-testid="type2-drawing-frame"')
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(!opensOutward)
+      expect(wrapper.findAll('[transform*="scale(-1 1)"]')).toHaveLength(0)
+      await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(opensOutward)
+      expect(wrapper.findAll('[transform="translate(1000 0) scale(-1 1)"]')).toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+  it('показывает ошибку без свойств, восстанавливает чертёж и не зависит от подписи', async () => {
+    calc.openingOrientation.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+      await wrapper.vm.$nextTick()
+      const svg = wrapper.get('svg').html()
+      calc.openingOptionName.value = 'Внутрь / Правая'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      calc.openingOrientation.value = null
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(false)
+    } finally {
+      wrapper.unmount()
+      calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+    }
+  })
   afterEach(() => {
     calc.widthProyema.value = '1000'
     calc.heightProyema.value = '2000'
     calc.stolbName.value = 'Труба 50×50×2'
     calc.openingOptionName.value = 'Наружу / Левая'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
     calc.shieldType.value = 'Тип_1'
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
@@ -289,16 +333,19 @@ describe('Type2Drawing', () => {
       .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Внутрь / Левая'
+    calc.openingOrientation.value = { opensOutward: false, hingeSide: 'right' }
     await wrapper.vm.$nextTick()
 
     expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
       .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Наружу / Левая'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
   })
 
   it('зеркалит чертёж и меняет план петель при переключении на вид со двора', async () => {
     calc.openingOptionName.value = 'Внутрь / Левая'
+    calc.openingOrientation.value = { opensOutward: false, hingeSide: 'right' }
     const wrapper = mount(Type2Drawing)
     const drawingView = wrapper.get('[data-testid="type2-drawing-view"]')
 
@@ -313,6 +360,7 @@ describe('Type2Drawing', () => {
       .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Наружу / Левая'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
   })
 
   it('переносит профлист и притворную полосу за каркас при виде со двора', async () => {

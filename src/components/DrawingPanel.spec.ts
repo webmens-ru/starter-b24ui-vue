@@ -10,6 +10,7 @@ const calc = {
   hasStolby: ref(1),
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
+  openingOrientation: ref({ opensOutward: true, hingeSide: 'left' }),
   shieldType: ref('Тип_1'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),

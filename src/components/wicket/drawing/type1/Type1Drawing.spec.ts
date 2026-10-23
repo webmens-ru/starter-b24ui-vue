@@ -9,6 +9,7 @@ const c = {
   hasStolby: ref(1),
   stolbName: ref('60/60/2'),
   openingOptionName: ref('Наружу / Левая'),
+  openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
   shieldType: ref('Тип_1'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
@@ -45,6 +46,50 @@ vi.mock('../../../../composables/useCalculation', () => ({ useCalculation: () =>
 import Type1Drawing from './Type1Drawing.vue'
 
 describe('Type1Drawing', () => {
+  it.each([
+    { opensOutward: true, hingeSide: 'left' as const, x: '54' },
+    { opensOutward: true, hingeSide: 'right' as const, x: '930' },
+    { opensOutward: false, hingeSide: 'left' as const, x: '54' },
+    { opensOutward: false, hingeSide: 'right' as const, x: '930' },
+  ])('зеркалит один раз без перестановки физических петель: $opensOutward / $hingeSide', async ({ opensOutward, hingeSide, x }) => {
+    c.openingOrientation.value = { opensOutward, hingeSide }
+    const wrapper = mount(Type1Drawing)
+    try {
+      const hinges = () => wrapper.get('[data-testid="type1-hinges"] rect')
+      const behind = () => wrapper.html().indexOf('data-testid="type1-hinges"') < wrapper.html().indexOf('data-testid="type1-frame"')
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(!opensOutward)
+      expect(wrapper.findAll('[transform*="scale(-1 1)"]')).toHaveLength(0)
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(opensOutward)
+      expect(wrapper.findAll('[transform="translate(1000 0) scale(-1 1)"]')).toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+      c.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+    }
+  })
+  it('показывает ошибку без свойств, восстанавливает чертёж и не зависит от подписи', async () => {
+    c.openingOrientation.value = null
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      c.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+      await wrapper.vm.$nextTick()
+      const svg = wrapper.get('svg').html()
+      c.openingOptionName.value = 'Внутрь / Правая'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      c.openingOrientation.value = null
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(false)
+    } finally {
+      wrapper.unmount()
+      c.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+      c.openingOptionName.value = 'Наружу / Левая'
+    }
+  })
   it('рисует отдельный адаптивный SVG и заполнение улицы перед рамой', () => {
     const w = mount(Type1Drawing)
     expect(w.get('[data-testid="type1-drawing-svg"]').classes()).toContain('max-h-[650px]')

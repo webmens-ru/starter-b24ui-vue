@@ -1,5 +1,6 @@
 import { computeJumperGeometry } from '../jumperGeometry'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
+import { parseOpeningOrientation } from '../../openingOrientation'
 
 export interface Rect { x:number; y:number; width:number; height:number }
 interface VisibleRect extends Rect { visible:boolean }
@@ -30,8 +31,9 @@ function color(v:unknown,f:string){const s=t(v);return /^#[\da-f]{6}$/i.test(s)?
 export function topPath(r:Rect){return`M${r.x},${r.y} L${r.x+r.width},${r.y} L${r.x+r.width-r.height},${r.y+r.height} L${r.x+r.height},${r.y+r.height} Z`}
 export function bottomPath(r:Rect){return`M${r.x},${r.y+r.height} L${r.x+r.width},${r.y+r.height} L${r.x+r.width-r.height},${r.y} L${r.x+r.height},${r.y} Z`}
 export function computeType1Geometry(s:Type1Source):Type1Geometry{
+ const orientation=parseOpeningOrientation(s.openingOrientation)
  const ow=n(s.widthProyema,1000,300,10000),oh=n(s.heightProyema,2000,500,5000),clear=n(s.clearanceProyema,50,0,500)
- const has=s.hasStolby===undefined||Number(s.hasStolby)!==0,pw=size(s.stolbName,50),right=/правая/i.test(t(s.openingOptionName))
+ const has=s.hasStolby===undefined||Number(s.hasStolby)!==0,pw=size(s.stolbName,50),right=orientation.hingeSide==='right'
  const sub=resolveFrameSubtype(s.shieldType),capabilities=frameSubtypeCapabilities(sub),lowerH=n(s.heightLowerPart,300,0,1000),upperH=n(s.heightTopPart,300,0,1000),sideW=n(s.widthSidePart,300,20,3000)
  const extraSize=size(s.peremichkaSortamentName,60),verticalGeometry=computeJumperGeometry({openingHeight:oh,bottomClearance:clear,hasPosts:has,jumperName:s.peremichkaPolozheniyeName,jumperHeight:extraSize})
  const drawingHeight=oh,gateY=verticalGeometry.gateY,gateHeight=verticalGeometry.gateHeight,postHeight=verticalGeometry.postHeight

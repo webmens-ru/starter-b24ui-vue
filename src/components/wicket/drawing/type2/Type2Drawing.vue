@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
 
@@ -21,13 +22,13 @@ const netPatternId = `type2-net-pattern-${instanceId}`
 const lowerNetPatternId = `type2-lower-net-pattern-${instanceId}`
 const upperNetPatternId = `type2-upper-net-pattern-${instanceId}`
 
-const geometry = computed(() => computeType2Geometry({
+const { geometry, error: drawingError } = useDrawingGeometry(() => computeType2Geometry({
   widthProyema: calc.widthProyema.value,
   heightProyema: calc.heightProyema.value,
   clearanceProyema: calc.clearanceProyema.value,
   hasStolby: calc.hasStolby.value,
   stolbName: calc.stolbName.value,
-  openingOptionName: calc.openingOptionName.value,
+  openingOrientation: calc.openingOrientation.value,
   shieldType: calc.shieldType.value,
   heightLowerPart: calc.heightLowerPart.value,
   heightTopPart: calc.heightTopPart.value,
@@ -58,8 +59,8 @@ if (import.meta.env.DEV) {
       calc.colorFacade.value,
       calc.colorFacadeHex.value,
       calc.colorFacadeImage.value,
-      geometry.value.fill.color,
-      geometry.value.fill.image,
+      drawingError.value ? '' : geometry.value.fill.color,
+      drawingError.value ? '' : geometry.value.fill.image,
     ],
     ([idFacade, colorFacade, colorFacadeHex, colorFacadeImage, fillColor, fillImage]) => {
       console.info('[type2-drawing] SVG fill', {
@@ -121,7 +122,7 @@ const upperNetTileWidth = computed(() => Math.max(
   1,
   geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
 ))
-const opensInward = computed(() => /внутрь/i.test(String(calc.openingOptionName.value ?? '')))
+const opensInward = computed(() => !calc.openingOrientation.value!.opensOutward)
 const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
 const viewTransform = computed(() => viewedFromYard.value
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
@@ -132,14 +133,14 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
 ))
 
 watch(
-  () => geometry.value.netImage,
+  () => drawingError.value ? '' : geometry.value.netImage,
   (imageUrl) => {
     netImageWidthToHeight.value = 1
     if (!imageUrl || typeof window === 'undefined') return
 
     const image = new window.Image()
     image.onload = () => {
-      if (geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
+      if (drawingError.value || geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
       netImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
@@ -147,14 +148,14 @@ watch(
   { immediate: true },
 )
 watch(
-  () => geometry.value.upperNetImage,
+  () => drawingError.value ? '' : geometry.value.upperNetImage,
   (imageUrl) => {
     upperNetImageWidthToHeight.value = 1
     if (!imageUrl || typeof window === 'undefined') return
 
     const image = new window.Image()
     image.onload = () => {
-      if (geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
+      if (drawingError.value || geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
       upperNetImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
@@ -178,7 +179,8 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
 <template>
   <div class="flex flex-col gap-3">
-    <svg
+    <p v-if="drawingError" role="alert">{{ drawingError }}</p>
+    <svg v-else
       data-testid="type2-drawing-svg"
       class="block h-auto max-h-[650px] w-full"
       :viewBox="viewBox"

@@ -5,10 +5,11 @@ let idSeed=0
 import {computed,ref,watch} from 'vue'
 import {useCalculation} from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import { useDrawingGeometry } from '../useDrawingGeometry'
 import {resolveJumperPresentation} from '../jumperGeometry'
 import {bottomPath,computeType1Geometry,topPath} from './type1Geometry'
 const id=idSeed++,calc=useCalculation(),showFill=ref(true),colors=ref<'realistic'|'schematic'>('realistic'),side=ref<'street'|'yard'>('street')
-const g=computed(()=>computeType1Geometry({widthProyema:calc.widthProyema.value,heightProyema:calc.heightProyema.value,clearanceProyema:calc.clearanceProyema.value,hasStolby:calc.hasStolby.value,stolbName:calc.stolbName.value,openingOptionName:calc.openingOptionName.value,shieldType:calc.shieldType.value,heightLowerPart:calc.heightLowerPart.value,heightTopPart:calc.heightTopPart.value,widthSidePart:calc.widthSidePart.value,grilleLocation:calc.grilleLocation.value,peremichkaPolozheniyeName:calc.peremichkaPolozheniyeName.value,peremichkaSortamentName:calc.peremichkaSortamentName.value,colorFacadeHex:calc.colorFacadeHex.value,colorFacadeImage:calc.colorFacadeImage.value,colorFacadeReverseHex:calc.colorFacadeReverseHex?.value,colorFacadeReverseImage:calc.colorFacadeReverseImage?.value,colorYardHex:calc.colorYardHex?.value,colorYardImage:calc.colorYardImage?.value,raspolozheniyePolotna:calc.raspolozheniyePolotna.value,colorShieldHex:calc.colorShieldHex.value,sideGrilleNetImage:calc.sideGrilleNetImage?.value,lowerGrilleNetImage:calc.lowerGrilleNetImage?.value,upperGrilleNetImage:calc.upperGrilleNetImage?.value}))
+const {geometry:g,error:drawingError}=useDrawingGeometry(()=>computeType1Geometry({widthProyema:calc.widthProyema.value,heightProyema:calc.heightProyema.value,clearanceProyema:calc.clearanceProyema.value,hasStolby:calc.hasStolby.value,stolbName:calc.stolbName.value,openingOrientation:calc.openingOrientation.value,shieldType:calc.shieldType.value,heightLowerPart:calc.heightLowerPart.value,heightTopPart:calc.heightTopPart.value,widthSidePart:calc.widthSidePart.value,grilleLocation:calc.grilleLocation.value,peremichkaPolozheniyeName:calc.peremichkaPolozheniyeName.value,peremichkaSortamentName:calc.peremichkaSortamentName.value,colorFacadeHex:calc.colorFacadeHex.value,colorFacadeImage:calc.colorFacadeImage.value,colorFacadeReverseHex:calc.colorFacadeReverseHex?.value,colorFacadeReverseImage:calc.colorFacadeReverseImage?.value,colorYardHex:calc.colorYardHex?.value,colorYardImage:calc.colorYardImage?.value,raspolozheniyePolotna:calc.raspolozheniyePolotna.value,colorShieldHex:calc.colorShieldHex.value,sideGrilleNetImage:calc.sideGrilleNetImage?.value,lowerGrilleNetImage:calc.lowerGrilleNetImage?.value,upperGrilleNetImage:calc.upperGrilleNetImage?.value}))
 const yard=computed(()=>side.value==='yard'),real=computed(()=>colors.value==='realistic'),frameColor=computed(()=>real.value?g.value.frameColor:'#d1d5db')
 const reverse=computed(()=>yard.value&&calc.fillSide.value==='Одна сторона')
 const yardTwoSides=computed(()=>yard.value&&calc.fillSide.value==='Две стороны')
@@ -20,18 +21,19 @@ const fillImage=computed(()=>real.value?(yardTwoSides.value?g.value.yardFill.ima
 const coatingColor=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardHex?.value??''):(calc.coatingFacadeHex?.value??'')):'')
 const coatingImage=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardImage?.value??''):(calc.coatingFacadeImage?.value??'')):'')
 const reliefImage=computed(()=>yardTwoSides.value?(calc.reliefYardImage?.value??''):(calc.reliefFacadeImage?.value??''))
-const inward=computed(()=>/внутрь/i.test(String(calc.openingOptionName.value??''))),behind=computed(()=>inward.value!==yard.value)
+const inward=computed(()=>!calc.openingOrientation.value!.opensOutward),behind=computed(()=>inward.value!==yard.value)
 const transform=computed(()=>yard.value?`translate(${g.value.drawing.width} 0) scale(-1 1)`:undefined)
 const jumperPresentation=computed(()=>resolveJumperPresentation(g.value.extraRail.placement,side.value))
 const top=computed(()=>topPath({x:g.value.gate.x,y:g.value.gate.y,width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
 const bottom=computed(()=>bottomPath({x:g.value.gate.x,y:g.value.gate.y+Math.max(0,g.value.gate.height-60),width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
 const netRatio=ref(1),upperRatio=ref(1)
 function track(url:string,set:(v:number)=>void){set(1);if(!url||typeof window==='undefined')return;const image=new window.Image();image.onload=()=>{if(image.naturalHeight>0)set(image.naturalWidth/image.naturalHeight)};image.src=url}
-watch(()=>g.value.netImage,v=>track(v,x=>netRatio.value=x),{immediate:true});watch(()=>g.value.upperNetImage,v=>track(v,x=>upperRatio.value=x),{immediate:true})
+watch(()=>drawingError.value?'':g.value.netImage,v=>track(v,x=>netRatio.value=x),{immediate:true});watch(()=>drawingError.value?'':g.value.upperNetImage,v=>track(v,x=>upperRatio.value=x),{immediate:true})
 const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),netTileW=computed(()=>Math.max(1,g.value.netArea.height*netRatio.value)),upperTileW=computed(()=>Math.max(1,g.value.upperNetArea.height*upperRatio.value))
 </script>
 <template><div class="flex flex-col gap-3">
- <svg data-testid="type1-drawing-svg" class="block h-auto max-h-[650px] w-full" :viewBox="`0 0 ${g.drawing.width} ${g.drawing.height}`" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Чертёж калитки типа 1">
+ <p v-if="drawingError" role="alert">{{ drawingError }}</p>
+ <svg v-else data-testid="type1-drawing-svg" class="block h-auto max-h-[650px] w-full" :viewBox="`0 0 ${g.drawing.width} ${g.drawing.height}`" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Чертёж калитки типа 1">
   <g :transform="transform">
    <rect v-bind="g.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" vector-effect="non-scaling-stroke"/>
    <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='background'" data-testid="type1-jumper-background" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" fill="none" stroke="#000" :stroke-dasharray="jumperPresentation.dashed?'12 8':undefined"/>

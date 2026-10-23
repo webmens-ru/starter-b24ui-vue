@@ -1,5 +1,6 @@
 import { computeJumperGeometry } from '../jumperGeometry'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
+import { parseOpeningOrientation } from '../../openingOrientation'
 
 export interface Type2DrawingSource {
   widthProyema?: unknown
@@ -8,6 +9,7 @@ export interface Type2DrawingSource {
   hasStolby?: unknown
   stolbName?: unknown
   openingOptionName?: unknown
+  openingOrientation?: unknown
   shieldType?: unknown
   heightLowerPart?: unknown
   heightTopPart?: unknown
@@ -146,7 +148,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
   const hasPosts = source.hasStolby === undefined ? true : Number(source.hasStolby) !== 0
   const postWidth = type2VisibleProfileSize(source.stolbName, 50)
-  const hingeSide: 'left' | 'right' = /правая/i.test(text(source.openingOptionName)) ? 'right' : 'left'
+  const { hingeSide } = parseOpeningOrientation(source.openingOrientation)
   const gateSubtype = resolveFrameSubtype(source.shieldType)
   const capabilities = frameSubtypeCapabilities(gateSubtype)
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)

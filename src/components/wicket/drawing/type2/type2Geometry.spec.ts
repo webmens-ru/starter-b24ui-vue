@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { computeType2Geometry } from './type2Geometry'
 
 describe('computeType2Geometry', () => {
-  it('строит безопасную конфигурацию MVP для пустых полей формы', () => {
-    const geometry = computeType2Geometry({})
+  it('использует размеры по умолчанию при явных свойствах открытия', () => {
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },})
 
     expect(geometry.drawing).toEqual({ width: 1000, height: 2000 })
     expect(geometry.gate).toEqual({ x: 54, y: 0, width: 886, height: 1950 })
@@ -22,7 +22,8 @@ describe('computeType2Geometry', () => {
       clearanceProyema: '75',
       hasStolby: 0,
       stolbName: 'Труба 60×60×2',
-      openingOptionName: 'Внутрь / Правая',
+      openingOptionName: 'Произвольная подпись',
+      openingOrientation: { opensOutward: false, hingeSide: 'right' },
       shieldType: 'Тип_4',
       heightLowerPart: '410',
       heightTopPart: '275',
@@ -70,7 +71,7 @@ describe('computeType2Geometry', () => {
     ['Труба 50×80×3', 80],
     ['Труба 100×100×4', 100],
   ])('берёт ширину столба из маркировки %s', (stolbName, expectedWidth) => {
-    const geometry = computeType2Geometry({ stolbName, hasStolby: 1 })
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, stolbName, hasStolby: 1 })
 
     expect(geometry.posts.left.width).toBe(expectedWidth)
     expect(geometry.posts.right.width).toBe(expectedWidth)
@@ -81,7 +82,7 @@ describe('computeType2Geometry', () => {
     ['60/30/2', 60],
     ['Труба 50×80×3', 80],
   ])('берёт видимую высоту перемычки из маркировки %s', (peremichkaSortamentName, expectedHeight) => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName,
     })
@@ -91,7 +92,7 @@ describe('computeType2Geometry', () => {
   })
 
   it('сдвигает створку и столбы ниже верхней перемычки', () => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       heightProyema: '2000',
       clearanceProyema: '50',
       peremichkaPolozheniyeName: 'Над калиткой',
@@ -104,7 +105,7 @@ describe('computeType2Geometry', () => {
   })
 
   it('сохраняет вертикальную геометрию для задней перемычки', () => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       heightProyema: '2000',
       clearanceProyema: '50',
       peremichkaPolozheniyeName: 'За калиткой',
@@ -117,22 +118,22 @@ describe('computeType2Geometry', () => {
   })
 
   it('uses only a valid explicit HEX and falls back safely', () => {
-    expect(computeType2Geometry({
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#A1b2C3',
     }).fill.color).toBe('#A1b2C3')
 
-    expect(computeType2Geometry({
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: 'A1b2C3',
     }).fill.color).toBe('#A1b2C3')
 
-    expect(computeType2Geometry({
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#123',
     }).fill.color).toBe('')
 
-    expect(computeType2Geometry({ colorFacade: 'RAL 7016' }).fill.color).toBe('')
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, colorFacade: 'RAL 7016' }).fill.color).toBe('')
   })
 
   it.each([
@@ -141,7 +142,7 @@ describe('computeType2Geometry', () => {
     ['Тип_3', 'type3'],
     ['Тип_4', 'type4'],
   ] as const)('строит геометрию подтипа %s', (shieldType, subtype) => {
-    const geometry = computeType2Geometry({ shieldType })
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, shieldType })
 
     expect(geometry.subtype).toBe(subtype)
     expect(geometry.rails.lowerSubtype.visible).toBe(subtype === 'type2' || subtype === 'type3')
@@ -156,7 +157,7 @@ describe('computeType2Geometry', () => {
   })
 
   it.each(['Тип_2', 'Тип_3'])('выделяет нижнюю область сетки для %s', (shieldType) => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       shieldType,
       heightLowerPart: '300',
       lowerGrilleNetImage: '/uploads/nets/lower.webp',
@@ -170,7 +171,7 @@ describe('computeType2Geometry', () => {
   })
 
   it('строит только верхнюю сетку и положительное заполнение Тип_5 при 600×1000', () => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       widthProyema: 600,
       heightProyema: 1000,
       shieldType: 'Тип_5',
@@ -193,7 +194,7 @@ describe('computeType2Geometry', () => {
   })
 
   it('выделяет верхнюю область сетки для подтипа 3', () => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       shieldType: 'Тип_3',
       heightTopPart: '300',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
@@ -205,14 +206,14 @@ describe('computeType2Geometry', () => {
     expect(geometry.upperNetArea.y).toBe(geometry.gate.y + 50)
     expect(geometry.upperNetImage).toBe('/uploads/nets/upper.webp')
 
-    expect(computeType2Geometry({
+    expect(computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       shieldType: 'Тип_2',
       upperGrilleNetImage: '/uploads/nets/upper.webp',
     }).upperNetArea.visible).toBe(false)
   })
 
   it('не возвращает отрицательные размеры для предельных значений', () => {
-    const geometry = computeType2Geometry({
+    const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' },
       widthProyema: '-10',
       heightProyema: '100',
       clearanceProyema: '9999',
