@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAssortmentJumper, getOpeningOptions, getPolozhenieJumper, recalculate, saveWicketData } from '../../app/api/wicket'
+import { getAssortmentStolb, getAssortmentJumper, getOpeningOptions, getPolozhenieJumper, recalculate, saveWicketData } from '../../app/api/wicket'
 import { useCalculation } from '../../composables/useCalculation'
 import StolbVariantOtkritiya from './StolbVariantOtkritiya.vue'
 
@@ -27,6 +27,16 @@ function mountComponent() {
   })
 }
 
+function mountPipeComponent() {
+  const select = {
+    props: ['modelValue', 'items'], emits: ['update:modelValue'],
+    template: `<select :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
+      <option value=""></option><option v-for="item in items" :key="item.id" :value="item.id" :disabled="item.disabled">{{ item.label }}</option>
+    </select>`,
+  }
+  return mount(StolbVariantOtkritiya, { global: { stubs: { SelectMenu: select, B24SelectMenu: select } } })
+}
+
 function getNextButton(wrapper: VueWrapper) {
   const button = wrapper.findAll('button').find(candidate => candidate.text() === 'Далее')
   if (!button) throw new Error('Кнопка «Далее» не найдена')
@@ -46,6 +56,7 @@ describe('StolbVariantOtkritiya navigation', () => {
     calc.jumperPlacement.value = 'none'
     vi.mocked(saveWicketData).mockClear()
     vi.mocked(recalculate).mockClear()
+    vi.mocked(getAssortmentStolb).mockReset().mockResolvedValue({ assortmentPipe: [] })
     vi.mocked(getPolozhenieJumper).mockReset().mockResolvedValue({ availablePolozheniyeJumper: [
       { id: 1733, name: 'Любая подпись', placement: 'none', hasJumper: false },
     ] })
@@ -65,6 +76,156 @@ describe('StolbVariantOtkritiya navigation', () => {
     ])
     expect(wrapper.findAll('input[type="radio"]').map(input => input.attributes('value'))).toContain('819')
     expect(getOpeningOptions).toHaveBeenCalledOnce()
+  })
+
+  it('commits numeric post profiles with FK and caption, without echoing derived fields', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    vi.mocked(getAssortmentStolb).mockResolvedValueOnce({ assortmentPipe: [
+      { id: 985, name: '60/60 (не размеры)', profile: { sizeA: 80, sizeB: 40 }, profileProblem: null, disabled: false },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.findAll('select')[0]!.setValue('985')
+    await flushPromises()
+    expect(calc.stolbId.value).toBe('985')
+    expect(calc.stolbName.value).toBe('60/60 (не размеры)')
+    expect(calc.postProfile.value).toEqual({ sizeA: 80, sizeB: 40 })
+    expect(calc.postProfileProblem.value).toBeNull()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('postProfile')
+    await wrapper.get('input[type="radio"][value="0"]').setValue()
+    expect(calc.postProfile.value).toBeNull()
+  })
+
+  it('updates post identity and profile together even while an unrelated list blocks saving', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = 111
+    calc.postProfile.value = { sizeA: 60, sizeB: 60 }
+    vi.mocked(getAssortmentStolb).mockResolvedValueOnce({ assortmentPipe: [
+      { id: 985, name: 'Новая труба', profile: { sizeA: 80, sizeB: 40 }, profileProblem: null, disabled: false },
+    ] })
+    let finish!: (value: Awaited<ReturnType<typeof getPolozhenieJumper>>) => void
+    vi.mocked(getPolozhenieJumper).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.findAll('select')[0]!.setValue('985')
+    expect(calc.stolbId.value).toBe('985')
+    expect(calc.stolbName.value).toBe('Новая труба')
+    expect(calc.postProfile.value).toEqual({ sizeA: 80, sizeB: 40 })
+    expect(saveWicketData).not.toHaveBeenCalled()
+    wrapper.unmount()
+    finish({ availablePolozheniyeJumper: [] })
+    await flushPromises()
+  })
+
+  it('keeps unavailable saved pipe visible and blocks Next/recalculation', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = 985
+    calc.stolbName.value = 'Историческая труба'
+    calc.postProfileProblem.value = { code: 'unavailable', message: 'Труба недоступна' }
+    calc.priceRetail.value = 123
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Историческая труба')
+    expect(wrapper.text()).toContain('Труба недоступна')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(calc.stolbId.value).toBe(985)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it('disables catalog pipes with invalid dimensions and rejects a saved invalid selection', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = 985
+    calc.postProfile.value = { sizeA: 60, sizeB: 40 }
+    vi.mocked(getAssortmentStolb).mockResolvedValueOnce({ assortmentPipe: [
+      { id: 985, name: '60/40', profile: null, profileProblem: { code: 'invalid', message: 'Размеры не настроены' }, disabled: true },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    expect(wrapper.get('option[value="985"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Размеры не настроены')
+    expect(calc.postProfile.value).toBeNull()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+  })
+
+  it('commits jumper properties independently of its caption and clears them on opening change', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.peremichkaPolozheniyeId.value = '55'
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [
+      { id: 55, name: 'Положение', placement: 'above', hasJumper: true },
+    ] })
+    vi.mocked(getAssortmentJumper).mockResolvedValueOnce({ assortmentJumper: [
+      { id: 984, name: '80/80', profile: { sizeA: 50, sizeB: 25 }, profileProblem: null, disabled: false },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.findAll('select')[2]!.setValue('984')
+    await flushPromises()
+    expect(calc.assortmentJumperId.value).toBe('984')
+    expect(calc.peremichkaSortamentName.value).toBe('80/80')
+    expect(calc.jumperProfile.value).toEqual({ sizeA: 50, sizeB: 25 })
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('jumperProfile')
+    await wrapper.get('input[type="radio"][value="920"]').setValue()
+    expect(calc.jumperProfile.value).toBeNull()
+    expect(calc.assortmentJumperId.value).toBeNull()
+  })
+
+  it('permits a partial save with an invalid used profile but never recalculates', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = 985
+    calc.priceRetail.value = 123
+    vi.mocked(getAssortmentStolb).mockResolvedValueOnce({ assortmentPipe: [
+      { id: 985, name: 'Труба', profile: null, profileProblem: { code: 'invalid', message: 'Нет размеров' }, disabled: true },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.get('input[type="radio"][value="920"]').setValue()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenCalledOnce()
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({ stolbId: '985', openingOptionId: 920 })
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(calc.postProfile.value).toBeNull()
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+  })
+
+  it('clears a jumper profile immediately while a different placement list is loading', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.peremichkaPolozheniyeId.value = '55'
+    calc.assortmentJumperId.value = 984
+    calc.jumperProfile.value = { sizeA: 50, sizeB: 25 }
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [
+      { id: 55, name: 'А', placement: 'above', hasJumper: true },
+      { id: 66, name: 'Б', placement: 'behind', hasJumper: true },
+    ] })
+    vi.mocked(getAssortmentJumper).mockResolvedValueOnce({ assortmentJumper: [
+      { id: 984, name: 'Подпись', profile: { sizeA: 50, sizeB: 25 }, profileProblem: null, disabled: false },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    let finish!: (value: Awaited<ReturnType<typeof getAssortmentJumper>>) => void
+    vi.mocked(getAssortmentJumper).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await wrapper.findAll('select')[1]!.setValue('66')
+    expect(calc.assortmentJumperId.value).toBeNull()
+    expect(calc.jumperProfile.value).toBeNull()
+    wrapper.unmount()
+    finish({ assortmentJumper: [{ id: 984, name: 'Поздно', profile: { sizeA: 80, sizeB: 60 }, profileProblem: null, disabled: false }] })
+    await flushPromises()
+    expect(calc.jumperProfile.value).toBeNull()
   })
 
   it('rejects a missing opening option and keeps the existing modal message', async () => {

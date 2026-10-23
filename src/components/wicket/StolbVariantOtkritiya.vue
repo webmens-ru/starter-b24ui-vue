@@ -10,7 +10,8 @@ import {
   saveWicketData,
   recalculate,
 } from '../../app/api/wicket'
-import type { JumperOption, OpeningOption, SelectItem } from '../../app/api/wicket'
+import type { JumperOption, OpeningOption, PipeOption } from '../../app/api/wicket'
+import { parsePipeProfileDescriptor, type PipeProfileDescriptor, type PipeProfileProblem } from '../../app/api/pipeProfiles'
 import { parseOpeningOrientation } from './openingOrientation'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
@@ -41,7 +42,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Столбы ──────────────────────────────────────────────────────────────────
-const stolbOptions      = ref<SelectItem[]>([])
+const stolbOptions      = ref<PipeOption[]>([])
 const postsChoice = ref<0 | 1 | null>(null)
 const stolbId          = ref<string>('')
 const showStolbList = computed(() => postsChoice.value === 1)
@@ -111,11 +112,18 @@ const jumperProblem = computed(() => {
   if (!peremichkaPolozheniyeId.value || selectedJumper.value) return ''
   return calc.jumperPlacementProblem.value?.message || 'Сохранённая перемычка недоступна. Выберите действующее положение.'
 })
-const sortamentOptions       = ref<SelectItem[]>([])
+const sortamentOptions       = ref<PipeOption[]>([])
 const assortmentJumperId      = ref<string>('')
 
 // Формат для B24SelectMenu: { id, label }
-const stolbSelectItems       = computed(() => stolbOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+function pipeItems(options: PipeOption[], id: string, name: string) {
+  const items = options.map(o => ({ id: String(o.id), label: o.name, disabled: o.disabled }))
+  if (id && !options.some(o => String(o.id) === id)) {
+    items.push({ id, label: name || 'Сохранённая труба', disabled: true })
+  }
+  return items
+}
+const stolbSelectItems = computed(() => pipeItems(stolbOptions.value, stolbId.value, calc.stolbName.value))
 const peremichkaSelectItems = computed(() => {
   const items = peremichkaOptions.value.map(o => ({ id: String(o.id), label: o.name, disabled: false }))
   if (peremichkaPolozheniyeId.value && !selectedJumper.value) {
@@ -123,7 +131,27 @@ const peremichkaSelectItems = computed(() => {
   }
   return items
 })
-const sortamentSelectItems   = computed(() => sortamentOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+const sortamentSelectItems = computed(() => pipeItems(sortamentOptions.value, assortmentJumperId.value, calc.peremichkaSortamentName.value ?? ''))
+
+function pipeDescriptor(options: PipeOption[], id: string, savedProblem: PipeProfileProblem | null): PipeProfileDescriptor {
+  if (!id) return { profile: null, profileProblem: { code: 'missing', message: 'Выберите необходимую трубу.' } }
+  const item = options.find(o => String(o.id) === id)
+  if (!item) return { profile: null, profileProblem: savedProblem ?? { code: 'unavailable', message: 'Выбранная труба недоступна. Выберите действующую.' } }
+  return parsePipeProfileDescriptor(item.disabled ? null : item.profile, item.profileProblem)
+}
+const postDescriptor = computed(() => pipeDescriptor(stolbOptions.value, stolbId.value, calc.postProfileProblem.value))
+const jumperDescriptor = computed(() => pipeDescriptor(sortamentOptions.value, assortmentJumperId.value, calc.jumperProfileProblem.value))
+const postProfileProblem = computed(() => postsChoice.value === 1 && !stolbLoading.value && !stolbError.value ? postDescriptor.value.profileProblem?.message ?? '' : '')
+const jumperProfileProblem = computed(() => showSortament.value && !sortamentLoading.value && !sortamentError.value ? jumperDescriptor.value.profileProblem?.message ?? '' : '')
+
+function syncPipeProfiles() {
+  const post = postsChoice.value === 1 ? postDescriptor.value : { profile: null, profileProblem: null }
+  const jumper = showSortament.value ? jumperDescriptor.value : { profile: null, profileProblem: null }
+  calc.postProfile.value = post.profile
+  calc.postProfileProblem.value = post.profileProblem
+  calc.jumperProfile.value = jumper.profile
+  calc.jumperProfileProblem.value = jumper.profileProblem
+}
 
 // ─── Загрузка данных ─────────────────────────────────────────────────────────
 async function loadStolbOptions() {
@@ -180,11 +208,14 @@ async function onNalichieChange() {
   if (!isCurrent()) return
   ++editVersion
   calc.postsPresenceProblem.value = null
+  syncCalcFields()
   await save()
 }
 
 async function onStolbChange() {
+  if (!isCurrent()) return
   ++editVersion
+  syncCalcFields()
   await save()
 }
 
@@ -203,6 +234,8 @@ async function onOpeningOptionChange() {
   calc.jumperPlacement.value = null
   calc.jumperPlacementProblem.value = null
   calc.assortmentJumperId.value         = null
+  calc.jumperProfile.value = null
+  calc.jumperProfileProblem.value = null
   calc.peremichkaSortamentName.value   = null
   peremichkaPolozheniyeId.value = ''
   if (!await loadPolozhenieOptions(openingOptionId.value)) return
@@ -217,6 +250,7 @@ async function onPolozhenieChange() {
   sortamentError.value = ''
   sortamentOptions.value = []
   assortmentJumperId.value = ''
+  syncCalcFields()
   if (showSortament.value) {
     if (!await loadSortamentOptions()) return
   }
@@ -224,7 +258,9 @@ async function onPolozhenieChange() {
 }
 
 async function onSortamentChange() {
+  if (!isCurrent()) return
   ++editVersion
+  syncCalcFields()
   await save()
 }
 
@@ -258,6 +294,7 @@ function syncCalcFields() {
     calc.assortmentJumperId.value       = null
     calc.peremichkaSortamentName.value = null
   }
+  syncPipeProfiles()
 }
 
 function buildBlock() {
@@ -288,12 +325,13 @@ function selectionProblem(): string {
 
 function isComplete(): boolean {
   return postsChoice.value !== null && !!selectedOpening.value && !!selectedJumper.value
-    && (postsChoice.value === 0 || stolbOptions.value.some(item => String(item.id) === stolbId.value))
-    && (!showSortament.value || sortamentOptions.value.some(item => String(item.id) === assortmentJumperId.value))
+    && (postsChoice.value === 0 || postDescriptor.value.profile !== null)
+    && (!showSortament.value || jumperDescriptor.value.profile !== null)
 }
 
 async function save(version = editVersion): Promise<boolean> {
   if (!isCurrent() || version !== editVersion) return false
+  syncPipeProfiles()
   const problem = selectionProblem()
   if (problem) {
     openModal(problem)
@@ -338,7 +376,7 @@ async function save(version = editVersion): Promise<boolean> {
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
 async function validateAndSave(): Promise<boolean> {
   if (!isCurrent()) return false
-  const problem = selectionProblem()
+  const problem = selectionProblem() || postProfileProblem.value || jumperProfileProblem.value
   if (problem) {
     openModal(problem)
     return false
@@ -388,7 +426,8 @@ onMounted(async () => {
       await loadSortamentOptions()
     }
   }
-
+  if (!isCurrent() || mountingVersion !== editVersion) return
+  syncPipeProfiles()
 })
 </script>
 
@@ -458,6 +497,7 @@ onMounted(async () => {
       </div>
 
       <!-- Вариант открытия -->
+      <p v-if="postProfileProblem" role="alert" class="text-red-600">{{ postProfileProblem }}</p>
       <p v-if="openingProblem" role="alert" class="text-red-600">{{ openingProblem }}</p>
       <div class="opening-grid">
         <label
@@ -489,6 +529,7 @@ onMounted(async () => {
       <p v-if="calc.postsPresenceProblem.value" role="alert" class="text-red-600">{{ calc.postsPresenceProblem.value.message }}</p>
       <p v-if="jumperProblem" role="alert" class="text-red-600">{{ jumperProblem }}</p>
       <p v-if="showSortament && sortamentError" role="alert" class="text-red-600">{{ sortamentError }}</p>
+      <p v-if="jumperProfileProblem" role="alert" class="text-red-600">{{ jumperProfileProblem }}</p>
       <div v-show="showPeremichka" class="flex flex-col items-start gap-2 w-full">
         <div class="peremichka-select-wrap">
           <span class="text-sm font-semibold whitespace-nowrap">Перемычка:</span>
