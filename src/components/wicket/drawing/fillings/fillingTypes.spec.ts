@@ -3,18 +3,17 @@ import { resolveFillingType } from './fillingTypes'
 
 describe('resolveFillingType', () => {
   it.each([
-    ['Профлист', 'С-8', 'c8'],
-    ['Профлист', 'Профнастил С-20', 'c20'],
-    ['Профлист', 'Профнастил МП-10', 'mp10'],
-    ['Профлист', 'Профнастил МП-20', 'mp20'],
-    ['Сайдинг', 'Сайдинг «Бревно»', 'logSiding'],
-    ['Сайдинг', 'Корабельная доска', 'shipLap'],
-    ['Сайдинг', 'Сайдинг «Корабельная доска»', 'shipLap'],
-  ] as const)('%s / %s → %s', (group, name, expected) => {
-    expect(resolveFillingType(group, name)).toBe(expected)
+    'c8', 'c20', 'mp10', 'mp20', 'logSiding', 'shipLap',
+  ] as const)('selects only explicit technical kind %s', kind => {
+    expect(resolveFillingType({ kind })).toBe(kind)
   })
 
-  it('не подменяет неизвестный профлист профилем С8', () => {
-    expect(resolveFillingType('Профлист', 'НС-35')).toBe('none')
+  it.each([null, undefined, {}, 'С-8', { kind: 'unknown' }, { kind: 'С-8' }])('never guesses a renderer for invalid profile %j', profile => {
+    expect(resolveFillingType(profile)).toBeNull()
+  })
+
+  it('ignores any display caption attached to the same explicit kind', () => {
+    expect(resolveFillingType({ kind: 'c20', name: 'Сайдинг Бревно' })).toBe('c20')
+    expect(resolveFillingType({ kind: 'c20', name: 'Переименовано' })).toBe('c20')
   })
 })

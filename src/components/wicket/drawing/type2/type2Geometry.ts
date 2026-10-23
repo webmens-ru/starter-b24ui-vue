@@ -21,8 +21,6 @@ export interface Type2DrawingSource extends DrawingPipeSource {
   grilleLocation?: unknown
   peremichkaPolozheniyeName?: unknown
   peremichkaSortamentName?: unknown
-  materialFacadeGlob?: unknown
-  materialFacade?: unknown
   colorFacade?: unknown
   colorFacadeHex?: unknown
   colorFacadeImage?: unknown
@@ -74,7 +72,6 @@ export interface Type2DrawingGeometry {
   hinges: DrawingRect[]
   strip: DrawingRect[]
   fill: {
-    material: 'none' | 'c8'
     color: string
     image: string
     reverseColor: string
@@ -295,9 +292,6 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     safeRect(stripX + widths.slice(0, index).reduce((sum, value) => sum + value, 0), gate.y, width, gate.height),
   )
 
-  const fillText = `${text(source.materialFacadeGlob)} ${text(source.materialFacade)}`
-  const material: 'none' | 'c8' = /проф|с\s*[-–]?\s*8|c\s*[-–]?\s*8/i.test(fillText) ? 'c8' : 'none'
-
   return {
     drawing: { width: openingWidth, height: openingHeight },
     opening: safeRect(0, 0, openingWidth, openingHeight),
@@ -327,7 +321,6 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     hinges,
     strip,
     fill: {
-      material,
       color: fillColor(source.colorFacadeHex),
       image: text(source.colorFacadeImage),
       reverseColor: fillColor(source.colorFacadeReverseHex || '#D7D5C6'),

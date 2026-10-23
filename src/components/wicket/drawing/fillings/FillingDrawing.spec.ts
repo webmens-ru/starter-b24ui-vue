@@ -9,8 +9,7 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
   return mount(defineComponent({
     setup: () => () => h('svg', [h(FillingDrawing, {
       area,
-      materialGroup: 'Профлист',
-      materialName: 'С-8',
+      profile: { kind: 'c8' },
       direction: 'vertical',
       color: '#704214',
       image: '/uploads/colors/wood.webp',
@@ -25,6 +24,16 @@ function mountDrawing(props: Partial<InstanceType<typeof FillingDrawing>['$props
 }
 
 describe('FillingDrawing', () => {
+  it.each([
+    ['c8', 'filling-c8'], ['c20', 'filling-c20'], ['mp10', 'filling-mp10'],
+    ['mp20', 'filling-mp20'], ['logSiding', 'filling-log-siding'], ['shipLap', 'filling-ship-lap'],
+  ] as const)('routes explicit %s to its existing renderer', (kind, testId) => {
+    const wrapper = mountDrawing({ profile: { kind } })
+    expect(wrapper.find(`[data-testid="${testId}"]`).exists()).toBe(true)
+    expect(wrapper.get(`[data-testid="${testId}"]`).attributes('clip-path')).toContain('fill-a-clip')
+    wrapper.unmount()
+  })
+
   it('renders the C8 profile with clipped texture and no built-in relief', () => {
     const wrapper = mountDrawing()
 
@@ -106,8 +115,7 @@ describe('FillingDrawing', () => {
 
   it('draws siding coating before its relief', () => {
     const wrapper = mountDrawing({
-      materialGroup: 'Сайдинг',
-      materialName: 'Сайдинг «Бревно»',
+      profile: { kind: 'logSiding' },
       color: '#704214',
       image: '',
     })
@@ -118,8 +126,7 @@ describe('FillingDrawing', () => {
 
   it('draws log siding without relief when backend did not provide relief image', () => {
     const wrapper = mountDrawing({
-      materialGroup: 'Сайдинг',
-      materialName: 'Сайдинг «Бревно»',
+      profile: { kind: 'logSiding' },
       area: { ...area, width: 200 },
     })
 
@@ -131,8 +138,8 @@ describe('FillingDrawing', () => {
   it('keeps texture and clip IDs distinct between instances', () => {
     const Wrapper = defineComponent({
       setup: () => () => h('svg', [
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/a.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'a' }),
-        h(FillingDrawing, { area, materialGroup: 'Сайдинг', materialName: 'Сайдинг «Бревно»', direction: 'vertical', color: '#704214', image: '/b.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'b' }),
+        h(FillingDrawing, { area, profile: { kind: 'logSiding' }, direction: 'vertical', color: '#704214', image: '/a.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'a' }),
+        h(FillingDrawing, { area, profile: { kind: 'logSiding' }, direction: 'vertical', color: '#704214', image: '/b.webp', coatingColor: '', coatingImage: '', reliefImage: '', appearanceMode: 'coating', idPrefix: 'b' }),
       ]),
     })
     const wrapper = mount(Wrapper)
@@ -144,7 +151,7 @@ describe('FillingDrawing', () => {
   })
 
   it('renders nothing for an unsupported material', () => {
-    const wrapper = mountDrawing({ materialName: 'НС-35' })
+    const wrapper = mountDrawing({ profile: null })
 
     expect(wrapper.find('[data-testid="filling-drawing"]').exists()).toBe(false)
   })

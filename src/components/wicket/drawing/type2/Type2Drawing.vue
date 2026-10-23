@@ -9,6 +9,7 @@ import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import { resolveFillingPreview } from '../fillings/fillingTypes'
 import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
@@ -40,8 +41,6 @@ const { geometry, error: drawingError } = useDrawingGeometry(() => computeType2G
   jumperPlacement: calc.jumperPlacement.value,
   jumperPlacementProblem: calc.jumperPlacementProblem.value,
   postsPresenceProblem: calc.postsPresenceProblem.value,
-  materialFacadeGlob: calc.materialFacadeGlob.value,
-  materialFacade: calc.materialFacade.value,
   colorFacade: calc.colorFacade.value,
   colorFacadeHex: calc.colorFacadeHex.value,
   colorFacadeImage: calc.colorFacadeImage.value,
@@ -85,12 +84,10 @@ const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
 const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
 const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 'Две стороны')
-const activeMaterialGroup = computed(() => yardTwoSides.value
-  ? (calc.materialYardGlob.value ?? '')
-  : (calc.materialFacadeGlob.value ?? ''))
-const activeMaterialName = computed(() => yardTwoSides.value
-  ? (calc.materialYard.value ?? '')
-  : (calc.materialFacade.value ?? ''))
+const fillingPreview = computed(() => yardTwoSides.value
+  ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value)
+  : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value))
+const previewError = computed(() => drawingError.value || fillingPreview.value.error)
 const activeDirection = computed(() => yardTwoSides.value
   ? geometry.value.yardFill.direction
   : geometry.value.fill.direction)
@@ -183,7 +180,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
 <template>
   <div class="flex flex-col gap-3">
-    <p v-if="drawingError" role="alert">{{ drawingError }}</p>
+    <p v-if="previewError" role="alert">{{ previewError }}</p>
     <svg v-else
       data-testid="type2-drawing-svg"
       class="block h-auto max-h-[650px] w-full"
@@ -378,8 +375,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="activeMaterialGroup"
-          :material-name="activeMaterialName"
+          :profile="fillingPreview.profile"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
@@ -539,8 +535,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="activeMaterialGroup"
-          :material-name="activeMaterialName"
+          :profile="fillingPreview.profile"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"

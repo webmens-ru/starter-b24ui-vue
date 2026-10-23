@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { computeType2Geometry } from './type2Geometry'
 
 describe('computeType2Geometry', () => {
+  it('does not derive any physical geometry or flags from material captions', () => {
+    const source = { openingOrientation: { opensOutward: true, hingeSide: 'left' as const },
+      jumperPlacement: 'none' as const, hasStolby: 0, postProfile: null, jumperProfile: null,
+      widthProyema: 1000, heightProyema: 2000, materialFacadeGlob: 'Профлист', materialFacade: 'С-8' }
+    const renamed = { ...source, materialFacadeGlob: 'Произвольная группа', materialFacade: 'Переименовано' }
+    expect(computeType2Geometry(source)).toEqual(computeType2Geometry(renamed))
+  })
   it('использует размеры по умолчанию при явных свойствах открытия', () => {
     const geometry = computeType2Geometry({openingOrientation: { opensOutward: true, hingeSide: 'left' }, jumperProfile: null, jumperPlacement: 'none', postProfile: { sizeA: 50, sizeB: 50 }, hasStolby: 1 })
 
@@ -12,7 +19,6 @@ describe('computeType2Geometry', () => {
     expect(geometry.posts.visible).toBe(true)
     expect(geometry.subtype).toBe('type1')
     expect(geometry.hingeSide).toBe('left')
-    expect(geometry.fill.material).toBe('none')
   })
 
   it('напрямую сопоставляет заполненные поля формы', () => {
@@ -31,8 +37,6 @@ describe('computeType2Geometry', () => {
       grilleLocation: 'Возле замка',
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName: 'Труба 40×20',
-      materialFacadeGlob: 'Профлист',
-      materialFacade: 'С-8',
       colorFacade: 'RAL 7016',
       colorFacadeHex: '#704214',
       colorFacadeImage: '  /uploads/colors/wood.webp  ',
@@ -55,7 +59,6 @@ describe('computeType2Geometry', () => {
     expect(geometry.netImage).toBe('/uploads/nets/side.webp')
     expect(geometry.extraRail).toMatchObject({ visible: true, placement: 'behind', height: 40 })
     expect(geometry.fill).toEqual({
-      material: 'c8',
       color: '#704214',
       image: '/uploads/colors/wood.webp',
       reverseColor: '#D7D5C6',

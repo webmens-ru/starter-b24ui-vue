@@ -1,12 +1,17 @@
-export type FillingType = 'none' | 'c8' | 'c20' | 'mp10' | 'mp20' | 'logSiding' | 'shipLap'
+import { parseFillingDrawingDescriptor, type FillingDrawingKind, type FillingDrawingProfile } from '../../../../app/api/fillingDrawingProfiles'
+import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../../../app/positiveDecimalId'
 
-export function resolveFillingType(materialGroup: string, materialName: string): FillingType {
-  const value = `${materialGroup} ${materialName}`.trim()
-  if (/корабельн/i.test(value)) return 'shipLap'
-  if (/сайдинг[\s«"]*бревно/i.test(value)) return 'logSiding'
-  if (/мп\s*[-–]?\s*20|mp\s*[-–]?\s*20/i.test(value)) return 'mp20'
-  if (/мп\s*[-–]?\s*10|mp\s*[-–]?\s*10/i.test(value)) return 'mp10'
-  if (/с\s*[-–]?\s*20|c\s*[-–]?\s*20/i.test(value)) return 'c20'
-  if (/с\s*[-–]?\s*8|c\s*[-–]?\s*8/i.test(value)) return 'c8'
-  return 'none'
+export function resolveFillingType(profile: unknown): FillingDrawingKind | null {
+  return parseFillingDrawingDescriptor(profile, null).profile?.kind ?? null
+}
+
+export function resolveFillingPreview(materialId: unknown, profile: unknown, problem: unknown, visible: boolean): { profile: FillingDrawingProfile | null; error: string } {
+  if (!visible || materialId === null || materialId === undefined || materialId === '') return { profile: null, error: '' }
+  if (!isPositiveSafeInteger(materialId) && parsePositiveDecimalId(materialId).kind !== 'valid') {
+    return { profile: null, error: 'Некорректный идентификатор материала заполнения.' }
+  }
+  const descriptor = parseFillingDrawingDescriptor(profile, problem)
+  return descriptor.profile === null
+    ? { profile: null, error: descriptor.problem?.message ?? 'Для выбранного материала не настроен профиль отрисовки.' }
+    : { profile: descriptor.profile, error: '' }
 }

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
+import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../../../app/api/fillingDrawingProfiles'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const calc = {
@@ -26,6 +27,12 @@ const calc = {
   peremichkaSortamentName: ref(''),
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
+  idFacade: ref<string | number>(725),
+  idYard: ref<string | number>(819),
+  fillingProfileFacade: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileFacadeProblem: ref<FillingDrawingProfileProblem | null>(null),
+  fillingProfileYard: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileYardProblem: ref<FillingDrawingProfileProblem | null>(null),
   materialYardGlob: ref<string | null>(null),
   materialYard: ref(''),
   colorFacade: ref('RAL 7016'),
@@ -56,6 +63,56 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  it('requires a configured profile only for a selected visible material and recovers on an explicit choice', async () => {
+    const before = calc.fillingProfileFacade.value
+    calc.fillingProfileFacade.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      calc.fillingProfileFacade.value = { kind: 'c20' }
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="filling-c20"]').exists()).toBe(true)
+    } finally { wrapper.unmount(); calc.fillingProfileFacade.value = before }
+  })
+
+  it('does not infer shape from renamed captions or require an unused yard profile', async () => {
+    const name = calc.materialFacade.value, yardProfile = calc.fillingProfileYard.value
+    calc.fillingProfileYard.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      const svg = wrapper.get('svg').html()
+      calc.materialFacade.value = 'Сайдинг Бревно МП-20'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      calc.fillSide.value = 'Две стороны'
+      await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    } finally {
+      wrapper.unmount(); calc.materialFacade.value = name
+      calc.fillingProfileYard.value = yardProfile; calc.fillSide.value = 'Одна сторона'
+    }
+  })
+
+  it('draws a frame without filling for no selected material and allows hiding an unconfigured filling', async () => {
+    const id = calc.idFacade.value, profile = calc.fillingProfileFacade.value
+    calc.idFacade.value = ''
+    calc.fillingProfileFacade.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="filling-drawing"]').exists()).toBe(false)
+      const toggle = wrapper.findAll('input[type="checkbox"]').find(input => input.element.parentElement?.textContent?.includes('Показывать заполнение'))!
+      await toggle.setValue(false)
+      calc.idFacade.value = id
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    } finally { wrapper.unmount(); calc.idFacade.value = id; calc.fillingProfileFacade.value = profile }
+  })
+
   it('renders an error, not SVG, when a used pipe has no numeric profile', () => {
     const previous = calc.postProfile.value
     calc.postProfile.value = null
@@ -139,6 +196,7 @@ describe('Type2Drawing', () => {
     calc.shieldType.value = 'Тип_1'
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
     calc.colorFacade.value = 'RAL 7016'
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = ''
@@ -479,6 +537,7 @@ describe('Type2Drawing', () => {
   it('рисует сайдинг второго типа через общий renderer заполнения', () => {
     calc.materialFacadeGlob.value = 'Сайдинг'
     calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.fillingProfileFacade.value = { kind: 'logSiding' }
     calc.colorFacadeHex.value = '#704214'
     const wrapper = mount(Type2Drawing)
 
@@ -488,16 +547,19 @@ describe('Type2Drawing', () => {
 
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
   })
 
   it('показывает независимые материалы и оформление фасада и двора', async () => {
     calc.fillSide.value = 'Две стороны'
     calc.materialFacadeGlob.value = 'Сайдинг'
     calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.fillingProfileFacade.value = { kind: 'logSiding' }
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = '/uploads/colors/facade.webp'
     calc.materialYardGlob.value = 'Профлист'
     calc.materialYard.value = 'Профнастил МП-10'
+    calc.fillingProfileYard.value = { kind: 'mp10' }
     calc.colorYard.value = 'RAL 7016'
     calc.colorYardHex.value = '#383E42'
     calc.colorYardImage.value = '/uploads/colors/yard.webp'
@@ -523,6 +585,7 @@ describe('Type2Drawing', () => {
     calc.fillSide.value = 'Одна сторона'
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
     calc.colorFacadeImage.value = ''
     calc.materialYardGlob.value = null
     calc.materialYard.value = ''
@@ -599,6 +662,7 @@ describe('Type2Drawing', () => {
 
     calc.materialYardGlob.value = 'Профлист'
     calc.materialYard.value = 'С-8'
+    calc.fillingProfileYard.value = { kind: 'c8' }
     calc.colorYardImage.value = '/uploads/colors/yard.webp'
     calc.fillSide.value = 'Две стороны'
     await wrapper.vm.$nextTick()

@@ -19,8 +19,8 @@ const renderers = {
   shipLap: ShipLapSidingDrawing,
 }
 const renderer = computed(() => {
-  const fillingType = resolveFillingType(props.materialGroup, props.materialName)
-  return fillingType === 'none' ? undefined : renderers[fillingType]
+  const fillingType = resolveFillingType(props.profile)
+  return fillingType === null ? undefined : renderers[fillingType]
 })
 </script>
 

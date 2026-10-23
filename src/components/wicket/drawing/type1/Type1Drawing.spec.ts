@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
+import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../../../app/api/fillingDrawingProfiles'
 import { describe, expect, it, vi } from 'vitest'
 
 const c = {
@@ -26,6 +27,12 @@ const c = {
   peremichkaSortamentName: ref(''),
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
+  idFacade: ref<string | number>(725),
+  idYard: ref<string | number>(819),
+  fillingProfileFacade: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileFacadeProblem: ref<FillingDrawingProfileProblem | null>(null),
+  fillingProfileYard: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileYardProblem: ref<FillingDrawingProfileProblem | null>(null),
   colorFacadeHex: ref('#704214'),
   colorFacadeImage: ref(''),
   coatingFacadeHex: ref(''),
@@ -69,6 +76,56 @@ vi.mock('../../../../composables/useCalculation', () => ({ useCalculation: () =>
 import Type1Drawing from './Type1Drawing.vue'
 
 describe('Type1Drawing', () => {
+  it('requires a configured profile only for a selected visible material and recovers on an explicit choice', async () => {
+    const before = c.fillingProfileFacade.value
+    c.fillingProfileFacade.value = null
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      c.fillingProfileFacade.value = { kind: 'c20' }
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="filling-c20"]').exists()).toBe(true)
+    } finally { wrapper.unmount(); c.fillingProfileFacade.value = before }
+  })
+
+  it('does not infer shape from renamed captions or require an unused yard profile', async () => {
+    const name = c.materialFacade.value, yardProfile = c.fillingProfileYard.value
+    c.fillingProfileYard.value = null
+    const wrapper = mount(Type1Drawing)
+    try {
+      const svg = wrapper.get('svg').html()
+      c.materialFacade.value = 'Сайдинг Бревно МП-20'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      c.fillSide.value = 'Две стороны'
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    } finally {
+      wrapper.unmount(); c.materialFacade.value = name
+      c.fillingProfileYard.value = yardProfile; c.fillSide.value = 'Одна сторона'
+    }
+  })
+
+  it('draws a frame without filling for no selected material and allows hiding an unconfigured filling', async () => {
+    const id = c.idFacade.value, profile = c.fillingProfileFacade.value
+    c.idFacade.value = ''
+    c.fillingProfileFacade.value = null
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="filling-drawing"]').exists()).toBe(false)
+      const toggle = wrapper.findAll('input[type="checkbox"]').find(input => input.element.parentElement?.textContent?.includes('Показывать заполнение'))!
+      await toggle.setValue(false)
+      c.idFacade.value = id
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    } finally { wrapper.unmount(); c.idFacade.value = id; c.fillingProfileFacade.value = profile }
+  })
+
   it('shows an error instead of SVG when jumper properties are missing', () => {
     const previous = c.jumperPlacement.value
     c.jumperPlacement.value = null
@@ -241,17 +298,20 @@ describe('Type1Drawing', () => {
 
   it('рисует внешний рельеф профнастила только из данных бэка', () => {
     c.materialFacade.value = 'Профнастил С-20'
+    c.fillingProfileFacade.value = { kind: 'c20' }
     c.reliefFacadeImage.value = '/uploads/dict/filling-relief/profnastil-c20.svg'
     const w = mount(Type1Drawing)
     expect(w.get('[data-testid="filling-c20"]')).toBeTruthy()
     expect(w.get('[data-testid="filling-relief-texture"]').attributes('fill')).toContain('relief-texture')
     expect(w.find('[data-testid="filling-profile-shadow"]').exists()).toBe(false)
     c.materialFacade.value = 'С-8'
+    c.fillingProfileFacade.value = { kind: 'c8' }
     c.reliefFacadeImage.value = ''
   })
 
   it('без reliefImage не рисует слой рельефа', () => {
     c.materialFacade.value = 'С-8'
+    c.fillingProfileFacade.value = { kind: 'c8' }
     c.reliefFacadeImage.value = ''
     const w = mount(Type1Drawing)
     expect(w.find('[data-testid="filling-relief-texture"]').exists()).toBe(false)
@@ -279,7 +339,9 @@ describe('Type1Drawing', () => {
   it('со двора показывает лицевую сторону yard-материала на переднем плане', async () => {
     c.fillSide.value = 'Две стороны'
     c.materialFacade.value = 'С-8'
+    c.fillingProfileFacade.value = { kind: 'c8' }
     c.materialYard.value = 'Профнастил МП-10'
+    c.fillingProfileYard.value = { kind: 'mp10' }
     const w = mount(Type1Drawing)
     await w.get('[data-testid="type1-view-yard"]').setValue(true)
     expect(w.get('[data-testid="filling-mp10"]')).toBeTruthy()
@@ -287,6 +349,7 @@ describe('Type1Drawing', () => {
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
     c.fillSide.value = 'Одна сторона'
     c.materialYard.value = 'С-8'
+    c.fillingProfileYard.value = { kind: 'c8' }
   })
 
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
