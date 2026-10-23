@@ -694,7 +694,7 @@ export async function mockLoadWicketData(
     doesAssemblyCode: 'manufacturer',
     penProvidedCode: 'manufacturer',
     penInstalledCode: 'manufacturer',
-    fillSide: 'Одна сторона',
+    fillingSideCount: 1,
     materialFacadeGroupCode: 'siding',
     materialYardGroupCode: null,
     nalichieStolbovName: 'Со столбами',

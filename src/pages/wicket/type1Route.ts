@@ -31,7 +31,7 @@ const fill = fillingSection(
   ],
   (from, state) => {
     if (from === 'page2') return facadePage(state)
-    if (from.startsWith('page2_facade_') && state.fillSide === 'Две стороны') {
+    if (from.startsWith('page2_facade_') && state.fillSide === 2) {
       return yardPage(state)
     }
     return undefined
@@ -41,7 +41,7 @@ const fill = fillingSection(
     if (from.startsWith('page2_yard_')) return facadePage(state)
     return undefined
   },
-  state => state.fillSide === 'Две стороны' ? yardPage(state) : facadePage(state),
+  state => state.fillSide === 2 ? yardPage(state) : facadePage(state),
 )
 
 export const type1Route = defineWicketRoute([

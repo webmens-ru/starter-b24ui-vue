@@ -113,14 +113,14 @@ describe('saveWicketData — данные передаются на бэк', () 
       orderId: 42,
       modelId: '1',
       reachedStep: 'page2',
-      fillSide: 'Одна сторона',
+      fillSide: 1,
       materialFacadeGlob: 'siding',
       materialYardGlob: null,
     })
   })
 
   it('FillSide при "Две стороны" передаёт materialYardGlob', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialYardGlob.value = 'profnastil'
 
     mount(FillSide, {
@@ -137,7 +137,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   })
 
   it('FillSide сбрасывает все поля двора при переходе с сайдинга на профлист', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = 'siding'
     calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
@@ -185,7 +185,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   })
 
   it('FillSide сохраняет явные null после перехода с двух сторон на одну', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
@@ -198,7 +198,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Одна сторона"]').setValue(true)
+    await wrapper.get('input[name="fillingSideCount"][value="1"]').setValue(true)
     await flushPromises()
 
     expect(calc.materialYardGlob.value).toBeNull()
@@ -206,7 +206,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(calc.manufacturerYardId.value).toBeNull()
     expect(calc.colorYardId.value).toBeNull()
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      fillSide: 'Одна сторона',
+      fillSide: 1,
       materialYardGlob: null,
       idYard: null,
       manufacturerYardId: null,
@@ -216,7 +216,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   })
 
   it('FillSide не изменяет настроенный двор при выборе материала фасада', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = ''
     calc.materialYardGlob.value = 'profnastil'
     calc.idYard.value = 27

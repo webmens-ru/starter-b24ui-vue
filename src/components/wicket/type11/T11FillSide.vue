@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fillingSideCountLabel, hasInvalidFillingSideCountSelection, isFillingSideCount } from '../../../app/fillingSideCounts'
 import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
@@ -23,25 +24,40 @@ function clearYardSelection() {
   calc.colorYard.value = ''
 }
 
+async function chooseFillingSideCount() {
+  calc.fillSide.value = 1
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
+    await saveWicketData({ ...calc.getBaseSavePayload(), providesMaterial: calc.providesMaterial.value, fillSide: 1 })
+    return
+  }
+  await save()
+}
+
 async function chooseMaterialGroup() {
   calc.materialFacadeGlob.value = 'profnastil'
   calc.materialYardGlob.value = null
+  if (hasInvalidFillingSideCountSelection(calc.fillSide.value)) {
+    await saveWicketData({ ...calc.getBaseSavePayload(), providesMaterial: calc.providesMaterial.value,
+      materialFacadeGlob: calc.materialFacadeGlob.value, materialYardGlob: null })
+    return
+  }
   await save()
 }
 
 async function save() {
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
+    || hasInvalidFillingSideCountSelection(calc.fillSide.value)) {
     await saveWicketData({ ...calc.getBaseSavePayload(), providesMaterial: calc.providesMaterial.value })
     return
   }
-  calc.fillSide.value = 'Одна сторона'
+  calc.fillSide.value = 1
   calc.materialFacadeGlob.value = 'profnastil'
   calc.materialYardGlob.value = null
   clearYardSelection()
 
   calc.updateOrCreateBlock('Заполнение', [
     { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
-    { name: 'Сторона заполнения',          value: calc.fillSide.value },
+    { name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
     { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ])
 
@@ -61,7 +77,8 @@ async function save() {
     inStockYard:            null,
   })
 
-  if (calc.priceRetail.value) {
+  if (calc.priceRetail.value && isFillingSideCount(calc.fillSide.value)
+    && !hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -79,7 +96,9 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page2')
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
+    || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
+  if (calc.fillSide.value === null) calc.fillSide.value = 1
   await save()
 })
 </script>
@@ -103,11 +122,12 @@ onMounted(async () => {
       <div>
         <h2 class="text-center text-xl font-semibold mb-3">Сторона заполнения</h2>
         <div class="option-grid">
-          <div class="lock-card selected">
+          <label class="lock-card" :class="{ selected: calc.fillSide.value === 1 }">
+            <input v-model="calc.fillSide.value" type="radio" name="fillingSideCount" :value="1" class="sr-only" @click="chooseFillingSideCount" />
             <div class="card-content">
-              <span class="block text-sm font-semibold text-center">Одна сторона</span>
+              <span class="block text-sm font-semibold text-center">{{ fillingSideCountLabel(1) }}</span>
             </div>
-          </div>
+          </label>
         </div>
       </div>
 

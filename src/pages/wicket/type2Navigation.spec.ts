@@ -5,7 +5,7 @@ function state(overrides: Partial<Type2NavState> = {}): Type2NavState {
   return {
     modelId: '2',
     materialFacadeGlob: 'profnastil',
-    fillSide: 'Одна сторона',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
@@ -17,7 +17,7 @@ function state(overrides: Partial<Type2NavState> = {}): Type2NavState {
 describe('type2Navigation', () => {
   it.each([null, '', 'unknown', 'sheet'])('does not choose a material family for unresolved group %s', materialFacadeGlob => {
     expect(getNextPage('page2', state({ materialFacadeGlob }))).toBe('page2')
-    expect(getNextPage('page2_facade_siding', state({ fillSide: 'Две стороны', materialYardGlob: materialFacadeGlob }))).toBe('page2')
+    expect(getNextPage('page2_facade_siding', state({ fillSide: 2, materialYardGlob: materialFacadeGlob }))).toBe('page2')
   })
   describe('getNextPage — все ветки переключений', () => {
     describe('page2 → facade (по материалу фасада)', () => {
@@ -32,16 +32,16 @@ describe('type2Navigation', () => {
 
     describe('page2_facade_* → yard или page5 (сторона заполнения)', () => {
       it('Одна сторона → page5 (пропуск yard)', () => {
-        expect(getNextPage('page2_facade_profnastil', state({ fillSide: 'Одна сторона' }))).toBe('page5')
+        expect(getNextPage('page2_facade_profnastil', state({ fillSide: 1 }))).toBe('page5')
         expect(getNextPage('page2_facade_siding', state({
-          fillSide: 'Одна сторона',
+          fillSide: 1,
           materialFacadeGlob: 'siding',
         }))).toBe('page5')
       })
 
       it('Две стороны + Профлист двор → page2_yard_profnastil', () => {
         expect(getNextPage('page2_facade_profnastil', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'profnastil',
         }))).toBe('page2_yard_profnastil')
       })
@@ -49,7 +49,7 @@ describe('type2Navigation', () => {
       it('Две стороны + Сайдинг двор → page2_yard_siding', () => {
         expect(getNextPage('page2_facade_siding', state({
           materialFacadeGlob: 'siding',
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'siding',
         }))).toBe('page2_yard_siding')
       })
@@ -60,7 +60,7 @@ describe('type2Navigation', () => {
         expect(getNextPage('page2_yard_profnastil', state())).toBe('page5')
         expect(getNextPage('page2_yard_siding', state({
           materialFacadeGlob: 'siding',
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'siding',
         }))).toBe('page5')
       })
@@ -107,7 +107,7 @@ describe('type2Navigation', () => {
         expect(getPrevPage('page2_yard_profnastil', state())).toBe('page2_facade_profnastil')
         expect(getPrevPage('page2_yard_siding', state({
           materialFacadeGlob: 'siding',
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'siding',
         }))).toBe('page2_facade_siding')
       })
@@ -115,21 +115,21 @@ describe('type2Navigation', () => {
 
     describe('page5 → facade или yard (по fillSide)', () => {
       it('Одна сторона → выбранный facade', () => {
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона' }))).toBe('page2_facade_profnastil')
+        expect(getPrevPage('page5', state({ fillSide: 1 }))).toBe('page2_facade_profnastil')
         expect(getPrevPage('page5', state({
-          fillSide: 'Одна сторона',
+          fillSide: 1,
           materialFacadeGlob: 'siding',
         }))).toBe('page2_facade_siding')
       })
 
       it('Две стороны → выбранный yard', () => {
         expect(getPrevPage('page5', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'profnastil',
         }))).toBe('page2_yard_profnastil')
         expect(getPrevPage('page5', state({
           materialFacadeGlob: 'siding',
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'siding',
         }))).toBe('page2_yard_siding')
       })

@@ -6,6 +6,7 @@ import { isPositiveSafeInteger, parsePositiveDecimalId } from '../../app/positiv
 import { participantRoleFields } from '../../app/participantRoles'
 import { readParticipantRole } from '../../app/api/legacyParticipantRoles'
 import { readFillingMaterialGroup } from '../../app/api/legacyFillingMaterialGroups'
+import { readFillingSideCount } from '../../app/api/legacyFillingSideCounts'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -89,7 +90,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   providesPrimer: 'manufacturer',
   doesPaintingFrame: 'manufacturer',
   doesAssembly: 'manufacturer',
-  fillSide: 'Одна сторона',
   nalichieStolbovName: 'Со столбами',
   raspolozheniyePolotna: 'Вертикально',
   sostoyaniyeProyema: 'Готов',
@@ -172,6 +172,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'fillSide' || key === 'fillingSideCount' || key === 'fillingSideCountProblem') continue
     if (key === 'materialFacadeGlob' || key === 'materialYardGlob'
       || key === 'materialFacadeGroupCode' || key === 'materialYardGroupCode' || key === 'fillingGroupProblems') continue
     if (participantRoleFields.some(field => key === field || key === `${field}Code`)) continue
@@ -189,6 +190,10 @@ export function applyWicketApiFieldMappings(
     if (refMap[field] && (Object.prototype.hasOwnProperty.call(apiData, field) || Object.prototype.hasOwnProperty.call(apiData, `${field}Code`))) {
       refMap[field].value = readParticipantRole(apiData, field)
     }
+  }
+  if (refMap.fillSide && (Object.prototype.hasOwnProperty.call(apiData, 'fillSide')
+    || Object.prototype.hasOwnProperty.call(apiData, 'fillingSideCount'))) {
+    refMap.fillSide.value = readFillingSideCount(apiData)
   }
   for (const side of ['facade', 'yard'] as const) {
     const prefix = side === 'facade' ? 'materialFacade' : 'materialYard'

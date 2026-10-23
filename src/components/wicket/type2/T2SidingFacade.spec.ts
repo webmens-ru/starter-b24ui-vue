@@ -131,7 +131,7 @@ describe('Type 2 siding flow', () => {
 
   it('offers siding and preserves an independently configured yard when the facade material changes', async () => {
     const calc = useCalculation()
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = 'profnastil'
     calc.materialYardGlob.value = 'profnastil'
     calc.idFacade.value = 1
@@ -229,7 +229,7 @@ describe('Type 2 siding flow', () => {
 
   it('preserves facade product and appearance fields when only the yard material changes', async () => {
     const calc = useCalculation()
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = 'siding'
     calc.idFacade.value = 27
     calc.materialFacade.value = 'Бревно Type 2'

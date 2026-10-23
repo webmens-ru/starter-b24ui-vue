@@ -1,6 +1,7 @@
 import type { WicketSavePayload } from './wicket.types'
 import { isParticipantRole, participantRoleFields } from '../participantRoles'
 import { isFillingMaterialGroup } from '../fillingMaterialGroups'
+import { isFillingSideCount } from '../fillingSideCounts'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -57,6 +58,14 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.fillingSideCountProblem
+  const explicitCount = Object.prototype.hasOwnProperty.call(canonicalPayload, 'fillingSideCount')
+  const count = explicitCount ? canonicalPayload.fillingSideCount : canonicalPayload.fillSide
+  delete canonicalPayload.fillSide
+  if (explicitCount || (count !== undefined && count !== '')) {
+    if (count !== null && !isFillingSideCount(count)) throw new TypeError('Некорректное количество сторон заполнения: fillingSideCount')
+    canonicalPayload.fillingSideCount = count
+  }
   delete canonicalPayload.fillingGroupProblems
   for (const prefix of ['materialFacade', 'materialYard']) {
     const codeKey = `${prefix}GroupCode`

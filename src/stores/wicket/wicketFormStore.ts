@@ -2,6 +2,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
 import { fillingMaterialGroupLabel } from '../../app/fillingMaterialGroups'
+import { fillingSideCountLabel, isFillingSideCount, type FillingSideCountSelection } from '../../app/fillingSideCounts'
 import type { CalcBlock } from './types'
 import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
 import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
@@ -44,7 +45,7 @@ const doesAssembly        = ref<string>('manufacturer')
 const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 
 // Поля шага "Заполнение"
-const fillSide            = ref<string>('Одна сторона')
+const fillSide            = ref<FillingSideCountSelection>(1)
 const materialFacadeGlob = ref<string | null>('siding')
 const materialYardGlob   = ref<string | null>(null)
 const fillingProfileFacade = ref<FillingDrawingProfile | null>(null)
@@ -222,9 +223,9 @@ const fieldsFilled = ref<number>(0)
   /** Раздел «Заполнение» неполный: сброшен материал или не выбран материал двора при «Две стороны». */
   const isFillSectionIncomplete = computed(() => {
     const hasFacade = idFacade.value != null && String(idFacade.value).trim() !== ''
-    const needYard = fillSide.value === 'Две стороны'
+    const needYard = fillSide.value === 2
     const hasYard = idYard.value != null && String(idYard.value).trim() !== ''
-    return !hasFacade || (needYard && !hasYard)
+    return !isFillingSideCount(fillSide.value) || !hasFacade || (needYard && !hasYard)
   })
 
   function updateOrCreateBlock(blockName: string, params: CalcBlock['params']) {
@@ -319,7 +320,7 @@ const fieldsFilled = ref<number>(0)
     doesPaintingFrame.value = 'manufacturer'
     doesAssembly.value = 'manufacturer'
     participantRoleProblems.value = null
-    fillSide.value = 'Одна сторона'
+    fillSide.value = 1
     materialFacadeGlob.value = 'siding'
     materialYardGlob.value = null
     nalichieStolbovName.value = 'Со столбами'
@@ -595,7 +596,7 @@ const fieldsFilled = ref<number>(0)
       let completed = false
       switch (pageId) {
         case 'page2':
-          completed = notEmpty(fillSide.value) || !!(idFacade.value && String(idFacade.value)) || !!(idYard.value && String(idYard.value))
+          completed = isFillingSideCount(fillSide.value)
           break
         case 'page2_facade_profnastil':
           completed = !!(idFacade.value && String(idFacade.value))
@@ -862,10 +863,10 @@ const fieldsFilled = ref<number>(0)
     // Заполнение
     const fillParams: CalcBlock['params'] = [
       { name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
-      { name: 'Сторона заполнения', value: fillSide.value },
+      { name: 'Сторона заполнения', value: fillingSideCountLabel(fillSide.value) },
       { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(materialFacadeGlob.value) },
     ]
-    if (fillSide.value === 'Две стороны') {
+    if (fillSide.value === 2) {
       fillParams.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
     }
     blocks.push({ blockName: 'Заполнение', params: fillParams })
@@ -894,7 +895,7 @@ const fieldsFilled = ref<number>(0)
     }
 
     // Заполнение (двор) — только при "Две стороны"
-    if (fillSide.value === 'Две стороны' && (idYard.value || materialYard.value)) {
+    if (fillSide.value === 2 && (idYard.value || materialYard.value)) {
       const isProfnastil = materialYardGlob.value === 'profnastil'
       blocks.push({
         blockName: 'Заполнение (двор)',

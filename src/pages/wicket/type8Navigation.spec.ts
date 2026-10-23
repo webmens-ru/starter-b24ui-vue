@@ -5,7 +5,7 @@ function state(overrides: Partial<Type8NavState> = {}): Type8NavState {
   return {
     modelId: '8',
     materialFacadeGlob: 'sheet',
-    fillSide: 'Одна сторона',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',

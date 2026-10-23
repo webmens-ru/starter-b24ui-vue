@@ -234,7 +234,7 @@ describe('useCalculation', () => {
       calc.loadFromApi(fullApiData)
 
       expect(calc.number.value).toBe(42)
-      expect(calc.fillSide.value).toBe('Две стороны')
+      expect(calc.fillSide.value).toBe(2)
       expect(calc.materialFacadeGlob.value).toBe('profnastil')
       expect(calc.materialYardGlob.value).toBe('siding')
       expect(calc.hasStolby.value).toBe(1)
@@ -831,14 +831,14 @@ describe('useCalculation', () => {
   describe('reset', () => {
     it('сбрасывает все поля к дефолтным значениям', () => {
       calc.number.value = '123'
-      calc.fillSide.value = 'Две стороны'
+      calc.fillSide.value = 2
       calc.colorFacadeHex.value = '#704214'
       calc.colorFacadeImage.value = '/uploads/colors/wood.jpg'
 
       calc.reset()
 
       expect(calc.number.value).toBe('')
-      expect(calc.fillSide.value).toBe('Одна сторона')
+      expect(calc.fillSide.value).toBe(1)
       expect(calc.colorFacadeHex.value).toBe('')
       expect(calc.colorFacadeImage.value).toBe('')
       expect(calc.data.value).toHaveLength(0)

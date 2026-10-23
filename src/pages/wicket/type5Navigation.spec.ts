@@ -5,7 +5,7 @@ function state(overrides: Partial<Type5NavState> = {}): Type5NavState {
   return {
     modelId: '5',
     materialFacadeGlob: 'spSiding',
-    fillSide: 'Одна сторона',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
@@ -24,11 +24,11 @@ describe('type5Navigation', () => {
 
     describe('page2_facade_sp → yard или page5 (сторона заполнения)', () => {
       it('Одна сторона → page5 (пропуск yard)', () => {
-        expect(getNextPage('page2_facade_sp', state({ fillSide: 'Одна сторона' }))).toBe('page5')
+        expect(getNextPage('page2_facade_sp', state({ fillSide: 1 }))).toBe('page5')
       })
       it('Две стороны → page2_yard_sp', () => {
         expect(getNextPage('page2_facade_sp', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })
@@ -83,11 +83,11 @@ describe('type5Navigation', () => {
 
     describe('page5 → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_sp', () => {
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона' }))).toBe('page2_facade_sp')
+        expect(getPrevPage('page5', state({ fillSide: 1 }))).toBe('page2_facade_sp')
       })
       it('Две стороны → page2_yard_sp', () => {
         expect(getPrevPage('page5', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })

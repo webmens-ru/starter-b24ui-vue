@@ -48,7 +48,7 @@ const calc = {
   coatingYardHex: ref(''),
   coatingYardImage: ref(''),
   reliefYardImage: ref(''),
-  fillSide: ref('Одна сторона'),
+  fillSide: ref(1),
   colorShieldHex: ref(''),
   sideGrilleNetImage: ref(''),
   lowerGrilleNetImage: ref(''),
@@ -86,13 +86,13 @@ describe('Type2Drawing', () => {
       calc.materialFacade.value = 'Сайдинг Бревно МП-20'
       await wrapper.vm.$nextTick()
       expect(wrapper.get('svg').html()).toBe(svg)
-      calc.fillSide.value = 'Две стороны'
+      calc.fillSide.value = 2
       await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
       expect(wrapper.find('svg').exists()).toBe(false)
       expect(wrapper.find('[role="alert"]').exists()).toBe(true)
     } finally {
       wrapper.unmount(); calc.materialFacade.value = name
-      calc.fillingProfileYard.value = yardProfile; calc.fillSide.value = 'Одна сторона'
+      calc.fillingProfileYard.value = yardProfile; calc.fillSide.value = 1
     }
   })
 
@@ -212,7 +212,7 @@ describe('Type2Drawing', () => {
     calc.coatingYardHex.value = ''
     calc.coatingYardImage.value = ''
     calc.reliefYardImage.value = ''
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     calc.colorShieldHex.value = ''
     calc.sideGrilleNetImage.value = ''
     calc.lowerGrilleNetImage.value = ''
@@ -487,7 +487,7 @@ describe('Type2Drawing', () => {
     calc.jumperPlacement.value = 'behind'
     calc.peremichkaSortamentName.value = '60/60/2'
     calc.jumperProfile.value = { sizeA: 60, sizeB: 50 }
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     const wrapper = mount(Type2Drawing)
     const html = wrapper.html()
     const background = wrapper.get('[data-testid="type2-drawing-jumper-background"]')
@@ -551,7 +551,7 @@ describe('Type2Drawing', () => {
   })
 
   it('показывает независимые материалы и оформление фасада и двора', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = 'Сайдинг'
     calc.materialFacade.value = 'Сайдинг «Бревно»'
     calc.fillingProfileFacade.value = { kind: 'logSiding' }
@@ -582,7 +582,7 @@ describe('Type2Drawing', () => {
     expect(yardImages).toContain('/uploads/reliefs/yard.svg')
     expect(yardImages).not.toContain('/uploads/colors/facade.webp')
 
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
     calc.fillingProfileFacade.value = { kind: 'c8' }
@@ -651,7 +651,7 @@ describe('Type2Drawing', () => {
     calc.colorFacadeImage.value = '/uploads/colors/front.webp'
     calc.colorFacadeReverseHex.value = '#D7D5C6'
     calc.colorFacadeReverseImage.value = '/uploads/colors/reverse.webp'
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
@@ -664,7 +664,7 @@ describe('Type2Drawing', () => {
     calc.materialYard.value = 'С-8'
     calc.fillingProfileYard.value = { kind: 'c8' }
     calc.colorYardImage.value = '/uploads/colors/yard.webp'
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     await wrapper.vm.$nextTick()
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/yard.webp')
 
@@ -673,6 +673,6 @@ describe('Type2Drawing', () => {
     calc.materialYardGlob.value = null
     calc.materialYard.value = ''
     calc.colorYardImage.value = ''
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
   })
 })

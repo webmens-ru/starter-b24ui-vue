@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fillingSideCountLabel, hasInvalidFillingSideCountSelection, isFillingSideCount, fillingSideCountOptions } from '../../../app/fillingSideCounts'
 import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
@@ -13,10 +14,7 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 
-const fillSideOptions = [
-  { label: 'Одна сторона', value: 'Одна сторона' },
-  { label: 'Две стороны',  value: 'Две стороны' },
-]
+const fillSideOptions = fillingSideCountOptions()
 
 const materialOptions = fillingMaterialGroupOptions(['spSiding'])
 
@@ -41,10 +39,10 @@ function clearYardSelection() {
 }
 
 function onFillSideChange() {
-  if (calc.fillSide.value === 'Одна сторона') {
+  if (calc.fillSide.value === 1) {
     calc.materialYardGlob.value = null
     clearYardSelection()
-  } else {
+  } else if (!hasInvalidFillingGroupSelection(null, calc.materialYardGlob.value)) {
     calc.materialYardGlob.value = calc.materialFacadeGlob.value
     clearYardSelection()
   }
@@ -53,7 +51,7 @@ function onFillSideChange() {
 
 function onMaterialFacadeChange() {
   clearFacadeSelection()
-  if (calc.fillSide.value === 'Две стороны') {
+  if (calc.fillSide.value === 2) {
     calc.materialYardGlob.value = calc.materialFacadeGlob.value
     clearYardSelection()
   }
@@ -68,10 +66,10 @@ function onMaterialYardChange() {
 async function save() {
   const params = [
     { name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
-    { name: 'Сторона заполнения',          value: calc.fillSide.value },
+    { name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
     { name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ]
-  if (calc.fillSide.value === 'Две стороны') {
+  if (calc.fillSide.value === 2) {
     params.push({ name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
   }
   calc.updateOrCreateBlock('Заполнение', params)
@@ -100,7 +98,8 @@ async function save() {
     inStockYard:            null,
   })
 
-  if (calc.priceRetail.value) {
+  if (calc.priceRetail.value && isFillingSideCount(calc.fillSide.value)
+    && !hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -118,12 +117,14 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page2')
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) return
+  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
+    || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
+  if (calc.fillSide.value === null) calc.fillSide.value = 1
   // Дефолт материала «SP сайдинг» (единственная опция) — выставляем, если ещё не выбран
   if (!calc.materialFacadeGlob.value) {
     calc.materialFacadeGlob.value = 'spSiding'
   }
-  if (calc.fillSide.value === 'Две стороны' && !calc.materialYardGlob.value) {
+  if (calc.fillSide.value === 2 && !calc.materialYardGlob.value) {
     calc.materialYardGlob.value = 'spSiding'
   }
   await save()
@@ -156,6 +157,7 @@ onMounted(async () => {
           >
             <input
               v-model="calc.fillSide.value"
+              name="fillingSideCount"
               type="radio"
               :value="opt.value"
               class="sr-only"
@@ -192,7 +194,7 @@ onMounted(async () => {
       </div>
 
       <!-- Материал заполнения (двор) — только при "Две стороны" -->
-      <div v-if="calc.fillSide.value === 'Две стороны'">
+      <div v-if="calc.fillSide.value === 2">
         <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (двор)</h2>
         <div class="option-grid">
           <label

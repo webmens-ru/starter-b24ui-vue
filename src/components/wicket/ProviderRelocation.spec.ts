@@ -3,8 +3,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Component } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
-import { saveWicketData } from '../../app/api/wicket'
+import { saveWicketData, recalculate } from '../../app/api/wicket'
 import * as groups from '../../app/fillingMaterialGroups'
+import * as sideCounts from '../../app/fillingSideCounts'
 import { getNextPage } from '../../pages/wicket/type2Route'
 
 vi.mock('../../app/api/wicket', async original => ({
@@ -17,13 +18,117 @@ const fillingComponents = import.meta.glob<{ default: Component }>('./type*/*Fil
 const cases = Object.entries(fillingComponents).map(([path, component]) => [path.match(/type(\d+)/)![1]!, component.default] as const)
 
 describe('material provider in filling', () => {
+  it.each(cases.filter(([id]) => Number(id) <= 5))('type %s does not guess invalid yard group when selecting Double', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = 1
+    calc.materialFacadeGlob.value = ({ '1': 'siding', '2': 'siding', '3': 'fence', '4': 'lamella', '5': 'spSiding' } as Record<string, string>)[modelId]!
+    calc.materialYardGlob.value = ''
+    calc.priceRetail.value = 1000
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[name="fillingSideCount"][value="2"]').setValue()
+    await flushPromises()
+    expect(calc.fillSide.value).toBe(2)
+    expect(calc.materialYardGlob.value).toBe('')
+    expect(recalculate).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it.each(cases.filter(([id]) => Number(id) <= 5))('type %s can edit provider without trying to calculate an unresolved count', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = ''
+    calc.priceRetail.value = 1000
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[value="customer"]').setValue()
+    await flushPromises()
+    expect(calc.fillSide.value).toBe('')
+    expect(saveWicketData).toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it.each(cases)('type %s does not repair or autosave an invalid stored side count on mount', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = ''
+    calc.setActivePage('page1')
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    expect(calc.fillSide.value).toBe('')
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.getBaseSavePayload().reachedStep).toBe('page2')
+    wrapper.unmount()
+  })
+  it('keeps numeric choices and yard resets when both side-count labels change', async () => {
+    const options = vi.spyOn(sideCounts, 'fillingSideCountOptions').mockReturnValue([{ value: 1, label: 'Вариант А' }, { value: 2, label: 'Вариант Б' }])
+    const calc = useCalculation()
+    calc.modelId.value = '2'
+    calc.fillSide.value = 1
+    calc.materialFacadeGlob.value = 'siding'
+    calc.materialYardGlob.value = 'profnastil'
+    calc.idFacade.value = 21
+    calc.idYard.value = 39
+    const wrapper = mount(cases.find(([id]) => id === '2')![1], { global: { stubs: ['B24Button'] } })
+    try {
+      await flushPromises()
+      expect(wrapper.text()).toContain('Вариант Б')
+      await wrapper.get('input[name="fillingSideCount"][value="2"]').setValue()
+      await flushPromises()
+      expect(calc.fillSide.value).toBe(2)
+      expect(calc.idYard.value).toBe(39)
+      await wrapper.get('input[name="fillingSideCount"][value="1"]').setValue()
+      await flushPromises()
+      expect(calc.fillSide.value).toBe(1)
+      expect(calc.idYard.value).toBe('')
+      expect(calc.materialYardGlob.value).toBe(null)
+      expect(calc.idFacade.value).toBe(21)
+    } finally {
+      wrapper.unmount()
+      options.mockRestore()
+    }
+  })
+  it.each(cases.filter(([id]) => Number(id) >= 6))('type %s repairs a side count only through explicit selection, independently of group', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = ''
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[value="customer"]').setValue()
+    await flushPromises()
+    expect(calc.fillSide.value).toBe('')
+    await wrapper.get('input[name="materialFacadeGroup"]').trigger('click')
+    await flushPromises()
+    expect(calc.fillSide.value).toBe('')
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.not.objectContaining({ fillSide: expect.anything() }))
+    await wrapper.get('input[name="fillingSideCount"]').trigger('click')
+    await flushPromises()
+    expect(calc.fillSide.value).toBe(1)
+    expect(wrapper.find('[data-side-count-problem]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+  it.each(cases.filter(([id]) => Number(id) >= 6))('type %s can save an explicit count repair while keeping invalid group unresolved', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = ''
+    calc.materialFacadeGlob.value = ''
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[name="fillingSideCount"]').trigger('click')
+    await flushPromises()
+    expect(calc.fillSide.value).toBe(1)
+    expect(calc.materialFacadeGlob.value).toBe('')
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillSide: 1 }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.not.objectContaining({ materialFacadeGlob: expect.anything() }))
+    wrapper.unmount()
+  })
   it('uses codes when every option label changes, preserving the other side and route', async () => {
     const options = vi.spyOn(groups, 'fillingMaterialGroupOptions').mockImplementation(codes => codes.map(value => ({ value, label: `Новая подпись ${value}` })))
     const calc = useCalculation()
     calc.modelId.value = '2'
     calc.materialFacadeGlob.value = 'siding'
     calc.materialYardGlob.value = 'profnastil'
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.idFacade.value = 21
     calc.idYard.value = 39
     const component = cases.find(([id]) => id === '2')![1]

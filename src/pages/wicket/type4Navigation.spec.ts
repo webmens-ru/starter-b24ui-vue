@@ -5,7 +5,7 @@ function state(overrides: Partial<Type4NavState> = {}): Type4NavState {
   return {
     modelId: '4',
     materialFacadeGlob: 'lamella',
-    fillSide: 'Одна сторона',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
@@ -24,11 +24,11 @@ describe('type4Navigation', () => {
 
     describe('page2_facade_lamel → yard или page5 (сторона заполнения)', () => {
       it('Одна сторона → page5 (пропуск yard)', () => {
-        expect(getNextPage('page2_facade_lamel', state({ fillSide: 'Одна сторона' }))).toBe('page5')
+        expect(getNextPage('page2_facade_lamel', state({ fillSide: 1 }))).toBe('page5')
       })
       it('Две стороны → page2_yard_lamel', () => {
         expect(getNextPage('page2_facade_lamel', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'lamella',
         }))).toBe('page2_yard_lamel')
       })
@@ -83,11 +83,11 @@ describe('type4Navigation', () => {
 
     describe('page5 → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_lamel', () => {
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона' }))).toBe('page2_facade_lamel')
+        expect(getPrevPage('page5', state({ fillSide: 1 }))).toBe('page2_facade_lamel')
       })
       it('Две стороны → page2_yard_lamel', () => {
         expect(getPrevPage('page5', state({
-          fillSide: 'Две стороны',
+          fillSide: 2,
           materialYardGlob: 'lamella',
         }))).toBe('page2_yard_lamel')
       })

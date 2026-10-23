@@ -54,7 +54,7 @@ describe('Type3Drawing', () => {
 
   it('всегда показывает стороны и скрывает одностороннее заполнение со двора', async () => {
     const store = useWicketFormStore()
-    store.fillSide = 'Одна сторона'
+    store.fillSide = 1
     store.numberOfSticks = 8
 
     const wrapper = mount(Type3Drawing)
@@ -99,7 +99,7 @@ describe('Type3Drawing', () => {
     store.jumperPlacement = 'behind'
     store.peremichkaSortamentName = '60/60/2'
     store.jumperProfile = { sizeA: 60, sizeB: 50 }
-    store.fillSide = 'Две стороны'
+    store.fillSide = 2
     const wrapper = mount(Type3Drawing)
     const html = wrapper.html()
     const background = wrapper.get('[data-testid="type3-jumper-background"]')

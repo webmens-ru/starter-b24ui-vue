@@ -138,7 +138,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     ],
     fillArea: activeFill,
     facadePickets,
-    yardPickets: text(source.fillSide) === 'Две стороны' ? facadePickets : [],
+    yardPickets: source.fillSide === 2 ? facadePickets : [],
     rails: { lower, upper, vertical },
     upperNetArea,
     upperNetImage: upperVisible ? text(source.upperGrilleNetImage) : '',
@@ -152,7 +152,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     yard: {
       color: text(source.colorYardHex) || '#6f604f',
       image: text(source.colorYardImage),
-      visible: text(source.fillSide) === 'Две стороны',
+      visible: source.fillSide === 2,
     },
   }
 }

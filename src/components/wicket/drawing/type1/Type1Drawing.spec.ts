@@ -52,7 +52,7 @@ const c = {
   sideGrilleNetImage: ref(''),
   lowerGrilleNetImage: ref(''),
   upperGrilleNetImage: ref(''),
-  fillSide: ref('Одна сторона'),
+  fillSide: ref(1),
 }
 
 describe('numeric pipe rendering errors', () => {
@@ -99,13 +99,13 @@ describe('Type1Drawing', () => {
       c.materialFacade.value = 'Сайдинг Бревно МП-20'
       await wrapper.vm.$nextTick()
       expect(wrapper.get('svg').html()).toBe(svg)
-      c.fillSide.value = 'Две стороны'
+      c.fillSide.value = 2
       await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
       expect(wrapper.find('svg').exists()).toBe(false)
       expect(wrapper.find('[role="alert"]').exists()).toBe(true)
     } finally {
       wrapper.unmount(); c.materialFacade.value = name
-      c.fillingProfileYard.value = yardProfile; c.fillSide.value = 'Одна сторона'
+      c.fillingProfileYard.value = yardProfile; c.fillSide.value = 1
     }
   })
 
@@ -337,7 +337,7 @@ describe('Type1Drawing', () => {
   })
 
   it('со двора показывает лицевую сторону yard-материала на переднем плане', async () => {
-    c.fillSide.value = 'Две стороны'
+    c.fillSide.value = 2
     c.materialFacade.value = 'С-8'
     c.fillingProfileFacade.value = { kind: 'c8' }
     c.materialYard.value = 'Профнастил МП-10'
@@ -347,7 +347,7 @@ describe('Type1Drawing', () => {
     expect(w.get('[data-testid="filling-mp10"]')).toBeTruthy()
     expect(w.findAll('[data-testid="type1-fill"] rect').some(rect => rect.attributes('fill') === '#123456')).toBe(true)
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
-    c.fillSide.value = 'Одна сторона'
+    c.fillSide.value = 1
     c.materialYard.value = 'С-8'
     c.fillingProfileYard.value = { kind: 'c8' }
   })
@@ -361,7 +361,7 @@ describe('Type1Drawing', () => {
     c.jumperPlacement.value = 'behind'
     c.peremichkaSortamentName.value = '60/60/2'
     c.jumperProfile.value = { sizeA: 60, sizeB: 60 }
-    c.fillSide.value = 'Две стороны'
+    c.fillSide.value = 2
 
     try {
       const wrapper = mount(Type1Drawing)

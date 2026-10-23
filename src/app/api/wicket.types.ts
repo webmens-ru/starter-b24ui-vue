@@ -2,6 +2,10 @@ import type { OrderTotals, ProductRowContext, ProductRowSummary } from './produc
 import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
 import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
 import type { FillingMaterialGroup, FillingSide } from '../fillingMaterialGroups'
+import type { FillingSideCount } from '../fillingSideCounts'
+
+export interface FillingSideCountProperties { fillingSideCount?: FillingSideCount | null }
+export interface FillingSideCountProblem { code: 'missing' | 'invalid'; message: string }
 
 export interface FillingGroupProperties {
   materialFacadeGroupCode?: FillingMaterialGroup | null
@@ -35,7 +39,7 @@ export interface OpeningOptionsResponse {
   problems: Array<{ id: number; message: string }>
 }
 
-export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties {
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties {
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -433,7 +437,8 @@ export interface CompanyScopedPayload {
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties {
+export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties {
+  fillingSideCountProblem?: FillingSideCountProblem | null
   fillingGroupProblems?: FillingGroupProblems
   participantRoleProblems?: ParticipantRoleProblems
   openingOrientation?: OpeningOrientation | null

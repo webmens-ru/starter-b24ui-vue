@@ -227,6 +227,18 @@ describe('product row API', () => {
     unsubscribe()
   })
 
+  it('sends numeric filling count instead of legacy caption or readonly diagnostic', async () => {
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+    await loadWicketData(context)
+    await saveWicketData({ ...context, fillSide: 2, fillingSideCountProblem: null })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/data', {
+      ...context, fillingSideCount: 2, lockPenId: null, lockPenColorId: null, lockVersion: 4,
+    })
+  })
+
   it('rejects a wicket save for a never-loaded item before sending a request', async () => {
     const { saveWicketData } = await import('./wicket')
 

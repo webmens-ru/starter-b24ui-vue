@@ -5,7 +5,7 @@ function state(overrides: Partial<type11NavState> = {}): type11NavState {
   return {
     modelId: '11',
     materialFacadeGlob: 'profnastil',
-    fillSide: 'Одна сторона',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',

@@ -82,8 +82,8 @@ if (import.meta.env.DEV) {
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
 const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
-const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
-const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 'Две стороны')
+const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 1)
+const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 2)
 const fillingPreview = computed(() => yardTwoSides.value
   ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value)
   : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value))

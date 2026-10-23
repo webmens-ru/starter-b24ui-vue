@@ -38,7 +38,7 @@ const calc = {
   colorFacadeImage: ref(''),
   colorFacadeReverseHex: ref('#D7D5C6'),
   colorFacadeReverseImage: ref(''),
-  fillSide: ref('Одна сторона'),
+  fillSide: ref(1),
   materialYardGlob: ref('Профлист'),
   materialYard: ref('С-8'),
   colorYardHex: ref(''),
