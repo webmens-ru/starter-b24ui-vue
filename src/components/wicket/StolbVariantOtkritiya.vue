@@ -270,9 +270,10 @@ function syncCalcFields() {
   calc.nalichieStolbovName.value = postsChoice.value === 1 ? 'Со столбами' : postsChoice.value === 0 ? 'Без столбов' : ''
 
   if (postsChoice.value === 1) {
+    const previousName = String(calc.stolbId.value) === stolbId.value ? calc.stolbName.value : ''
     calc.stolbId.value   = stolbId.value
     const item = stolbOptions.value.find(i => String(i.id) === stolbId.value)
-    calc.stolbName.value = item?.name ?? ''
+    calc.stolbName.value = item?.name ?? previousName
   } else {
     calc.stolbId.value   = ''
     calc.stolbName.value = ''
@@ -287,9 +288,10 @@ function syncCalcFields() {
   calc.jumperPlacementProblem.value = null
 
   if (polItem?.hasJumper) {
+    const previousName = String(calc.assortmentJumperId.value) === assortmentJumperId.value ? calc.peremichkaSortamentName.value : null
     calc.assortmentJumperId.value = assortmentJumperId.value || null
     const sortItem = sortamentOptions.value.find(i => String(i.id) === assortmentJumperId.value)
-    calc.peremichkaSortamentName.value = sortItem?.name ?? null
+    calc.peremichkaSortamentName.value = sortItem?.name ?? previousName
   } else {
     calc.assortmentJumperId.value       = null
     calc.peremichkaSortamentName.value = null

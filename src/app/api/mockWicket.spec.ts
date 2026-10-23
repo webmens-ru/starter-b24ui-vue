@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { mockGetFillingAppearanceOptions, mockGetSidingTable, mockGetAssortmentStolb, mockGetAssortmentJumper } from './mockWicket'
+import { mockGetFillingAppearanceOptions, mockGetSidingTable, mockGetAssortmentStolb, mockGetAssortmentJumper, mockLoadWicketData } from './mockWicket'
+import { createPinia, setActivePinia } from 'pinia'
+import { useWicketFormStore } from '../../stores/wicket/wicketFormStore'
+
+it('hydrates a mock draft with explicit used and unused pipe profiles', async () => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.loadFromApi(await mockLoadWicketData(42))
+  expect(store.postProfile).toEqual({ sizeA: 60, sizeB: 60 })
+  expect(store.postProfileProblem).toBeNull()
+  expect(store.jumperProfile).toBeNull()
+  expect(store.jumperProfileProblem).toBeNull()
+})
 
 it('supplies explicit numeric pipe properties in mock options', async () => {
   const posts = await mockGetAssortmentStolb()

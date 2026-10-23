@@ -202,6 +202,45 @@ describe('StolbVariantOtkritiya navigation', () => {
     expect(await validateBeforeLeave(wrapper)).toBe(false)
   })
 
+  it('retains an unavailable pipe caption during an unrelated partial save', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = 985
+    calc.stolbName.value = 'Старая труба'
+    calc.postProfileProblem.value = { code: 'unavailable', message: 'Труба недоступна' }
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.get('input[type="radio"][value="920"]').setValue()
+    await flushPromises()
+    expect(calc.stolbName.value).toBe('Старая труба')
+    expect(wrapper.text()).toContain('Старая труба')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
+  it('blocks an invalid saved jumper pipe even when the FK is in the catalog', async () => {
+    const calc = useCalculation()
+    calc.openingOptionId.value = 819
+    calc.assortmentJumperId.value = 984
+    calc.jumperPlacement.value = 'above'
+    calc.priceRetail.value = 123
+    vi.mocked(getPolozhenieJumper).mockResolvedValueOnce({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Любое', placement: 'above', hasJumper: true },
+    ] })
+    vi.mocked(getAssortmentJumper).mockResolvedValueOnce({ assortmentJumper: [
+      { id: 984, name: '60/40', profile: null, profileProblem: { code: 'invalid', message: 'Размеры перемычки не настроены' }, disabled: true },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    expect(wrapper.get('option[value="984"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Размеры перемычки не настроены')
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(calc.jumperProfile.value).toBeNull()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+  })
+
   it('clears a jumper profile immediately while a different placement list is loading', async () => {
     const calc = useCalculation()
     calc.openingOptionId.value = 819
