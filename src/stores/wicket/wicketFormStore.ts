@@ -21,6 +21,7 @@ import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketSt
 import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
 import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
 import { frameSubtypeLabel, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
+import { grilleSideLabel, type GrilleSideSelection } from '../../app/grilleSides'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -168,7 +169,7 @@ const lowerGrilleNetImage = ref<string>('')
 const upperGrilleNetImage = ref<string>('')
 const assortmentHeightUpperNetId = ref<string | number | null>(null)
 const assortmentHeightLowerNetId = ref<string | number | null>(null)
-const grilleLocation         = ref<string>('Возле петель')
+const grilleLocation         = ref<GrilleSideSelection>('hinge')
 const netWidthProviderTop  = ref<string>('executor')
 const netWidthProviderLower = ref<string>('executor')
 const netWidthProviderSide  = ref<string>('executor')
@@ -397,7 +398,7 @@ const fieldsFilled = ref<number>(0)
     upperGrilleNetImage.value = ''
     assortmentHeightUpperNetId.value = null
     assortmentHeightLowerNetId.value = null
-    grilleLocation.value = 'Возле петель'
+    grilleLocation.value = 'hinge'
     netWidthProviderTop.value = 'executor'
     netWidthProviderLower.value = 'executor'
     netWidthProviderSide.value = 'executor'
@@ -959,7 +960,7 @@ const fieldsFilled = ref<number>(0)
         shieldParams.push({ name: 'Ширина боковой части', value: widthSidePart.value })
       }
       if (grilleLocation.value) {
-        shieldParams.push({ name: 'Расположение решётки', value: grilleLocation.value })
+        shieldParams.push({ name: 'Расположение решётки', value: grilleSideLabel(grilleLocation.value) })
       }
     }
     blocks.push({ blockName: 'Тип щита', params: shieldParams })

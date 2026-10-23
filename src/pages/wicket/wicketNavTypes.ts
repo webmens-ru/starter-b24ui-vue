@@ -16,4 +16,5 @@ export interface WicketSharedNavState {
   heightProyema?: string | number
   raspolozheniyePolotna?: string | null
   shieldType?: string | null
+  grilleLocation?: string | null
 }

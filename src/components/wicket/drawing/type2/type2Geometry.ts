@@ -1,4 +1,5 @@
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
+import { parseDrawingGrilleSide } from '../../../../app/grilleSides'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
@@ -151,7 +152,7 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)
   const upperPartHeight = numberInRange(source.heightTopPart, 300, 0, 1000)
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)
-  const grilleSide: 'hinge' | 'lock' = /замк/i.test(text(source.grilleLocation)) ? 'lock' : 'hinge'
+  const grilleSide = parseDrawingGrilleSide(source.grilleLocation, capabilities.side)
 
   const extraRailSize = jumper.placement === 'above' ? jumper.overheadJumperHeight : jumper.jumperFaceSize
   const vertical = computeJumperGeometry({

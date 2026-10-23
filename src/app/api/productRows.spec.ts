@@ -235,9 +235,9 @@ describe('product row API', () => {
     await loadWicketData(context)
     await saveWicketData({ ...context, fillSide: 2, fillingSideCountProblem: null,
       raspolozheniyePolotna: 'horizontal', fillingOrientationProblem: null,
-      shieldType: 'sideNet', frameSubtypeProblem: null })
+      shieldType: 'sideNet', frameSubtypeProblem: null, grilleLocation: 'lock', grilleSideProblem: null })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/data', {
-      ...context, fillingSideCount: 2, fillingOrientationCode: 'horizontal', frameSubtypeCode: 'sideNet', lockPenId: null, lockPenColorId: null, lockVersion: 4,
+      ...context, fillingSideCount: 2, fillingOrientationCode: 'horizontal', frameSubtypeCode: 'sideNet', grilleSideCode: 'lock', lockPenId: null, lockPenColorId: null, lockVersion: 4,
     })
   })
 

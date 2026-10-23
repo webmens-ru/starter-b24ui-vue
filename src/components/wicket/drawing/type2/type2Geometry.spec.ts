@@ -34,7 +34,7 @@ describe('computeType2Geometry', () => {
       heightLowerPart: '410',
       heightTopPart: '275',
       widthSidePart: '360',
-      grilleLocation: 'Возле замка',
+      grilleLocation: 'lock',
       peremichkaPolozheniyeName: 'За калиткой',
       peremichkaSortamentName: 'Труба 40×20',
       colorFacade: 'RAL 7016',

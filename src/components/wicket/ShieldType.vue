@@ -8,6 +8,7 @@ import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
 import { frameSubtypeLabel, frameSubtypeOptions, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
 import { parseOpeningOrientation } from './openingOrientation'
+import { grilleSideLabel, grilleSideOptions, isGrilleSide, type GrilleSideSelection } from '../../app/grilleSides'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 interface GrilleNetItem {
@@ -49,10 +50,7 @@ const providerOptions = [
   { value: '', label: 'Оставляем не заполненным' },
 ]
 
-const grilleLocationOptions = [
-  { value: 'Возле петель', label: 'Возле петель' },
-  { value: 'Возле замка', label: 'Возле замка' },
-]
+const grilleLocationOptions = grilleSideOptions()
 
 // Локальные refs для переключателя (надёжная реактивность в шаблоне)
 const providerTop   = ref<string>('executor')
@@ -78,7 +76,7 @@ const netWidthOptions = ref<{ id: string; name: string }[]>([])
 const heightTopPart   = ref<string>('')  // select
 const heightLowerPart = ref<string>('')  // select
 const widthSidePart   = ref<string>('')  // select
-const grilleLocation   = ref<string>('Возле петель')
+const grilleLocation   = ref<GrilleSideSelection>('hinge')
 
 const grilleNetItems         = ref<GrilleNetItem[]>([])
 const assortmentSideGrilleNetId = ref<number | null>(null)
@@ -117,9 +115,9 @@ const shieldOptions = computed(() => {
   const orient = panelOrientation.value
   const base = sharedShieldImgBase.value
   // z - замок, p - петля (только для Тип_4)
-  const type4Suffix = grilleLocation.value === 'Возле замка' ? 'z' : 'p'
+  const type4Suffix = isGrilleSide(grilleLocation.value) ? (grilleLocation.value === 'lock' ? 'z' : 'p') : null
   return frameSubtypeOptions().map(option => ({ ...option,
-    img: orient === null ? null : `${base}/w_${orient}_1.${option.imageIndex}${option.value === 'sideNet' ? `_${type4Suffix}` : ''}.png`,
+    img: orient === null || (option.value === 'sideNet' && type4Suffix === null) ? null : `${base}/w_${orient}_1.${option.imageIndex}${option.value === 'sideNet' ? `_${type4Suffix}` : ''}.png`,
   }))
 })
 
@@ -300,7 +298,7 @@ async function onShieldTypeChange() {
     widthSidePart.value  = ''
     grilleNetItems.value   = []
     assortmentSideGrilleNetId.value = null
-    grilleLocation.value  = 'Возле петель'
+    grilleLocation.value  = 'hinge'
   }
   errHeightTop.value       = false
   errHeightUpperNet.value  = false
@@ -341,7 +339,7 @@ function syncCalcFields() {
   calc.upperGrilleNetImage.value = showHeightTop.value
     ? heightUpperNetItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
     : ''
-  calc.grilleLocation.value = grilleLocation.value
+  calc.grilleLocation.value = showSidePart.value ? grilleLocation.value : null
   calc.netWidthProviderTop.value = showHeightTop.value ? providerTop.value : ''
   calc.netWidthProviderLower.value = showHeightLower.value ? providerLower.value : ''
   calc.netWidthProviderSide.value = showSidePart.value ? providerSide.value : ''
@@ -379,13 +377,14 @@ function buildBlock() {
     }
   }
   if (showSidePart.value && calc.grilleLocation.value) {
-    params.push({ name: 'Расположение решётки', value: calc.grilleLocation.value })
+    params.push({ name: 'Расположение решётки', value: grilleSideLabel(calc.grilleLocation.value) })
   }
   calc.updateOrCreateBlock('Тип щита', params)
 }
 
 async function save() {
   if (!isFrameSubtypeCode(shieldType.value)) return
+  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) return
   syncCalcFields()
   buildBlock()
 
@@ -416,7 +415,7 @@ async function save() {
       assortmentHeightUpperNetId: showHeightTop.value
         ? (provTop === 'executor' ? assortmentHeightUpperNetId.value : null)
         : undefined,
-      grilleLocation:         calc.grilleLocation.value,
+      grilleSideCode: showSidePart.value && isGrilleSide(grilleLocation.value) ? grilleLocation.value : null,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -442,6 +441,10 @@ async function save() {
 function validate(): boolean {
   if (!isFrameSubtypeCode(shieldType.value)) {
     openModal('Выберите тип щита')
+    return false
+  }
+  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) {
+    openModal('Выберите расположение решётки')
     return false
   }
   errHeightTop.value   = false
@@ -547,7 +550,7 @@ onMounted(async () => {
   if ((unresolvedSubtype || showSidePart.value) && savedSide && savedSide !== '0' && Number(savedSide) > 0) {
     widthSidePart.value = String(savedSide)
   }
-  if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
+  grilleLocation.value = calc.grilleLocation.value
   await loadNetWidths()
   if ((unresolvedSubtype || showSidePart.value) && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
   if ((unresolvedSubtype || showHeightLower.value) && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)

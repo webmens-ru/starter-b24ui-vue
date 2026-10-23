@@ -22,7 +22,7 @@ const c = {
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
   widthSidePart: ref('300'),
-  grilleLocation: ref('Возле петель'),
+  grilleLocation: ref('hinge'),
   peremichkaPolozheniyeName: ref('Без перемычки'),
   peremichkaSortamentName: ref(''),
   materialFacadeGlob: ref('Профлист'),

@@ -4,6 +4,7 @@ import { isFillingMaterialGroup } from '../fillingMaterialGroups'
 import { isFillingSideCount } from '../fillingSideCounts'
 import { isFillingOrientation } from '../fillingOrientations'
 import { isFrameSubtypeCode } from '../frameSubtypes'
+import { isGrilleSide } from '../grilleSides'
 
 /** Remove legacy handles, retired fields and server-derived drawing properties. */
 export function canonicalizeWicketRootSavePayload(
@@ -60,6 +61,14 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.grilleSideProblem
+  const explicitGrilleSide = Object.prototype.hasOwnProperty.call(canonicalPayload, 'grilleSideCode')
+  const grilleSide = explicitGrilleSide ? canonicalPayload.grilleSideCode : canonicalPayload.grilleLocation
+  delete canonicalPayload.grilleLocation
+  if (explicitGrilleSide || (grilleSide !== undefined && grilleSide !== '')) {
+    if (grilleSide !== null && !isGrilleSide(grilleSide)) throw new TypeError('Некорректное положение решётки: grilleSideCode')
+    canonicalPayload.grilleSideCode = grilleSide
+  }
   delete canonicalPayload.frameSubtypeProblem
   const explicitSubtype = Object.prototype.hasOwnProperty.call(canonicalPayload, 'frameSubtypeCode')
   const subtype = explicitSubtype ? canonicalPayload.frameSubtypeCode : canonicalPayload.shieldType

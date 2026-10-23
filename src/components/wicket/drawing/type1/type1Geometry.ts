@@ -1,4 +1,5 @@
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
+import { parseDrawingGrilleSide } from '../../../../app/grilleSides'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
@@ -45,7 +46,7 @@ export function computeType1Geometry(s:Type1Source):Type1Geometry{
  const ly=Math.max(gi.y,gate.y+gate.height-R-lowerH-S),lower={...rect(gi.x,ly,gi.width,S),visible:capabilities.lower}
  const upperMaxY=sub==='type5'?gi.y+gi.height-S-I:lower.y-S-I
  const uy=Math.min(gi.y+upperH,upperMaxY),upper={...rect(gi.x,uy,gi.width,S),visible:capabilities.top}
- const meshLeft=!/замк/i.test(t(s.grilleLocation))?!right:right,vx=meshLeft?Math.min(gi.x+sideW,gi.x+gi.width-S):Math.max(gi.x,gi.x+gi.width-sideW-S),vertical={...rect(vx,gi.y,S,gi.height),visible:capabilities.side}
+ const meshLeft=parseDrawingGrilleSide(s.grilleLocation,capabilities.side)==='lock'?right:!right,vx=meshLeft?Math.min(gi.x+sideW,gi.x+gi.width-S):Math.max(gi.x,gi.x+gi.width-sideW-S),vertical={...rect(vx,gi.y,S,gi.height),visible:capabilities.side}
  let fill=gi,framed=base,net={...rect(0,0,0,0),visible:false},upperNet={...rect(0,0,0,0),visible:false}
  if(capabilities.lower){const fy=capabilities.top?upper.y+upper.height:gi.y;fill=rect(gi.x,fy,gi.width,lower.y-fy);framed=rect(base.x,fy+I,base.width,lower.y-fy-I*2);const ny=lower.y+lower.height;net={...rect(gi.x,ny,gi.width,gi.y+gi.height-ny),visible:true};if(capabilities.top)upperNet={...rect(gi.x,gi.y,gi.width,upper.y-gi.y),visible:true}}
  else if(capabilities.top){const fy=upper.y+upper.height;fill=rect(gi.x,fy,gi.width,gi.y+gi.height-fy);framed=rect(base.x,fy+I,base.width,gi.y+gi.height-fy-I*2);upperNet={...rect(gi.x,gi.y,gi.width,upper.y-gi.y),visible:true}}

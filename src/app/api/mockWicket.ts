@@ -738,6 +738,7 @@ export async function mockLoadWicketData(
     netWidthProviderLower: 'executor',
     netWidthProviderSide: 'executor',
     grilleLocation: 'Возле петель',
+    grilleSideCode: 'hinge',
     idFacade: 5,
     fillingProfileFacade: { kind: 'logSiding' },
     fillingProfileFacadeProblem: null,

@@ -2,6 +2,7 @@ import type { WicketRouteSection } from './wicketRoute'
 import { isFillingSideCount } from '../../app/fillingSideCounts'
 import { isFillingOrientation } from '../../app/fillingOrientations'
 import { isFrameSubtypeCode } from '../../app/frameSubtypes'
+import { isGrilleSide } from '../../app/grilleSides'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 const ok = () => ({ valid: true, errors: [] })
@@ -88,8 +89,10 @@ export function postsSection(): WicketRouteSection {
 
 export function shieldSection(): WicketRouteSection {
   const result = section('page3', 'Тип щита', 'shield-type')
-  const valid = (state: WicketSharedNavState) => state.shieldType === undefined || isFrameSubtypeCode(state.shieldType)
-  result.validate = state => valid(state) ? ok() : { valid: false, errors: ['Выберите тип щита'] }
+  const valid = (state: WicketSharedNavState) => (state.shieldType === undefined || isFrameSubtypeCode(state.shieldType))
+    && (state.shieldType !== 'sideNet' || state.grilleLocation === undefined || isGrilleSide(state.grilleLocation))
+  result.validate = state => valid(state) ? ok() : { valid: false,
+    errors: [isFrameSubtypeCode(state.shieldType) ? 'Выберите расположение решётки' : 'Выберите тип щита'] }
   result.next = (_from, state) => valid(state) ? undefined : 'page3'
   return result
 }

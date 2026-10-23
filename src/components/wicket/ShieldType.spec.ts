@@ -16,7 +16,7 @@ vi.mock('../../app/api/wicket', async (importOriginal) => ({
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
 }))
 
-const { saveWicketData } = await import('../../app/api/wicket')
+const { saveWicketData, recalculate } = await import('../../app/api/wicket')
 
 const router = createRouter({
   history: createMemoryHistory(),
@@ -58,6 +58,46 @@ describe('ShieldType top-only subtype', () => {
     calc.modelId.value = '1'
     calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
     vi.mocked(saveWicketData).mockClear()
+    vi.mocked(recalculate).mockClear()
+  })
+
+  it('does not save unresolved active side; explicit repair keeps subtype, size, net and provider', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'sideNet'
+    calc.grilleLocation.value = ''
+    calc.widthSidePart.value = '150'
+    calc.assortmentSideGrilleNetId.value = 31
+    calc.netWidthProviderSide.value = 'executor'
+    calc.priceRetail.value = '1000'
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(wrapper.find('img[alt="Сетка сбоку"]').exists()).toBe(false)
+    expect(calc.widthSidePart.value).toBe('150')
+    expect(calc.assortmentSideGrilleNetId.value).toBe(31)
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    await wrapper.find('input[value="lock"]').setValue(true)
+    await flushPromises()
+    expect(calc.shieldType.value).toBe('sideNet')
+    expect(calc.grilleLocation.value).toBe('lock')
+    expect(calc.widthSidePart.value).toBe('150')
+    expect(calc.assortmentSideGrilleNetId.value).toBe(31)
+    expect(calc.netWidthProviderSide.value).toBe('executor')
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ grilleSideCode: 'lock' }))
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('grilleLocation')
+    expect(wrapper.find('img[alt="Сетка сбоку"]').attributes('src')).toContain('/w_v_1.4_z.png')
+    wrapper.unmount()
+  })
+
+  it('explicitly clears side property when selecting a shape without side nets', async () => {
+    const calc = useCalculation()
+    calc.grilleLocation.value = ''
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ grilleSideCode: null }))
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('grilleLocation')
+    wrapper.unmount()
   })
 
   it('does not save, calculate or clear nets for unresolved hydrated subtype', async () => {
