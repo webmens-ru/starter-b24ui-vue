@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { participantRoleLabel } from '../../app/participantRoles'
+import { isOptionPresence, optionPresenceLabel, optionPresenceOptions, parseOptionPresence, type OptionPresenceSelection } from '../../app/optionPresence'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { recalculate } from '../../app/api/wicket'
@@ -19,7 +20,9 @@ const items = computed(() => calc.addonItems.value[props.config.key])
 const isMulti = computed(() => props.config.key === 'skud')
 const role = computed<WicketAccessoryRole>(() => props.config.key === 'doorCloser' ? 'door_closer' : props.config.key)
 
-const isThereName = ref<string>(isMulti.value ? 'Будет' : (calc.addons.value[props.config.key].isThere === 1 ? 'Будет' : 'Не будет'))
+const presence = ref<OptionPresenceSelection>(isMulti.value ? 1 : parseOptionPresence(calc.addons.value[props.config.key].isThere))
+const presenceOptions = optionPresenceOptions('optional')
+const presenceError = ref('')
 const provided = computed<string>({
   get: () => calc.addons.value[props.config.key].provided || 'manufacturer',
   set: value => { calc.addons.value[props.config.key].provided = value },
@@ -31,7 +34,7 @@ const installed = computed<string>({
 const selectedId = ref<number | null>(calc.addons.value[props.config.key].itemId)
 const selectedIds = ref<number[]>([...calc.addons.value[props.config.key].itemIds])
 
-const showDetails = computed(() => isMulti.value || isThereName.value === 'Будет')
+const showDetails = computed(() => isMulti.value || presence.value === 1)
 const showSelection = computed(() => true)
 const showProvided = true
 const showIsThere = computed(() => !isMulti.value)
@@ -86,8 +89,9 @@ function isMultiSelected(id: number) {
 }
 
 function sync() {
+  if (!isOptionPresence(presence.value)) return
   const st = calc.addons.value[props.config.key]
-  st.isThere = isThereName.value === 'Будет' ? 1 : 0
+  st.isThere = presence.value
   if (showDetails.value) {
     st.provided = provided.value
     st.installed = installed.value
@@ -110,7 +114,7 @@ function sync() {
 
 function buildBlock() {
   const st = calc.addons.value[props.config.key]
-  const params: { name: string; value: string }[] = [{ name: props.config.title, value: isThereName.value }]
+  const params: { name: string; value: string }[] = [{ name: props.config.title, value: optionPresenceLabel(presence.value, 'optional') }]
   if (showDetails.value) {
     if (showProvided) {
       params.push({ name: 'Предоставляет', value: participantRoleLabel('provide', st.provided) })
@@ -131,6 +135,8 @@ function buildBlock() {
 }
 
 async function save() {
+  if (!isOptionPresence(presence.value)) return
+  presenceError.value = ''
   const previousSelections = calc.getAccessorySelections()
   const hadCanonicalSelection = role.value === 'door_closer'
     ? previousSelections.doorClosers.length > 0
@@ -172,7 +178,7 @@ async function save() {
 
 watch(selectedId, () => { if (!isMulti.value) void save() })
 watch(selectedIds, () => { if (isMulti.value) void save() }, { deep: true })
-watch(isThereName, () => save())
+watch(presence, () => save())
 
 function changeProvided(): void {
   calc.setAccessoryGroupProvided(role.value, provided.value === 'manufacturer')
@@ -187,6 +193,19 @@ function changeInstalled(): void {
 onMounted(async () => {
   calc.setActivePage(props.config.page)
 })
+
+function validateBeforeLeave(): boolean {
+  const valid = isOptionPresence(presence.value)
+  presenceError.value = valid ? '' : 'Выберите наличие опции'
+  return valid
+}
+
+function next(): void {
+  if (validateBeforeLeave()) emit('next')
+}
+
+defineExpose({ validateBeforeLeave })
+
 </script>
 
 <template>
@@ -194,16 +213,18 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">{{ config.title }}</span>
-      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" @click="next" />
     </div>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
       <div v-if="showIsThere" class="option-grid">
-        <label class="lock-card"><input v-model="isThereName" type="radio" value="Будет" class="sr-only" />
-          <div class="card-content"><span class="block text-sm font-semibold text-center">Будет</span></div></label>
-        <label class="lock-card"><input v-model="isThereName" type="radio" value="Не будет" class="sr-only" />
-          <div class="card-content"><span class="block text-sm font-semibold text-center">Не будет</span></div></label>
+        <label v-for="option in presenceOptions" :key="option.value" class="lock-card">
+          <input v-model="presence" name="addon-presence" type="radio" :value="option.value" class="sr-only" />
+          <div class="card-content"><span class="block text-sm font-semibold text-center">{{ option.label }}</span></div>
+        </label>
       </div>
+
+      <p v-if="presenceError" class="text-red-500 text-sm" role="alert">{{ presenceError }}</p>
 
       <template v-if="showDetails">
         <div v-if="showProvided" class="option-grid">

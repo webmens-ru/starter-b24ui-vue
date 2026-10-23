@@ -77,16 +77,39 @@ describe('FurnitureAddon', () => {
       global: { stubs: { B24Button: true, ImageViewer: true } },
     })
     await wrapper.vm.$nextTick()
-    const radios = wrapper.findAll('input[type="radio"]')
-    const budet = radios.find(r => (r.element as HTMLInputElement).value === 'Будет')
-    if (budet) {
-      await budet.setValue()
-      await wrapper.vm.$nextTick()
-      expect(wrapper.text()).toContain('Предоставляет изготовитель')
-    } else {
-      // fallback: component renders without crashing and shows title
-      expect(wrapper.text()).toContain('Доводчик')
-    }
+    const presence = wrapper.findAll('input[name="addon-presence"]')
+    expect(presence.map(input => input.attributes('value'))).toEqual(['1', '0'])
+    await wrapper.get('input[name="addon-presence"][value="1"]').setValue()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('Предоставляет изготовитель')
+  })
+
+  it('keeps unresolved numeric presence and canonical selection until explicit repair', async () => {
+    const form = useWicketFormStore()
+    form.addonItems.doorCloser = [{ id: 31, name: 'Переведённая модель', article: 'DC-31', imageUrls: [] }]
+    form.replaceAccessorySelectionIds('door_closer', [31], { providedByManufacturer: false, installedByManufacturer: true })
+    form.addons.doorCloser = { isThere: 7, provided: 'customer', installed: 'manufacturer',
+      itemId: 31, itemIds: [31], marking: 'Переведённая модель' }
+    const before = form.getAccessorySelections()
+    const wrapper = mount(FurnitureAddon, {
+      props: { config: { ...config, title: 'Переведённый заголовок' } },
+      global: { stubs: { B24Button: true, ImageViewer: true } },
+    })
+    await flushPromises()
+    expect(api.saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    expect(form.getAccessorySelections()).toEqual(before)
+    expect(form.addons.doorCloser.itemId).toBe(31)
+    const next = wrapper.findAll('button').find(button => button.text() === 'Далее')
+    expect(next).toBeDefined()
+    await next!.trigger('click')
+    expect(wrapper.emitted('next')).toBeUndefined()
+    expect(wrapper.text()).toContain('Выберите наличие опции')
+    await wrapper.get('input[name="addon-presence"][value="1"]').setValue()
+    await flushPromises()
+    const payload = vi.mocked(api.saveWicketAccessoryComposition).mock.lastCall?.[0]
+    expect(payload?.doorClosers).toEqual([{ role: 'door_closer', materialItemId: 31,
+      providedByManufacturer: false, installedByManufacturer: true }])
+    wrapper.unmount()
   })
 
   it('при повторной загрузке СКУД сохраняет выбранного поставщика в первом payload', async () => {
@@ -166,7 +189,7 @@ describe('FurnitureAddon', () => {
         props: { config: { key, title, page } },
         global: { stubs: { B24Button: true, ImageViewer: true } },
       })
-      await wrapper.find('input[type="radio"][value="Будет"]').setValue()
+      await wrapper.get('input[name="addon-presence"][value="1"]').setValue()
       await wrapper.find('input[type="radio"][name="provided"][value="customer"]').setValue()
       expect(form.addons[key].provided).toBe('customer')
       expect(form.addons[key].installed).toBe('manufacturer')

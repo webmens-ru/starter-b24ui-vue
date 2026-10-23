@@ -120,9 +120,9 @@ describe('wicket root/accessory version flow', () => {
 
     const lockPresence = mount(IsTherelock, mountOptions())
     await vi.waitFor(() => {
-      expect(lockPresence.find('input[value="Нет"]:checked').exists()).toBe(true)
+      expect(lockPresence.find('input[name="lock-presence"][value="0"]:checked').exists()).toBe(true)
     })
-    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(4))
     await lockPresence.find('input[name="providesLock"][value="customer"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(5))
@@ -196,9 +196,9 @@ describe('wicket root/accessory version flow', () => {
     calc.loadFromApi(initial.wicketData)
 
     const presence = mount(IsTherelock, mountOptions())
-    await presence.find('input[value="Нет"]').setValue()
+    await presence.find('input[name="lock-presence"][value="0"]').setValue()
     await vi.waitFor(() => expect(serverWicket.lockSetId).toBeNull())
-    await presence.find('input[value="Есть"]').setValue()
+    await presence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(32))
     expect(presence.find('input[name="providesLock"][value="manufacturer"]:checked').exists()).toBe(true)
     expect(presence.find('input[name="lockInstaller"][value="manufacturer"]:checked').exists()).toBe(true)
@@ -526,10 +526,10 @@ describe('wicket root/accessory version flow', () => {
     calc.applyAccessoryComposition(coherent.accessoryComposition)
     const lockPresence = mount(IsTherelock, mountOptions())
     await vi.waitFor(() => {
-      expect(lockPresence.find('input[value="Нет"]:checked').exists()).toBe(true)
+      expect(lockPresence.find('input[name="lock-presence"][value="0"]:checked').exists()).toBe(true)
     })
 
-    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
     calc.productRowId.value = 18
     calc.accessoryCompositionLockVersion.value = 99

@@ -356,7 +356,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     })
     await new Promise(r => setTimeout(r, 100))
 
-    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
     await lockPresence.find('input[name="providesLock"][value="customer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
@@ -412,7 +412,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     vi.mocked(saveWicketData).mockClear()
     vi.mocked(saveWicketAccessoryComposition).mockClear()
 
-    await wrapper.find('input[value="Нет"]').setValue()
+    await wrapper.find('input[name="lock-presence"][value="0"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
@@ -495,6 +495,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {
     calc.modelId.value = '2'
     calc.isTherePenName.value = 'Будет'
+    calc.isTherePen.value = 1
     calc.isTherePen.value = 1
     calc.additionalPenId.value = 9
     calc.penColorId.value = 6

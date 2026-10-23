@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { participantRoleLabel } from '../../app/participantRoles'
+import { isOptionPresence, optionPresenceLabel, optionPresenceOptions, parseOptionPresence, type OptionPresenceSelection } from '../../app/optionPresence'
 import { ref, computed, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
@@ -12,11 +13,13 @@ const emit = defineEmits<{
 const calc = useCalculation()
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
-const isThereLockName  = ref<string>('Есть')
+const presence = ref<OptionPresenceSelection>(null)
+const presenceOptions = optionPresenceOptions('lock')
+const presenceError = ref('')
 const providesLock = ref<string>('manufacturer')
 const lockInstaller = ref<string>('manufacturer')
 
-const showLockDetails = computed(() => isThereLockName.value === 'Есть')
+const showLockDetails = computed(() => presence.value === 1)
 
 // ─── Группы радио ────────────────────────────────────────────────────────────
 const providesOptions = [
@@ -31,8 +34,8 @@ const installerOptions = [
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
 function syncCalcFields() {
-  calc.isThereLockName.value = isThereLockName.value
-  calc.isThereLock.value   = isThereLockName.value === 'Есть' ? 1 : 0
+  calc.isThereLockName.value = optionPresenceLabel(presence.value, 'lock')
+  calc.isThereLock.value = presence.value
 
   if (showLockDetails.value) {
     calc.providesLock.value = providesLock.value
@@ -50,7 +53,7 @@ function syncCalcFields() {
 
 function buildBlock() {
   const params: { name: string; value: string }[] = [
-    { name: 'Замок есть/нет', value: calc.isThereLockName.value },
+    { name: 'Замок есть/нет', value: optionPresenceLabel(calc.isThereLock.value, 'lock') },
   ]
   if (showLockDetails.value) {
     params.push({ name: 'Замок предоставляет',    value: participantRoleLabel('provide', calc.providesLock.value) })
@@ -60,6 +63,8 @@ function buildBlock() {
 }
 
 async function save() {
+  if (!isOptionPresence(presence.value)) return
+  presenceError.value = ''
   const previous = {
     isThereLockName: calc.isThereLockName.value,
     isThereLock: calc.isThereLock.value,
@@ -94,7 +99,7 @@ async function save() {
     calc.lockPenId.value = previous.lockPenId
     calc.lockPenColor.value = previous.lockPenColor
     calc.lockPenColorId.value = previous.lockPenColorId
-    isThereLockName.value = previous.isThereLockName
+    presence.value = previous.isThereLock
     providesLock.value = previous.providesLock
     lockInstaller.value = previous.lockInstaller
     buildBlock()
@@ -122,11 +127,23 @@ async function save() {
 onMounted(() => {
   calc.setActivePage('page9')
 
-  if (calc.isThereLockName.value) isThereLockName.value  = calc.isThereLockName.value
+  presence.value = parseOptionPresence(calc.isThereLock.value)
   providesLock.value = calc.providesLock.value
   lockInstaller.value = calc.lockInstaller.value
 
 })
+
+function validateBeforeLeave(): boolean {
+  const valid = isOptionPresence(presence.value)
+  presenceError.value = valid ? '' : 'Выберите наличие замка'
+  return valid
+}
+
+function next(): void {
+  if (validateBeforeLeave()) emit('next')
+}
+
+defineExpose({ validateBeforeLeave })
 </script>
 
 <template>
@@ -136,7 +153,7 @@ onMounted(() => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Замок</span>
-      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" @click="next" />
     </div>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
@@ -144,19 +161,14 @@ onMounted(() => {
       <!-- Есть / Нет замок -->
       <div>
         <div class="option-grid">
-          <label class="lock-card">
-            <input v-model="isThereLockName" type="radio" value="Есть" class="sr-only" @change="save" />
+          <label v-for="option in presenceOptions" :key="option.value" class="lock-card">
+            <input v-model="presence" name="lock-presence" type="radio" :value="option.value" class="sr-only" @change="save" />
             <div class="card-content">
-              <span class="block text-sm font-semibold text-center">Есть</span>
-            </div>
-          </label>
-          <label class="lock-card">
-            <input v-model="isThereLockName" type="radio" value="Нет" class="sr-only" @change="save" />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">Нет</span>
+              <span class="block text-sm font-semibold text-center">{{ option.label }}</span>
             </div>
           </label>
         </div>
+        <p v-if="presenceError" class="text-red-500 text-sm" role="alert">{{ presenceError }}</p>
       </div>
 
       <!-- Детали замка (только если Есть) -->

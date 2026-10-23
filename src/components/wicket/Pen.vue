@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { participantRoleLabel } from '../../app/participantRoles'
+import { participantRoleLabel, isParticipantRole } from '../../app/participantRoles'
+import { isOptionPresence, optionPresenceLabel, optionPresenceOptions, parseOptionPresence, type OptionPresenceSelection } from '../../app/optionPresence'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getAdditionalPens, saveWicketData, recalculate } from '../../app/api/wicket'
@@ -25,7 +26,8 @@ const calc = useCalculation()
 
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
-const isTherePenName = ref<string>('Не будет')
+const presence = ref<OptionPresenceSelection>(0)
+const presenceOptions = optionPresenceOptions('optional')
 const penProvided = ref<string>('manufacturer')
 const penInstalled = ref<string>('manufacturer')
 const selectedPenId = ref<number | null>(null)
@@ -37,7 +39,7 @@ const selectedColorModel = computed<number | 'frame' | undefined>({
   set: value => { selectedColor.value = value ?? null },
 })
 
-const showDetails = computed(() => isTherePenName.value === 'Будет')
+const showDetails = computed(() => presence.value === 1)
 
 /** Блок выбора ручки показываем только если её предоставляет изготовитель */
 const showPenSelection = computed(() => penProvided.value === 'manufacturer')
@@ -61,9 +63,15 @@ const installedOptions = [
   { value: 'customer', label: 'Устанавливает заказчик' },
 ]
 
+function canSyncSelection(): boolean {
+  return isOptionPresence(presence.value) && (presence.value === 0
+    || (isParticipantRole(penProvided.value) && isParticipantRole(penInstalled.value)))
+}
+
 function syncCalcFields() {
-  calc.isTherePenName.value = isTherePenName.value
-  calc.isTherePen.value = isTherePenName.value === 'Будет' ? 1 : 0
+  if (!canSyncSelection()) return
+  calc.isTherePenName.value = optionPresenceLabel(presence.value, 'optional')
+  calc.isTherePen.value = presence.value
 
   if (showDetails.value) {
     calc.penProvided.value = penProvided.value
@@ -100,7 +108,7 @@ function syncCalcFields() {
 
 function buildBlock() {
   const params: { name: string; value: string }[] = [
-    { name: 'Дополнительная ручка', value: calc.isTherePenName.value },
+    { name: 'Дополнительная ручка', value: optionPresenceLabel(calc.isTherePen.value, 'optional') },
   ]
   if (showDetails.value) {
     params.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', calc.penProvided.value) })
@@ -135,7 +143,7 @@ async function loadAdditionalPens() {
 }
 
 watch(selectedPenId, (id) => {
-  if (isRestoringSelection) return
+  if (isRestoringSelection || !canSyncSelection()) return
   calc.additionalPenId.value = id
   const pen = penItems.value.find(p => p.id === id)
   calc.additionalPenMarking.value = pen?.marking ?? ''
@@ -153,22 +161,24 @@ watch(selectedPenId, (id) => {
 })
 
 watch(selectedColor, () => {
-  if (isRestoringSelection) return
+  if (isRestoringSelection || !canSyncSelection()) return
   colorError.value = ''
   syncCalcFields()
   buildBlock()
   save()
 })
 
-watch(isTherePenName, () => {
-  if (isRestoringSelection) return
+watch(presence, () => {
+  if (isRestoringSelection || !canSyncSelection()) return
+  colorError.value = ''
   syncCalcFields()
   buildBlock()
   save()
 })
 
 watch([penProvided, penInstalled], () => {
-  if (isRestoringSelection) return
+  if (isRestoringSelection || !canSyncSelection()) return
+  colorError.value = ''
   syncCalcFields()
   buildBlock()
   save()
@@ -198,6 +208,14 @@ function applySavedSelection() {
 }
 
 async function validateAndSave(): Promise<boolean> {
+  if (!isOptionPresence(presence.value)) {
+    colorError.value = 'Выберите наличие дополнительной ручки'
+    return false
+  }
+  if (!canSyncSelection()) {
+    colorError.value = 'Выберите поставщика и исполнителя ручки'
+    return false
+  }
   if (showDetails.value && showPenSelection.value && selectedPenId.value != null && selectedColor.value == null) {
     colorError.value = 'Для выбранной ручки не настроен доступный цвет'
     return false
@@ -213,6 +231,7 @@ const { validateBeforeLeave, next: continueToNext } = leaveAttempt
 defineExpose({ validateBeforeLeave })
 
 async function save() {
+  if (!canSyncSelection()) return
   syncCalcFields()
   buildBlock()
 
@@ -220,7 +239,6 @@ async function save() {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       isTherePen: calc.isTherePen.value,
-      isTherePenName: calc.isTherePenName.value,
       penProvided: calc.penProvided.value || null,
       penInstalled: calc.penInstalled.value || null,
       penColorId: calc.penColorId.value,
@@ -251,7 +269,7 @@ onMounted(async () => {
   calc.setActivePage('page10')
   isRestoringSelection = true
 
-  if (calc.isTherePenName.value) isTherePenName.value = calc.isTherePenName.value
+  presence.value = parseOptionPresence(calc.isTherePen.value)
   penProvided.value = calc.penProvided.value
   penInstalled.value = calc.penInstalled.value
   selectedPenId.value = calc.additionalPenId.value
@@ -281,19 +299,15 @@ onMounted(async () => {
 
       <!-- Будет / Не будет -->
       <div class="option-grid">
-        <label class="lock-card">
-          <input v-model="isTherePenName" type="radio" value="Будет" class="sr-only" />
+        <label v-for="option in presenceOptions" :key="option.value" class="lock-card">
+          <input v-model="presence" name="pen-presence" type="radio" :value="option.value" class="sr-only" />
           <div class="card-content">
-            <span class="block text-sm font-semibold text-center">Будет</span>
-          </div>
-        </label>
-        <label class="lock-card">
-          <input v-model="isTherePenName" type="radio" value="Не будет" class="sr-only" />
-          <div class="card-content">
-            <span class="block text-sm font-semibold text-center">Не будет</span>
+            <span class="block text-sm font-semibold text-center">{{ option.label }}</span>
           </div>
         </label>
       </div>
+
+      <p v-if="colorError" class="text-sm text-red-600" role="alert">{{ colorError }}</p>
 
       <!-- Детали (только при "Будет") -->
       <template v-if="showDetails">
@@ -362,7 +376,6 @@ onMounted(async () => {
                 class="w-full"
               />
             </div>
-            <p v-if="colorError" class="text-sm text-red-600">{{ colorError }}</p>
           </div>
         </template>
 
