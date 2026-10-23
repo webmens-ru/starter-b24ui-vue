@@ -3,6 +3,7 @@ import { isFillingSideCount } from '../../app/fillingSideCounts'
 import { isFillingOrientation } from '../../app/fillingOrientations'
 import { isFrameSubtypeCode } from '../../app/frameSubtypes'
 import { isGrilleSide } from '../../app/grilleSides'
+import { isOptionPresence } from '../../app/optionPresence'
 import type { WicketSharedNavState } from './wicketNavTypes'
 
 const ok = () => ({ valid: true, errors: [] })
@@ -113,6 +114,7 @@ export function paintingSection(): WicketRouteSection {
 export function lockSection(): WicketRouteSection {
   const result = section('page9', 'Комплект замка', 'is-there-lock', ['page9', 'page_lock_type'])
   result.next = (from, state) => {
+    if (!isOptionPresence(state.isThereLock)) return 'page9'
     if (from === 'page9' && state.isThereLock === 1) {
       return 'page_lock_type'
     }
@@ -121,6 +123,7 @@ export function lockSection(): WicketRouteSection {
   result.prev = from => from === 'page_lock_type' ? 'page9' : undefined
   result.last = state => state.isThereLock === 1 ? 'page_lock_type' : 'page9'
   result.validate = state => {
+    if (!isOptionPresence(state.isThereLock)) return { valid: false, errors: ['Выберите наличие замка'] }
     if (state.isThereLock !== 1) return ok()
     return state.lockSetId == null
       ? { valid: false, errors: ['Не выбран тип замка'] }

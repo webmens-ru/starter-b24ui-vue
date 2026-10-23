@@ -22,6 +22,7 @@ import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProdu
 import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
 import { frameSubtypeLabel, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
 import { grilleSideLabel, type GrilleSideSelection } from '../../app/grilleSides'
+import { optionPresenceLabel, presenceFromLockSetId, type OptionPresenceSelection } from '../../app/optionPresence'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -80,7 +81,7 @@ const peremichkaSortamentName   = ref<string | null>(null)
 
 // Поля шага "Ручка" (дополнительная ручка / скоба)
 const isTherePenName   = ref<string>('Не будет')
-const isTherePen       = ref<number>(0)
+const isTherePen       = ref<OptionPresenceSelection>(0)
 const penProvided        = ref<string>('manufacturer')
 const penInstalled       = ref<string>('manufacturer')
 const penColor           = ref<string>('')
@@ -137,7 +138,7 @@ const lockComponentIds = ref<number[]>([])
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
-const isThereLock     = ref<number>(1)
+const isThereLock     = ref<OptionPresenceSelection>(1)
 const providesLock      = ref<string>('manufacturer')
 const lockInstaller     = ref<string>('manufacturer')
 const lockComponentsProvided = ref<string>('manufacturer')
@@ -243,7 +244,7 @@ const fieldsFilled = ref<number>(0)
 
   function buildLockSummaryParams(): CalcBlock['params'] {
     const params: CalcBlock['params'] = [
-      { name: 'Замок есть/нет', value: isThereLockName.value },
+      { name: 'Замок есть/нет', value: optionPresenceLabel(isThereLock.value, 'lock') },
     ]
     if (isThereLock.value === 1) {
       params.push({ name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
@@ -804,8 +805,8 @@ const fieldsFilled = ref<number>(0)
         refMap[key].value = null
       }
     }
-    isThereLock.value = lockSetId.value == null ? 0 : 1
-    isThereLockName.value = isThereLock.value === 1 ? 'Есть' : 'Нет'
+    isThereLock.value = presenceFromLockSetId(lockSetId.value)
+    isThereLockName.value = optionPresenceLabel(isThereLock.value, 'lock')
     if (import.meta.env.DEV && modelIdForLoad === '2') {
       console.info('[type2-drawing] Pinia after loadFromApi', {
         idFacade: idFacade.value,
@@ -995,7 +996,7 @@ const fieldsFilled = ref<number>(0)
 
     // Дополнительная ручка (скоба)
     const penParams: CalcBlock['params'] = [
-      { name: 'Дополнительная ручка', value: isTherePenName.value },
+      { name: 'Дополнительная ручка', value: optionPresenceLabel(isTherePen.value, 'optional') },
     ]
     if (isTherePen.value === 1) {
       penParams.push({ name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })

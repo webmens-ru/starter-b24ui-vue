@@ -10,6 +10,8 @@ import { readFillingSideCount } from '../../app/api/legacyFillingSideCounts'
 import { readFillingOrientation } from '../../app/api/legacyFillingOrientations'
 import { readFrameSubtype } from '../../app/api/legacyFrameSubtypes'
 import { readGrilleSide } from '../../app/api/legacyGrilleSides'
+import { readPenPresence } from '../../app/api/legacyOptionPresence'
+import { optionPresenceLabel } from '../../app/optionPresence'
 
 /**
  * Маппинг полей ответа get-data в ref'ы формы калитки.
@@ -26,7 +28,6 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'sidingFormYardId',
   'productRowId',
   'openingOptionId',
-  'isTherePen',
   'isThereLock',
   'lockPenId',
   'lockSetId',
@@ -109,8 +110,6 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   lockSetId: null,
   lockPenColor: '',
   lockPenColorId: null,
-  isTherePenName: 'Не будет',
-  isTherePen: 0,
   penProvided: 'manufacturer',
   penInstalled: 'manufacturer',
   penColor: '',
@@ -172,6 +171,7 @@ export function applyWicketApiFieldMappings(
   }
 
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'isTherePen' || key === 'isTherePenName') continue
     if (key === 'grilleLocation' || key === 'grilleSideCode' || key === 'grilleSideProblem') continue
     if (key === 'shieldType' || key === 'frameSubtypeCode' || key === 'frameSubtypeProblem') continue
     if (key === 'raspolozheniyePolotna' || key === 'fillingOrientationCode' || key === 'fillingOrientationProblem') continue
@@ -188,6 +188,12 @@ export function applyWicketApiFieldMappings(
       || key === 'jumperPlacement' || key === 'jumperPlacementProblem') continue
     if (WICKET_LEGACY_ACCESSORY_KEYS.has(key) || WICKET_LEGACY_CLIENT_KEYS.has(key)) continue
     set(key, value)
+  }
+  if (refMap.isTherePen && (Object.prototype.hasOwnProperty.call(apiData, 'isTherePen')
+    || Object.prototype.hasOwnProperty.call(apiData, 'isTherePenName'))) {
+    const presence = readPenPresence(apiData)
+    refMap.isTherePen.value = presence
+    if (refMap.isTherePenName) refMap.isTherePenName.value = optionPresenceLabel(presence, 'optional')
   }
   if (refMap.grilleLocation && (Object.prototype.hasOwnProperty.call(apiData, 'grilleLocation')
     || Object.prototype.hasOwnProperty.call(apiData, 'grilleSideCode'))) {

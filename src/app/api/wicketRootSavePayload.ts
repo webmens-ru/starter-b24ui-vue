@@ -61,6 +61,9 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYardProblem
 
   delete canonicalPayload.participantRoleProblems
+  delete canonicalPayload.isThereLock
+  delete canonicalPayload.isThereLockName
+  delete canonicalPayload.isTherePenName
   delete canonicalPayload.grilleSideProblem
   const explicitGrilleSide = Object.prototype.hasOwnProperty.call(canonicalPayload, 'grilleSideCode')
   const grilleSide = explicitGrilleSide ? canonicalPayload.grilleSideCode : canonicalPayload.grilleLocation
