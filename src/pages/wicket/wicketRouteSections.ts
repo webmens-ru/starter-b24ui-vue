@@ -44,11 +44,12 @@ export function fillingSection(
   last: NonNullable<WicketRouteSection['last']>,
 ): WicketRouteSection {
   const result = section('page2', 'Заполнение', 'fill-side', pages)
-  result.next = (from, state) => isFillingSideCount(state.fillSide) ? next(from, state) : 'page2'
+  result.next = (from, state) => state.fillSide === 0 ? undefined : isFillingSideCount(state.fillSide) ? next(from, state) : 'page2'
   result.prev = prev
-  result.last = state => isFillingSideCount(state.fillSide) ? last(state) : 'page2'
+  result.last = state => state.fillSide === 0 ? 'page2' : isFillingSideCount(state.fillSide) ? last(state) : 'page2'
   result.validate = state => {
     if (!isFillingSideCount(state.fillSide)) return { valid: false, errors: ['Не выбрано количество сторон заполнения'] }
+    if (state.fillSide === 0) return ok()
     const hasFacade = state.idFacade != null && String(state.idFacade).trim() !== ''
     const needsYard = state.fillSide === 2
     const hasYard = state.idYard != null && String(state.idYard).trim() !== ''
@@ -100,7 +101,8 @@ export function shieldSection(): WicketRouteSection {
 
 export function canvasSection(): WicketRouteSection {
   const result = section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
-  const valid = (state: WicketSharedNavState) => state.raspolozheniyePolotna === undefined
+  result.visible = state => state.fillSide !== 0
+  const valid = (state: WicketSharedNavState) => state.fillSide === 0 || state.raspolozheniyePolotna === undefined
     || isFillingOrientation(state.raspolozheniyePolotna)
   result.validate = state => valid(state) ? ok() : { valid: false, errors: ['Выберите расположение полотна'] }
   result.next = (_from, state) => valid(state) ? undefined : 'page6'

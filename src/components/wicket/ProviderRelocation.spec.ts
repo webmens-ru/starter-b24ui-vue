@@ -189,6 +189,48 @@ describe('material provider in filling', () => {
     expect(calc.getBaseSavePayload().reachedStep).toBe('page2')
     wrapper.unmount()
   })
+  it.each(cases)('type %s persists no filling, hides fields and restores single with cleared IDs', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.idFacade.value = 21
+    calc.idYard.value = 39
+    calc.paintId.value = 7
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[value="none"]').setValue()
+    await flushPromises()
+    expect(calc.fillSide.value).toBe(0)
+    expect(calc.providesMaterial.value).toBe('manufacturer')
+    expect(wrapper.find('input[name="fillingSideCount"]').exists()).toBe(false)
+    expect(calc.idFacade.value).toBe('')
+    expect(calc.idYard.value).toBe('')
+    expect(calc.paintId.value).toBe(7)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillingSideCount: 0, idFacade: null, idYard: null }))
+    expect(calc.data.value.find(block => block.blockCode === 'filling')?.params).toEqual([
+      { paramCode: 'sideCount', name: 'Сторона заполнения', value: 'Без заполнения' },
+    ])
+    await wrapper.get('input[value="customer"]').setValue()
+    await flushPromises()
+    expect(calc.fillSide.value).toBe(1)
+    expect(calc.idFacade.value).toBe('')
+    expect(calc.isFillSectionIncomplete.value).toBe(true)
+    wrapper.unmount()
+  })
+  it('shows a failed no-filling save and keeps navigation disabled until retry succeeds', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '2'
+    const wrapper = mount(cases.find(([id]) => id === '2')![1], { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('save unavailable'))
+    await wrapper.get('input[value="none"]').setValue()
+    await flushPromises()
+    expect(wrapper.get('[data-filling-save-error]').text()).toContain('Не удалось сохранить')
+    expect(wrapper.find('[data-filling-save-retry]').exists()).toBe(true)
+    await wrapper.get('[data-filling-save-retry]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-filling-save-error]').exists()).toBe(false)
+    wrapper.unmount()
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()

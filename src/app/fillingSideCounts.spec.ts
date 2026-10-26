@@ -41,7 +41,7 @@ describe('numeric filling side count boundary', () => {
   it('keeps numeric options separate from display labels and rejects coercible values', () => {
     expect(fillingSideCountOptions()).toEqual([{ value: 1, label: 'Одна сторона' }, { value: 2, label: 'Две стороны' }])
     expect(fillingSideCountLabel(2)).toBe('Две стороны')
-    for (const raw of ['1', '2', 'Две стороны', true, false, null, 0, 3, 1.5, NaN]) expect(isFillingSideCount(raw)).toBe(false)
+    for (const raw of ['1', '2', 'Две стороны', true, false, null, 3, 1.5, NaN]) expect(isFillingSideCount(raw)).toBe(false)
     expect(fillingSideCountLabel('unknown')).toBe('')
   })
   it('prefers count, honors invalid diagnostics and confines legacy defaults to the read boundary', () => {

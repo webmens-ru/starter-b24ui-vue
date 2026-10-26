@@ -3,6 +3,7 @@ import { fillingSideCountLabel, hasInvalidFillingSideCountSelection, isFillingSi
 import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
+import { saveNoFilling } from '../saveNoFilling'
 import { onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../../app/api/wicket'
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value })
 
 const fillSideOptions = fillingSideCountOptions()
 
@@ -64,6 +66,7 @@ function onMaterialYardChange() {
 }
 
 async function save() {
+  if (await saveNoFilling(calc)) return
   const params = [
     { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { paramCode: 'sideCount', name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
@@ -117,6 +120,7 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page2')
+  if (calc.fillSide.value === 0) { calc.clearFilling(); await save(); return }
   if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
     || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
   if (calc.fillSide.value === null) calc.fillSide.value = 1
@@ -138,13 +142,13 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение</span>
-      <B24Button label="Далее"  color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <MaterialProvider @change="save" />
+    <MaterialProvider :persist="save" />
 
     <!-- Группы карточек -->
-    <div class="flex flex-col gap-6 mt-4">
+    <div v-if="calc.fillSide.value !== 0" class="flex flex-col gap-6 mt-4">
 
       <!-- Сторона заполнения -->
       <div>

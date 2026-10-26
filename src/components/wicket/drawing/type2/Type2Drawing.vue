@@ -48,7 +48,7 @@ const { geometry, error: drawingError } = useDrawingGeometry(() => computeType2G
   colorFacadeReverseImage: calc.colorFacadeReverseImage?.value,
   colorYardHex: calc.colorYardHex?.value,
   colorYardImage: calc.colorYardImage?.value,
-  raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
+  raspolozheniyePolotna: calc.fillSide.value === 0 ? undefined : calc.raspolozheniyePolotna.value,
   colorShieldHex: calc.colorShieldHex.value,
   sideGrilleNetImage: calc.sideGrilleNetImage?.value,
   lowerGrilleNetImage: calc.lowerGrilleNetImage?.value,
@@ -84,10 +84,10 @@ const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
 const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 1)
 const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 2)
-const hasMaterial = computed(() => Boolean(yardTwoSides.value ? calc.idYard.value : calc.idFacade.value))
+const hasMaterial = computed(() => calc.fillSide.value !== 0 && Boolean(yardTwoSides.value ? calc.idYard.value : calc.idFacade.value))
 const fillingPreview = computed(() => yardTwoSides.value
-  ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value)
-  : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value))
+  ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value && calc.fillSide.value !== 0)
+  : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value && calc.fillSide.value !== 0))
 const previewError = computed(() => drawingError.value || fillingPreview.value.error)
 const activeDirection = computed(() => yardTwoSides.value
   ? geometry.value.yardFill.direction

@@ -34,10 +34,10 @@ const { geometry, error: drawingError } = useDrawingGeometry(() => buildType3Geo
   heightTopPart: calc.heightTopPart.value,
   heightLowerPart: calc.heightLowerPart.value,
   widthSidePart: calc.widthSidePart.value,
-  numberOfSticks: calc.numberOfSticks.value,
+  numberOfSticks: calc.fillSide.value === 0 ? 0 : calc.numberOfSticks.value,
   gapName: calc.gapName.value,
   thicknessFacade: calc.thicknessFacade.value,
-  raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
+  raspolozheniyePolotna: calc.fillSide.value === 0 ? undefined : calc.raspolozheniyePolotna.value,
   jumperPlacement: calc.jumperPlacement.value,
   jumperPlacementProblem: calc.jumperPlacementProblem.value,
   postsPresenceProblem: calc.postsPresenceProblem.value,
@@ -75,7 +75,7 @@ const viewedFill = computed(() => viewSide.value === 'yard' && geometry.value.ya
   ? geometry.value.yard
   : geometry.value.facade)
 const viewedPickets = computed(() => {
-  if (!showFill.value) return []
+  if (calc.fillSide.value === 0 || !showFill.value) return []
   if (viewSide.value === 'yard') {
     return geometry.value.yard.visible ? geometry.value.yardPickets : []
   }
@@ -111,7 +111,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       aria-label="Чертёж калитки типа 3"
       role="img"
     >
-      <defs v-if="realisticColors && viewedFill.image">
+      <defs v-if="calc.fillSide.value !== 0 && realisticColors && viewedFill.image">
         <pattern :id="activePatternId" patternUnits="objectBoundingBox" width="1" height="1">
           <image :href="viewedFill.image" width="1" height="1" preserveAspectRatio="xMidYMid slice" />
         </pattern>
