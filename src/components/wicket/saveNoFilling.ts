@@ -1,4 +1,5 @@
 import { recalculate, saveWicketData } from '../../app/api/wicket'
+import { withoutSummaryBlock } from '../../app/summaryCodes'
 import { fillingSideCountLabel } from '../../app/fillingSideCounts'
 import type { useCalculation } from '../../composables/useCalculation'
 
@@ -39,7 +40,12 @@ export async function saveNoFilling(calc: ReturnType<typeof useCalculation>): Pr
         modelId: calc.modelId.value,
       })
       calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-    } catch (error) { console.error('Ошибка пересчёта цены:', error) }
+    } catch (error) {
+      calc.priceRetail.value = ''
+      calc.priceDealer.value = ''
+      calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
+      console.error('Ошибка пересчёта цены:', error)
+    }
   }
   return true
 }
