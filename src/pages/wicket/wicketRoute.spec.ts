@@ -29,13 +29,18 @@ describe('defineWicketRoute', () => {
   it.each(Object.entries(routes))('%s starts at opening and contains no manufacturing section', (_, module) => {
     const route = Object.values(module).find(value => typeof value === 'object' && value !== null && 'sections' in value) as ReturnType<typeof defineWicketRoute>
     expect(route.menu(state)[0]?.page).toBe('page7')
+    expect(route.menu(state).map(item => item.page).slice(0, 4)).toEqual(['page7', 'page5', 'page2', 'page6'])
+    expect(route.next('page7', state)).toBe('page5')
+    expect(route.next('page5', state)).toBe('page2')
+    expect(route.prev('page5', state)).toBe('page7')
+    expect(route.prev('page2', state)).toBe('page5')
     expect(route.menu(state).some(item => item.page === 'page1' || item.label === 'Вариант изготовления')).toBe(false)
     expect(route.prev('page7', state)).toBeNull()
   })
   it('orders canvas, shield and painting as separate consecutive sections', () => {
     const route = defineWicketRoute(standardTailSections())
     expect(route.menu(state).map(item => item.label)).toEqual([
-      'Столбы / Вариант открытия / Перемычка', 'Расположение полотна', 'Тип щита',
+      'Расположение полотна', 'Тип щита',
       'Окраска', 'Комплект замка', 'Дополнительная ручка', 'Рассчитать',
     ])
     expect(route.next('page6', state)).toBe('page3')

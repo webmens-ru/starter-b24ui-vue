@@ -13,7 +13,7 @@ describe('numeric filling side count boundary', () => {
   it.each([null, '', 3] as const)('keeps unresolved count %s at the choice page instead of choosing a side layout', fillSide => {
     const state = { ...navigation, fillSide }
     expect(type2Route.next('page2', state)).toBe('page2')
-    expect(type2Route.prev('page5', state)).toBe('page2')
+    expect(type2Route.prev('page6', state)).toBe('page2')
     expect(type2Route.validations(state).get('page2')?.valid).toBe(false)
   })
   it('requires and routes to the yard for numeric Double independently of captions', () => {

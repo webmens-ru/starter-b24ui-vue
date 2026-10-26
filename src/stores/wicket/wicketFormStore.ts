@@ -584,9 +584,9 @@ const fieldsFilled = ref<number>(0)
     const stepOrder = modelId === '2'
       ? [
           'page7',
+          'page5',
           'page2',
           'page2_facade_profnastil',
-          'page5',
           'page6',
           'page3',
           'page_painting',
@@ -595,7 +595,7 @@ const fieldsFilled = ref<number>(0)
           'page10',
           'page12',
         ]
-      : ['page7', 'page2', 'page5', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
+      : ['page7', 'page5', 'page2', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
     const visited: string[] = []
     let active = 'page7'
 

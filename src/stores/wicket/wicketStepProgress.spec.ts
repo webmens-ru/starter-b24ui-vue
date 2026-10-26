@@ -21,11 +21,12 @@ describe('wicketStepProgress', () => {
   })
 
   it('visitedPagesUpTo не открывает шаги дальше active', () => {
-    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page7', 'page2'])
+    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page7', 'page5', 'page2'])
     const calculatedPages = visitedPagesUpTo('page12', ['page1', 'page10'])
     expect(calculatedPages).toContain('page12')
     expect(calculatedPages).not.toContain('page11')
-    expect(visitedPagesUpTo('page2', ['page1'])).not.toContain('page5')
+    expect(visitedPagesUpTo('page5', ['page1'])).toEqual(['page7', 'page5'])
+    expect(laterWizardStep('page2', 'page5')).toBe('page2')
   })
 
   it('располагает проём перед заполнением', () => {
