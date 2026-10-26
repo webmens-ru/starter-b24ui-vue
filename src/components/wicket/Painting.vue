@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
+import { withoutSummaryBlock } from '../../app/summaryCodes'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
 import { computed, onMounted, ref } from 'vue'
@@ -171,7 +172,7 @@ async function saveSelection(): Promise<boolean> {
       calculationWarning.value = `Окраска сохранена. Стоимость не пересчитана:\n${requestErrorMessage(e, 'Не удалось пересчитать стоимость')}`
       calc.priceRetail.value = ''
       calc.priceDealer.value = ''
-      calc.data.value = calc.data.value.filter(block => block.blockName !== 'Цена')
+      calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
     }
   }
   return true

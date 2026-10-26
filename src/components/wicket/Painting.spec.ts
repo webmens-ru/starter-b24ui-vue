@@ -115,10 +115,12 @@ describe('separate paint and color', () => {
  it('allows leaving after saved painting when recalculation fails', async () => {
   const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});c.priceRetail.value='1000'
   const w=render();await flushPromises()
+  c.data.value.push({ blockCode: 'price', blockName: 'Renamed price', params: [] })
   vi.mocked(recalculate).mockRejectedValueOnce(new Error('Price failed'))
   expect(await w.vm.validateBeforeLeave()).toBe(true)
   expect(w.text()).toContain('Окраска сохранена')
   expect(w.text()).toContain('Price failed')
+  expect(c.data.value.some(block => block.blockCode === 'price')).toBe(false)
   w.unmount()
  })
  it('does not preserve an unavailable paint through the unavailable-color exception', async () => {
