@@ -194,6 +194,10 @@ const colorFacadeHex          = ref<string>('')
 const colorFacadeImage        = ref<string>('')
 const coatingFacadeHex        = ref<string>('')
 const coatingFacadeImage      = ref<string>('')
+const reliefFacadeAlongMode = ref<'stretch' | 'repeat'>('stretch')
+const reliefFacadeAcrossMode = ref<'stretch' | 'repeat'>('repeat')
+const reliefYardAlongMode = ref<'stretch' | 'repeat'>('stretch')
+const reliefYardAcrossMode = ref<'stretch' | 'repeat'>('repeat')
 const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
@@ -286,6 +290,10 @@ const fieldsFilled = ref<number>(0)
     coatingFacadeHex.value = ''
     coatingFacadeImage.value = ''
     reliefFacadeImage.value = ''
+    reliefFacadeAlongMode.value = 'stretch'
+    reliefFacadeAcrossMode.value = 'repeat'
+    reliefYardAlongMode.value = 'stretch'
+    reliefYardAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
     gapId.value = null
@@ -758,6 +766,8 @@ const fieldsFilled = ref<number>(0)
       coatingFacadeHex,
       coatingFacadeImage,
       reliefFacadeImage,
+      reliefFacadeAlongMode,
+      reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
       gapId,
@@ -780,6 +790,8 @@ const fieldsFilled = ref<number>(0)
       coatingYardHex,
       coatingYardImage,
       reliefYardImage,
+      reliefYardAlongMode,
+      reliefYardAcrossMode,
       priceRetail,
       priceDealer,
     }
@@ -1127,6 +1139,8 @@ const fieldsFilled = ref<number>(0)
     coatingFacadeHex,
     coatingFacadeImage,
     reliefFacadeImage,
+    reliefFacadeAlongMode,
+    reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
     gapId,
@@ -1149,6 +1163,8 @@ const fieldsFilled = ref<number>(0)
     coatingYardHex,
     coatingYardImage,
     reliefYardImage,
+    reliefYardAlongMode,
+    reliefYardAcrossMode,
     priceRetail,
     priceDealer,
     fieldsFilled,

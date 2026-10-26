@@ -359,6 +359,8 @@ export async function getType2ProfnastilFormOptions(
             coatingHex: null,
             coatingImage: null,
             reliefImage: null,
+            reliefAlongMode: 'stretch',
+            reliefAcrossMode: 'repeat',
             drawingProfile: { kind: 'c8' },
             drawingProfileProblem: null,
           }]

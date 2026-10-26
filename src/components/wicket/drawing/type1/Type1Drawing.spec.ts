@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../../../app/api/fillingDrawingProfiles'
 import { describe, expect, it, vi } from 'vitest'
@@ -74,19 +74,20 @@ describe('numeric pipe rendering errors', () => {
 vi.mock('../../../../composables/useCalculation', () => ({ useCalculation: () => c }))
 
 import Type1Drawing from './Type1Drawing.vue'
+vi.stubGlobal('fetch', async () => ({ ok: true, blob: async () => new Blob(['<svg viewBox="0 0 80 200"/>'], { type: 'image/svg+xml' }) }))
 
 describe('Type1Drawing', () => {
-  it('requires a configured profile only for a selected visible material and recovers on an explicit choice', async () => {
+  it('draws base and frame without requiring a historical profile', async () => {
     const before = c.fillingProfileFacade.value
     c.fillingProfileFacade.value = null
     const wrapper = mount(Type1Drawing)
     try {
-      expect(wrapper.find('svg').exists()).toBe(false)
-      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
       c.fillingProfileFacade.value = { kind: 'c20' }
       await wrapper.vm.$nextTick()
       expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-      expect(wrapper.find('[data-testid="filling-c20"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="filling-drawing"]').exists()).toBe(true)
     } finally { wrapper.unmount(); c.fillingProfileFacade.value = before }
   })
 
@@ -101,8 +102,8 @@ describe('Type1Drawing', () => {
       expect(wrapper.get('svg').html()).toBe(svg)
       c.fillSide.value = 2
       await wrapper.get('[data-testid="type1-view-yard"]').setValue(true)
-      expect(wrapper.find('svg').exists()).toBe(false)
-      expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     } finally {
       wrapper.unmount(); c.materialFacade.value = name
       c.fillingProfileYard.value = yardProfile; c.fillSide.value = 1
@@ -296,12 +297,13 @@ describe('Type1Drawing', () => {
     c.upperGrilleNetImage.value = ''
   })
 
-  it('рисует внешний рельеф профнастила только из данных бэка', () => {
+  it('рисует внешний рельеф профнастила только из данных бэка', async () => {
     c.materialFacade.value = 'Профнастил С-20'
     c.fillingProfileFacade.value = { kind: 'c20' }
     c.reliefFacadeImage.value = '/uploads/dict/filling-relief/profnastil-c20.svg'
     const w = mount(Type1Drawing)
-    expect(w.get('[data-testid="filling-c20"]')).toBeTruthy()
+    expect(w.get('[data-testid="filling-drawing"]')).toBeTruthy()
+    await flushPromises()
     expect(w.get('[data-testid="filling-relief-texture"]').attributes('fill')).toContain('relief-texture')
     expect(w.find('[data-testid="filling-profile-shadow"]').exists()).toBe(false)
     c.materialFacade.value = 'С-8'
@@ -344,7 +346,7 @@ describe('Type1Drawing', () => {
     c.fillingProfileYard.value = { kind: 'mp10' }
     const w = mount(Type1Drawing)
     await w.get('[data-testid="type1-view-yard"]').setValue(true)
-    expect(w.get('[data-testid="filling-mp10"]')).toBeTruthy()
+    expect(w.get('[data-testid="filling-drawing"]')).toBeTruthy()
     expect(w.findAll('[data-testid="type1-fill"] rect').some(rect => rect.attributes('fill') === '#123456')).toBe(true)
     expect(w.html().indexOf('data-testid="type1-fill"')).toBeGreaterThan(w.html().indexOf('data-testid="type1-frame"'))
     c.fillSide.value = 1

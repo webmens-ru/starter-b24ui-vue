@@ -4,7 +4,7 @@ let idSeed=0
 <script setup lang="ts">
 import {computed,ref,watch} from 'vue'
 import {useCalculation} from '../../../../composables/useCalculation'
-import FillingDrawing from '../fillings/FillingDrawing.vue'
+import FillingDrawing from '../fillings/MaterialFillingDrawing.vue'
 import {resolveFillingPreview} from '../fillings/fillingTypes'
 import { useDrawingGeometry } from '../useDrawingGeometry'
 import {resolveJumperPresentation} from '../jumperGeometry'
@@ -14,6 +14,7 @@ const {geometry:g,error:drawingError}=useDrawingGeometry(()=>computeType1Geometr
 const yard=computed(()=>side.value==='yard'),real=computed(()=>colors.value==='realistic'),frameColor=computed(()=>real.value?g.value.frameColor:'#d1d5db')
 const reverse=computed(()=>yard.value&&calc.fillSide.value===1)
 const yardTwoSides=computed(()=>yard.value&&calc.fillSide.value===2)
+const hasMaterial = computed(() => Boolean(yardTwoSides.value ? calc.idYard.value : calc.idFacade.value))
 const fillingPreview=computed(()=>yardTwoSides.value
  ?resolveFillingPreview(calc.idYard.value,calc.fillingProfileYard.value,calc.fillingProfileYardProblem.value,showFill.value)
  :resolveFillingPreview(calc.idFacade.value,calc.fillingProfileFacade.value,calc.fillingProfileFacadeProblem.value,showFill.value))
@@ -24,6 +25,8 @@ const fillImage=computed(()=>real.value?(yardTwoSides.value?g.value.yardFill.ima
 const coatingColor=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardHex?.value??''):(calc.coatingFacadeHex?.value??'')):'')
 const coatingImage=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardImage?.value??''):(calc.coatingFacadeImage?.value??'')):'')
 const reliefImage=computed(()=>yardTwoSides.value?(calc.reliefYardImage?.value??''):(calc.reliefFacadeImage?.value??''))
+const reliefAlongMode=computed(()=>yardTwoSides.value?calc.reliefYardAlongMode?.value:calc.reliefFacadeAlongMode?.value)
+const reliefAcrossMode=computed(()=>yardTwoSides.value?calc.reliefYardAcrossMode?.value:calc.reliefFacadeAcrossMode?.value)
 const inward=computed(()=>!calc.openingOrientation.value!.opensOutward),behind=computed(()=>inward.value!==yard.value)
 const transform=computed(()=>yard.value?`translate(${g.value.drawing.width} 0) scale(-1 1)`:undefined)
 const jumperPresentation=computed(()=>resolveJumperPresentation(g.value.extraRail.placement,side.value))
@@ -51,14 +54,14 @@ const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),ne
    <defs v-if="g.rails.upper.visible&&g.upperNetArea.visible&&g.upperNetImage"><pattern :id="`t1-upper-${id}`" patternUnits="userSpaceOnUse" :x="g.upperNetArea.x" :y="g.upperNetArea.y" :width="upperTileW" :height="g.upperNetArea.height"><image data-testid="type1-drawing-upper-net-image" :href="g.upperNetImage" x="0" y="0" :width="upperTileW" :height="g.upperNetArea.height" preserveAspectRatio="xMidYMid meet"/></pattern></defs>
    <rect v-if="g.rails.upper.visible&&g.upperNetArea.visible&&g.upperNetImage" data-testid="type1-upper-net-background" v-bind="g.upperNetArea" :fill="frameColor"/>
    <rect v-if="g.rails.upper.visible&&g.upperNetArea.visible&&g.upperNetImage" data-testid="type1-upper-net" v-bind="g.upperNetArea" :fill="`url(#t1-upper-${id})`"/>
-   <g v-if="yard&&!yardTwoSides&&showFill" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :profile="fillingPreview.profile" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
+   <g v-if="yard&&!yardTwoSides&&showFill&&hasMaterial" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
    <g v-if="yard" data-testid="type1-strip" :fill="frameColor" stroke="#000"><rect v-for="(r,i) in g.strip" :key="`bs${i}`" v-bind="r"/></g>
    <g data-testid="type1-frame" :fill="frameColor" stroke="#000" vector-effect="non-scaling-stroke"><rect v-for="(r,k) in g.innerFrame" :key="k" v-bind="r"/><rect v-for="(r,i) in g.lockPipes" :key="`lock${i}`" data-testid="type1-lock-pipe" v-bind="r"/><rect v-if="g.rails.lower.visible" v-bind="g.rails.lower"/><rect v-if="g.rails.upper.visible" v-bind="g.rails.upper"/><rect v-if="g.rails.vertical.visible" v-bind="g.rails.vertical"/></g>
    <g :fill="frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke"><rect v-bind="g.frame.left"/><rect v-bind="g.frame.right"/><path :d="top"/><path :d="bottom"/></g>
    <g v-if="g.posts.visible" :fill="frameColor" stroke="#000" stroke-width="2"><rect v-bind="g.posts.left"/><rect v-bind="g.posts.right"/></g>
    <g v-if="!behind" data-testid="type1-hinges" fill="#e8b923" stroke="#000"><rect v-for="(r,i) in g.hinges" :key="`fh${i}`" v-bind="r"/></g>
    <g v-if="!yard" data-testid="type1-strip" :fill="frameColor" stroke="#000"><rect v-for="(r,i) in g.strip" :key="`fs${i}`" v-bind="r"/></g>
-   <g v-if="(!yard||yardTwoSides)&&showFill" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :profile="fillingPreview.profile" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
+   <g v-if="(!yard||yardTwoSides)&&showFill&&hasMaterial" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
    <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='foreground'" data-testid="type1-jumper-foreground" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" :fill="frameColor" stroke="#000"/>
   </g>
  </svg>

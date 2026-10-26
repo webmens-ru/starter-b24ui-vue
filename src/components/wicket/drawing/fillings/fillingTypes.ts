@@ -11,7 +11,6 @@ export function resolveFillingPreview(materialId: unknown, profile: unknown, pro
     return { profile: null, error: 'Некорректный идентификатор материала заполнения.' }
   }
   const descriptor = parseFillingDrawingDescriptor(profile, problem)
-  return descriptor.profile === null
-    ? { profile: null, error: descriptor.problem?.message ?? 'Для выбранного материала не настроен профиль отрисовки.' }
-    : { profile: descriptor.profile, error: '' }
+  // Historical drawing kinds do not determine live material appearance.
+  return { profile: descriptor.profile, error: descriptor.problem?.code === 'unavailable' ? descriptor.problem.message : '' }
 }

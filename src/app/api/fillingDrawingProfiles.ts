@@ -6,6 +6,8 @@ export type FillingDrawingDescriptor = Readonly<{
   problem: FillingDrawingProfileProblem | null
 }>
 export type FillingDrawingMetadata = Readonly<{
+  reliefAlongMode?: 'stretch' | 'repeat'
+  reliefAcrossMode?: 'stretch' | 'repeat'
   drawingProfile: FillingDrawingProfile | null
   drawingProfileProblem: FillingDrawingProfileProblem | null
 }>

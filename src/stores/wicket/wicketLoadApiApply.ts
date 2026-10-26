@@ -89,6 +89,10 @@ const WICKET_NET_PROVIDER_KEYS = new Set([
 ])
 
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
+  reliefFacadeAlongMode: 'stretch',
+  reliefFacadeAcrossMode: 'repeat',
+  reliefYardAlongMode: 'stretch',
+  reliefYardAcrossMode: 'repeat',
   providesMaterial: 'manufacturer',
   providesPaint: 'manufacturer',
   providesPrimer: 'manufacturer',
@@ -130,6 +134,10 @@ export function applyWicketApiFieldMappings(
   apiData: Record<string, unknown>,
   refMap: Record<string, RefLike>,
 ): void {
+  for (const key of ['reliefFacadeAlongMode', 'reliefFacadeAcrossMode', 'reliefYardAlongMode', 'reliefYardAcrossMode']) {
+    const target = refMap[key]
+    if (target) target.value = apiData[key] === 'stretch' || apiData[key] === 'repeat' ? apiData[key] : WICKET_API_FIELD_DEFAULTS[key]
+  }
   function set(key: string, val: unknown) {
     if (val === undefined) return
     let v: unknown
@@ -162,6 +170,8 @@ export function applyWicketApiFieldMappings(
       }
     } else if (WICKET_NET_PROVIDER_KEYS.has(key) && (val === null || val === '')) {
       v = ''
+    } else if (['reliefFacadeAlongMode', 'reliefFacadeAcrossMode', 'reliefYardAlongMode', 'reliefYardAcrossMode'].includes(key)) {
+      v = val === 'stretch' || val === 'repeat' ? val : WICKET_API_FIELD_DEFAULTS[key]
     } else if (key === 'materialYardGlob' && val === null) {
       v = null
     } else if (key in WICKET_API_FIELD_DEFAULTS && (val === null || val === '')) {
