@@ -154,13 +154,14 @@ describe('separate paint and color', () => {
   expect(w.get('textarea').element.value).toBe('')
   w.unmount()
  })
- it('preserves note text for a fixed palette that explicitly requires a note', async () => {
-  const data=catalog();data.colorShield[0]!.requiresColorNote=true
+ it('retains the draft note when switching between valid individual paints', async () => {
+  const data=catalog()
+  data.colorShield.push(paint(5, [], { isFixedColor:false, requiresColorNote:true }))
   vi.mocked(getColorShield).mockResolvedValueOnce(data)
   const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Required sample'})
   const w=render();await flushPromises()
-  await w.get('[data-testid="paint-product"]').setValue('1');await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:1,colorShieldNote:'Required sample'}))
+  await w.get('[data-testid="paint-product"]').setValue('5');await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:5,colorShieldNote:'Required sample'}))
   expect(c.colorShieldNote.value).toBe('Required sample')
   w.unmount()
  })
@@ -190,6 +191,39 @@ describe('separate paint and color', () => {
   expect(await leaving).toBe(true)
   expect(c.priceRetail.value).toBe('2000')
   expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(false)
+  w.unmount()
+ })
+
+ // Defensive wire-boundary resilience: individual flags are valid, but the unavailable-color
+ // flag is anomalous with a null palette FK. It must not silently discard a visible note edit.
+ it('keeps editable individual notes independent of preserved material state at the history boundary', async () => {
+  const c=useCalculation()
+  c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Saved sample',paintSelectionUnavailable:true,paintSelection:{isFixedColor:false,requiresColorNote:true,isPaintAvailable:true}})
+  const w=render();await flushPromises()
+  w.get('textarea').element.value='   '
+  await w.get('textarea').trigger('input')
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  w.get('textarea').element.value='Edited sample'
+  await w.get('textarea').trigger('input')
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Note rejected'))
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,paintColorId:null,colorShieldNote:'Edited sample'}))
+  expect(c.colorShieldNote.value).toBe('Saved sample')
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(c.colorShieldNote.value).toBe('Edited sample')
+  expect(c.data.value.find(block=>block.blockCode==='painting')?.params).toContainEqual({paramCode:'paintNote',name:'Примечание к цвету краски',value:'Edited sample'})
+  w.unmount()
+ })
+ it('keeps a local individual-note draft hidden and unsaved while customer performs painting', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Saved sample'})
+  const w=render();await flushPromises()
+  w.get('textarea').element.value='Local sample'
+  await w.get('textarea').trigger('input')
+  await w.get('input[value="Выполняет заказчик"]').setValue();await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,colorShieldNote:'Saved sample',doesPaintingFrameCode:'customer'}))
+  expect(c.colorShieldNote.value).toBe('Saved sample')
+  expect(w.find('textarea').exists()).toBe(false)
   w.unmount()
  })
 

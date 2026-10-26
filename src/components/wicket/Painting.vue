@@ -106,11 +106,15 @@ async function saveSelection(): Promise<boolean> {
   if (!customerPainting.value && !unchangedUnavailable.value) {
     if (loading.value || !paint) { error.value = 'Выберите краску из списка.'; return false }
     if (paint.isFixedColor && !color) { error.value = 'Выберите цвет из списка.'; return false }
-    if (paint.requiresColorNote && !draftNote.value.trim()) { error.value = 'Укажите примечание к цвету краски'; return false }
   }
   const preserve = customerPainting.value || unchangedUnavailable.value
   const acceptsNote = paint != null && (!paint.isFixedColor || paint.requiresColorNote)
-  const note = preserve ? calc.colorShieldNote.value.trim() : acceptsNote ? draftNote.value.trim() : ''
+  const editNote = !customerPainting.value && acceptsNote
+  if (editNote && paint?.requiresColorNote && !draftNote.value.trim()) {
+    error.value = 'Укажите примечание к цвету краски'
+    return false
+  }
+  const note = editNote ? draftNote.value.trim() : preserve ? calc.colorShieldNote.value.trim() : ''
   const paintId = preserve ? calc.paintId.value : draftPaintId.value
   const paintColorId = preserve ? calc.paintColorId.value : paint?.isFixedColor ? draftColorId.value : null
   const primer = primers.value.find(item => item.id === calc.primerId.value)
@@ -125,8 +129,8 @@ async function saveSelection(): Promise<boolean> {
       paintId, paintColorId, primerId,
       colorShieldNote: note,
     })
+    calc.colorShieldNote.value = note
     if (!preserve && paint) {
-      calc.colorShieldNote.value = note
       calc.paintName.value = paint.name
       calc.paintId.value = paintId
       calc.paintColorId.value = paintColorId
