@@ -159,6 +159,7 @@ export interface PaintCategory {
   id: number
   name: string
   isFixedColor: boolean
+  requiresColorNote: boolean
   isCustomerSupplied: boolean
   requiresPaintType: boolean
   allowsAnyPrimer: boolean

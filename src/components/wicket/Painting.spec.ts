@@ -5,10 +5,10 @@ import { useCalculation } from '../../composables/useCalculation'
 import Painting from './Painting.vue'
 
 const { categoryFixtures } = vi.hoisted(() => ({ categoryFixtures: [
-  { id: 71, name: 'Базовая переименованная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
-  { id: 83, name: 'Другая', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
-  { id: 96, name: 'Произвольная', isFixedColor: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
-  { id: 125, name: 'Материал клиента', isFixedColor: true, isCustomerSupplied: true, requiresPaintType: false, allowsAnyPrimer: true, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
+  { id: 71, name: 'Базовая переименованная', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
+  { id: 83, name: 'Другая', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
+  { id: 96, name: 'Произвольная', isFixedColor: false, requiresColorNote: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
+  { id: 125, name: 'Материал клиента', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: true, requiresPaintType: false, allowsAnyPrimer: true, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
 ] }))
 
 vi.mock('../../app/api/wicket', async (original) => ({
@@ -204,6 +204,20 @@ describe('Окраска', () => {
     wrapper.unmount()
   })
 
+  it('allows an empty note for a renamed variable-color customer paint', async () => {
+    vi.mocked(getColorShield).mockResolvedValueOnce({
+      paintCategories: [{ ...categoryFixtures[3]!, id: 407, name: 'Переименована', isFixedColor: false, requiresColorNote: false }],
+      colorShield: [{ id: 31, name: 'Материал', paintCategoryId: 407, primers: [], paintTypeId: null, paintTypeName: null, consumptionRate: null }],
+    })
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.get('textarea').attributes('required')).toBeUndefined()
+    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', colorShieldNote: '' }))
+    wrapper.unmount()
+  })
+
   it('offers compatible primers, permits no primer and clears an incompatible selection on paint change', async () => {
     const wrapper = render()
     await flushPromises()
@@ -335,7 +349,7 @@ describe('Окраска', () => {
   it('keeps equally named arbitrary categories separate and uses independent properties', async () => {
     vi.mocked(getColorShield).mockResolvedValueOnce({
       paintCategories: [
-        { ...categoryFixtures[0]!, id: 407, name: 'Одинаковая', isCustomerSupplied: true, isFixedColor: false },
+        { ...categoryFixtures[0]!, id: 407, name: 'Одинаковая', isCustomerSupplied: true, isFixedColor: false, requiresColorNote: true },
         { ...categoryFixtures[3]!, id: 908, name: 'Одинаковая', isCustomerSupplied: false, isFixedColor: true },
       ],
       colorShield: [

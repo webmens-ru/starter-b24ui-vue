@@ -27,6 +27,7 @@ const calculationWarning = ref('')
 const selectedColor = computed(() => colors.value.find(item => String(item.id) === String(calc.colorShieldId.value)))
 const customerPainting = computed(() => calc.doesPaintingFrame.value === 'customer')
 const individual = computed(() => selectedCategory.value?.isFixedColor === false)
+const noteRequired = computed(() => selectedCategory.value?.requiresColorNote === true)
 const primers = computed(() => selectedColor.value?.primers ?? [])
 const colorItems = computed(() => {
   const groups = new Map<number, ColorShieldItem[]>()
@@ -119,7 +120,7 @@ async function save(): Promise<boolean> {
       { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
     ], 'Окраска')
   }
-  if (!customerPainting.value && individual.value && !calc.colorShieldNote.value.trim()) return false
+  if (!customerPainting.value && noteRequired.value && !calc.colorShieldNote.value.trim()) return false
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
@@ -185,6 +186,7 @@ async function load(): Promise<void> {
     if (!categories.value.length || categories.value.some(item =>
       typeof item.isFixedColor !== 'boolean' || typeof item.isCustomerSupplied !== 'boolean'
       || typeof item.requiresPaintType !== 'boolean' || typeof item.allowsAnyPrimer !== 'boolean'
+      || typeof item.requiresColorNote !== 'boolean' || (item.requiresColorNote && item.isFixedColor)
       || !['consumption', 'ceilKg'].includes(item.quantityCalculationMode)
       || !Number.isFinite(item.costCoefficient) || item.costCoefficient <= 0)
       || colors.value.some(item => !categories.value.some(entry => entry.id === item.paintCategoryId))) {
@@ -261,18 +263,18 @@ onMounted(async () => {
         />
       </label>
       <label v-if="individual" class="flex flex-col gap-2">
-        <span class="font-semibold">Примечание к цвету краски <span class="text-red-600">*</span></span>
+        <span class="font-semibold">Примечание к цвету краски <span v-if="noteRequired" class="text-red-600">*</span></span>
         <textarea
           v-model="calc.colorShieldNote.value"
-          required
+          :required="noteRequired"
           maxlength="1000"
           rows="3"
           class="w-full px-3 py-2 border rounded border-gray-300 bg-white"
-          :aria-invalid="submitted && !calc.colorShieldNote.value.trim()"
+          :aria-invalid="submitted && noteRequired && !calc.colorShieldNote.value.trim()"
           placeholder="Укажите индивидуальный цвет и требования к нему"
           @change="save"
         />
-        <span v-if="submitted && !calc.colorShieldNote.value.trim()" role="alert" class="text-sm text-red-600">Укажите примечание к цвету краски</span>
+        <span v-if="submitted && noteRequired && !calc.colorShieldNote.value.trim()" role="alert" class="text-sm text-red-600">Укажите примечание к цвету краски</span>
       </label>
       <label v-if="selectedColor" class="flex flex-col gap-2">
         <span class="font-semibold">Грунтовка <span class="font-normal text-gray-500">(необязательно)</span></span>

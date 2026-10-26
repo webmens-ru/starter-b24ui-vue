@@ -497,8 +497,8 @@ export async function mockGetColorShield(): Promise<{ colorShield: ColorShieldIt
   return {
     colorShield: MOCK_COLOR_SHIELD.map(item => ({ ...item, paintCategoryId: item.isStandard === 0 ? 102 : 101 })),
     paintCategories: [
-      { id: 101, name: 'Стандартная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption', costCoefficient: 1 },
-      { id: 102, name: 'Не стандартная', isFixedColor: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg', costCoefficient: 1.1 },
+      { id: 101, name: 'Стандартная', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption', costCoefficient: 1 },
+      { id: 102, name: 'Не стандартная', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg', costCoefficient: 1.1 },
     ],
   }
 }
