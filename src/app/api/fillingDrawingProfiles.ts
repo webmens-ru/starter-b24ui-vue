@@ -1,6 +1,6 @@
 export type FillingDrawingKind = 'c8' | 'c20' | 'mp10' | 'mp20' | 'logSiding' | 'shipLap'
 export type FillingDrawingProfile = Readonly<{ kind: FillingDrawingKind }>
-export type FillingDrawingProfileProblem = Readonly<{ code: 'missing' | 'unavailable' | 'invalid'; message: string }>
+export type FillingDrawingProfileProblem = Readonly<{ code: 'missing' | 'unavailable' | 'invalid'; message: string; scope?: 'profile' }>
 export type FillingDrawingDescriptor = Readonly<{
   profile: FillingDrawingProfile | null
   problem: FillingDrawingProfileProblem | null
@@ -21,7 +21,7 @@ export function parseFillingDrawingDescriptor(profile: unknown, problem: unknown
   if (profile === null && record(problem)
     && (problem.code === 'missing' || problem.code === 'unavailable' || problem.code === 'invalid')
     && typeof problem.message === 'string' && problem.message.trim() !== '') {
-    return { profile: null, problem: { code: problem.code, message: problem.message } }
+    return { profile: null, problem: { code: problem.code, message: problem.message, ...(problem.scope === 'profile' ? { scope: 'profile' as const } : {}) } }
   }
   if (problem === null && record(profile)) {
     switch (profile.kind) {

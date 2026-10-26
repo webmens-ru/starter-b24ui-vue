@@ -4,11 +4,13 @@ import { resolveFillingType, resolveFillingPreview } from './fillingTypes'
 describe('live material preview', () => {
   it('accepts material without a historical profile', () => {
     expect(resolveFillingPreview(725, null, { code: 'missing', message: 'Не настроен' }, true).error).toBe('')
-    expect(resolveFillingPreview(725, null, { code: 'invalid', message: 'Старый код' }, true).error).toBe('')
+    expect(resolveFillingPreview(725, null, { code: 'invalid', scope: 'profile', message: 'Старый код' }, true).error).toBe('')
+    expect(resolveFillingPreview(725, null, null, true).error).toBe('')
   })
   it('retains unavailable material and malformed FK diagnostics', () => {
     expect(resolveFillingPreview(725, null, { code: 'unavailable', message: 'Материал недоступен' }, true).error).toBe('Материал недоступен')
     expect(resolveFillingPreview('bad', null, null, true).error).not.toBe('')
+    expect(resolveFillingPreview(725, null, { code: 'invalid', message: 'Повреждённая связь' }, true).error).toBe('Повреждённая связь')
   })
 })
 

@@ -12,5 +12,7 @@ export function resolveFillingPreview(materialId: unknown, profile: unknown, pro
   }
   const descriptor = parseFillingDrawingDescriptor(profile, problem)
   // Historical drawing kinds do not determine live material appearance.
-  return { profile: descriptor.profile, error: descriptor.problem?.code === 'unavailable' ? descriptor.problem.message : '' }
+  const optionalProfileProblem = descriptor.problem?.code === 'missing'
+    || (descriptor.problem?.code === 'invalid' && descriptor.problem.scope === 'profile')
+  return { profile: descriptor.profile, error: descriptor.problem && !optionalProfileProblem ? descriptor.problem.message : '' }
 }
