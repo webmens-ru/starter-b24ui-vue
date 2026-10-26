@@ -13,6 +13,23 @@ describe('Type3Drawing', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it('shows only frame on both views for explicit zero with stale pickets and invalid orientation', async () => {
+    const store = useWicketFormStore()
+    store.widthProyema = '700'
+    store.heightProyema = '1500'
+    store.fillSide = 0
+    store.colorFacadeImage = '/stale-fill.png'
+    store.numberOfSticks = 8
+    store.raspolozheniyePolotna = ''
+    const wrapper = mount(Type3Drawing)
+    expect(wrapper.find('svg').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
+    expect(wrapper.find('image[href="/stale-fill.png"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
   it('renders an error, not SVG, when a used jumper has no numeric profile', () => {
     useWicketFormStore().jumperPlacement = 'behind'
     const wrapper = mount(Type3Drawing)

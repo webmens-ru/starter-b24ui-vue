@@ -189,6 +189,7 @@ export function useCalculation() {
     setAccessoryGroupInstalled: form.setAccessoryGroupInstalled,
     clearAccessorySelections: form.clearAccessorySelections,
     loadFromApi: form.loadFromApi,
+    clearFilling: form.clearFilling,
     resetFacadeFilling: form.resetFacadeFilling,
     resetYardFilling: form.resetYardFilling,
     reset,

@@ -447,3 +447,26 @@ describe('Type1Drawing', () => {
     }
   })
 })
+
+ describe('no filling frame preview', () => {
+  it('ignores stale material errors and orientation on both views', async () => {
+    const before = [c.fillSide.value, c.raspolozheniyePolotna.value, c.fillingProfileFacadeProblem.value] as const
+    c.fillSide.value = 0
+    c.raspolozheniyePolotna.value = ''
+    c.fillingProfileFacadeProblem.value = { code: 'invalid', message: 'stale FK' }
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="type1-fill"]').exists()).toBe(false)
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue()
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="type1-fill"]').exists()).toBe(false)
+    } finally {
+      wrapper.unmount()
+      c.fillSide.value = before[0]
+      c.raspolozheniyePolotna.value = before[1]
+      c.fillingProfileFacadeProblem.value = before[2]
+    }
+  })
+ })

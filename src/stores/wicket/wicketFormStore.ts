@@ -51,6 +51,7 @@ const doesAssembly        = ref<string>('manufacturer')
 const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 
 // Поля шага "Заполнение"
+const fillingSaveBlocked = ref(false)
 const fillSide            = ref<FillingSideCountSelection>(1)
 const materialFacadeGlob = ref<string | null>('siding')
 const materialYardGlob   = ref<string | null>(null)
@@ -242,6 +243,7 @@ const fieldsFilled = ref<number>(0)
 
   /** Раздел «Заполнение» неполный: сброшен материал или не выбран материал двора при «Две стороны». */
   const isFillSectionIncomplete = computed(() => {
+    if (fillSide.value === 0) return false
     const hasFacade = idFacade.value != null && String(idFacade.value).trim() !== ''
     const needYard = fillSide.value === 2
     const hasYard = idYard.value != null && String(idYard.value).trim() !== ''
@@ -340,9 +342,20 @@ const fieldsFilled = ref<number>(0)
     reliefYardAcrossMode.value = 'repeat'
   }
 
+  function clearFilling(): void {
+    resetFacadeFilling()
+    resetYardFilling()
+    materialFacadeGlob.value = null
+    materialYardGlob.value = null
+    raspolozheniyePolotna.value = null
+    materialSelectionProblems.value = []
+    data.value = data.value.filter(block => !['fillingFacade', 'fillingYard', 'fillingOrientation'].includes(block.blockCode ?? ''))
+  }
+
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
     materialSelectionProblems.value = []
+    fillingSaveBlocked.value = false
     data.value = []
     priceRetail.value = ''
     priceDealer.value = ''
@@ -631,6 +644,7 @@ const fieldsFilled = ref<number>(0)
     }
 
     for (const pageId of stepOrder) {
+      if (fillSide.value === 0 && (pageId === 'page6' || pageId.startsWith('page2_'))) continue
       let completed = false
       switch (pageId) {
         case 'page2':
@@ -832,7 +846,9 @@ const fieldsFilled = ref<number>(0)
         colorFacadeImage: apiData.colorFacadeImage,
       })
     }
+    fillingSaveBlocked.value = false
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    if (fillSide.value === 0) clearFilling()
     savedPaintId.value = paintId.value
     savedPaintColorId.value = paintColorId.value
     for (const key of [
@@ -889,12 +905,15 @@ const fieldsFilled = ref<number>(0)
       active = computedProgress.activePage
     }
 
+    if (fillSide.value === 0 && (active === 'page6' || active.startsWith('page2_'))) active = 'page3'
     const shouldStartFromFirstPage = modelIdForLoad === '2' && !replacementPage
     w.activePage.value = shouldStartFromFirstPage ? 'page7' : active
     w.visitedPages.value =
       apiVisited.length > 0 || replacementPage
         ? mergeVisitedPages(visitedPagesUpTo(active, apiVisited), computedProgress.visitedPages)
         : computedProgress.visitedPages
+
+    if (fillSide.value === 0) w.visitedPages.value = w.visitedPages.value.filter(page => page !== 'page6' && !page.startsWith('page2_'))
 
     // Восстанавливаем блоки сводки из загруженных данных
     rebuildSummaryBlocks()
@@ -913,10 +932,11 @@ const fieldsFilled = ref<number>(0)
     if (fillSide.value === 2) {
       fillParams.push({ paramCode: 'yardGroup', name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
     }
+    if (fillSide.value === 0) fillParams.splice(0, fillParams.length, { paramCode: 'sideCount', name: 'Сторона заполнения', value: fillingSideCountLabel(0) })
     blocks.push({ blockCode: 'filling', blockName: 'Заполнение', params: fillParams })
 
     // Заполнение (фасад) — сайдинг или профлист
-    if (idFacade.value || materialFacade.value) {
+    if (fillSide.value !== 0 && (idFacade.value || materialFacade.value)) {
       const isProfnastil = materialFacadeGlob.value === 'profnastil'
       blocks.push({
         blockCode: 'fillingFacade', blockName: 'Заполнение (фасад)',
@@ -980,7 +1000,7 @@ const fieldsFilled = ref<number>(0)
     blocks.push({ blockCode: 'postsOpeningJumper', blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
 
     // Расположение полотна
-    blocks.push({
+    if (fillSide.value !== 0) blocks.push({
       blockCode: 'fillingOrientation', blockName: 'Расположение полотна',
       params: [{ paramCode: 'fillingOrientation', name: 'Расположение полотна', value: fillingOrientationLabel(raspolozheniyePolotna.value) }],
     })
@@ -1203,6 +1223,8 @@ const fieldsFilled = ref<number>(0)
     removeAllBlocksExcept,
     updatePriceBlock,
     loadFromApi,
+    fillingSaveBlocked,
+    clearFilling,
     resetFacadeFilling,
     resetYardFilling,
     resetFormFields,
