@@ -15,6 +15,9 @@ const category = ref<number | null>(null)
 const draftPaintId = ref<number | null>(calc.paintId.value)
 const draftColorId = ref<number | null>(calc.paintColorId.value)
 const loading = ref(true)
+const saving = ref(false)
+let pendingSave: Promise<boolean> | null = null
+const draftNote = ref(calc.colorShieldNote.value)
 const submitted = ref(false)
 const error = ref('')
 const catalogError = ref('')
@@ -32,16 +35,20 @@ const primerProviders = ['Предоставляет изготовитель', 
 const unchangedUnavailable = computed(() => calc.paintSelectionUnavailable.value && calc.paintSelection.value?.isPaintAvailable === true && draftPaintId.value === calc.paintId.value && draftColorId.value === calc.paintColorId.value)
 function numberId(value: string | number | null): number | null { return value == null || value === '' ? null : Number(value) }
 async function onCategoryChange(id: number): Promise<void> {
+  if (saving.value) return
   category.value = id
   if (selectedPaint.value?.paintCategoryId !== id) { draftPaintId.value = null; draftColorId.value = null }
 }
 async function onPaintChange(value: string | number | null): Promise<void> {
+  if (saving.value) return
   draftPaintId.value = numberId(value)
+  if (selectedPaint.value?.isFixedColor && !selectedPaint.value.requiresColorNote) draftNote.value = ''
   draftColorId.value = selectPaintColor(selectedPaint.value?.colors ?? [], draftColorId.value)
   if (selectedPaint.value && (!selectedPaint.value.isFixedColor || draftColorId.value != null)) await save()
 }
-async function onColorChange(value: string | number | null): Promise<void> { draftColorId.value = numberId(value); await save() }
+async function onColorChange(value: string | number | null): Promise<void> { if (saving.value) return; draftColorId.value = numberId(value); await save() }
 async function onPrimerChange(value: string | number | null): Promise<void> {
+  if (saving.value) return
   calc.primerId.value = value === 'none' ? null : numberId(value)
   await save()
 }
@@ -74,7 +81,7 @@ function requestErrorMessage(cause: unknown, fallback: string): string {
 
 function syncSummary(): void {
   const params = [
-    { paramCode: 'paintProduct', name: 'Краска', value: selectedPaint.value?.name ?? calc.paintName.value },
+    { paramCode: 'paintProduct', name: 'Краска', value: calc.paintName.value },
     { paramCode: 'color', name: 'Цвет рамы', value: calc.colorShieldName.value },
     { paramCode: 'paintProvider', name: 'Поставщик краски', value: calc.providesPaint.value },
     { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
@@ -83,15 +90,27 @@ function syncSummary(): void {
   if (calc.primerName.value) params.push({ paramCode: 'primer', name: 'Грунтовка', value: calc.primerName.value }, { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: calc.providesPrimer.value })
   calc.setCodedBlock('painting', 'Окраска', params)
 }
-async function save(): Promise<boolean> {
+function save(): Promise<boolean> {
+  if (pendingSave) return pendingSave
+  saving.value = true
+  pendingSave = saveSelection().finally(() => {
+    saving.value = false
+    pendingSave = null
+  })
+  return pendingSave
+}
+
+async function saveSelection(): Promise<boolean> {
   const paint = selectedPaint.value
   const color = selectedColor.value
   if (!customerPainting.value && !unchangedUnavailable.value) {
     if (loading.value || !paint) { error.value = 'Выберите краску из списка.'; return false }
     if (paint.isFixedColor && !color) { error.value = 'Выберите цвет из списка.'; return false }
-    if (paint.requiresColorNote && !calc.colorShieldNote.value.trim()) { error.value = 'Укажите примечание к цвету краски'; return false }
+    if (paint.requiresColorNote && !draftNote.value.trim()) { error.value = 'Укажите примечание к цвету краски'; return false }
   }
   const preserve = customerPainting.value || unchangedUnavailable.value
+  const acceptsNote = paint != null && (!paint.isFixedColor || paint.requiresColorNote)
+  const note = preserve ? calc.colorShieldNote.value.trim() : acceptsNote ? draftNote.value.trim() : ''
   const paintId = preserve ? calc.paintId.value : draftPaintId.value
   const paintColorId = preserve ? calc.paintColorId.value : paint?.isFixedColor ? draftColorId.value : null
   const primer = primers.value.find(item => item.id === calc.primerId.value)
@@ -104,9 +123,10 @@ async function save(): Promise<boolean> {
       doesPaintingFrameCode: calc.doesPaintingFrameCode.value,
       doesAssembly: calc.doesAssembly.value,
       paintId, paintColorId, primerId,
-      colorShieldNote: calc.colorShieldNote.value.trim(),
+      colorShieldNote: note,
     })
     if (!preserve && paint) {
+      calc.colorShieldNote.value = note
       calc.paintName.value = paint.name
       calc.paintId.value = paintId
       calc.paintColorId.value = paintColorId
@@ -164,36 +184,36 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
 <template>
   <div class="flex flex-col gap-4">
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
-      <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
+      <B24Button label="Назад" color="air-secondary" :disabled="saving" @click="!saving && emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
-      <B24Button label="Далее" color="air-secondary" :disabled="loading && !customerPainting" @click="next" />
+      <B24Button label="Далее" color="air-secondary" :disabled="saving || (loading && !customerPainting)" @click="next" />
     </div>
-    <PaintingProviders @change="save" />
+    <PaintingProviders :disabled="saving" @change="save" />
     <div v-if="error && customerPainting" role="alert" class="text-red-600">{{ error }}</div>
     <template v-if="!customerPainting">
       <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
-        <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card" :data-paint-category="item.id" :aria-pressed="category === item.id" :disabled="loading" @click="onCategoryChange(item.id)">{{ item.name }}</button>
+        <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card" :data-paint-category="item.id" :aria-pressed="category === item.id" :disabled="loading || saving" @click="onCategoryChange(item.id)">{{ item.name }}</button>
       </div>
       <p v-if="unchangedUnavailable" role="status">Сохранённый выбор недоступен: {{ calc.colorShieldName.value }}. Его можно сохранить без изменений или выбрать новую краску и цвет.</p>
       <p v-if="loading">Загрузка красок…</p>
       <p v-if="!loading && !paintItems.length" role="status">В этой категории пока нет доступных красок.</p>
-      <div v-if="error || catalogError" role="alert" class="text-red-600 whitespace-pre-line">{{ error || catalogError }}<B24Button v-if="catalogError" label="Повторить загрузку" @click="load" /></div>
+      <div v-if="error || catalogError" role="alert" class="text-red-600 whitespace-pre-line">{{ error || catalogError }}<B24Button v-if="catalogError" label="Повторить загрузку" :disabled="saving" @click="load" /></div>
       <p v-if="calculationWarning" role="status" class="text-amber-700 whitespace-pre-line">{{ calculationWarning }}</p>
       <label class="flex flex-col gap-2"><span class="font-semibold">Краска</span>
-        <B24SelectMenu data-testid="paint-product" :model-value="draftPaintId == null ? '' : String(draftPaintId)" :items="paintItems" value-key="id" placeholder="Выберите краску" :disabled="loading" @update:model-value="onPaintChange" />
+        <B24SelectMenu data-testid="paint-product" :model-value="draftPaintId == null ? '' : String(draftPaintId)" :items="paintItems" value-key="id" placeholder="Выберите краску" :disabled="loading || saving" @update:model-value="onPaintChange" />
       </label>
       <label v-if="!individual" class="flex flex-col gap-2"><span class="font-semibold">Цвет рамы</span>
-        <B24SelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || !selectedPaint" @update:model-value="onColorChange" />
+        <B24SelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || saving || !selectedPaint" @update:model-value="onColorChange" />
       </label>
       <label v-if="individual || requiresNote" class="flex flex-col gap-2"><span class="font-semibold">Примечание к цвету краски <span v-if="requiresNote" class="text-red-600">*</span></span>
-        <textarea v-model="calc.colorShieldNote.value" :required="requiresNote" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !calc.colorShieldNote.value.trim()" @change="save" />
-        <span v-if="submitted && requiresNote && !calc.colorShieldNote.value.trim()" role="alert">Укажите примечание к цвету краски</span>
+        <textarea v-model="draftNote" :disabled="saving" :required="requiresNote" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
+        <span v-if="submitted && requiresNote && !draftNote.trim()" role="alert">Укажите примечание к цвету краски</span>
       </label>
       <label v-if="selectedPaint" class="flex flex-col gap-2"><span class="font-semibold">Грунтовка (необязательно)</span>
-        <B24SelectMenu data-testid="paint-primer" :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)" :items="primerItems" value-key="id" :disabled="!primers.length" @update:model-value="onPrimerChange" />
+        <B24SelectMenu data-testid="paint-primer" :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)" :items="primerItems" value-key="id" :disabled="saving || !primers.length" @update:model-value="onPrimerChange" />
         <span v-if="!primers.length">Для выбранной краски совместимые грунтовки не заданы.</span>
       </label>
-      <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading" @change="save" />
+      <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading || saving" @change="save" />
     </template>
   </div>
 </template>
