@@ -53,7 +53,7 @@ describe('separate paint and color', () => {
  it('retains failed local choice and saved pair for retry',async()=>{const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});const w=render();await flushPromises();vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Failed'));await w.get('[data-testid="paint-product"]').setValue('3');await w.get('[data-testid="paint-color"]').setValue('93');await flushPromises();expect(c.paintId.value).toBe(1);expect(w.get<HTMLSelectElement>('[data-testid="paint-color"]').element.value).toBe('93');expect(await w.vm.validateBeforeLeave()).toBe(true);expect(c.paintId.value).toBe(3);w.unmount()})
  it('uses flags after every label is renamed and requires only explicit note flag',async()=>{const data=catalog();data.colorShield=data.colorShield.map(p=>({...p,name:'Renamed paint',paintCategoryName:'Renamed category',colors:p.colors.map(c=>({...c,name:'Renamed color'}))}));data.paintCategories[0]!.name='Renamed';vi.mocked(getColorShield).mockResolvedValueOnce(data);const c=useCalculation();const w=render();await flushPromises();await w.get('[data-testid="paint-product"]').setValue('4');await flushPromises();expect(w.find('textarea').exists()).toBe(true);expect(await w.vm.validateBeforeLeave()).toBe(false);await w.get('textarea').setValue('Sample');expect(await w.vm.validateBeforeLeave()).toBe(true);expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,paintColorId:null,providesPaintCode:'customer'}));expect(c.data.value.find(b=>b.blockCode==='painting')?.params).toContainEqual({paramCode:'paintProduct',name:'Краска',value:'Renamed paint'});w.unmount()})
  it('preserves unavailable saved pair but cannot offer it for a new selection',async()=>{const c=useCalculation();c.loadFromApi({paintId:99,paintColorId:999,colorShieldName:'Historical',paintSelectionUnavailable:true,paintSelection:{isFixedColor:true,requiresColorNote:false,isPaintAvailable:true}});const w=render();await flushPromises();expect(w.text()).toContain('Historical');expect(await w.vm.validateBeforeLeave()).toBe(true);await w.get('[data-testid="paint-product"]').setValue('3');expect(await w.vm.validateBeforeLeave()).toBe(false);expect(w.get('[data-testid="paint-color"]').text()).not.toContain('Historical');w.unmount()})
- it('allows customer painting without catalog',async()=>{vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Offline'));const w=render();await flushPromises();await w.get('input[value="customer"]').setValue();await flushPromises();expect(await w.vm.validateBeforeLeave()).toBe(true);expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({doesPaintingFrameCode:'customer'}));w.unmount()})
+ it('allows customer painting without catalog',async()=>{useCalculation().fillSide.value=0;vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Offline'));const w=render();await flushPromises();await w.get('input[value="customer"]').setValue();await flushPromises();expect(await w.vm.validateBeforeLeave()).toBe(true);expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({doesPaintingFrameCode:'customer'}));w.unmount()})
  it('does not select a paint or rewrite an existing pair while loading', async () => {
   const c = useCalculation()
   const w = render()
@@ -78,7 +78,7 @@ describe('separate paint and color', () => {
  })
  it('preserves hidden saved material choices while customer performs painting', async () => {
   const c = useCalculation()
-  c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Sample',primerId:20,doesPaintingFrameCode:'customer'})
+  c.loadFromApi({fillingSideCount:0,paintId:4,paintColorId:null,colorShieldNote:'Sample',primerId:20,doesPaintingFrameCode:'customer'})
   const w = render()
   await flushPromises()
   expect(w.find('[data-testid="paint-product"]').exists()).toBe(false)
@@ -200,7 +200,7 @@ describe('separate paint and color', () => {
   w.unmount()
  })
  it('summarizes the acknowledged pair when customer painting preserves an incomplete material draft', async () => {
-  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91,paintName:'Paint 1',colorShieldName:'Color 91'})
+  const c=useCalculation();c.loadFromApi({fillingSideCount:0,paintId:1,paintColorId:91,paintName:'Paint 1',colorShieldName:'Color 91'})
   const w=render();await flushPromises()
   await w.get('[data-testid="paint-product"]').setValue('3');await flushPromises()
   await w.get('input[value="customer"]').setValue();await flushPromises()
@@ -250,7 +250,7 @@ describe('separate paint and color', () => {
   w.unmount()
  })
  it('keeps a local individual-note draft hidden and unsaved while customer performs painting', async () => {
-  const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Saved sample'})
+  const c=useCalculation();c.loadFromApi({fillingSideCount:0,paintId:4,paintColorId:null,colorShieldNote:'Saved sample'})
   const w=render();await flushPromises()
   w.get('textarea').element.value='Local sample'
   await w.get('textarea').trigger('input')

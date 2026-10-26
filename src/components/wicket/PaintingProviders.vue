@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { participantRoleOptions } from '../../app/participantRoles'
 import { useCalculation } from '../../composables/useCalculation'
 import ProviderChoice from './ProviderChoice.vue'
 defineProps<{ disabled?: boolean }>()
 const calc = useCalculation()
 const emit = defineEmits<{ change: [] }>()
-const painters = participantRoleOptions('perform')
+const painters = computed(() => participantRoleOptions('perform').filter(option =>
+  calc.fillSide.value === 0 || option.value === 'manufacturer',
+))
 </script>
 
 <template>

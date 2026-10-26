@@ -60,7 +60,7 @@ describe('wicketFormStore accessory composition', () => {
   it('uses codes for fresh roles and presentation labels for restored independent summary', () => {
     const store = useWicketFormStore()
     expect(store.providesMaterial).toBe('manufacturer')
-    store.loadFromApi({ providesPaintCode: 'customer', providesPaint: 'Иная подпись',
+    store.loadFromApi({ fillingSideCount: 0, providesPaintCode: 'customer', providesPaint: 'Иная подпись',
       providesPrimerCode: 'manufacturer', doesPaintingFrameCode: 'customer' })
     expect(store.providesPaint).toBe('customer')
     expect(store.providesPrimer).toBe('manufacturer')
@@ -88,7 +88,7 @@ describe('wicketFormStore accessory composition', () => {
     })
     expect(store.data.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
       { paramCode: 'paintProvider', name: 'Поставщик краски', value: 'Предоставляет заказчик' },
-      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет изготовитель' },
     ])
     expect(store.doesAssembly).toBe('customer')
   })
@@ -372,7 +372,7 @@ describe('wicketFormStore accessory composition', () => {
     const store = useWicketFormStore()
     const wizard = useWicketWizardStore()
     const payload = {
-      modelId, widthProyema: '1000', heightProyema: '2000', fillSide: 'Одна сторона',
+      modelId, widthProyema: '1000', heightProyema: '2000', fillingSideCount: 0,
       idFacade: 5, shieldType: 'Тип_1', openingOptionId: 1,
       raspolozheniyePolotna: 'Вертикально', doesPaintingFrame: 'Выполняет заказчик',
     }
