@@ -1,6 +1,6 @@
 import { isPaintingComplete } from './wicketStepProgress'
 import { defineStore, storeToRefs } from 'pinia'
-import { ref, computed, onScopeDispose } from 'vue'
+import { ref, computed, onScopeDispose, watch } from 'vue'
 import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
 import { fillingMaterialGroupLabel } from '../../app/fillingMaterialGroups'
 import { fillingSideCountLabel, isFillingSideCount, type FillingSideCountSelection } from '../../app/fillingSideCounts'
@@ -53,6 +53,7 @@ const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 // Поля шага "Заполнение"
 const fillingSaveBlocked = ref(false)
 const fillSide            = ref<FillingSideCountSelection>(1)
+watch(fillSide, () => normalizeFillingPaintingPerformer(), { flush: 'sync' })
 const materialFacadeGlob = ref<string | null>('siding')
 const materialYardGlob   = ref<string | null>(null)
 const fillingProfileFacade = ref<FillingDrawingProfile | null>(null)
@@ -694,6 +695,16 @@ const fieldsFilled = ref<number>(0)
     return { visitedPages: visited, activePage: active }
   }
 
+  function normalizeFillingPaintingPerformer(): void {
+    if ((fillSide.value !== 1 && fillSide.value !== 2) || doesPaintingFrame.value !== 'customer') return
+    doesPaintingFrame.value = 'manufacturer'
+    data.value = data.value.map(block => block.blockCode !== 'painting' ? block : {
+      ...block, params: block.params.map(param => param.paramCode !== 'paintingPerformer' ? param : {
+        ...param, value: participantRoleLabel('perform', 'manufacturer'),
+      }),
+    })
+  }
+
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
     materialSelectionProblems.value = []
@@ -848,6 +859,7 @@ const fieldsFilled = ref<number>(0)
     }
     fillingSaveBlocked.value = false
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    normalizeFillingPaintingPerformer()
     if (fillSide.value === 0) clearFilling()
     savedPaintId.value = paintId.value
     savedPaintColorId.value = paintColorId.value
