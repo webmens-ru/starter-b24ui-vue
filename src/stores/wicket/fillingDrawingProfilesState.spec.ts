@@ -74,3 +74,17 @@ it('treats an explicitly selected but unconfigured profile as missing rather tha
   expect(store.fillingProfileFacade).toBeNull()
   expect(store.fillingProfileFacadeProblem).toMatchObject({ code: 'missing' })
 })
+
+it('resets relief modes only for the cleared side', () => {
+  const store = useWicketFormStore()
+  store.loadFromApi({ ...payload, reliefFacadeAlongMode: 'repeat', reliefFacadeAcrossMode: 'stretch', reliefYardAlongMode: 'repeat', reliefYardAcrossMode: 'stretch' })
+  store.resetFacadeFilling()
+  expect(store.idYard).toBe(payload.idYard)
+  expect([store.reliefFacadeAlongMode, store.reliefFacadeAcrossMode]).toEqual(['stretch', 'repeat'])
+  expect([store.reliefYardAlongMode, store.reliefYardAcrossMode]).toEqual(['repeat', 'stretch'])
+  store.reliefFacadeAlongMode = 'repeat'
+  store.reliefFacadeAcrossMode = 'stretch'
+  store.resetYardFilling()
+  expect([store.reliefFacadeAlongMode, store.reliefFacadeAcrossMode]).toEqual(['repeat', 'stretch'])
+  expect([store.reliefYardAlongMode, store.reliefYardAcrossMode]).toEqual(['stretch', 'repeat'])
+})

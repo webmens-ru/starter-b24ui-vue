@@ -309,8 +309,6 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeImage.value = ''
     reliefFacadeAlongMode.value = 'stretch'
     reliefFacadeAcrossMode.value = 'repeat'
-    reliefYardAlongMode.value = 'stretch'
-    reliefYardAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
     gapId.value = null
@@ -338,6 +336,8 @@ const fieldsFilled = ref<number>(0)
     coatingYardHex.value = ''
     coatingYardImage.value = ''
     reliefYardImage.value = ''
+    reliefYardAlongMode.value = 'stretch'
+    reliefYardAcrossMode.value = 'repeat'
   }
 
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
