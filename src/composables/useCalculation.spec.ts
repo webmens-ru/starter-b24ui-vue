@@ -825,6 +825,15 @@ describe('useCalculation', () => {
     })
   })
 
+  it('roundtrips canonical numeric painting IDs without writing the compatibility alias or behavior flags', () => {
+    calc.loadFromApi({ paintId: '7', paintColorId: '92', paintSelection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true } })
+    expect(calc.getFullSavePayload()).toMatchObject({ paintId: 7, paintColorId: 92 })
+    expect(calc.getFullSavePayload()).not.toHaveProperty('colorShieldId')
+    expect(calc.getFullSavePayload()).not.toHaveProperty('paintSelection')
+    calc.loadFromApi({ paintId: null, paintColorId: null })
+    expect(calc.getFullSavePayload()).toMatchObject({ paintId: null, paintColorId: null })
+  })
+
   describe('reset', () => {
     it('сбрасывает все поля к дефолтным значениям', () => {
       calc.number.value = '123'

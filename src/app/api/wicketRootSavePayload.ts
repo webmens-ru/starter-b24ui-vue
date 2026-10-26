@@ -14,6 +14,10 @@ export function canonicalizeWicketRootSavePayload(
     clientAddress: _clientAddress,
     clientComment: _clientComment,
     countryCode: _countryCode,
+    colorShieldId: _colorShieldId,
+    paintSelection: _paintSelection,
+    paintSelectionUnavailable: _paintSelectionUnavailable,
+    paintName: _paintName,
     ...canonicalPayload
   } = payload
   void _calculationName
@@ -24,6 +28,10 @@ export function canonicalizeWicketRootSavePayload(
   void _clientEmail
   void _clientAddress
   void _clientComment
+  void _paintSelection
+  void _paintSelectionUnavailable
+  void _paintName
+  void _colorShieldId
   void _countryCode
 
   return {

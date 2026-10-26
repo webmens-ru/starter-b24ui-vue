@@ -54,3 +54,21 @@ export function visitedPagesUpTo(active: string, apiVisited: string[]): string[]
   }
   return mergeVisitedPages([...set], apiVisited)
 }
+
+export function isPaintingComplete(state: {
+  performerCode: string
+  paintId: number | null
+  paintColorId: number | null
+  selection: { isFixedColor: boolean; requiresColorNote: boolean; isPaintAvailable: boolean } | null
+  note: string
+  unavailable: boolean
+  savedPaintId: number | null
+  savedPaintColorId: number | null
+}): boolean {
+  if (state.performerCode === 'customer') return true
+  if (state.paintId == null) return false
+  if (!state.selection?.isPaintAvailable) return false
+  if (state.unavailable) return state.paintId === state.savedPaintId && state.paintColorId === state.savedPaintColorId
+  return state.selection != null && (!state.selection.isFixedColor || state.paintColorId != null)
+    && (!state.selection.requiresColorNote || !!state.note.trim())
+}

@@ -67,8 +67,8 @@ describe('wicketFormStore accessory composition', () => {
       name: 'Материал заполнения', value: 'Предоставляет заказчик',
     })
     expect(store.data.find(block => block.blockName === 'Окраска')?.params.slice(0, 2)).toEqual([
-      { name: 'Краска', value: 'Предоставляет заказчик' },
-      { name: 'Окраска каркаса', value: 'Выполняет заказчик' },
+      { paramCode: 'paintProvider', name: 'Поставщик краски', value: 'Предоставляет заказчик' },
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' },
     ])
     expect(store.doesAssembly).toBe('Выполняет заказчик')
   })
@@ -339,7 +339,7 @@ describe('wicketFormStore accessory composition', () => {
       shieldType: 'Тип_1',
       openingOptionId: 1,
       raspolozheniyePolotna: 'Вертикально',
-      colorShieldId: 1,
+      paintId: 1, paintColorId: 91, paintSelection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true },
       isTherePen: 0,
       priceRetail: '1000',
     })
@@ -400,5 +400,39 @@ describe('wicketFormStore restored shield summary', () => {
         ...zones,
       ])
     })
+  })
+})
+
+describe('canonical painting selection', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  it('loads numeric canonical IDs, gives canonical precedence and clears missing order state', () => {
+    const store = useWicketFormStore()
+    store.loadFromApi({ paintId: '7', paintColorId: '92', colorShieldId: 999, paintSelectionUnavailable: true, paintSelection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true } })
+    expect(store.paintId).toBe(7)
+    expect(store.colorShieldId).toBe(7)
+    expect(store.paintColorId).toBe(92)
+    expect(store.paintSelectionUnavailable).toBe(true)
+    store.loadFromApi({ colorShieldId: '8' })
+    expect(store.paintId).toBe(8)
+    expect(store.paintColorId).toBeNull()
+    expect(store.paintSelectionUnavailable).toBe(false)
+    store.loadFromApi({ paintId: null, paintColorId: null, colorShieldId: 9 })
+    expect(store.paintId).toBeNull()
+    store.resetFormFields()
+    expect(store.paintColorId).toBeNull()
+    expect(store.paintSelection).toBeNull()
+  })
+  it('never retains malformed paint IDs as strings', () => {
+    const store = useWicketFormStore()
+    store.loadFromApi({ paintId: 'invalid', paintColorId: -3 })
+    expect(store.paintId).toBeNull()
+    expect(store.paintColorId).toBeNull()
+  })
+  it('updates summaries by stable code even after renaming', () => {
+    const store = useWicketFormStore()
+    store.data = [{ blockCode: 'painting', blockName: 'Renamed', params: [] }, { blockName: 'Окраска', params: [] }]
+    store.setCodedBlock('painting', 'New title', [{ paramCode: 'color', name: 'New label', value: 'Blue' }])
+    expect(store.data).toHaveLength(2)
+    expect(store.data[0]?.params[0]?.paramCode).toBe('color')
   })
 })

@@ -1,6 +1,7 @@
 import type {
   SelectItem,
-  ColorShieldItem,
+  PaintItem,
+  PaintCategoryItem,
   RecalculateResponse,
   FilterOptions,
   FillingAppearanceOptions,
@@ -460,21 +461,14 @@ export async function mockGetAssortmentJumper(): Promise<{ assortmentJumper: Sel
 
 // ─── Моки цвет щита ──────────────────────────────────────────────────────────
 
-const MOCK_COLOR_SHIELD: ColorShieldItem[] = [
-  { id: 1,  name: 'RAL 7024 (Графитовый серый)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#474A51' },
-  { id: 2,  name: 'RAL 8017 (Шоколадно-коричневый)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#4E3629' },
-  { id: 3,  name: 'RAL 9003 (Сигнальный белый)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#F4F4F4' },
-  { id: 4,  name: 'RAL 3005 (Винно-красный)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#5B1F2A' },
-  { id: 5,  name: 'RAL 6020 (Хромовый зелёный)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#3E4F3D' },
-  { id: 6,  name: 'RAL 1014 (Слоновая кость)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#E8DBC4' },
-  { id: 7,  name: 'RAL 7004 (Сигнальный серый)', isStandard: 1, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125.5, hex: '#9EA2A5' },
-  { id: 101, name: 'RAL 9001 (Кремово-белый)', isStandard: 0, paintTypeId: 2, paintTypeName: 'Молотковая', consumptionRate: 150, hex: '#F3ECE0' },
-  { id: 102, name: 'RAL 5010 (Горечавково-синий)', isStandard: 0, paintTypeId: 2, paintTypeName: 'Молотковая', consumptionRate: 150, hex: '#1B3F6E' },
+const MOCK_COLOR_SHIELD: PaintItem[] = [
+  { id: 1, name: 'Эмаль', paintCategoryId: 1, paintCategoryName: 'Палитра', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 125, primers: [], colors: [{ id: 91, name: 'Белый', hex: '#ffffff', image: null }] },
+  { id: 2, name: 'Молотковая', paintCategoryId: 1, paintCategoryName: 'Палитра', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, paintTypeId: 2, paintTypeName: 'Молотковая', consumptionRate: 150, primers: [], colors: [{ id: 91, name: 'Белый', hex: '#ffffff', image: null }, { id: 92, name: 'Серый', hex: '#888888', image: null }] },
+  { id: 3, name: 'По образцу', paintCategoryId: 2, paintCategoryName: 'Особая', isFixedColor: false, requiresColorNote: true, isCustomerSupplied: false, paintTypeId: null, paintTypeName: null, consumptionRate: null, primers: [], colors: [] },
 ]
-
-export async function mockGetColorShield(): Promise<{ colorShield: ColorShieldItem[] }> {
+export async function mockGetColorShield(): Promise<{ colorShield: PaintItem[]; paintCategories: PaintCategoryItem[] }> {
   await delay(100)
-  return { colorShield: MOCK_COLOR_SHIELD }
+  return { colorShield: MOCK_COLOR_SHIELD, paintCategories: [{ id: 1, name: 'Палитра', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false }, { id: 2, name: 'Особая', isFixedColor: false, requiresColorNote: true, isCustomerSupplied: false }] }
 }
 
 // ─── Мок ширины сетки ────────────────────────────────────────────────────────
@@ -692,6 +686,11 @@ export async function mockLoadWicketData(
     sostoyaniyeProyema: 'Готов',
     raspolozheniyePolotna: 'Вертикально',
     shieldType: 'Тип_1',
+    paintName: 'Эмаль',
+    paintId: 1,
+    paintColorId: 91,
+    paintSelectionUnavailable: false,
+    paintSelection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true },
     colorShieldId: 1,
     heightTopPart: '0',
     heightLowerPart: '0',

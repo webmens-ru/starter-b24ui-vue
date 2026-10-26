@@ -36,6 +36,9 @@ import {
 import type {
   SelectItem,
   ColorShieldItem,
+  PaintItem,
+  PaintColorItem,
+  PaintCategoryItem,
   FilterOptionItem,
   FilterOptions,
   FillingAppearanceOptions,
@@ -79,6 +82,9 @@ import type {
 export type {
   SelectItem,
   ColorShieldItem,
+  PaintItem,
+  PaintColorItem,
+  PaintCategoryItem,
   FilterOptionItem,
   FilterOptions,
   FillingAppearanceOptions,
@@ -485,10 +491,22 @@ export async function getAssortmentJumper(
 
 export async function getColorShield(
   modelId: string | number
-): Promise<{ colorShield: ColorShieldItem[]; paintCategories?: Array<{ id: number; name: string; isFixedColor: boolean }> }> {
+): Promise<{ colorShield: PaintItem[]; paintCategories?: PaintCategoryItem[] }> {
   if (isMock) return mockGetColorShield()
   const { data } = await api.get(`/api/wicket/type${modelId}/get-color-shield`)
-  return data.data
+  const catalog = data.data
+  return {
+    colorShield: catalog.colorShield.map((paint: PaintItem) => ({
+      ...paint, id: Number(paint.id), paintCategoryId: Number(paint.paintCategoryId),
+      paintTypeId: paint.paintTypeId == null ? null : Number(paint.paintTypeId),
+      paintTypeName: paint.paintTypeName ?? null,
+      consumptionRate: paint.consumptionRate == null ? null : Number(paint.consumptionRate),
+      isFixedColor: Boolean(Number(paint.isFixedColor)), requiresColorNote: Boolean(Number(paint.requiresColorNote)), isCustomerSupplied: Boolean(Number(paint.isCustomerSupplied)),
+      colors: (paint.colors ?? []).map(color => ({ ...color, id: Number(color.id), hex: color.hex ?? null, image: color.image ?? null })),
+      primers: (paint.primers ?? []).map(primer => ({ ...primer, id: Number(primer.id) })),
+    })),
+    paintCategories: (catalog.paintCategories ?? []).map((category: PaintCategoryItem) => ({ ...category, id: Number(category.id), isFixedColor: Boolean(Number(category.isFixedColor)), requiresColorNote: Boolean(Number(category.requiresColorNote)), isCustomerSupplied: Boolean(Number(category.isCustomerSupplied)) })),
+  }
 }
 
 /** Список доступной ширины сетки (sizeA из справочника dir_net). */

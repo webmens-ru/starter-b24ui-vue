@@ -510,13 +510,13 @@ describe('saveWicketData — данные передаются на бэк', () 
 
   it('ShieldType сохраняет выбранный цвет при смене типа щита', async () => {
     calc.modelId.value = '2'
-    calc.colorShieldId.value = '7'
+    calc.paintId.value = 7
     calc.colorShieldName.value = 'Сохранённый цвет'
 
     vi.mocked(getColorShield).mockResolvedValueOnce({
       colorShield: [
-        { id: 1, name: 'Первый цвет', hex: '#111111', paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
-        { id: 7, name: 'Сохранённый цвет', hex: '#777777', paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
+        { id: 1, name: 'Первый цвет', paintCategoryId: 30, paintCategoryName: 'Palette', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, colors: [{id:91,name:'Первый цвет',hex:'#111111',image:null}], primers: [], paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
+        { id: 7, name: 'Сохранённый цвет', paintCategoryId: 30, paintCategoryName: 'Palette', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, colors: [{id:97,name:'Сохранённый цвет',hex:'#777777',image:null}], primers: [], paintTypeId: 1, paintTypeName: 'Порошок', consumptionRate: 1 },
       ],
     })
 
@@ -555,7 +555,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(saveCalls[saveCalls.length - 1]?.[0]).toMatchObject({
       shieldType: 'Тип_2',
     })
-    expect(calc.colorShieldId.value).toBe('7')
+    expect(calc.paintId.value).toBe(7)
     expect(calc.colorShieldName.value).toBe('Сохранённый цвет')
     expect(saveCalls[saveCalls.length - 1]?.[0]).not.toHaveProperty('colorShieldId')
 

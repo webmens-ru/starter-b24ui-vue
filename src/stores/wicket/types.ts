@@ -1,4 +1,5 @@
 export interface CalcBlock {
+  blockCode?: string
   blockName: string
-  params: { name: string; value: string }[]
+  params: { paramCode?: string; name: string; value: string }[]
 }
