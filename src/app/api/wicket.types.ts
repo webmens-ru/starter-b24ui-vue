@@ -52,6 +52,10 @@ export interface OpeningOptionsResponse {
 }
 
 export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+  paintId?: number | null
+  paintColorId?: number | null
+  /** Compatibility input only; outgoing requests remove this alias. */
+  colorShieldId?: number | null
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -155,6 +159,23 @@ export interface SelectItem {
   name: string
 }
 
+export interface PaintColorItem { id: number; name: string; hex: string | null; image: string | null }
+export interface PaintCategoryItem { id: number; name: string; isFixedColor: boolean; requiresColorNote: boolean; isCustomerSupplied: boolean }
+export interface PaintItem {
+  id: number
+  name: string
+  paintCategoryId: number
+  paintCategoryName: string
+  isFixedColor: boolean
+  requiresColorNote: boolean
+  isCustomerSupplied: boolean
+  paintTypeId: number | null
+  paintTypeName: string | null
+  consumptionRate: number | null
+  primers: Array<{ id: number; name: string }>
+  colors: PaintColorItem[]
+}
+/** Historical catalog response, retained only at the API compatibility boundary. */
 export interface PaintCategory {
   id: number
   name: string
@@ -173,11 +194,13 @@ export interface ColorShieldItem extends SelectItem {
   paintCategoryName?: string
   paintCategoryId?: number
   isFixedColor?: boolean
+  requiresColorNote?: boolean
+  isCustomerSupplied?: boolean
   primers?: Array<{ id: number; name: string }>
+  colors?: PaintColorItem[]
   paintTypeId: number | null
   paintTypeName: string | null
   consumptionRate: number | null
-  /** HEX-цвет для визуализации (из dir_color.hex через dir_paints.color) */
   hex?: string | null
 }
 
@@ -464,7 +487,17 @@ export interface WicketGetDataResponse extends ParticipantRoleProperties, Fillin
   lockSetId?: number | null
   providesLock?: string | null
   lockInstaller?: string | null
-  /** ID краски (dir_paints); для type1 — единственное хранимое поле выбора краски рамы. */
+  paintName?: string
+  colorShieldName?: string
+  colorShieldHex?: string | null
+  paintSelectionUnavailable?: boolean
+  paintSelection?: { isFixedColor: boolean; requiresColorNote: boolean; isPaintAvailable: boolean } | null
+  /** Canonical paint/color FKs; colorShieldId is a legacy paint alias. */
+  providesPaintCode?: 'manufacturer' | 'customer'
+  providesPrimerCode?: 'manufacturer' | 'customer'
+  doesPaintingFrameCode?: 'manufacturer' | 'customer'
+  paintId?: number | null
+  paintColorId?: number | null
   colorShieldId?: number | null
   colorShieldNote?: string
   primerId?: number | null

@@ -20,6 +20,10 @@ export function canonicalizeWicketRootSavePayload(
     clientAddress: _clientAddress,
     clientComment: _clientComment,
     countryCode: _countryCode,
+    colorShieldId: _colorShieldId,
+    paintSelection: _paintSelection,
+    paintSelectionUnavailable: _paintSelectionUnavailable,
+    paintName: _paintName,
     openingOrientation: _openingOrientation,
     openingOrientationProblem: _openingOrientationProblem,
     jumperPlacement: _jumperPlacement,
@@ -44,6 +48,10 @@ export function canonicalizeWicketRootSavePayload(
   void _clientEmail
   void _clientAddress
   void _clientComment
+  void _paintSelection
+  void _paintSelectionUnavailable
+  void _paintName
+  void _colorShieldId
   void _countryCode
   void _openingOrientation
   void _openingOrientationProblem

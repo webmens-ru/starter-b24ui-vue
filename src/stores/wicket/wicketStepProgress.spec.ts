@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
+import { isPaintingComplete, laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 
 describe('wicketStepProgress', () => {
   it('maps legacy manufacturing progress to opening without unlocking subsequent steps', () => {
@@ -30,5 +30,24 @@ describe('wicketStepProgress', () => {
 
   it('располагает проём перед заполнением', () => {
     expect(mergeVisitedPages(['page2'], ['page7'])).toEqual(['page7', 'page2'])
+  })
+})
+
+describe('painting completeness', () => {
+  it('uses structured flags and requires the palette color and conditional note', () => {
+    const state = { performerCode: 'manufacturer', paintId: 7, paintColorId: null, selection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true }, note: '', unavailable: false, savedPaintId: null, savedPaintColorId: null }
+    expect(isPaintingComplete(state)).toBe(false)
+    expect(isPaintingComplete({ ...state, paintColorId: 91 })).toBe(true)
+    expect(isPaintingComplete({ ...state, paintColorId: 91, performerCode: '' })).toBe(false)
+    expect(isPaintingComplete({ ...state, selection: { isFixedColor: false, requiresColorNote: true, isPaintAvailable: true } })).toBe(false)
+    expect(isPaintingComplete({ ...state, note: 'Sample', selection: { isFixedColor: false, requiresColorNote: true, isPaintAvailable: true } })).toBe(true)
+    expect(isPaintingComplete({ ...state, performerCode: 'customer', paintId: null })).toBe(true)
+  })
+  it('preserves only the unchanged historical pair and never guesses flags', () => {
+    const state = { performerCode: 'manufacturer', paintId: 7, paintColorId: 91, selection: {isFixedColor:true,requiresColorNote:false,isPaintAvailable:true}, note: '', unavailable: true, savedPaintId: 7, savedPaintColorId: 91 }
+    expect(isPaintingComplete(state)).toBe(true)
+    expect(isPaintingComplete({ ...state, paintColorId: 92 })).toBe(false)
+    expect(isPaintingComplete({ ...state, unavailable: false, selection: null })).toBe(false)
+    expect(isPaintingComplete({ ...state, selection: { ...state.selection, isPaintAvailable: false } })).toBe(false)
   })
 })

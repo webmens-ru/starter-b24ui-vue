@@ -1,3 +1,4 @@
+import { isPaintingComplete } from './wicketStepProgress'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
@@ -156,7 +157,17 @@ const raspolozheniyePolotna = ref<FillingOrientationSelection>('vertical')
 
 // Поля шага "Тип щита"
 const shieldType       = ref<FrameSubtypeSelection>('noNet')
-const colorShieldId   = ref<string | number>('')
+const doesPaintingFrameCode = computed(() => isParticipantRole(doesPaintingFrame.value) ? doesPaintingFrame.value : null)
+const providesPaintCode = computed(() => isParticipantRole(providesPaint.value) ? providesPaint.value : null)
+const providesPrimerCode = computed(() => isParticipantRole(providesPrimer.value) ? providesPrimer.value : null)
+const paintName = ref('')
+const paintId = ref<number | null>(null)
+const colorShieldId = paintId
+const paintColorId = ref<number | null>(null)
+const paintSelectionUnavailable = ref(false)
+const savedPaintId = ref<number | null>(null)
+const savedPaintColorId = ref<number | null>(null)
+const paintSelection = ref<{ isFixedColor: boolean; requiresColorNote: boolean; isPaintAvailable: boolean } | null>(null)
 const colorShieldName = ref<string>('')
 const colorShieldHex  = ref<string>('')
 const colorShieldNote = ref<string>('')
@@ -232,6 +243,12 @@ const fieldsFilled = ref<number>(0)
     const hasYard = idYard.value != null && String(idYard.value).trim() !== ''
     return !isFillingSideCount(fillSide.value) || !hasFacade || (needYard && !hasYard)
   })
+
+  function setCodedBlock(blockCode: string, blockName: string, params: Array<{ paramCode: string; name: string; value: string }>): void {
+    const block = data.value.find(item => item.blockCode === blockCode)
+    if (block) { block.blockName = blockName; block.params = params }
+    else data.value.push({ blockCode, blockName, params })
+  }
 
   function updateOrCreateBlock(blockCode: string, params: CalcBlock['params'], blockName: string) {
     data.value = normalizeSummaryBlocks(data.value)
@@ -387,7 +404,13 @@ const fieldsFilled = ref<number>(0)
     sostoyaniyeProyema.value = 'Готов'
     raspolozheniyePolotna.value = 'vertical'
     shieldType.value = 'noNet'
-    colorShieldId.value = ''
+    paintName.value = ''
+    paintId.value = null
+    paintColorId.value = null
+    paintSelectionUnavailable.value = false
+    savedPaintId.value = null
+    savedPaintColorId.value = null
+    paintSelection.value = null
     colorShieldName.value = ''
     colorShieldHex.value = ''
     colorShieldNote.value = ''
@@ -612,8 +635,7 @@ const fieldsFilled = ref<number>(0)
           completed = isFrameSubtypeCode(shieldType.value)
           break
         case 'page_painting':
-          completed = isParticipantRole(doesPaintingFrame.value)
-            && (doesPaintingFrame.value === 'customer' || notEmpty(colorShieldId.value))
+          completed = isPaintingComplete({ performerCode: doesPaintingFrameCode.value, paintId: paintId.value, paintColorId: paintColorId.value, selection: paintSelection.value, note: colorShieldNote.value, unavailable: paintSelectionUnavailable.value, savedPaintId: savedPaintId.value, savedPaintColorId: savedPaintColorId.value })
           break
         case 'page5':
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
@@ -721,6 +743,7 @@ const fieldsFilled = ref<number>(0)
       sostoyaniyeProyema,
       raspolozheniyePolotna,
       shieldType,
+      paintName, paintId, paintColorId, paintSelectionUnavailable, paintSelection,
       colorShieldId,
       colorShieldName,
       colorShieldHex,
@@ -798,6 +821,8 @@ const fieldsFilled = ref<number>(0)
       })
     }
     applyWicketApiPayloadForModel(modelIdForLoad, apiData, refMap)
+    savedPaintId.value = paintId.value
+    savedPaintColorId.value = paintColorId.value
     for (const key of [
       'manufacturerFacadeId',
       'colorFacadeId',
@@ -970,10 +995,11 @@ const fieldsFilled = ref<number>(0)
     blocks.push({ blockCode: 'frameSubtype', blockName: 'Тип щита', params: shieldParams })
 
     const paintingParams: CalcBlock['params'] = [
-      { paramCode: 'paintProvider', name: 'Краска', value: participantRoleLabel('provide', providesPaint.value) },
+      { paramCode: 'paintProvider', name: 'Поставщик краски', value: participantRoleLabel('provide', providesPaint.value) },
       { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', doesPaintingFrame.value) },
     ]
-    if (colorShieldName.value) paintingParams.push({ paramCode: 'paint', name: 'Цвет рамы', value: colorShieldName.value })
+    if (paintName.value) paintingParams.push({ paramCode: 'paintProduct', name: 'Краска', value: paintName.value })
+    if (colorShieldName.value) paintingParams.push({ paramCode: 'color', name: 'Цвет рамы', value: colorShieldName.value })
     if (colorShieldNote.value) paintingParams.push({ paramCode: 'paintNote', name: 'Примечание к цвету краски', value: colorShieldNote.value })
     if (primerName.value) paintingParams.push(
       { paramCode: 'primer', name: 'Грунтовка', value: primerName.value },
@@ -1090,6 +1116,8 @@ const fieldsFilled = ref<number>(0)
     sostoyaniyeProyema,
     raspolozheniyePolotna,
     shieldType,
+    doesPaintingFrameCode, providesPaintCode, providesPrimerCode,
+    paintName, paintId, paintColorId, paintSelectionUnavailable, paintSelection,
     colorShieldId,
     colorShieldName,
     colorShieldHex,
@@ -1153,6 +1181,7 @@ const fieldsFilled = ref<number>(0)
     priceDealer,
     fieldsFilled,
     isFillSectionIncomplete,
+    setCodedBlock,
     updateOrCreateBlock,
     rebuildLockSummaryBlock,
     removeAllBlocksExcept,

@@ -1,431 +1,262 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
 import Painting from './Painting.vue'
+import type { DefineComponent } from 'vue'
+import type { PaintItem } from '../../app/api/wicket.types'
+type PaintSelectStub = DefineComponent<{ items: Array<{ type?: 'label'; label: string; id?: string }> }>
+vi.mock('../../app/api/wicket', async original => ({ ...(await original<typeof import('../../app/api/wicket')>()), getColorShield: vi.fn(), saveWicketData: vi.fn().mockResolvedValue({}), recalculate: vi.fn() }))
+const { getColorShield, saveWicketData, recalculate } = await import('../../app/api/wicket')
+const color = (id: number) => ({ id, name: `Color ${id}`, hex: '#112233', image: null })
+const paint = (id: number, colors: ReturnType<typeof color>[], extra: Partial<PaintItem> = {}): PaintItem => ({ id, name: `Paint ${id}`, paintCategoryId: 30, paintCategoryName: 'Category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, colors, primers: [] as Array<{id:number;name:string}>, paintTypeId: null, paintTypeName: null, consumptionRate: null, ...extra })
+const catalog = () => ({ colorShield: [paint(1, [color(91)]), paint(2, [color(91), color(92)]), paint(3, [color(93), color(94)]), paint(4, [], { isFixedColor: false, requiresColorNote: true, isCustomerSupplied: true })], paintCategories: [{ id: 30, name: 'Category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false }] })
+const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<select :value="modelValue ?? ''" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)"><option value=""></option><option v-for="item in items.filter(x=>!x.type)" :value="item.id">{{item.label}}</option></select>` }
+const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
+describe('separate paint and color', () => {
+ beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('groups paint options by type IDs inside the selected category, including untyped paints', async () => {
+  const data = catalog()
+  data.colorShield = [
+   paint(1, [color(91)], { paintTypeId: 10, paintTypeName: 'Same type caption' }),
+   paint(2, [color(92)], { paintTypeId: 20, paintTypeName: 'Same type caption' }),
+   paint(3, [color(93)], { paintTypeId: 10, paintTypeName: 'Same type caption' }),
+   paint(4, [], { isFixedColor: false, requiresColorNote: true }),
+   paint(5, [color(94)], { paintCategoryId: 31, paintTypeId: 10, paintTypeName: 'Same type caption' }),
+  ]
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const w = render()
+  await flushPromises()
+  const options = () => w.getComponent<PaintSelectStub>('[data-testid="paint-product"]').props('items')
+  expect(options()).toEqual([
+   { type: 'label', label: 'Same type caption' }, { id: '1', label: 'Paint 1' }, { id: '3', label: 'Paint 3' },
+   { type: 'label', label: 'Same type caption' }, { id: '2', label: 'Paint 2' },
+   { type: 'label', label: 'Без типа' }, { id: '4', label: 'Paint 4' },
+  ])
+  await w.get('[data-testid="paint-product"]').setValue('2')
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ paintId: 2, paintColorId: 92 }))
+  w.unmount()
+  data.colorShield = data.colorShield.map(item => ({ ...item, paintTypeName: item.paintTypeId == null ? null : 'Renamed type' }))
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const renamed = render()
+  await flushPromises()
+  expect(renamed.getComponent<PaintSelectStub>('[data-testid="paint-product"]').props('items').filter(item => !item.type).map(item => item.id)).toEqual(['1', '3', '2', '4'])
+  renamed.unmount()
+ })
+ it('keeps incomplete drafts local and saves the complete numeric pair once', async () => {
+  const c=useCalculation(); c.loadFromApi({paintId:1,paintColorId:91}); const w=render();await flushPromises();expect(saveWicketData).not.toHaveBeenCalled()
+  await w.get('[data-testid="paint-product"]').setValue('3');await flushPromises();expect(c.paintId.value).toBe(1);expect(c.paintColorId.value).toBe(91);expect(saveWicketData).not.toHaveBeenCalled();expect(await w.vm.validateBeforeLeave()).toBe(false)
+  await w.get('[data-testid="paint-color"]').setValue('94');await flushPromises();expect(saveWicketData).toHaveBeenCalledTimes(1);expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({paintId:3,paintColorId:94}));expect(c.paintId.value).toBe(3);w.unmount()
+ })
+ it('retains shared colors and auto selects a sole color', async()=>{const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});const w=render();await flushPromises();await w.get('[data-testid="paint-product"]').setValue('2');await flushPromises();expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:2,paintColorId:91}));await w.get('[data-testid="paint-product"]').setValue('1');await flushPromises();expect(c.paintColorId.value).toBe(91);w.unmount()})
+ it('retains failed local choice and saved pair for retry',async()=>{const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});const w=render();await flushPromises();vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Failed'));await w.get('[data-testid="paint-product"]').setValue('3');await w.get('[data-testid="paint-color"]').setValue('93');await flushPromises();expect(c.paintId.value).toBe(1);expect(w.get<HTMLSelectElement>('[data-testid="paint-color"]').element.value).toBe('93');expect(await w.vm.validateBeforeLeave()).toBe(true);expect(c.paintId.value).toBe(3);w.unmount()})
+ it('uses flags after every label is renamed and requires only explicit note flag',async()=>{const data=catalog();data.colorShield=data.colorShield.map(p=>({...p,name:'Renamed paint',paintCategoryName:'Renamed category',colors:p.colors.map(c=>({...c,name:'Renamed color'}))}));data.paintCategories[0]!.name='Renamed';vi.mocked(getColorShield).mockResolvedValueOnce(data);const c=useCalculation();const w=render();await flushPromises();await w.get('[data-testid="paint-product"]').setValue('4');await flushPromises();expect(w.find('textarea').exists()).toBe(true);expect(await w.vm.validateBeforeLeave()).toBe(false);await w.get('textarea').setValue('Sample');expect(await w.vm.validateBeforeLeave()).toBe(true);expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,paintColorId:null,providesPaintCode:'customer'}));expect(c.data.value.find(b=>b.blockCode==='painting')?.params).toContainEqual({paramCode:'paintProduct',name:'Краска',value:'Renamed paint'});w.unmount()})
+ it('preserves unavailable saved pair but cannot offer it for a new selection',async()=>{const c=useCalculation();c.loadFromApi({paintId:99,paintColorId:999,colorShieldName:'Historical',paintSelectionUnavailable:true,paintSelection:{isFixedColor:true,requiresColorNote:false,isPaintAvailable:true}});const w=render();await flushPromises();expect(w.text()).toContain('Historical');expect(await w.vm.validateBeforeLeave()).toBe(true);await w.get('[data-testid="paint-product"]').setValue('3');expect(await w.vm.validateBeforeLeave()).toBe(false);expect(w.get('[data-testid="paint-color"]').text()).not.toContain('Historical');w.unmount()})
+ it('allows customer painting without catalog',async()=>{vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Offline'));const w=render();await flushPromises();await w.get('input[value="customer"]').setValue();await flushPromises();expect(await w.vm.validateBeforeLeave()).toBe(true);expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({doesPaintingFrameCode:'customer'}));w.unmount()})
+ it('does not select a paint or rewrite an existing pair while loading', async () => {
+  const c = useCalculation()
+  const w = render()
+  await flushPromises()
+  expect(c.paintId.value).toBeNull()
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-color"]').element.disabled).toBe(true)
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  w.unmount()
+ })
+ it('keeps optional individual notes optional', async () => {
+  const data = catalog()
+  data.colorShield[3]!.requiresColorNote = false
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const w = render()
+  await flushPromises()
+  await w.get('[data-testid="paint-product"]').setValue('4')
+  await flushPromises()
+  expect(w.get('textarea').attributes('required')).toBeUndefined()
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  w.unmount()
+ })
+ it('preserves hidden saved material choices while customer performs painting', async () => {
+  const c = useCalculation()
+  c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Sample',primerId:20,doesPaintingFrameCode:'customer'})
+  const w = render()
+  await flushPromises()
+  expect(w.find('[data-testid="paint-product"]').exists()).toBe(false)
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,paintColorId:null,primerId:20,colorShieldNote:'Sample'}))
+  await w.get('input[value="manufacturer"]').setValue()
+  await flushPromises()
+  expect(w.get('textarea').element.value).toBe('Sample')
+  w.unmount()
+ })
+ it('clears an incompatible primer after a successful new paint save', async () => {
+  const data = catalog()
+  data.colorShield[0]!.primers = [{id:10,name:'Primer'}]
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const c=useCalculation()
+  c.loadFromApi({paintId:1,paintColorId:91,primerId:10})
+  const w=render()
+  await flushPromises()
+  expect(w.get('[data-testid="paint-primer"]').text()).toContain('Primer')
+  await w.get('[data-testid="paint-product"]').setValue('2')
+  await flushPromises()
+  expect(c.primerId.value).toBeNull()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({primerId:null}))
+  w.unmount()
+ })
+ it('shows server field validation details and blocks leaving', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91})
+  const w=render();await flushPromises()
+  vi.mocked(saveWicketData).mockRejectedValueOnce({response:{data:{errors:{paintColorId:['Incompatible color']}}}})
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(w.text()).toContain('Incompatible color')
+  w.unmount()
+ })
+ it('allows leaving after saved painting when recalculation fails', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});c.priceRetail.value='1000'
+  const w=render();await flushPromises()
+  vi.mocked(recalculate).mockRejectedValueOnce(new Error('Price failed'))
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(w.text()).toContain('Окраска сохранена')
+  expect(w.text()).toContain('Price failed')
+  w.unmount()
+ })
+ it('does not preserve an unavailable paint through the unavailable-color exception', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:99,paintColorId:999,paintSelectionUnavailable:true,paintSelection:{isFixedColor:true,requiresColorNote:false,isPaintAvailable:false}})
+  const w=render();await flushPromises()
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  w.unmount()
+ })
 
-const { categoryFixtures } = vi.hoisted(() => ({ categoryFixtures: [
-  { id: 71, name: 'Базовая переименованная', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
-  { id: 83, name: 'Другая', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
-  { id: 96, name: 'Произвольная', isFixedColor: false, requiresColorNote: true, isCustomerSupplied: false, requiresPaintType: true, allowsAnyPrimer: false, quantityCalculationMode: 'ceilKg' as const, costCoefficient: 1.1 },
-  { id: 125, name: 'Материал клиента', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: true, requiresPaintType: false, allowsAnyPrimer: true, quantityCalculationMode: 'consumption' as const, costCoefficient: 1 },
-] }))
+ it('locks material inputs while saving and shares the pending acknowledgement with Next', async () => {
+  const c = useCalculation()
+  c.loadFromApi({ paintId: 1, paintColorId: 91, paintName: 'Paint 1', colorShieldName: 'Color 91' })
+  const w = render()
+  await flushPromises()
+  let resolveSave!: (response: {lockVersion:number}) => void
+  vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve }))
+  await w.get('[data-testid="paint-product"]').setValue('2')
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(true)
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-color"]').element.disabled).toBe(true)
+  expect(w.get<HTMLFieldSetElement>('fieldset').element.disabled).toBe(true)
+  expect(w.findAll('button').find(button => button.text() === 'Далее')?.attributes('disabled')).toBeDefined()
+  // Even synthetic emissions from a disabled child must not start an overlapping write.
+  w.findAllComponents(selectStub).find(component => component.attributes('data-testid') === 'paint-product')!.vm.$emit('update:modelValue', '1')
+  w.findAllComponents(selectStub).find(component => component.attributes('data-testid') === 'paint-color')!.vm.$emit('update:modelValue', '92')
+  const leaving = w.vm.validateBeforeLeave()
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenCalledTimes(1)
+  expect(c.paintId.value).toBe(1)
+  resolveSave({lockVersion:2})
+  expect(await leaving).toBe(true)
+  expect(c.getFullSavePayload()).toMatchObject({paintId:2,paintColorId:91})
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(false)
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.value).toBe('2')
+  w.unmount()
+ })
+ it('unlocks a failed in-flight save and retries the retained complete draft', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91})
+  const w=render();await flushPromises()
+  let rejectSave!: (cause: Error) => void
+  vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise((_resolve,reject) => {rejectSave=reject}))
+  await w.get('[data-testid="paint-product"]').setValue('2')
+  const leaving=w.vm.validateBeforeLeave()
+  rejectSave(new Error('Retry needed'))
+  expect(await leaving).toBe(false)
+  expect(c.paintId.value).toBe(1)
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(false)
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(saveWicketData).toHaveBeenCalledTimes(2)
+  expect(c.paintId.value).toBe(2)
+  w.unmount()
+ })
+ it('clears incompatible individual notes atomically on fixed-color success and requires a new note on return', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Old sample'})
+  const w=render();await flushPromises()
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Rejected fixed paint'))
+  await w.get('[data-testid="paint-product"]').setValue('1');await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:1,paintColorId:91,colorShieldNote:''}))
+  expect(c.getFullSavePayload()).toMatchObject({paintId:4,paintColorId:null,colorShieldNote:'Old sample'})
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(c.colorShieldNote.value).toBe('')
+  expect(c.data.value.find(block=>block.blockCode==='painting')?.params.some(param=>param.paramCode==='paintNote')).toBe(false)
+  await w.get('[data-testid="paint-product"]').setValue('4');await flushPromises()
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(w.get('textarea').element.value).toBe('')
+  w.unmount()
+ })
+ it('retains the draft note when switching between valid individual paints', async () => {
+  const data=catalog()
+  data.colorShield.push(paint(5, [], { isFixedColor:false, requiresColorNote:true }))
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Required sample'})
+  const w=render();await flushPromises()
+  await w.get('[data-testid="paint-product"]').setValue('5');await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:5,colorShieldNote:'Required sample'}))
+  expect(c.colorShieldNote.value).toBe('Required sample')
+  w.unmount()
+ })
+ it('summarizes the acknowledged pair when customer painting preserves an incomplete material draft', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91,paintName:'Paint 1',colorShieldName:'Color 91'})
+  const w=render();await flushPromises()
+  await w.get('[data-testid="paint-product"]').setValue('3');await flushPromises()
+  await w.get('input[value="customer"]').setValue();await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:1,paintColorId:91}))
+  const params=c.data.value.find(block=>block.blockCode==='painting')?.params
+  expect(params).toContainEqual({paramCode:'paintProduct',name:'Краска',value:'Paint 1'})
+  expect(params).toContainEqual({paramCode:'color',name:'Цвет рамы',value:'Color 91'})
+  w.unmount()
+ })
 
-vi.mock('../../app/api/wicket', async (original) => ({
-  ...(await original<typeof import('../../app/api/wicket')>()),
-  getColorShield: vi.fn().mockResolvedValue({ colorShield: [
-    { id: 1, name: 'Белая', paintCategoryId: 71, primers: [{ id: 10, name: 'Грунт А' }], hex: '#ffffff' },
-    { id: 2, name: 'Индивидуальная эмаль', paintCategoryId: 96, primers: [{ id: 20, name: 'Грунт Б' }] },
-  ], paintCategories: categoryFixtures }),
-  saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 2 }),
-  recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
-}))
-const { saveWicketData, recalculate, getColorShield } = await import('../../app/api/wicket')
+ it('keeps inputs locked until the price response for the acknowledged save finishes', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});c.priceRetail.value='1000'
+  const w=render();await flushPromises()
+  let resolvePrice!: (response: {priceDealer:string;priceRetail:string}) => void
+  vi.mocked(recalculate).mockImplementationOnce(() => new Promise(resolve => {resolvePrice=resolve}))
+  await w.get('[data-testid="paint-product"]').setValue('2');await flushPromises()
+  expect(c.paintId.value).toBe(2)
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(true)
+  const leaving=w.vm.validateBeforeLeave()
+  expect(saveWicketData).toHaveBeenCalledTimes(1)
+  resolvePrice({priceDealer:'1500',priceRetail:'2000'})
+  expect(await leaving).toBe(true)
+  expect(c.priceRetail.value).toBe('2000')
+  expect(w.get<HTMLSelectElement>('[data-testid="paint-product"]').element.disabled).toBe(false)
+  w.unmount()
+ })
 
-const selectStub = {
-  props: ['modelValue', 'items', 'disabled'],
-  emits: ['update:modelValue'],
-  template: `<select :value="modelValue ?? ''" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)">
-    <template v-for="(item, i) in items" :key="i"><option v-if="!item.type" :value="item.id">{{ item.label }}</option></template>
-  </select>`,
-}
-function render() {
-  return mount(Painting, { global: { stubs: {
-    B24SelectMenu: selectStub,
-    SelectMenu: selectStub,
-    B24Button: { props: ['label'], template: '<button>{{ label }}</button>' },
-    Button: { props: ['label'], template: '<button>{{ label }}</button>' },
-  } } })
-}
+ // Defensive wire-boundary resilience: individual flags are valid, but the unavailable-color
+ // flag is anomalous with a null palette FK. It must not silently discard a visible note edit.
+ it('keeps editable individual notes independent of preserved material state at the history boundary', async () => {
+  const c=useCalculation()
+  c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Saved sample',paintSelectionUnavailable:true,paintSelection:{isFixedColor:false,requiresColorNote:true,isPaintAvailable:true}})
+  const w=render();await flushPromises()
+  w.get('textarea').element.value='   '
+  await w.get('textarea').trigger('input')
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  w.get('textarea').element.value='Edited sample'
+  await w.get('textarea').trigger('input')
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Note rejected'))
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,paintColorId:null,colorShieldNote:'Edited sample'}))
+  expect(c.colorShieldNote.value).toBe('Saved sample')
+  expect(await w.vm.validateBeforeLeave()).toBe(true)
+  expect(c.colorShieldNote.value).toBe('Edited sample')
+  expect(c.data.value.find(block=>block.blockCode==='painting')?.params).toContainEqual({paramCode:'paintNote',name:'Примечание к цвету краски',value:'Edited sample'})
+  w.unmount()
+ })
+ it('keeps a local individual-note draft hidden and unsaved while customer performs painting', async () => {
+  const c=useCalculation();c.loadFromApi({paintId:4,paintColorId:null,colorShieldNote:'Saved sample'})
+  const w=render();await flushPromises()
+  w.get('textarea').element.value='Local sample'
+  await w.get('textarea').trigger('input')
+  await w.get('input[value="customer"]').setValue();await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({paintId:4,colorShieldNote:'Saved sample',doesPaintingFrameCode:'customer'}))
+  expect(c.colorShieldNote.value).toBe('Saved sample')
+  expect(w.find('textarea').exists()).toBe(false)
+  w.unmount()
+ })
 
-describe('Окраска', () => {
-  it('does not infer an invalid stored paint supplier code from the selected category on load', async () => {
-    setActivePinia(createPinia())
-    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
-      { id: 1251, name: 'Материал', paintCategoryId: 125, primers: [], paintTypeId: null, paintTypeName: null, consumptionRate: null },
-    ], paintCategories: categoryFixtures })
-    const calc = useCalculation()
-    calc.loadFromApi({ providesPaintCode: 'unknown', colorShieldId: 1251 })
-    const wrapper = render()
-    await flushPromises()
-    expect(calc.providesPaint.value).toBe('')
-    wrapper.unmount()
-  })
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    const calc = useCalculation()
-    calc.orderId.value = 42
-    calc.productRowId.value = 7
-    calc.modelId.value = '1'
-    vi.clearAllMocks()
-  })
-
-  it('shows providers first and saves both choices with legacy assembly and painting details', async () => {
-    const calc = useCalculation()
-    calc.providesPaint.value = 'customer'
-    calc.colorShieldId.value = '1'
-    calc.doesAssembly.value = 'customer'
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.findAll('legend').map(legend => legend.text())).toEqual(['Кто осуществляет окраску'])
-    expect(wrapper.get('[data-paint-category="71"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('input[name="providesPrimer"][value="customer"]').exists()).toBe(false)
-    expect(saveWicketData).not.toHaveBeenCalled()
-    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
-    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
-    await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'customer', doesPaintingFrame: 'customer',
-      doesAssembly: 'customer', colorShieldId: '1', primerId: 10,
-    }))
-    expect(wrapper.find('[data-testid="paint-primer"]').exists()).toBe(false)
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
-      .toContainEqual({ paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' })
-    const payload = calc.getFullSavePayload()
-    calc.reset()
-    calc.loadFromApi(payload)
-    expect(calc.providesPaint.value).toBe('customer')
-    expect(wrapper.text()).not.toContain('В старом заказе')
-    expect(calc.doesPaintingFrame.value).toBe('customer')
-    expect(calc.doesAssembly.value).toBe('customer')
-    expect(calc.data.value.some(block => block.blockName === 'Вариант изготовления')).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('updates performer and removes stale price by codes despite renamed summary labels', async () => {
-    const calc = useCalculation()
-    calc.colorShieldId.value = '1'
-    calc.priceRetail.value = 1200
-    const renamedBlocks = [
-      { blockCode: 'painting', blockName: 'Changed coating', params: [
-        { paramCode: 'paintingPerformer', name: 'Changed performer', value: 'old' },
-        { paramCode: 'paint', name: 'Changed material', value: 'keep' },
-      ] },
-      { blockCode: 'price', blockName: 'Changed commercial', params: [] },
-      { blockCode: 'other', blockName: 'Цена', params: [] },
-    ]
-    vi.mocked(recalculate).mockRejectedValueOnce(new Error('unavailable'))
-    const wrapper = render()
-    await flushPromises()
-    calc.data.value = renamedBlocks
-    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
-    await flushPromises()
-    const coating = calc.data.value.filter(block => block.blockCode === 'painting')
-    expect(coating).toHaveLength(1)
-    expect(coating[0]?.params.filter(param => param.paramCode === 'paintingPerformer')).toEqual([
-      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: 'Выполняет заказчик' },
-    ])
-    expect(coating[0]?.params).toContainEqual({ paramCode: 'paint', name: 'Changed material', value: 'keep' })
-    expect(calc.data.value.some(block => block.blockCode === 'price')).toBe(false)
-    expect(calc.data.value.some(block => block.blockCode === 'other')).toBe(true)
-    wrapper.unmount()
-  })
-
-  it('hides all material controls for customer painting and restores selections and validation on return', async () => {
-    const calc = useCalculation()
-    calc.colorShieldId.value = '2'
-    calc.primerId.value = 20
-    calc.providesPrimer.value = 'customer'
-    const wrapper = render()
-    await flushPromises()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
-    await flushPromises()
-    expect(wrapper.findAll('legend').map(item => item.text())).toEqual(['Кто осуществляет окраску'])
-    expect(wrapper.find('[aria-label="Категория краски"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
-    expect(wrapper.find('textarea').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('Укажите примечание')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      doesPaintingFrame: 'customer', colorShieldId: '2', primerId: 20,
-      colorShieldNote: '', providesPrimer: 'customer',
-    }))
-    await wrapper.get('input[name="doesPaintingFrame"][value="manufacturer"]').setValue()
-    await flushPromises()
-    expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
-    expect(wrapper.find('textarea').exists()).toBe(true)
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it.each(['empty', 'unavailable', 'failed', 'pending'])('saves customer painting with an %s catalog', async (catalog) => {
-    const calc = useCalculation()
-    if (catalog === 'unavailable') calc.colorShieldId.value = '999'
-    if (catalog === 'empty') vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [] })
-    if (catalog === 'failed') vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Каталог недоступен'))
-    if (catalog === 'pending') vi.mocked(getColorShield).mockImplementationOnce(() => new Promise(() => {}))
-    const wrapper = render()
-    await flushPromises()
-    await wrapper.get('input[name="doesPaintingFrame"][value="customer"]').setValue()
-    await flushPromises()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(wrapper.text()).not.toContain('Каталог недоступен')
-    expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
-    expect(wrapper.text()).not.toContain('Загрузка красок')
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ doesPaintingFrame: 'customer' }))
-    wrapper.unmount()
-  })
-
-  it('restores saved customer painting without changing hidden selections or reporting a valid color unavailable', async () => {
-    const calc = useCalculation()
-    calc.doesPaintingFrame.value = 'customer'
-    calc.colorShieldId.value = '2'
-    calc.colorShieldNote.value = 'По образцу'
-    calc.primerId.value = 20
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.find('[data-testid="paint-color"]').exists()).toBe(false)
-    expect(calc.primerId.value).toBe(20)
-    await wrapper.get('input[name="doesPaintingFrame"][value="manufacturer"]').setValue()
-    await flushPromises()
-    expect(wrapper.get('textarea').element.value).toBe('По образцу')
-    expect(wrapper.text()).not.toContain('Выбранная краска недоступна')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    wrapper.unmount()
-  })
-
-  it('requires a nonblank note for individual paint before saving or leaving', async () => {
-    const wrapper = render()
-    await flushPromises()
-    await wrapper.get('[data-paint-category="96"]').trigger('click')
-    await flushPromises()
-    vi.mocked(saveWicketData).mockClear()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    expect(wrapper.text()).toContain('Укажите примечание к цвету краски')
-    await wrapper.get('textarea').setValue('   ')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    expect(saveWicketData).not.toHaveBeenCalled()
-    await wrapper.get('textarea').setValue('  По образцу заказчика  ')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      colorShieldId: '2', colorShieldNote: 'По образцу заказчика', primerId: null,
-    }))
-    wrapper.unmount()
-  })
-
-  it('allows an empty note for a renamed variable-color customer paint', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({
-      paintCategories: [{ ...categoryFixtures[3]!, id: 407, name: 'Переименована', isFixedColor: false, requiresColorNote: false }],
-      colorShield: [{ id: 31, name: 'Материал', paintCategoryId: 407, primers: [], paintTypeId: null, paintTypeName: null, consumptionRate: null }],
-    })
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.find('textarea').exists()).toBe(true)
-    expect(wrapper.get('textarea').attributes('required')).toBeUndefined()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', colorShieldNote: '' }))
-    wrapper.unmount()
-  })
-
-  it('offers compatible primers, permits no primer and clears an incompatible selection on paint change', async () => {
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт А')
-    expect(wrapper.get('[data-testid="paint-primer"]').text()).not.toContain('Грунт Б')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
-    await flushPromises()
-    expect(useCalculation().primerId.value).toBe(10)
-    await wrapper.get('[data-paint-category="96"]').trigger('click')
-    expect(useCalculation().primerId.value).toBeNull()
-    expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
-    wrapper.unmount()
-  })
-
-  it('restores note and primer and keeps painting fields through a full save and reload', async () => {
-    const calc = useCalculation()
-    calc.loadFromApi({ colorShieldId: 2, colorShieldNote: 'Матовый по образцу', primerId: '20', primerName: 'Грунт Б' })
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.get('textarea').element.value).toBe('Матовый по образцу')
-    expect(wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]').element.value).toBe('20')
-    expect(calc.getFullSavePayload()).toMatchObject({ colorShieldNote: 'Матовый по образцу', primerId: 20 })
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params).toContainEqual({ paramCode: 'primer', name: 'Грунтовка', value: 'Грунт Б' })
-    wrapper.unmount()
-  })
-
-  it('clears paint and primer for an empty Daval category and restores manufacturer for normal categories', async () => {
-    const wrapper = render()
-    await flushPromises()
-    await wrapper.get('[data-testid="paint-primer"]').setValue('10')
-    vi.mocked(saveWicketData).mockClear()
-    await wrapper.get('[data-paint-category="125"]').trigger('click')
-    await flushPromises()
-    expect(saveWicketData).not.toHaveBeenCalled()
-    expect(useCalculation().colorShieldId.value).toBe('')
-    expect(useCalculation().primerId.value).toBeNull()
-    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
-    expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
-    await wrapper.get('[data-paint-category="71"]').trigger('click')
-    await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPaint: 'manufacturer' }))
-    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Индивидуальная эмаль')
-    wrapper.unmount()
-  })
-
-  it('saves independent primer supplier with customer paint and manufacturer painting through reload', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
-      { id: 1, name: 'Белая', paintCategoryId: 71, primers: [], paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 },
-      { id: 8, name: 'Давальческая эмаль', paintCategoryId: 125,
-        primers: [{ id: 10, name: 'Грунт А' }, { id: 20, name: 'Грунт Б' }], paintTypeId: null, paintTypeName: null, consumptionRate: null },
-    ], paintCategories: categoryFixtures })
-    const calc = useCalculation()
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.text()).not.toContain('Поставщик грунтовки')
-    await wrapper.get('[data-paint-category="125"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Белая')
-    expect(wrapper.get('[data-testid="paint-primer"]').text()).toContain('Грунт Б')
-    await wrapper.get('[data-testid="paint-primer"]').setValue('20')
-    await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'customer', providesPrimer: 'manufacturer',
-      doesPaintingFrame: 'manufacturer', primerId: 20,
-    }))
-    await wrapper.get('input[name="providesPrimer"][value="customer"]').setValue()
-    await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ providesPrimer: 'customer' }))
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params)
-      .toContainEqual({ paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: 'Предоставляет заказчик' })
-    const payload = calc.getFullSavePayload()
-    calc.reset()
-    expect(calc.providesPrimer.value).toBe('manufacturer')
-    calc.loadFromApi(payload)
-    expect(calc.providesPrimer.value).toBe('customer')
-    expect(calc.providesPaint.value).toBe('customer')
-    expect(calc.primerId.value).toBe(20)
-    calc.loadFromApi({ providesPrimer: null })
-    expect(calc.providesPrimer.value).toBe('manufacturer')
-    await wrapper.get('[data-testid="paint-primer"]').setValue('none')
-    await flushPromises()
-    expect(wrapper.text()).not.toContain('Поставщик грунтовки')
-    expect(calc.data.value.find(block => block.blockName === 'Окраска')?.params.some(param => param.name === 'Поставщик грунтовки')).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('shows an empty category without saving an unavailable paint', async () => {
-    const wrapper = render()
-    await flushPromises()
-    await wrapper.get('[data-paint-category="83"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('В этой категории пока нет доступных красок')
-    expect(saveWicketData).not.toHaveBeenCalled()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('recognizes a configured customer supplied paint without an automatic save', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({
-      colorShield: [{ id: 8, name: 'Краска заказчика',
-        paintCategoryId: 34, isFixedColor: true, paintTypeId: 1, paintTypeName: 'Эмаль', consumptionRate: 100 }],
-      paintCategories: [{ ...categoryFixtures[3]!, id: 34 }],
-    })
-    const calc = useCalculation()
-    calc.colorShieldId.value = '8'
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.get('[data-paint-category="34"]').attributes('aria-pressed')).toBe('true')
-    expect(calc.providesPaint.value).toBe('customer')
-    expect(saveWicketData).not.toHaveBeenCalled()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      providesPaint: 'customer', colorShieldId: '8',
-    }))
-    wrapper.unmount()
-  })
-
-  it('does not advance when saving fails', async () => {
-    const wrapper = render()
-    await flushPromises()
-    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('Ошибка сохранения'))
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    expect(wrapper.text()).toContain('Ошибка сохранения')
-    expect(wrapper.emitted('next')).toBeUndefined()
-    wrapper.unmount()
-  })
-
-  it('keeps equally named arbitrary categories separate and uses independent properties', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({
-      paintCategories: [
-        { ...categoryFixtures[0]!, id: 407, name: 'Одинаковая', isCustomerSupplied: true, isFixedColor: false, requiresColorNote: true },
-        { ...categoryFixtures[3]!, id: 908, name: 'Одинаковая', isCustomerSupplied: false, isFixedColor: true },
-      ],
-      colorShield: [
-        { id: 31, name: 'Первый материал', paintCategoryId: 407, paintTypeId: null, paintTypeName: null, consumptionRate: null },
-        { id: 32, name: 'Второй материал', paintCategoryId: 908, paintTypeId: null, paintTypeName: null, consumptionRate: null },
-      ],
-    })
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.get('[data-paint-category="908"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.get('[data-testid="paint-color"]').text()).toContain('Второй материал')
-    expect(wrapper.get('[data-testid="paint-color"]').text()).not.toContain('Первый материал')
-    await wrapper.get('[data-paint-category="407"]').trigger('click')
-    expect(useCalculation().providesPaint.value).toBe('customer')
-    expect(wrapper.find('textarea').exists()).toBe(true)
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    await wrapper.get('textarea').setValue('По образцу')
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorShieldId: '31', providesPaint: 'customer' }))
-    wrapper.unmount()
-  })
-
-  it('requires category metadata instead of guessing from old labels and supports retry', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [
-      { id: 99, name: 'Материал', paintCategoryName: 'Стандартная', paintTypeId: null, paintTypeName: null, consumptionRate: null },
-    ] })
-    const wrapper = render()
-    await flushPromises()
-    expect(wrapper.text()).toContain('Не удалось загрузить свойства категорий краски')
-    expect(wrapper.find('[data-paint-category]').exists()).toBe(false)
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    expect(saveWicketData).not.toHaveBeenCalled()
-    await wrapper.findAll('button').find(button => button.text() === 'Повторить загрузку')!.trigger('click')
-    await flushPromises()
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    wrapper.unmount()
-  })
-
-  it('explains calculation failure separately from a successful painting save and allows leaving', async () => {
-    const calc = useCalculation()
-    calc.priceRetail.value = '1000'
-    const wrapper = render()
-    await flushPromises()
-    vi.mocked(recalculate).mockRejectedValueOnce({ response: { status: 422, data: {
-      error: 'Не удалось рассчитать цену',
-      problems: [{ message: 'Заклёпка 5×3,2 мм: позиция не найдена.' }],
-    } } })
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
-    expect(wrapper.text()).toContain('Окраска сохранена')
-    expect(wrapper.text()).toContain('Заклёпка 5×3,2 мм: позиция не найдена.')
-    expect(wrapper.text()).not.toContain('Request failed')
-    wrapper.unmount()
-  })
-
-  it('disables the primer dropdown when no compatible primers exist', async () => {
-    vi.mocked(getColorShield).mockResolvedValueOnce({ colorShield: [{
-      id: 1, name: 'Эмаль', paintCategoryId: 71, paintTypeId: 1, paintTypeName: 'Эмаль',
-      consumptionRate: 100, primers: [],
-    }], paintCategories: categoryFixtures })
-    const wrapper = render()
-    await flushPromises()
-    const select = wrapper.get<HTMLSelectElement>('[data-testid="paint-primer"]')
-    expect(select.element.disabled).toBe(true)
-    expect(select.element.value).toBe('none')
-    expect(wrapper.text()).toContain('Без грунтовки')
-    wrapper.unmount()
-  })
-
-  it('shows server validation details when the painting itself could not be saved', async () => {
-    const wrapper = render()
-    await flushPromises()
-    vi.mocked(saveWicketData).mockRejectedValueOnce({ response: { status: 422, data: {
-      errors: { primerId: ['Выберите совместимую грунтовку.'] },
-    } } })
-    expect(await wrapper.vm.validateBeforeLeave()).toBe(false)
-    expect(wrapper.text()).toContain('Выберите совместимую грунтовку.')
-    wrapper.unmount()
-  })
 })

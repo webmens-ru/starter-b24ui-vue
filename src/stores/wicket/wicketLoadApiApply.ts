@@ -35,6 +35,8 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'lockPenColorId',
   'penColorId',
   'primerId',
+  'paintId',
+  'paintColorId',
   'assortmentSideGrilleNetId',
   'assortmentHeightUpperNetId',
   'assortmentHeightLowerNetId',
@@ -133,7 +135,10 @@ export function applyWicketApiFieldMappings(
   function set(key: string, val: unknown) {
     if (val === undefined) return
     let v: unknown
-    if (key === 'lockSetId') {
+    if (key === 'paintId' || key === 'paintColorId') {
+      const id = Number(val)
+      v = Number.isSafeInteger(id) && id > 0 ? id : null
+    } else if (key === 'lockSetId') {
       const parsed = parsePositiveDecimalId(val)
       v = val === null || val === '' ? null
         : isPositiveSafeInteger(val) ? val
@@ -175,7 +180,16 @@ export function applyWicketApiFieldMappings(
     if (r) r.value = v
   }
 
+  set('paintId', Object.prototype.hasOwnProperty.call(apiData, 'paintId') ? apiData.paintId : apiData.colorShieldId ?? null)
+  if (refMap.paintName) refMap.paintName.value = typeof apiData.paintName === 'string' ? apiData.paintName : ''
+  set('paintColorId', apiData.paintColorId ?? null)
+  set('paintSelectionUnavailable', Boolean(Number(apiData.paintSelectionUnavailable)))
+  if (refMap.paintSelection) {
+    const selection = apiData.paintSelection as Record<string, unknown> | null | undefined
+    refMap.paintSelection.value = selection ? { isFixedColor: Boolean(Number(selection.isFixedColor)), requiresColorNote: Boolean(Number(selection.requiresColorNote)), isPaintAvailable: Boolean(Number(selection.isPaintAvailable)) } : null
+  }
   for (const [key, value] of Object.entries(apiData)) {
+    if (['paintId', 'paintColorId', 'colorShieldId', 'paintSelection', 'paintSelectionUnavailable'].includes(key)) continue
     if (key === 'isTherePen' || key === 'isTherePenName') continue
     if (key === 'grilleLocation' || key === 'grilleSideCode' || key === 'grilleSideProblem') continue
     if (key === 'shieldType' || key === 'frameSubtypeCode' || key === 'frameSubtypeProblem') continue
