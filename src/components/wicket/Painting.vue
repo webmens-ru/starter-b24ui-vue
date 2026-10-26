@@ -28,7 +28,19 @@ const customerPainting = computed(() => calc.doesPaintingFrameCode.value === 'cu
 const individual = computed(() => selectedPaint.value?.isFixedColor === false)
 const requiresNote = computed(() => selectedPaint.value?.requiresColorNote === true)
 const primers = computed(() => selectedPaint.value?.primers ?? [])
-const paintItems = computed(() => paints.value.filter(item => category.value == null || item.paintCategoryId === category.value).map(item => ({ id: String(item.id), label: item.name })))
+const paintItems = computed(() => {
+  const groups = new Map<number | null, PaintItem[]>()
+  for (const item of paints.value) {
+    if (category.value != null && item.paintCategoryId !== category.value) continue
+    const group = groups.get(item.paintTypeId)
+    if (group) group.push(item)
+    else groups.set(item.paintTypeId, [item])
+  }
+  return [...groups.entries()].flatMap(([typeId, items]) => [
+    { type: 'label' as const, label: typeId == null ? 'Без типа' : items[0]?.paintTypeName ?? 'Тип краски' },
+    ...items.map(item => ({ id: String(item.id), label: item.name })),
+  ])
+})
 const colorItems = computed(() => (selectedPaint.value?.colors ?? []).map(item => ({ id: String(item.id), label: item.name })))
 const primerItems = computed(() => [{ id: 'none', label: 'Без грунтовки' }, ...primers.value.map(item => ({ id: String(item.id), label: item.name }))])
 const primerProviders = ['Предоставляет изготовитель', 'Предоставляет заказчик']

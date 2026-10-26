@@ -3,15 +3,47 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
 import Painting from './Painting.vue'
+import type { DefineComponent } from 'vue'
+import type { PaintItem } from '../../app/api/wicket.types'
+type PaintSelectStub = DefineComponent<{ items: Array<{ type?: 'label'; label: string; id?: string }> }>
 vi.mock('../../app/api/wicket', async original => ({ ...(await original<typeof import('../../app/api/wicket')>()), getColorShield: vi.fn(), saveWicketData: vi.fn().mockResolvedValue({}), recalculate: vi.fn() }))
 const { getColorShield, saveWicketData, recalculate } = await import('../../app/api/wicket')
 const color = (id: number) => ({ id, name: `Color ${id}`, hex: '#112233', image: null })
-const paint = (id: number, colors: ReturnType<typeof color>[], extra = {}) => ({ id, name: `Paint ${id}`, paintCategoryId: 30, paintCategoryName: 'Category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, colors, primers: [] as Array<{id:number;name:string}>, paintTypeId: null, paintTypeName: null, consumptionRate: null, ...extra })
+const paint = (id: number, colors: ReturnType<typeof color>[], extra: Partial<PaintItem> = {}): PaintItem => ({ id, name: `Paint ${id}`, paintCategoryId: 30, paintCategoryName: 'Category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false, colors, primers: [] as Array<{id:number;name:string}>, paintTypeId: null, paintTypeName: null, consumptionRate: null, ...extra })
 const catalog = () => ({ colorShield: [paint(1, [color(91)]), paint(2, [color(91), color(92)]), paint(3, [color(93), color(94)]), paint(4, [], { isFixedColor: false, requiresColorNote: true, isCustomerSupplied: true })], paintCategories: [{ id: 30, name: 'Category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false }] })
 const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<select :value="modelValue ?? ''" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)"><option value=""></option><option v-for="item in items.filter(x=>!x.type)" :value="item.id">{{item.label}}</option></select>` }
 const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
 describe('separate paint and color', () => {
  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('groups paint options by type IDs inside the selected category, including untyped paints', async () => {
+  const data = catalog()
+  data.colorShield = [
+   paint(1, [color(91)], { paintTypeId: 10, paintTypeName: 'Same type caption' }),
+   paint(2, [color(92)], { paintTypeId: 20, paintTypeName: 'Same type caption' }),
+   paint(3, [color(93)], { paintTypeId: 10, paintTypeName: 'Same type caption' }),
+   paint(4, [], { isFixedColor: false, requiresColorNote: true }),
+   paint(5, [color(94)], { paintCategoryId: 31, paintTypeId: 10, paintTypeName: 'Same type caption' }),
+  ]
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const w = render()
+  await flushPromises()
+  const options = () => w.getComponent<PaintSelectStub>('[data-testid="paint-product"]').props('items')
+  expect(options()).toEqual([
+   { type: 'label', label: 'Same type caption' }, { id: '1', label: 'Paint 1' }, { id: '3', label: 'Paint 3' },
+   { type: 'label', label: 'Same type caption' }, { id: '2', label: 'Paint 2' },
+   { type: 'label', label: 'Без типа' }, { id: '4', label: 'Paint 4' },
+  ])
+  await w.get('[data-testid="paint-product"]').setValue('2')
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ paintId: 2, paintColorId: 92 }))
+  w.unmount()
+  data.colorShield = data.colorShield.map(item => ({ ...item, paintTypeName: item.paintTypeId == null ? null : 'Renamed type' }))
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const renamed = render()
+  await flushPromises()
+  expect(renamed.getComponent<PaintSelectStub>('[data-testid="paint-product"]').props('items').filter(item => !item.type).map(item => item.id)).toEqual(['1', '3', '2', '4'])
+  renamed.unmount()
+ })
  it('keeps incomplete drafts local and saves the complete numeric pair once', async () => {
   const c=useCalculation(); c.loadFromApi({paintId:1,paintColorId:91}); const w=render();await flushPromises();expect(saveWicketData).not.toHaveBeenCalled()
   await w.get('[data-testid="paint-product"]').setValue('3');await flushPromises();expect(c.paintId.value).toBe(1);expect(c.paintColorId.value).toBe(91);expect(saveWicketData).not.toHaveBeenCalled();expect(await w.vm.validateBeforeLeave()).toBe(false)
