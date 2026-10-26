@@ -17,6 +17,19 @@ function setReturnUrl(returnUrl: unknown): void {
   }
 }
 
+function setProductRowsUrlTemplate(productRowsUrlTemplate: unknown): void {
+  window._PARAMS_ = {
+    placement: 'DEFAULT',
+    placementOptions: {
+      type: 'openApplication',
+      title: '',
+      entity: '',
+      viewMode: 'view',
+      params: { productRowsUrlTemplate } as unknown as TPlacementParams,
+    },
+  }
+}
+
 describe('product-row return navigation', () => {
   const navigateTop = vi.fn()
 
@@ -91,5 +104,33 @@ describe('product-row return navigation', () => {
       if (ownTopDescriptor) Object.defineProperty(window, 'top', ownTopDescriptor)
       else Reflect.deleteProperty(window, 'top')
     }
+  })
+
+  it('navigates to the created order product rows using its ID', async () => {
+    setProductRowsUrlTemplate('/dealer/orders/product-rows?id={orderId}')
+
+    const { navigateToCreatedOrderProductRows } = await loadNavigation()
+
+    expect(navigateToCreatedOrderProductRows(42)).toBe(true)
+    expect(navigateTop).toHaveBeenCalledWith('/dealer/orders/product-rows?id=42')
+  })
+
+  it.each([
+    [0, '/dealer/orders/product-rows?id={orderId}'],
+    [-1, '/dealer/orders/product-rows?id={orderId}'],
+    [Number.NaN, '/dealer/orders/product-rows?id={orderId}'],
+    [Number.MAX_SAFE_INTEGER + 1, '/dealer/orders/product-rows?id={orderId}'],
+    [42, 'https://attacker.example/orders?id={orderId}'],
+    [42, '/dealer/orders/product-rows?id=42'],
+    [42, '/dealer/orders/product-rows?id={orderId}&copy={orderId}'],
+    [42, '/dealer/\u0000orders/product-rows?id={orderId}'],
+    [42, '//attacker.example/orders?id={orderId}'],
+  ])('rejects unsafe created-order navigation for %s and %s', async (orderId, template) => {
+    setProductRowsUrlTemplate(template)
+
+    const { navigateToCreatedOrderProductRows } = await loadNavigation()
+
+    expect(navigateToCreatedOrderProductRows(orderId as number)).toBe(false)
+    expect(navigateTop).not.toHaveBeenCalled()
   })
 })

@@ -23,19 +23,39 @@ export function getProductRowReturnUrl(): string | null {
   return isSafeReturnUrl(returnUrl) ? returnUrl : null
 }
 
-export function navigateToProductRows(): boolean {
+function navigateToSafeUrl(url: string): boolean {
   if (hasNavigated) return false
-
-  const returnUrl = getProductRowReturnUrl()
-  if (!returnUrl) return false
 
   hasNavigated = true
   const testNavigateTop = window.__productRowsNavigateTop__
   if (testNavigateTop) {
-    testNavigateTop(returnUrl)
+    testNavigateTop(url)
   } else {
     const topWindow = window.top
-    if (topWindow) topWindow.location.href = returnUrl
+    if (topWindow) topWindow.location.href = url
   }
   return true
+}
+
+export function navigateToProductRows(): boolean {
+  const returnUrl = getProductRowReturnUrl()
+  if (!returnUrl) return false
+
+  return navigateToSafeUrl(returnUrl)
+}
+
+export function navigateToCreatedOrderProductRows(orderId: number): boolean {
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) return false
+
+  const template = window._PARAMS_?.placementOptions?.params?.productRowsUrlTemplate
+  if (typeof template !== 'string') return false
+
+  const marker = '{orderId}'
+  const markerIndex = template.indexOf(marker)
+  if (markerIndex === -1 || template.indexOf(marker, markerIndex + marker.length) !== -1) return false
+
+  const url = `${template.slice(0, markerIndex)}${String(orderId)}${template.slice(markerIndex + marker.length)}`
+  if (!isSafeReturnUrl(url)) return false
+
+  return navigateToSafeUrl(url)
 }
