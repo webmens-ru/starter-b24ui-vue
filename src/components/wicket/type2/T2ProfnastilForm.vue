@@ -241,6 +241,8 @@ function applyMaterial(selected: ProfnastilCoatingOption) {
     calc.coatingFacadeHex.value = selected.coatingHex ?? ''
     calc.coatingFacadeImage.value = selected.coatingImage ?? ''
     calc.reliefFacadeImage.value = selected.reliefImage ?? ''
+    calc.reliefFacadeAlongMode.value = selected.reliefAlongMode ?? 'stretch'
+    calc.reliefFacadeAcrossMode.value = selected.reliefAcrossMode ?? 'repeat'
   } else {
     calc.materialYard.value = profileName
     calc.typeOfCoatingYard.value = selected.name
@@ -249,6 +251,8 @@ function applyMaterial(selected: ProfnastilCoatingOption) {
     calc.coatingYardHex.value = selected.coatingHex ?? ''
     calc.coatingYardImage.value = selected.coatingImage ?? ''
     calc.reliefYardImage.value = selected.reliefImage ?? ''
+    calc.reliefYardAlongMode.value = selected.reliefAlongMode ?? 'stretch'
+    calc.reliefYardAcrossMode.value = selected.reliefAcrossMode ?? 'repeat'
   }
 }
 

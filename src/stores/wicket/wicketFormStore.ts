@@ -205,6 +205,10 @@ const colorFacadeHex          = ref<string>('')
 const colorFacadeImage        = ref<string>('')
 const coatingFacadeHex        = ref<string>('')
 const coatingFacadeImage      = ref<string>('')
+const reliefFacadeAlongMode = ref<'stretch' | 'repeat'>('stretch')
+const reliefFacadeAcrossMode = ref<'stretch' | 'repeat'>('repeat')
+const reliefYardAlongMode = ref<'stretch' | 'repeat'>('stretch')
+const reliefYardAcrossMode = ref<'stretch' | 'repeat'>('repeat')
 const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
@@ -303,6 +307,10 @@ const fieldsFilled = ref<number>(0)
     coatingFacadeHex.value = ''
     coatingFacadeImage.value = ''
     reliefFacadeImage.value = ''
+    reliefFacadeAlongMode.value = 'stretch'
+    reliefFacadeAcrossMode.value = 'repeat'
+    reliefYardAlongMode.value = 'stretch'
+    reliefYardAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
     gapId.value = null
@@ -599,9 +607,9 @@ const fieldsFilled = ref<number>(0)
     const stepOrder = modelId === '2'
       ? [
           'page7',
+          'page5',
           'page2',
           'page2_facade_profnastil',
-          'page5',
           'page6',
           'page3',
           'page_painting',
@@ -610,7 +618,7 @@ const fieldsFilled = ref<number>(0)
           'page10',
           'page12',
         ]
-      : ['page7', 'page2', 'page5', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
+      : ['page7', 'page5', 'page2', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
     const visited: string[] = []
     let active = 'page7'
 
@@ -781,6 +789,8 @@ const fieldsFilled = ref<number>(0)
       coatingFacadeHex,
       coatingFacadeImage,
       reliefFacadeImage,
+      reliefFacadeAlongMode,
+      reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
       gapId,
@@ -803,6 +813,8 @@ const fieldsFilled = ref<number>(0)
       coatingYardHex,
       coatingYardImage,
       reliefYardImage,
+      reliefYardAlongMode,
+      reliefYardAcrossMode,
       priceRetail,
       priceDealer,
     }
@@ -1155,6 +1167,8 @@ const fieldsFilled = ref<number>(0)
     coatingFacadeHex,
     coatingFacadeImage,
     reliefFacadeImage,
+    reliefFacadeAlongMode,
+    reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
     gapId,
@@ -1177,6 +1191,8 @@ const fieldsFilled = ref<number>(0)
     coatingYardHex,
     coatingYardImage,
     reliefYardImage,
+    reliefYardAlongMode,
+    reliefYardAcrossMode,
     priceRetail,
     priceDealer,
     fieldsFilled,

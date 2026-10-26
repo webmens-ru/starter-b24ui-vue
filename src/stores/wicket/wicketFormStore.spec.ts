@@ -289,8 +289,8 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.activePage).toBe('page12')
     expect(wizard.visitedPages).toEqual([
       'page7',
-      'page2',
       'page5',
+      'page2',
       'page6',
       'page3',
       'page_painting',

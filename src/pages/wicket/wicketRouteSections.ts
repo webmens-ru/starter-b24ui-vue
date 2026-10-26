@@ -142,7 +142,6 @@ export function calculateSection(): WicketRouteSection {
 
 export function standardTailSections(): WicketRouteSection[] {
   return [
-    postsSection(),
     canvasSection(),
     shieldSection(),
     paintingSection(),

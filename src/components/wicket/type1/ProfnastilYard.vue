@@ -120,6 +120,8 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.coatingYardHex.value        = row.coatingHex ?? ''
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
+    calc.reliefYardAlongMode.value = row.reliefAlongMode ?? 'stretch'
+    calc.reliefYardAcrossMode.value = row.reliefAcrossMode ?? 'repeat'
 
   calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
 
@@ -241,6 +243,8 @@ function restoreFromCalc(): ProfnastilRow | null {
     coatingHex:    calc.coatingYardHex.value,
     coatingImage:  calc.coatingYardImage.value,
     reliefImage:   calc.reliefYardImage.value,
+    reliefAlongMode: calc.reliefYardAlongMode.value,
+    reliefAcrossMode: calc.reliefYardAcrossMode.value,
   }
 }
 

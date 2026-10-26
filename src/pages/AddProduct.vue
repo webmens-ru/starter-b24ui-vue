@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCalculation } from '../composables/useCalculation'
 import { createOrder } from '../app/api/wicket'
 import { parsePositiveDecimalId } from '../app/positiveDecimalId'
-import { navigateToProductRows } from '../app/productRowReturnNavigation'
+import { navigateToCreatedOrderProductRows, navigateToProductRows } from '../app/productRowReturnNavigation'
 
 declare const window: Window & { _HOSTNAME_?: string }
 
@@ -108,7 +108,11 @@ onMounted(async () => {
     const order = await createOrder()
     if (!isCurrentLifecycle(generation)) return
     calc.orderId.value = order.orderId
-    exitToProductRows()
+    if (navigateToCreatedOrderProductRows(order.orderId)) {
+      lifecycleGeneration += 1
+    } else {
+      errorMessage.value = 'Не удалось открыть созданный заказ'
+    }
   } catch (e) {
     if (!isCurrentLifecycle(generation)) return
     errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'

@@ -523,7 +523,8 @@ describe('useCalculation', () => {
       expect(calc.isPageAccessible('page1')).toBe(false)
       expect(calc.isPageAccessible('page7')).toBe(true)
       expect(calc.isPageAccessible('page2')).toBe(true)
-      expect(calc.isPageAccessible('page5')).toBe(false)
+      expect(calc.isPageAccessible('page5')).toBe(true)
+      expect(calc.isPageAccessible('page6')).toBe(false)
       expect(calc.isPageAccessible('page12')).toBe(false)
     })
 
@@ -552,7 +553,7 @@ describe('useCalculation', () => {
       expect(calc.isPageAccessible('page2_facade_profnastil')).toBe(true)
       expect(calc.isPageAccessible('page5')).toBe(true)
       expect(calc.visitedPages.value.indexOf('page2_facade_profnastil'))
-        .toBeLessThan(calc.visitedPages.value.indexOf('page5'))
+        .toBeGreaterThan(calc.visitedPages.value.indexOf('page5'))
     })
 
     it('для type2 отбрасывает retired page_lock_components, сохраняя доступ к валидному шагу замка', () => {

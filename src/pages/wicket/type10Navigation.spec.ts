@@ -19,8 +19,8 @@ describe('type10Navigation', () => {
     it('page2 → page2_facade_profnastil', () => {
       expect(getNextPage('page2', state())).toBe('page2_facade_profnastil')
     })
-    it('page2_facade_profnastil → page5 (всегда одна сторона)', () => {
-      expect(getNextPage('page2_facade_profnastil', state())).toBe('page5')
+    it('page2_facade_profnastil → page6 (всегда одна сторона)', () => {
+      expect(getNextPage('page2_facade_profnastil', state())).toBe('page6')
     })
     it('Замок есть + изготовитель → page_lock_type', () => {
       expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
@@ -34,8 +34,8 @@ describe('type10Navigation', () => {
     it('удалённый page1 отсутствует в маршруте', () => {
       expect(getNextPage('page1', state())).toBeNull()
     })
-    it('page5 → page6', () => {
-      expect(getNextPage('page5', state())).toBe('page6')
+    it('page5 → page2', () => {
+      expect(getNextPage('page5', state())).toBe('page2')
     })
     it('page_lock_type → page10', () => {
       expect(getNextPage('page_lock_type', state())).toBe('page10')
@@ -49,8 +49,8 @@ describe('type10Navigation', () => {
     it('page2_facade_profnastil → page2', () => {
       expect(getPrevPage('page2_facade_profnastil', state())).toBe('page2')
     })
-    it('page5 → page2_facade_profnastil', () => {
-      expect(getPrevPage('page5', state())).toBe('page2_facade_profnastil')
+    it('page6 → page2_facade_profnastil', () => {
+      expect(getPrevPage('page6', state())).toBe('page2_facade_profnastil')
     })
     it('page_lock_type → page9', () => {
       expect(getPrevPage('page_lock_type', state())).toBe('page9')
@@ -64,8 +64,8 @@ describe('type10Navigation', () => {
     it('page10, замок нет → page9', () => {
       expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')
     })
-    it('page2 → page7', () => {
-      expect(getPrevPage('page2', state())).toBe('page7')
+    it('page2 → page5', () => {
+      expect(getPrevPage('page2', state())).toBe('page5')
     })
     it('первый шаг page7 → null', () => {
       expect(getPrevPage('page7', state())).toBeNull()

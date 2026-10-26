@@ -10,6 +10,16 @@ const payload = {
 
 beforeEach(() => setActivePinia(createPinia()))
 
+it('hydrates independent material relief modes and clears them when resetting', () => {
+  const store = useWicketFormStore()
+  store.loadFromApi({ ...payload, reliefFacadeAlongMode: 'repeat', reliefFacadeAcrossMode: 'stretch', reliefYardAlongMode: 'stretch', reliefYardAcrossMode: 'repeat' })
+  expect([store.reliefFacadeAlongMode, store.reliefFacadeAcrossMode, store.reliefYardAlongMode, store.reliefYardAcrossMode]).toEqual(['repeat', 'stretch', 'stretch', 'repeat'])
+  store.loadFromApi(payload)
+  expect([store.reliefFacadeAlongMode, store.reliefFacadeAcrossMode, store.reliefYardAlongMode, store.reliefYardAcrossMode]).toEqual(['stretch', 'repeat', 'stretch', 'repeat'])
+  store.resetFormFields()
+  expect([store.reliefFacadeAlongMode, store.reliefFacadeAcrossMode, store.reliefYardAlongMode, store.reliefYardAcrossMode]).toEqual(['stretch', 'repeat', 'stretch', 'repeat'])
+})
+
 it('loads independent explicit side profiles and clears all four fields on reset', () => {
   const store = useWicketFormStore()
   store.loadFromApi(payload)

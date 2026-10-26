@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   createOrder: vi.fn(),
   navigateToProductRows: vi.fn(),
+  navigateToCreatedOrderProductRows: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -19,7 +20,10 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('../app/api/wicket', () => ({ createOrder: mocks.createOrder }))
-vi.mock('../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
+vi.mock('../app/productRowReturnNavigation', () => ({
+  navigateToProductRows: mocks.navigateToProductRows,
+  navigateToCreatedOrderProductRows: mocks.navigateToCreatedOrderProductRows,
+}))
 
 const SlotStub = { template: '<div><slot /></div>' }
 
@@ -41,6 +45,7 @@ describe('AddProduct order flow', () => {
     vi.clearAllMocks()
     mocks.route = reactive({ query: {} })
     mocks.createOrder.mockResolvedValue({ orderId: 42, companyId: null, managerId: 1 })
+    mocks.navigateToCreatedOrderProductRows.mockReturnValue(true)
   })
 
   it('creates an order once for the initial entry and returns through the server URL', async () => {
@@ -48,8 +53,18 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(mocks.createOrder).toHaveBeenCalledTimes(1)
-    expect(mocks.navigateToProductRows).toHaveBeenCalledTimes(1)
+    expect(mocks.navigateToCreatedOrderProductRows).toHaveBeenCalledWith(42)
     expect(mocks.push).not.toHaveBeenCalledWith(expect.objectContaining({ name: 'product-rows' }))
+  })
+
+  it('keeps product selection available when the created-order return navigation fails', async () => {
+    mocks.navigateToCreatedOrderProductRows.mockReturnValue(false)
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const wicketButton = wrapper.findAll('button').find(button => button.text().includes('Калитки'))!
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось открыть созданный заказ')
+    expect(wicketButton.attributes('disabled')).toBeUndefined()
   })
 
   it('uses the server-owned return navigation when cancelled', async () => {
@@ -190,7 +205,7 @@ describe('AddProduct order flow', () => {
     await flushPromises()
 
     expect(useCalculation().orderId.value, 'unrelated query change').toBe(42)
-    expect(mocks.navigateToProductRows, 'unrelated query change').toHaveBeenCalledTimes(1)
+    expect(mocks.navigateToCreatedOrderProductRows, 'unrelated query change').toHaveBeenCalledWith(42)
   })
 
   it('keeps an existing order while choosing a wicket product', async () => {

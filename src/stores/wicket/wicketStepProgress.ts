@@ -1,8 +1,8 @@
 /** Порядок основных шагов мастера (для сравнения reachedStep / activePage). */
 export const WICKET_PROGRESS_STEP_ORDER = [
   'page7',
-  'page2',
   'page5',
+  'page2',
   'page6',
   'page3',
   'page_painting',

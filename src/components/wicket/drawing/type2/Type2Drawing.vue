@@ -8,7 +8,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
-import FillingDrawing from '../fillings/FillingDrawing.vue'
+import FillingDrawing from '../fillings/MaterialFillingDrawing.vue'
 import { resolveFillingPreview } from '../fillings/fillingTypes'
 import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
@@ -84,6 +84,7 @@ const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
 const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 1)
 const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 2)
+const hasMaterial = computed(() => Boolean(yardTwoSides.value ? calc.idYard.value : calc.idFacade.value))
 const fillingPreview = computed(() => yardTwoSides.value
   ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value)
   : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value))
@@ -115,6 +116,8 @@ const displayedCoatingImage = computed(() => realisticColors.value && !reverseFa
 const displayedReliefImage = computed(() => yardTwoSides.value
   ? (calc.reliefYardImage?.value ?? '')
   : (calc.reliefFacadeImage?.value ?? ''))
+const reliefAlongMode = computed(() => yardTwoSides.value ? calc.reliefYardAlongMode?.value : calc.reliefFacadeAlongMode?.value)
+const reliefAcrossMode = computed(() => yardTwoSides.value ? calc.reliefYardAcrossMode?.value : calc.reliefFacadeAcrossMode?.value)
 const netImageWidthToHeight = ref(1)
 const netTileHeight = computed(() => Math.max(1, geometry.value.netArea.width * netImageWidthToHeight.value))
 const netTileWidth = computed(() => Math.max(1, geometry.value.netArea.height * netImageWidthToHeight.value))
@@ -370,12 +373,12 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
       <!-- Со двора профлист находится за каркасом -->
       <g
-        v-if="viewedFromYard && !yardTwoSides && showFill"
+        v-if="viewedFromYard && !yardTwoSides && showFill && hasMaterial"
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :profile="fillingPreview.profile"
+          :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
@@ -530,12 +533,12 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
       <!-- С улицы профлист находится перед каркасом -->
       <g
-        v-if="(!viewedFromYard || yardTwoSides) && showFill"
+        v-if="(!viewedFromYard || yardTwoSides) && showFill && hasMaterial"
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :profile="fillingPreview.profile"
+          :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
