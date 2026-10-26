@@ -210,7 +210,7 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
         <B24SelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || saving || !selectedPaint" @update:model-value="onColorChange" />
       </label>
       <label v-if="individual || requiresNote" class="flex flex-col gap-2"><span class="font-semibold">Примечание к цвету краски <span v-if="requiresNote" class="text-red-600">*</span></span>
-        <textarea v-model="draftNote" :disabled="saving" :required="requiresNote" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
+        <textarea class="w-full px-3 py-2 border rounded border-gray-300 bg-white" v-model="draftNote" :disabled="saving" :required="requiresNote" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
         <span v-if="submitted && requiresNote && !draftNote.trim()" role="alert">Укажите примечание к цвету краски</span>
       </label>
       <label v-if="selectedPaint" class="flex flex-col gap-2"><span class="font-semibold">Грунтовка (необязательно)</span>
