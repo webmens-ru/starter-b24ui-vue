@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
+import { fillingOrientationLabel, fillingOrientationOptions, isFillingOrientation, type FillingOrientationSelection } from '../../app/fillingOrientations'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -11,24 +12,24 @@ const emit = defineEmits<{
 const calc = useCalculation()
 
 const IMG_BASE = 'https://test-lk.doorhan-krd.ru/img/wicket/type1'
-const options = [
-  { value: 'Вертикально',   img: `${IMG_BASE}/w_v_1.1.png` },
-  { value: 'Горизонтально', img: `${IMG_BASE}/w_g_1.1.png` },
-]
+const options = fillingOrientationOptions().map(option => ({ ...option,
+  img: `${IMG_BASE}/${option.value === 'vertical' ? 'w_v_1.1.png' : 'w_g_1.1.png'}`,
+}))
 
-const selected = ref<string>('Вертикально')
+const selected = ref<FillingOrientationSelection>(calc.raspolozheniyePolotna.value)
 
 async function save() {
+  if (!isFillingOrientation(selected.value)) return
   calc.raspolozheniyePolotna.value = selected.value
 
-  calc.updateOrCreateBlock('Расположение полотна', [
-    { name: 'Расположение полотна', value: calc.raspolozheniyePolotna.value },
-  ])
+  calc.updateOrCreateBlock('fillingOrientation', [
+    { paramCode: 'fillingOrientation', name: 'Расположение полотна', value: fillingOrientationLabel(calc.raspolozheniyePolotna.value) },
+  ], 'Расположение полотна')
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
+      fillingOrientationCode: selected.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -52,9 +53,8 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page6')
-  if (calc.raspolozheniyePolotna.value) {
-    selected.value = calc.raspolozheniyePolotna.value
-  }
+  selected.value = calc.raspolozheniyePolotna.value
+  if (!isFillingOrientation(selected.value)) return
   await save()
 })
 </script>
@@ -66,9 +66,10 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Расположение полотна</span>
-      <B24Button label="Далее" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" :disabled="!isFillingOrientation(selected)" @click="emit('next')" />
     </div>
 
+    <p v-if="!isFillingOrientation(selected)" role="alert">Выберите расположение полотна.</p>
     <!-- Варианты -->
     <div class="polotno-grid">
       <label
@@ -79,6 +80,7 @@ onMounted(async () => {
         <input
           v-model="selected"
           type="radio"
+          name="fillingOrientationCode"
           :value="opt.value"
           class="sr-only"
           @change="save"
@@ -86,10 +88,10 @@ onMounted(async () => {
         <div class="card-content">
           <img
             :src="opt.img"
-            :alt="opt.value"
+            :alt="opt.label"
             class="w-full h-[140px] object-contain mb-2"
           />
-          <span class="block text-sm font-semibold text-center">{{ opt.value }}</span>
+          <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
         </div>
       </label>
     </div>

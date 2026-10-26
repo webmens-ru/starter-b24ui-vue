@@ -1,22 +1,14 @@
 export type ProfnastilColorMode = 'list' | 'combobox' | 'none'
 
-const listCoatings = new Set([
-  'глянец',
-  'глянец двухсторонний',
-  'матовый',
-  'матовый двусторонний',
-])
-const printechCoatings = new Set(['printech', 'printech двусторонний'])
-
-export function getProfnastilColorMode(coating: string): ProfnastilColorMode {
-  const normalized = coating.trim().toLocaleLowerCase('ru-RU')
-  if (listCoatings.has(normalized)) return 'list'
-  if (printechCoatings.has(normalized)) return 'combobox'
-  return 'none'
+export function getProfnastilColorMode(mode: unknown): ProfnastilColorMode {
+  if (mode === 'list' || mode === 'combobox' || mode === 'none') return mode
+  throw new Error('Некорректный режим цвета покрытия. Проверьте настройки справочника.')
 }
 
-export function getPrintechSelectItems(items: string[], currentValue: string): string[] {
+export interface ColorInputItem { id: string | number; label: string }
+
+export function getPrintechSelectItems(items: ColorInputItem[], currentValue: string): ColorInputItem[] {
   const customValue = currentValue.trim()
-  if (customValue === '' || items.includes(customValue)) return items
-  return [...items, customValue]
+  if (customValue === '') return items
+  return [...items, { id: `custom:${customValue}`, label: customValue }]
 }

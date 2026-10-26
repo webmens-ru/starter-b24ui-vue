@@ -38,6 +38,7 @@ describe('painting completeness', () => {
     const state = { performerCode: 'manufacturer', paintId: 7, paintColorId: null, selection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true }, note: '', unavailable: false, savedPaintId: null, savedPaintColorId: null }
     expect(isPaintingComplete(state)).toBe(false)
     expect(isPaintingComplete({ ...state, paintColorId: 91 })).toBe(true)
+    expect(isPaintingComplete({ ...state, paintColorId: 91, performerCode: '' })).toBe(false)
     expect(isPaintingComplete({ ...state, selection: { isFixedColor: false, requiresColorNote: true, isPaintAvailable: true } })).toBe(false)
     expect(isPaintingComplete({ ...state, note: 'Sample', selection: { isFixedColor: false, requiresColorNote: true, isPaintAvailable: true } })).toBe(true)
     expect(isPaintingComplete({ ...state, performerCode: 'customer', paintId: null })).toBe(true)

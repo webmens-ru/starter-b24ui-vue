@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { mockGetProfnastilFilterOptions, mockGetProfnastilTable } from '../../app/api/mockWicket'
 
 const components = [
   ['type1/ProfnastilFacade.vue', 3],
@@ -45,11 +46,13 @@ describe('filling thickness presentation contract', () => {
     expect(template).toContain(`colspan="${columnCount}"`)
   })
 
-  it('sends the selected coating as the profnastil table filter', () => {
-    const types = readFileSync(resolve(__dirname, '../../app/api/wicket.types.ts'), 'utf8')
-    const mock = readFileSync(resolve(__dirname, '../../app/api/mockWicket.ts'), 'utf8')
-
-    expect(types).toMatch(/interface ProfnastilFilters[\s\S]*?typeOfCoating:\s*string\[\]/)
-    expect(mock).toContain('filters.typeOfCoating.includes(r.typeOfCoating)')
+  it('filters profnastil by coating ID rather than its display name', async () => {
+    const options = await mockGetProfnastilFilterOptions()
+    const coating = options.typeOfCoating![0]!
+    const result = await mockGetProfnastilTable({ materials: [], typeOfCoating: [String(coating.id)] })
+    expect(result.table.length).toBeGreaterThan(0)
+    expect(result.table.every(row => String(row.typeOfCoatingId) === String(coating.id))).toBe(true)
+    const byLabel = await mockGetProfnastilTable({ materials: [], typeOfCoating: [coating.name] })
+    expect(byLabel.table).toEqual([])
   })
 })

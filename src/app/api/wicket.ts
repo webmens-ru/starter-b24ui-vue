@@ -1,6 +1,13 @@
 import api from '.'
-import { isPositiveSafeInteger } from '../positiveDecimalId'
+import { parseJumperOptions, type JumperOptionsResponse } from './jumperProperties'
+export type { JumperPlacement, JumperOption, JumperOptionsResponse } from './jumperProperties'
+import { parseOpeningOrientation } from '../../components/wicket/openingOrientation'
+import { isPositiveSafeInteger, parsePositiveDecimalId } from '../positiveDecimalId'
 import { canonicalizeWicketRootSavePayload } from './wicketRootSavePayload'
+import { parsePipeOptions, type PipeOption } from './pipeProfiles'
+import { parseFillingDrawingRow } from './fillingDrawingProfiles'
+import { parseFenceGapOptions } from './fenceGapOptions'
+export type { PipeProfile, PipeProfileProblem, PipeOption } from './pipeProfiles'
 import {
   forgetWicketProductRowLockVersion,
   initializeWicketProductRowLockVersion,
@@ -19,6 +26,7 @@ import {
   mockGetProfnastilColors,
   mockGetAssortmentStolb,
   mockGetPolozhenieJumper,
+  mockGetOpeningOptions,
   mockGetAssortmentJumper,
   mockGetColorShield,
   mockGetNetWidths,
@@ -34,6 +42,10 @@ import {
   mockFetchSavedOrderPrice,
 } from './mockWicket'
 import type {
+  OpeningOrientation,
+  OpeningOrientationProblem,
+  OpeningOption,
+  OpeningOptionsResponse,
   SelectItem,
   ColorShieldItem,
   PaintItem,
@@ -80,6 +92,10 @@ import type {
 } from './wicket.types'
 
 export type {
+  OpeningOrientation,
+  OpeningOrientationProblem,
+  OpeningOption,
+  OpeningOptionsResponse,
   SelectItem,
   ColorShieldItem,
   PaintItem,
@@ -264,24 +280,38 @@ export async function getFilterOptions(url: string, type?: string): Promise<Filt
   return data.data
 }
 
+function directoryFilterIds(values: string[]): number[] {
+  return values.map(value => {
+    const id = parsePositiveDecimalId(value)
+    if (id.kind !== 'valid') throw new Error('Некорректный ID справочника')
+    return id.value
+  })
+}
+
 export async function getSidingTable(
   modelId: string | number,
   filters: SidingFilters,
   page = 1,
 ): Promise<SidingTableResponse> {
-  if (isMock) return mockGetSidingTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-siding`, { ...filters, page })
-  return data.data
+  const result: SidingTableResponse = isMock ? await mockGetSidingTable(filters, page)
+    : (await api.post(`/api/wicket/type${modelId}/get-filling-siding`, {
+    materials: filters.materials,
+    sidingFormIds: directoryFilterIds(filters.form),
+    typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
+    page,
+  })).data.data
+  return { ...result, table: result.table.map(parseFillingDrawingRow) }
 }
 
 export async function getFillingAppearanceOptions(
   modelId: string | number,
   materialGroup: string,
 ): Promise<FillingAppearanceOptions> {
+  if (materialGroup !== 'siding' && materialGroup !== 'profnastil') throw new TypeError('Некорректная группа заполнения')
   if (isMock) return mockGetFillingAppearanceOptions(materialGroup)
   const { data } = await api.post(
     `/api/wicket/type${modelId}/get-filling-appearance-options`,
-    { materialGroup },
+    { materialGroupCode: materialGroup },
   )
   return data.data
 }
@@ -291,10 +321,13 @@ export async function getProfnastilTable(
   filters: ProfnastilFilters,
   page = 1,
 ): Promise<Required<ProfnastilTableResponse>> {
-  if (isMock) return mockGetProfnastilTable(filters, page)
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, { ...filters, page })
-  const result: ProfnastilTableResponse = data.data ?? data
-  const table = result.table ?? []
+  const result: ProfnastilTableResponse = isMock ? await mockGetProfnastilTable(filters, page)
+    : await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, {
+    profileTypeIds: directoryFilterIds(filters.materials),
+    typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
+    page,
+  }).then(({ data }) => data.data ?? data)
+  const table = (result.table ?? []).map(parseFillingDrawingRow)
   const pagination = result.pagination ?? {
     page:       1,
     pageSize:   table.length,
@@ -313,34 +346,41 @@ export async function getProfnastilColors(
 }
 
 export async function getType2ProfnastilFormOptions(
-  profile?: string,
-  coating?: string,
+  profileTypeId?: number,
+  typeOfCoatingId?: number,
 ): Promise<ProfnastilFormOptions> {
+  let result: ProfnastilFormOptions
   if (isMock) {
-    return {
-      profiles: [{ id: 'С-8', name: 'С-8' }],
-      coatings: profile
+    result = {
+      profiles: [{ id: 1, name: 'С-8' }],
+      coatings: profileTypeId
         ? [{
-            id: 'Глянец',
+            id: 1,
             name: 'Глянец',
             profnastilId: 1,
+            colorInputMode: 'list',
+            isDoubleSided: false,
             thickness: '0.45',
             coatingHex: null,
             coatingImage: null,
             reliefImage: null,
+            drawingProfile: { kind: 'c8' },
+            drawingProfileProblem: null,
           }]
         : [],
       manufacturers: [],
-      colors: coating
+      colors: typeOfCoatingId
         ? [{ id: 1, name: 'RAL 7016', hex: '#383E42', image: null }]
         : [],
     }
+  } else {
+    const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
+      profileTypeId: profileTypeId ?? null,
+      typeOfCoatingId: typeOfCoatingId ?? null,
+    })
+    result = data.data
   }
-  const { data } = await api.post('/api/wicket/type2/get-profnastil-form-options', {
-    profile: profile || null,
-    coating: coating || null,
-  })
-  return data.data
+  return { ...result, coatings: result.coatings.map(parseFillingDrawingRow) }
 }
 
 export async function getZhalyuziTable(
@@ -348,7 +388,10 @@ export async function getZhalyuziTable(
   filters: import('./wicket.types').ZhalyuziFilters,
   page = 1,
 ): Promise<Required<import('./wicket.types').ZhalyuziTableResponse>> {
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-zhalyuzi`, { ...filters, page })
+  const { typeOfCoating, ...otherFilters } = filters
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-zhalyuzi`, {
+    ...otherFilters, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+  })
   const result: import('./wicket.types').ZhalyuziTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {
@@ -399,7 +442,10 @@ export async function getFenceTable(
   filters: import('./wicket.types').FenceFilters,
   page = 1,
 ): Promise<Required<import('./wicket.types').FenceTableResponse>> {
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, { ...filters, page })
+  const { typeOfCoating, ...otherFilters } = filters
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, {
+    ...otherFilters, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+  })
   const result: import('./wicket.types').FenceTableResponse = data.data ?? data
   const table = result.table ?? []
   const pagination = result.pagination ?? {
@@ -416,7 +462,7 @@ export async function getFenceGapOptions(
 ): Promise<import('./wicket.types').FenceGapOption[]> {
   const { data } = await api.post('/api/wicket/type3/get-gap', payload)
   const result = data.data ?? data
-  return result.gaps ?? []
+  return parseFenceGapOptions(result.gaps)
 }
 
 export async function getLamelTable(
@@ -464,29 +510,57 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
 
 export async function getAssortmentStolb(
   modelId: string | number
-): Promise<{ assortmentPipe: SelectItem[] }> {
-  if (isMock) return mockGetAssortmentStolb()
-  const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-stolb`)
-  return data.data
+): Promise<{ assortmentPipe: PipeOption[] }> {
+  const raw: unknown = isMock ? await mockGetAssortmentStolb()
+    : (await api.get(`/api/wicket/type${modelId}/get-available-assortment-stolb`)).data.data
+  return { assortmentPipe: parsePipeOptions(raw, 'assortmentPipe') }
 }
 
 export async function getPolozhenieJumper(
   modelId: string | number,
   openingOptionId: number
-): Promise<{ availablePolozheniyeJumper: SelectItem[] }> {
-  if (isMock) return mockGetPolozhenieJumper()
+): Promise<JumperOptionsResponse> {
+  if (isMock) return parseJumperOptions(await mockGetPolozhenieJumper(openingOptionId))
   const { data } = await api.post(`/api/wicket/type${modelId}/get-available-polozheniye-jumper`, {
     openingOptionId,
   })
-  return data.data
+  return parseJumperOptions(data.data)
+}
+
+export async function getOpeningOptions(): Promise<OpeningOptionsResponse> {
+  const raw: unknown = isMock ? await mockGetOpeningOptions()
+    : (await api.get('/api/wicket/base-model/get-opening-options')).data.data
+  if (!raw || typeof raw !== 'object' || !('options' in raw) || !('problems' in raw)
+    || !Array.isArray(raw.options) || !Array.isArray(raw.problems)) {
+    throw new Error('Некорректный ответ справочника вариантов открытия.')
+  }
+  const seen = new Set<number>()
+  const options = raw.options.map((item: unknown) => {
+    if (!item || typeof item !== 'object' || !('id' in item) || !isPositiveSafeInteger(item.id)
+      || !('name' in item) || typeof item.name !== 'string'
+      || !('pathPhoto' in item) || (item.pathPhoto !== null && typeof item.pathPhoto !== 'string')
+      || seen.has(item.id)) {
+      throw new Error('Некорректный вариант открытия.')
+    }
+    seen.add(item.id)
+    return { id: item.id, name: item.name, pathPhoto: item.pathPhoto, ...parseOpeningOrientation(item) }
+  })
+  const problems = raw.problems.map((item: unknown) => {
+    if (!item || typeof item !== 'object' || !('id' in item) || !isPositiveSafeInteger(item.id)
+      || !('message' in item) || typeof item.message !== 'string') {
+      throw new Error('Некорректная диагностика вариантов открытия.')
+    }
+    return { id: item.id, message: item.message }
+  })
+  return { options, problems }
 }
 
 export async function getAssortmentJumper(
   modelId: string | number
-): Promise<{ assortmentJumper: SelectItem[] }> {
-  if (isMock) return mockGetAssortmentJumper()
-  const { data } = await api.get(`/api/wicket/type${modelId}/get-available-assortment-jumper`)
-  return data.data
+): Promise<{ assortmentJumper: PipeOption[] }> {
+  const raw: unknown = isMock ? await mockGetAssortmentJumper()
+    : (await api.get(`/api/wicket/type${modelId}/get-available-assortment-jumper`)).data.data
+  return { assortmentJumper: parsePipeOptions(raw, 'assortmentJumper') }
 }
 
 export async function getColorShield(

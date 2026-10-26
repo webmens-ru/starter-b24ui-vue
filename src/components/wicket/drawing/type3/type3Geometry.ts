@@ -1,11 +1,16 @@
-import { frameSubtypeCapabilities } from '../../frameSubtype'
+import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
+import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { computeJumperGeometry } from '../jumperGeometry'
+import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 
-export interface Type3DrawingSource {
+export interface Type3DrawingSource extends DrawingPipeSource {
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
   hasStolby?: unknown
+  jumperPlacement?: unknown
+  jumperPlacementProblem?: unknown
+  postsPresenceProblem?: unknown
   stolbName?: unknown
   shieldType?: unknown
   heightTopPart?: unknown
@@ -58,39 +63,31 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function profileSize(value: unknown, fallback = 80): number {
-  const source = text(value)
-  const match = source.match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
-  if (!match) {
-    return numberValue(source.match(/(\d+(?:[.,]\d+)?)/)?.[1]?.replace(',', '.'), fallback, 20, 200)
-  }
-  const first = numberValue(match?.[1]?.replace(',', '.'), fallback, 20, 200)
-  const second = numberValue(match?.[2]?.replace(',', '.'), fallback, 20, 200)
-  return first === 50 ? second : first
-}
-
 function rect(x: number, y: number, width: number, height: number): Type3Rect {
   return { x, y, width: Math.max(0, width), height: Math.max(0, height) }
 }
 
 export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
+  const fillingOrientation = parseDrawingFillingOrientation(source.raspolozheniyePolotna)
   const width = numberValue(source.widthProyema, 1000, 400, 5000)
   const height = numberValue(source.heightProyema, 2000, 600, 5000)
   const clearance = numberValue(source.clearanceProyema, 50, 0, 500)
-  const postsVisible = Number(source.hasStolby) === 1
-  const postSize = postsVisible ? profileSize(source.stolbName) : 0
-  const extraRailSize = profileSize(source.peremichkaSortamentName, 60)
+  const jumper = parseDrawingPipeProfiles(source, 50)
+  const postsVisible = jumper.hasPosts
+  const postSize = jumper.postWidth
+  const extraRailSize = jumper.placement === 'above' ? jumper.overheadJumperHeight : jumper.jumperFaceSize
   const verticalGeometry = computeJumperGeometry({
     openingHeight: height,
     bottomClearance: clearance,
     hasPosts: postsVisible,
-    jumperName: source.peremichkaPolozheniyeName,
+    jumperPlacement: jumper.placement,
     jumperHeight: extraRailSize,
   })
   const gate = rect(postSize + 4, verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
+  resolveFrameSubtype(source.shieldType)
   const capabilities = frameSubtypeCapabilities(source.shieldType)
   const lowerVisible = capabilities.lower
   const upperVisible = capabilities.top
@@ -115,7 +112,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     fillArea.height - (upperVisible ? upperSectionHeight + rail : 0) - (lowerVisible ? lowerHeight + rail : 0),
   )
   const count = Math.round(numberValue(source.numberOfSticks, 0, 0, 200))
-  const horizontal = /горизонт/i.test(text(source.raspolozheniyePolotna))
+  const horizontal = fillingOrientation === 'horizontal'
   const picketWidth = numberValue(source.thicknessFacade, 100, 10, 500)
   const span = horizontal ? activeFill.height : activeFill.width
   const visiblePicketWidth = Math.min(picketWidth, count > 0 ? span / count : picketWidth)
@@ -144,7 +141,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     ],
     fillArea: activeFill,
     facadePickets,
-    yardPickets: text(source.fillSide) === 'Две стороны' ? facadePickets : [],
+    yardPickets: source.fillSide === 2 ? facadePickets : [],
     rails: { lower, upper, vertical },
     upperNetArea,
     upperNetImage: upperVisible ? text(source.upperGrilleNetImage) : '',
@@ -158,7 +155,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     yard: {
       color: text(source.colorYardHex) || '#6f604f',
       image: text(source.colorYardImage),
-      visible: text(source.fillSide) === 'Две стороны',
+      visible: source.fillSide === 2,
     },
   }
 }

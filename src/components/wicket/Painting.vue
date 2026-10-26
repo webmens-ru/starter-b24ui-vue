@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
 import { computed, onMounted, ref } from 'vue'
@@ -43,7 +44,7 @@ const paintItems = computed(() => {
 })
 const colorItems = computed(() => (selectedPaint.value?.colors ?? []).map(item => ({ id: String(item.id), label: item.name })))
 const primerItems = computed(() => [{ id: 'none', label: 'Без грунтовки' }, ...primers.value.map(item => ({ id: String(item.id), label: item.name }))])
-const primerProviders = ['Предоставляет изготовитель', 'Предоставляет заказчик']
+const primerProviders = participantRoleOptions('provide')
 const unchangedUnavailable = computed(() => calc.paintSelectionUnavailable.value && calc.paintSelection.value?.isPaintAvailable === true && draftPaintId.value === calc.paintId.value && draftColorId.value === calc.paintColorId.value)
 function numberId(value: string | number | null): number | null { return value == null || value === '' ? null : Number(value) }
 async function onCategoryChange(id: number): Promise<void> {
@@ -95,11 +96,11 @@ function syncSummary(): void {
   const params = [
     { paramCode: 'paintProduct', name: 'Краска', value: calc.paintName.value },
     { paramCode: 'color', name: 'Цвет рамы', value: calc.colorShieldName.value },
-    { paramCode: 'paintProvider', name: 'Поставщик краски', value: calc.providesPaint.value },
-    { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: calc.doesPaintingFrame.value },
+    { paramCode: 'paintProvider', name: 'Поставщик краски', value: participantRoleLabel('provide', calc.providesPaint.value) },
+    { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', calc.doesPaintingFrame.value) },
   ]
   if (calc.colorShieldNote.value.trim()) params.push({ paramCode: 'paintNote', name: 'Примечание к цвету краски', value: calc.colorShieldNote.value.trim() })
-  if (calc.primerName.value) params.push({ paramCode: 'primer', name: 'Грунтовка', value: calc.primerName.value }, { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: calc.providesPrimer.value })
+  if (calc.primerName.value) params.push({ paramCode: 'primer', name: 'Грунтовка', value: calc.primerName.value }, { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: participantRoleLabel('provide', calc.providesPrimer.value) })
   calc.setCodedBlock('painting', 'Окраска', params)
 }
 function save(): Promise<boolean> {
@@ -150,7 +151,7 @@ async function saveSelection(): Promise<boolean> {
       calc.paintSelection.value = { isFixedColor: paint.isFixedColor, requiresColorNote: paint.requiresColorNote, isPaintAvailable: true }
       calc.colorShieldName.value = color?.name ?? ''
       calc.colorShieldHex.value = color?.hex ?? ''
-      calc.providesPaint.value = paint.isCustomerSupplied ? 'Предоставляет заказчик' : 'Предоставляет изготовитель'
+      calc.providesPaint.value = paint.isCustomerSupplied ? 'customer' : 'manufacturer'
       calc.primerId.value = primerId
       calc.primerName.value = primer?.name ?? ''
     }
@@ -229,7 +230,7 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
         <B24SelectMenu data-testid="paint-primer" :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)" :items="primerItems" value-key="id" :disabled="saving || !primers.length" @update:model-value="onPrimerChange" />
         <span v-if="!primers.length">Для выбранной краски совместимые грунтовки не заданы.</span>
       </label>
-      <ProviderChoice v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading || saving" @change="save" />
+      <ProviderChoice name="providesPrimer" v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading || saving" @change="save" />
     </template>
   </div>
 </template>

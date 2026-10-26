@@ -88,7 +88,11 @@ async function loadGapOptions() {
       ...calc.getFullSavePayload(),
       widthFenceFacade: calc.thicknessFacade.value,
     })
-    const restored = gapOptions.value.find(option => option.name === Number(calc.gapName.value))
+    const restored = gapOptions.value.find(option => option.gapMm === Number(calc.gapName.value))
+    if (restored) {
+      calc.gapId.value = restored.id
+      calc.numberOfSticks.value = restored.quantity
+    }
     if (calc.gapName.value != null && !restored) clearGap()
   } catch (e) {
     console.warn('getFenceGapOptions недоступен:', e)
@@ -111,12 +115,12 @@ async function selectGap(event: Event) {
     return
   }
   calc.gapId.value = option.id
-  calc.gapName.value = option.name
+  calc.gapName.value = option.gapMm
   calc.numberOfSticks.value = option.quantity
   await saveWicketData({
     ...calc.getBaseSavePayload(),
     gapId: option.id,
-    gapName: option.name,
+    gapName: option.gapMm,
     numberOfSticks: option.quantity,
   })
   await doRecalculate()
@@ -144,13 +148,13 @@ async function save(row: FenceRow) {
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.colorFacade.value             = row.color
 
-  calc.updateOrCreateBlock('Заполнение (фасад)', [
-    { name: 'Производитель материала', value: row.company },
-    { name: 'Материал',                value: row.material },
-    { name: 'Ширина штакетника',       value: String(row.widthFence) },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: row.color },
-  ])
+  calc.updateOrCreateBlock('fillingFacade', [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
+    { paramCode: 'material', name: 'Материал',                value: row.material },
+    { paramCode: 'fenceWidth', name: 'Ширина штакетника',       value: String(row.widthFence) },
+    { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет',                    value: row.color },
+  ], 'Заполнение (фасад)')
 
   try {
     await saveWicketData({
@@ -280,7 +284,7 @@ onMounted(async () => {
       >
         <option value="">Выберите зазор</option>
         <option v-for="option in gapOptions" :key="option.id" :value="option.id">
-          {{ option.name }} мм — {{ option.quantity }} шт.
+          {{ option.label }} — {{ option.quantity }} шт.
         </option>
       </select>
     </label>

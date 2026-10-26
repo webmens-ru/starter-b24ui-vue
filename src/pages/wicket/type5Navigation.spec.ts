@@ -4,8 +4,8 @@ import { getNextPage, getPrevPage, type Type5NavState, type5Route } from './type
 function state(overrides: Partial<Type5NavState> = {}): Type5NavState {
   return {
     modelId: '5',
-    materialFacadeGlob: 'SP сайдинг',
-    fillSide: 'Одна сторона',
+    materialFacadeGlob: 'spSiding',
+    fillSide: 1,
     materialYardGlob: null,
     isThereLock: 1,
     providesLock: 'Предоставляет изготовитель',
@@ -24,12 +24,12 @@ describe('type5Navigation', () => {
 
     describe('page2_facade_sp → yard или page5 (сторона заполнения)', () => {
       it('Одна сторона → page5 (пропуск yard)', () => {
-        expect(getNextPage('page2_facade_sp', state({ fillSide: 'Одна сторона' }))).toBe('page5')
+        expect(getNextPage('page2_facade_sp', state({ fillSide: 1 }))).toBe('page5')
       })
       it('Две стороны → page2_yard_sp', () => {
         expect(getNextPage('page2_facade_sp', state({
-          fillSide: 'Две стороны',
-          materialYardGlob: 'SP сайдинг',
+          fillSide: 2,
+          materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })
     })
@@ -42,10 +42,10 @@ describe('type5Navigation', () => {
 
     describe('page9 → lock или page10 (замок)', () => {
       it('Замок есть + изготовитель → page_lock_type', () => {
-        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
       })
       it('Замок есть + заказчик → page10 (пропуск выбора комплекта)', () => {
-        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
+        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
       })
       it('Замок нет (id=0) → page10 напрямую', () => {
         expect(getNextPage('page9', state({ isThereLock: 0 }))).toBe('page10')
@@ -83,12 +83,12 @@ describe('type5Navigation', () => {
 
     describe('page5 → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_sp', () => {
-        expect(getPrevPage('page5', state({ fillSide: 'Одна сторона' }))).toBe('page2_facade_sp')
+        expect(getPrevPage('page5', state({ fillSide: 1 }))).toBe('page2_facade_sp')
       })
       it('Две стороны → page2_yard_sp', () => {
         expect(getPrevPage('page5', state({
-          fillSide: 'Две стороны',
-          materialYardGlob: 'SP сайдинг',
+          fillSide: 2,
+          materialYardGlob: 'spSiding',
         }))).toBe('page2_yard_sp')
       })
     })
@@ -98,10 +98,10 @@ describe('type5Navigation', () => {
         expect(getPrevPage('page_lock_type', state())).toBe('page9')
       })
       it('page10, замок есть + изготовитель → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет изготовитель' }))).toBe('page_lock_type')
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
       })
       it('page10, замок есть + заказчик → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'Предоставляет заказчик' }))).toBe('page_lock_type')
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
       })
       it('page10, замок нет → page9', () => {
         expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')

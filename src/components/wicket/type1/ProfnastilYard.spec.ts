@@ -47,8 +47,8 @@ const ButtonStub = defineComponent({
 })
 
 const rows: ProfnastilRow[] = [
-  { id: 17, name: 'Профлист C8, 0,5 мм, Полиэстер', material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
-  { id: 21, name: 'Профлист C10, 0,6 мм, Пурал', material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
+  { id: 17, drawingProfile: { kind: 'c8' }, drawingProfileProblem: null, name: 'Профлист C8, 0,5 мм, Полиэстер', material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
+  { id: 21, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Профлист C10, 0,6 мм, Пурал', material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
 ]
 
 function mountYard() {
@@ -68,6 +68,37 @@ function mountYard() {
 }
 
 describe('ProfnastilYard', () => {
+  it('ignores a late material catalog response after the product row context changes', async () => {
+    let resolve!: (value: unknown) => void
+    apiMocks.getProfnastilTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const wrapper = mountYard()
+    const calc = useCalculation()
+    calc.productRowId.value = 99
+    calc.fillingProfileYard.value = { kind: 'mp20' }
+    await flushPromises()
+    resolve({ table: [{ id: 997, name: 'Просроченный каталог', material: 'Просроченный каталог', form: 'Форма', thickness: '0.45', typeOfCoating: 'Покрытие', drawingProfile: { kind: 'c8' }, drawingProfileProblem: null }],
+      pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Просроченный каталог')
+    expect(calc.fillingProfileYard.value).toEqual({ kind: 'mp20' })
+    wrapper.unmount()
+  })
+
+  it('selects and clears explicit profile metadata atomically without affecting the other side', async () => {
+    const calc = useCalculation()
+    calc.fillingProfileFacade.value = { kind: 'mp20' }
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(calc.fillingProfileYard.value).toEqual({ kind: 'c8' })
+    expect(calc.fillingProfileYardProblem.value).toBeNull()
+    calc.resetYardFilling()
+    expect(calc.fillingProfileYard.value).toBeNull()
+    expect(calc.fillingProfileYardProblem.value).toBeNull()
+    expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp20' })
+  })
+
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()
@@ -75,7 +106,7 @@ describe('ProfnastilYard', () => {
     calc.orderId.value = 42
     calc.productRowId.value = 70
     calc.modelId.value = '1'
-    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYardGlob.value = 'profnastil'
     apiMocks.getProfnastilTable.mockReset()
     apiMocks.getProfnastilTable.mockResolvedValue({
       table: rows,
@@ -108,7 +139,7 @@ describe('ProfnastilYard', () => {
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'Профлист')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'profnastil')
     const payload = apiMocks.saveWicketData.mock.lastCall?.[0]
     expect(payload).toMatchObject({
       idYard: 17,
@@ -120,7 +151,7 @@ describe('ProfnastilYard', () => {
       colorYardImage: '/colors/9003.webp',
     })
     expect(useCalculation().data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .toContainEqual({ name: 'Производитель материала', value: 'Двор-Профиль' })
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: 'Двор-Профиль' })
   })
 
   it('clears manufacturer and every color field before saving another product', async () => {
@@ -167,7 +198,7 @@ describe('ProfnastilYard', () => {
     expect(calc.manufacturerYardId.value).toBeNull()
     expect(calc.materialSupplierYard.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .toContainEqual({ name: 'Производитель материала', value: '' })
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: '' })
     expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
     warning.mockRestore()
   })
@@ -195,7 +226,7 @@ describe('ProfnastilYard', () => {
     expect(calc.colorYardHex.value).toBe('')
     expect(calc.colorYardImage.value).toBe('')
     expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .not.toContainEqual({ name: 'Цвет', value: 'RAL 7016' })
+      .not.toContainEqual({ paramCode: 'color', name: 'Цвет', value: 'RAL 7016' })
     expect((wrapper.get('[data-label="Далее"]').element as HTMLButtonElement).disabled).toBe(true)
 
     await wrapper.get('[data-label="Далее"]').trigger('click')

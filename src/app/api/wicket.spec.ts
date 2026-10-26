@@ -3,6 +3,75 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const api = { get: vi.fn(), post: vi.fn() }
 vi.mock('.', () => ({ default: api }))
 
+describe('pipe option response boundary', () => {
+  it.each([
+    ['getAssortmentStolb', 'assortmentPipe', 'get-available-assortment-stolb'],
+    ['getAssortmentJumper', 'assortmentJumper', 'get-available-assortment-jumper'],
+  ] as const)('validates numeric metadata for %s', async (method, key, route) => {
+    const wicket = await import('./wicket')
+    api.get.mockResolvedValue({ data: { data: { [key]: [
+      { id: 707, name: '60/40/2', profile: { sizeA: '60', sizeB: 40 }, profileProblem: null },
+    ] } } })
+    const response = await wicket[method]('1')
+    expect(api.get).toHaveBeenLastCalledWith(`/api/wicket/type1/${route}`)
+    expect(Object.values(response)[0][0]).toMatchObject({ profile: null, profileProblem: { code: 'invalid' }, disabled: true })
+  })
+})
+
+describe('material directory relation requests', () => {
+  it.each(['siding', 'profnastil', 'coatings'] as const)('normalizes filling profile metadata on %s without dropping material rows', async route => {
+    const wicket = await import('./wicket')
+    const raw = [
+      { id: 725, name: 'Одинаковая подпись', drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null },
+      { id: 819, name: 'Одинаковая подпись', drawingProfile: { kind: 'unknown' }, drawingProfileProblem: null },
+    ]
+    api.post.mockResolvedValue({ data: { data: route === 'coatings'
+      ? { profiles: [], coatings: raw, manufacturers: [], colors: [] }
+      : { table: raw, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } } } })
+    const rows = route === 'siding'
+      ? (await wicket.getSidingTable('1', { materials: [], form: [], typeOfCoating: [] })).table
+      : route === 'profnastil' ? (await wicket.getProfnastilTable('1', { materials: [], typeOfCoating: [] })).table
+        : (await wicket.getType2ProfnastilFormOptions(31)).coatings
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ id: 725, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null })
+    expect(rows[1]).toMatchObject({ id: 819, drawingProfile: null, drawingProfileProblem: { code: 'invalid' } })
+    expect(raw[1].drawingProfile).toEqual({ kind: 'unknown' })
+  })
+
+  it('sends numeric foreign keys separately from labels', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 } } } })
+    await wicket.getSidingTable('2', { materials: ['Текстовый поиск'], form: ['901'], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-siding', { materials: ['Текстовый поиск'], sidingFormIds: [901], typeOfCoatingIds: [707], page: 1 })
+    await wicket.getProfnastilTable('2', { materials: ['602'], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-profnastil', { profileTypeIds: [602], typeOfCoatingIds: [707], page: 1 })
+  })
+
+  it('rejects display names rather than converting them into numeric identifiers', async () => {
+    const wicket = await import('./wicket')
+    await expect(wicket.getProfnastilTable('2', { materials: ['Профиль'], typeOfCoating: [] })).rejects.toThrow('ID')
+  })
+
+  it('sends coating references for fence and zhalyuzi without sending labels', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [] } } })
+    await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], colors: [], typeOfCoating: ['707'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', {
+      companies: [], materials: [], widthFence: [], colors: [], typeOfCoatingIds: [707], page: 1,
+    })
+    await wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['808'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type6/get-filling-zhalyuzi', {
+      companies: [], materials: [], thickness: [], colors: [], typeOfCoatingIds: [808], page: 1,
+    })
+  })
+
+  it('rejects coating labels at the fence and zhalyuzi request boundary', async () => {
+    const wicket = await import('./wicket')
+    await expect(wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], colors: [], typeOfCoating: ['Название'] })).rejects.toThrow('ID')
+    await expect(wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['Название'] })).rejects.toThrow('ID')
+  })
+})
+
 function deferred<T>(): {
   promise: Promise<T>
   resolve: (value: T) => void
@@ -62,10 +131,10 @@ describe('wicket accessory composition API', () => {
     api.post.mockResolvedValueOnce({ data: { data: response } })
     const { getFillingAppearanceOptions } = await import('./wicket')
 
-    await expect(getFillingAppearanceOptions(1, 'Сайдинг')).resolves.toEqual(response)
+    await expect(getFillingAppearanceOptions(1, 'siding')).resolves.toEqual(response)
     expect(api.post).toHaveBeenCalledWith(
       '/api/wicket/type1/get-filling-appearance-options',
-      { materialGroup: 'Сайдинг' },
+      { materialGroupCode: 'siding' },
     )
   })
 

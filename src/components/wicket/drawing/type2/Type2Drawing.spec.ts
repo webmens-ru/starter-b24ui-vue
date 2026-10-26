@@ -1,23 +1,38 @@
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
+import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../../../app/api/fillingDrawingProfiles'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const calc = {
   widthProyema: ref('1000'),
   heightProyema: ref('2000'),
   clearanceProyema: ref('50'),
-  hasStolby: ref(1),
+  hasStolby: ref<0 | 1 | null>(1),
+  jumperPlacement: ref<'none' | 'above' | 'behind' | null>('none'),
+  jumperPlacementProblem: ref(null),
+  postsPresenceProblem: ref(null),
+  postProfile: ref<{sizeA:number;sizeB:number}|null>({ sizeA: 50, sizeB: 50 }),
+  postProfileProblem: ref(null),
+  jumperProfile: ref<{sizeA:number;sizeB:number}|null>(null),
+  jumperProfileProblem: ref(null),
   stolbName: ref('Труба 50×50×2'),
   openingOptionName: ref('Наружу / Левая'),
-  shieldType: ref('Тип_1'),
+  openingOrientation: ref<{ opensOutward: boolean; hingeSide: 'left' | 'right' } | null>({ opensOutward: true, hingeSide: 'left' }),
+  shieldType: ref('noNet'),
   heightLowerPart: ref('300'),
   heightTopPart: ref('300'),
   widthSidePart: ref('300'),
-  grilleLocation: ref('Возле петель'),
+  grilleLocation: ref('hinge'),
   peremichkaPolozheniyeName: ref('Без перемычки'),
   peremichkaSortamentName: ref(''),
   materialFacadeGlob: ref('Профлист'),
   materialFacade: ref('С-8'),
+  idFacade: ref<string | number>(725),
+  idYard: ref<string | number>(819),
+  fillingProfileFacade: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileFacadeProblem: ref<FillingDrawingProfileProblem | null>(null),
+  fillingProfileYard: ref<FillingDrawingProfile | null>({ kind: 'c8' }),
+  fillingProfileYardProblem: ref<FillingDrawingProfileProblem | null>(null),
   materialYardGlob: ref<string | null>(null),
   materialYard: ref(''),
   colorFacade: ref('RAL 7016'),
@@ -33,12 +48,12 @@ const calc = {
   coatingYardHex: ref(''),
   coatingYardImage: ref(''),
   reliefYardImage: ref(''),
-  fillSide: ref('Одна сторона'),
+  fillSide: ref(1),
   colorShieldHex: ref(''),
   sideGrilleNetImage: ref(''),
   lowerGrilleNetImage: ref(''),
   upperGrilleNetImage: ref(''),
-  raspolozheniyePolotna: ref('Вертикально'),
+  raspolozheniyePolotna: ref('vertical'),
 }
 
 vi.mock('../../../../composables/useCalculation', () => ({
@@ -48,14 +63,140 @@ vi.mock('../../../../composables/useCalculation', () => ({
 import Type2Drawing from './Type2Drawing.vue'
 
 describe('Type2Drawing', () => {
+  it('requires a configured profile only for a selected visible material and recovers on an explicit choice', async () => {
+    const before = calc.fillingProfileFacade.value
+    calc.fillingProfileFacade.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      calc.fillingProfileFacade.value = { kind: 'c20' }
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="filling-c20"]').exists()).toBe(true)
+    } finally { wrapper.unmount(); calc.fillingProfileFacade.value = before }
+  })
+
+  it('does not infer shape from renamed captions or require an unused yard profile', async () => {
+    const name = calc.materialFacade.value, yardProfile = calc.fillingProfileYard.value
+    calc.fillingProfileYard.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      const svg = wrapper.get('svg').html()
+      calc.materialFacade.value = 'Сайдинг Бревно МП-20'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      calc.fillSide.value = 2
+      await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    } finally {
+      wrapper.unmount(); calc.materialFacade.value = name
+      calc.fillingProfileYard.value = yardProfile; calc.fillSide.value = 1
+    }
+  })
+
+  it('draws a frame without filling for no selected material and allows hiding an unconfigured filling', async () => {
+    const id = calc.idFacade.value, profile = calc.fillingProfileFacade.value
+    calc.idFacade.value = ''
+    calc.fillingProfileFacade.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="filling-drawing"]').exists()).toBe(false)
+      const toggle = wrapper.findAll('input[type="checkbox"]').find(input => input.element.parentElement?.textContent?.includes('Показывать заполнение'))!
+      await toggle.setValue(false)
+      calc.idFacade.value = id
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    } finally { wrapper.unmount(); calc.idFacade.value = id; calc.fillingProfileFacade.value = profile }
+  })
+
+  it('renders an error, not SVG, when a used pipe has no numeric profile', () => {
+    const previous = calc.postProfile.value
+    calc.postProfile.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.postProfile.value = previous }
+  })
+  it('shows an error instead of SVG when jumper properties are missing', () => {
+    const previous = calc.jumperPlacement.value
+    calc.jumperPlacement.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.jumperPlacement.value = previous }
+  })
+
+  it('shows an error instead of SVG when posts are unknown', () => {
+    const previous = calc.hasStolby.value
+    calc.hasStolby.value = null
+    try {
+      const wrapper = mount(Type2Drawing)
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      wrapper.unmount()
+    } finally { calc.hasStolby.value = previous }
+  })
+  it.each([
+    { opensOutward: true, hingeSide: 'left' as const, x: '44' },
+    { opensOutward: true, hingeSide: 'right' as const, x: '940' },
+    { opensOutward: false, hingeSide: 'left' as const, x: '44' },
+    { opensOutward: false, hingeSide: 'right' as const, x: '940' },
+  ])('зеркалит один раз без перестановки физических петель: $opensOutward / $hingeSide', async ({ opensOutward, hingeSide, x }) => {
+    calc.openingOrientation.value = { opensOutward, hingeSide }
+    const wrapper = mount(Type2Drawing)
+    try {
+      const hinges = () => wrapper.get('[data-testid="type2-drawing-hinges"] rect')
+      const behind = () => wrapper.html().indexOf('data-testid="type2-drawing-hinges"') < wrapper.html().indexOf('data-testid="type2-drawing-frame"')
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(!opensOutward)
+      expect(wrapper.findAll('[transform*="scale(-1 1)"]')).toHaveLength(0)
+      await wrapper.get('[data-testid="type2-drawing-view-yard"]').setValue(true)
+      expect(hinges().attributes('x')).toBe(x)
+      expect(behind()).toBe(opensOutward)
+      expect(wrapper.findAll('[transform="translate(1000 0) scale(-1 1)"]')).toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+  it('показывает ошибку без свойств, восстанавливает чертёж и не зависит от подписи', async () => {
+    calc.openingOrientation.value = null
+    const wrapper = mount(Type2Drawing)
+    try {
+      expect(wrapper.find('svg').exists()).toBe(false)
+      expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+      calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+      await wrapper.vm.$nextTick()
+      const svg = wrapper.get('svg').html()
+      calc.openingOptionName.value = 'Внутрь / Правая'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('svg').html()).toBe(svg)
+      calc.openingOrientation.value = null
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('svg').exists()).toBe(false)
+    } finally {
+      wrapper.unmount()
+      calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+    }
+  })
   afterEach(() => {
     calc.widthProyema.value = '1000'
     calc.heightProyema.value = '2000'
     calc.stolbName.value = 'Труба 50×50×2'
+    calc.postProfile.value = { sizeA: 50, sizeB: 50 }
     calc.openingOptionName.value = 'Наружу / Левая'
-    calc.shieldType.value = 'Тип_1'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+    calc.shieldType.value = 'noNet'
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
     calc.colorFacade.value = 'RAL 7016'
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = ''
@@ -71,13 +212,15 @@ describe('Type2Drawing', () => {
     calc.coatingYardHex.value = ''
     calc.coatingYardImage.value = ''
     calc.reliefYardImage.value = ''
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     calc.colorShieldHex.value = ''
     calc.sideGrilleNetImage.value = ''
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
     calc.peremichkaPolozheniyeName.value = 'Без перемычки'
+    calc.jumperPlacement.value = 'none'
     calc.peremichkaSortamentName.value = ''
+    calc.jumperProfile.value = null
   })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
     const wrapper = mount(Type2Drawing)
@@ -96,26 +239,30 @@ describe('Type2Drawing', () => {
 
   it('обновляет ширину столбов при смене профиля', async () => {
     calc.stolbName.value = '60/60/2'
+    calc.postProfile.value = { sizeA: 60, sizeB: 60 }
     const wrapper = mount(Type2Drawing)
     const posts = wrapper.get('[data-testid="type2-drawing-posts"]')
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['60', '60'])
 
     calc.stolbName.value = '80/80/3'
+    calc.postProfile.value = { sizeA: 80, sizeB: 80 }
     await wrapper.vm.$nextTick()
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['80', '80'])
 
     calc.stolbName.value = '50/100/3'
+    calc.postProfile.value = { sizeA: 100, sizeB: 50 }
     await wrapper.vm.$nextTick()
 
     expect(posts.findAll('rect').map(rect => rect.attributes('width'))).toEqual(['100', '100'])
 
     calc.stolbName.value = 'Труба 50×50×2'
+    calc.postProfile.value = { sizeA: 50, sizeB: 50 }
   })
 
   it('вставляет картинку выбранной сетки только в боковую область подтипа 4', async () => {
-    calc.shieldType.value = 'Тип_4'
+    calc.shieldType.value = 'sideNet'
     calc.widthSidePart.value = '300'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -132,14 +279,14 @@ describe('Type2Drawing', () => {
     expect(Number(netPattern?.getAttribute('height'))).toBeGreaterThan(0)
     expect(net.attributes('fill')).toMatch(/^url\(#type2-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="type2-drawing-net"]').exists()).toBe(false)
 
     calc.sideGrilleNetImage.value = ''
   })
 
-  it.each(['Тип_2', 'Тип_3'])('замощает нижнюю сетку слева направо для %s', (shieldType) => {
+  it.each(['lowerNet', 'upperAndLowerNet'])('замощает нижнюю сетку слева направо для %s', (shieldType) => {
     calc.shieldType.value = shieldType
     calc.heightLowerPart.value = '300'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
@@ -155,12 +302,12 @@ describe('Type2Drawing', () => {
     expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
     expect(net.attributes('fill')).toMatch(/^url\(#type2-lower-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
   })
 
   it('замощает верхнюю сетку слева направо для подтипа 3', async () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.heightTopPart.value = '300'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -174,18 +321,18 @@ describe('Type2Drawing', () => {
     expect(pattern?.getAttribute('height')).toBe(net.attributes('height'))
     expect(net.attributes('fill')).toMatch(/^url\(#type2-upper-net-pattern-\d+\)$/)
 
-    calc.shieldType.value = 'Тип_2'
+    calc.shieldType.value = 'lowerNet'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="type2-drawing-upper-net"]').exists()).toBe(false)
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.upperGrilleNetImage.value = ''
   })
 
-  it('рисует только верхнюю сетку Тип_5 при 600×1000', () => {
+  it('рисует только верхнюю сетку upperNet при 600×1000', () => {
     calc.widthProyema.value = '600'
     calc.heightProyema.value = '1000'
-    calc.shieldType.value = 'Тип_5'
+    calc.shieldType.value = 'upperNet'
     calc.heightTopPart.value = '300'
     calc.upperGrilleNetImage.value = '/u.png'
     calc.lowerGrilleNetImage.value = '/l.png'
@@ -200,7 +347,7 @@ describe('Type2Drawing', () => {
     expect(wrapper.find('[data-testid="type2-drawing-net-image"]').exists()).toBe(false)
   })
 
-  it.each(['Тип_2', 'Тип_4'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {
+  it.each(['lowerNet', 'sideNet'])('рисует фон сетки %s перед PNG с той же геометрией', (shieldType) => {
     calc.shieldType.value = shieldType
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
@@ -216,13 +363,13 @@ describe('Type2Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.sideGrilleNetImage.value = ''
   })
 
   it('рисует фон верхней сетки перед PNG с той же геометрией', () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -237,13 +384,13 @@ describe('Type2Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(background.attributes('fill')).toBe('#66686c')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
   })
 
   it('использует схематичный цвет для фонов сеток', async () => {
-    calc.shieldType.value = 'Тип_3'
+    calc.shieldType.value = 'upperAndLowerNet'
     calc.lowerGrilleNetImage.value = 'https://backend.test/uploads/lower-net.jpg'
     calc.upperGrilleNetImage.value = 'https://backend.test/uploads/upper-net.jpg'
     const wrapper = mount(Type2Drawing)
@@ -253,13 +400,13 @@ describe('Type2Drawing', () => {
     expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
     expect(wrapper.get('[data-testid="type2-drawing-upper-net-background"]').attributes('fill')).toBe('#d1d5db')
 
-    calc.shieldType.value = 'Тип_4'
+    calc.shieldType.value = 'sideNet'
     calc.sideGrilleNetImage.value = 'https://backend.test/uploads/side-net.jpg'
     await wrapper.vm.$nextTick()
 
     expect(wrapper.get('[data-testid="type2-drawing-net-background"]').attributes('fill')).toBe('#d1d5db')
 
-    calc.shieldType.value = 'Тип_1'
+    calc.shieldType.value = 'noNet'
     calc.lowerGrilleNetImage.value = ''
     calc.upperGrilleNetImage.value = ''
     calc.sideGrilleNetImage.value = ''
@@ -289,16 +436,19 @@ describe('Type2Drawing', () => {
       .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Внутрь / Левая'
+    calc.openingOrientation.value = { opensOutward: false, hingeSide: 'right' }
     await wrapper.vm.$nextTick()
 
     expect(wrapper.html().indexOf('data-testid="type2-drawing-hinges"'))
       .toBeLessThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Наружу / Левая'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
   })
 
   it('зеркалит чертёж и меняет план петель при переключении на вид со двора', async () => {
     calc.openingOptionName.value = 'Внутрь / Левая'
+    calc.openingOrientation.value = { opensOutward: false, hingeSide: 'right' }
     const wrapper = mount(Type2Drawing)
     const drawingView = wrapper.get('[data-testid="type2-drawing-view"]')
 
@@ -313,6 +463,7 @@ describe('Type2Drawing', () => {
       .toBeGreaterThan(wrapper.html().indexOf('data-testid="type2-drawing-frame"'))
 
     calc.openingOptionName.value = 'Наружу / Левая'
+    calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
   })
 
   it('переносит профлист и притворную полосу за каркас при виде со двора', async () => {
@@ -333,8 +484,10 @@ describe('Type2Drawing', () => {
 
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
     calc.peremichkaPolozheniyeName.value = 'За калиткой'
+    calc.jumperPlacement.value = 'behind'
     calc.peremichkaSortamentName.value = '60/60/2'
-    calc.fillSide.value = 'Две стороны'
+    calc.jumperProfile.value = { sizeA: 60, sizeB: 50 }
+    calc.fillSide.value = 2
     const wrapper = mount(Type2Drawing)
     const html = wrapper.html()
     const background = wrapper.get('[data-testid="type2-drawing-jumper-background"]')
@@ -358,7 +511,9 @@ describe('Type2Drawing', () => {
 
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
     calc.peremichkaPolozheniyeName.value = 'Над калиткой'
+    calc.jumperPlacement.value = 'above'
     calc.peremichkaSortamentName.value = '60/60/2'
+    calc.jumperProfile.value = { sizeA: 60, sizeB: 50 }
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('[data-testid="type2-drawing-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
@@ -382,6 +537,7 @@ describe('Type2Drawing', () => {
   it('рисует сайдинг второго типа через общий renderer заполнения', () => {
     calc.materialFacadeGlob.value = 'Сайдинг'
     calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.fillingProfileFacade.value = { kind: 'logSiding' }
     calc.colorFacadeHex.value = '#704214'
     const wrapper = mount(Type2Drawing)
 
@@ -391,16 +547,19 @@ describe('Type2Drawing', () => {
 
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
   })
 
   it('показывает независимые материалы и оформление фасада и двора', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = 'Сайдинг'
     calc.materialFacade.value = 'Сайдинг «Бревно»'
+    calc.fillingProfileFacade.value = { kind: 'logSiding' }
     calc.colorFacadeHex.value = '#704214'
     calc.colorFacadeImage.value = '/uploads/colors/facade.webp'
     calc.materialYardGlob.value = 'Профлист'
     calc.materialYard.value = 'Профнастил МП-10'
+    calc.fillingProfileYard.value = { kind: 'mp10' }
     calc.colorYard.value = 'RAL 7016'
     calc.colorYardHex.value = '#383E42'
     calc.colorYardImage.value = '/uploads/colors/yard.webp'
@@ -423,9 +582,10 @@ describe('Type2Drawing', () => {
     expect(yardImages).toContain('/uploads/reliefs/yard.svg')
     expect(yardImages).not.toContain('/uploads/colors/facade.webp')
 
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     calc.materialFacadeGlob.value = 'Профлист'
     calc.materialFacade.value = 'С-8'
+    calc.fillingProfileFacade.value = { kind: 'c8' }
     calc.colorFacadeImage.value = ''
     calc.materialYardGlob.value = null
     calc.materialYard.value = ''
@@ -491,7 +651,7 @@ describe('Type2Drawing', () => {
     calc.colorFacadeImage.value = '/uploads/colors/front.webp'
     calc.colorFacadeReverseHex.value = '#D7D5C6'
     calc.colorFacadeReverseImage.value = '/uploads/colors/reverse.webp'
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
     const wrapper = mount(Type2Drawing)
 
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/front.webp')
@@ -502,8 +662,9 @@ describe('Type2Drawing', () => {
 
     calc.materialYardGlob.value = 'Профлист'
     calc.materialYard.value = 'С-8'
+    calc.fillingProfileYard.value = { kind: 'c8' }
     calc.colorYardImage.value = '/uploads/colors/yard.webp'
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     await wrapper.vm.$nextTick()
     expect(wrapper.get('pattern image').attributes('href')).toBe('/uploads/colors/yard.webp')
 
@@ -512,6 +673,6 @@ describe('Type2Drawing', () => {
     calc.materialYardGlob.value = null
     calc.materialYard.value = ''
     calc.colorYardImage.value = ''
-    calc.fillSide.value = 'Одна сторона'
+    calc.fillSide.value = 1
   })
 })

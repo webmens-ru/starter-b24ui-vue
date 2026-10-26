@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
+import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import {
   getProfnastilTable,
   saveWicketData,
@@ -44,6 +45,16 @@ const filters = reactive({
 const rows         = ref<ProfnastilRow[]>([])
 const selectedRow  = ref<ProfnastilRow | null>(null)
 const tableLoading = ref(false)
+let tableRevision = 0
+let disposed = false
+const catalogContext = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, calc.materialYardGlob.value]))
+onBeforeUnmount(() => { disposed = true; tableRevision++ })
+watch(catalogContext, () => {
+  tableRevision++
+  rows.value = []
+  selectedRow.value = null
+  void loadTable(1)
+})
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'yard')
@@ -52,17 +63,22 @@ const appearanceSaving = appearanceSave.saving
 const appearanceSaveFailed = appearanceSave.failed
 
 async function loadTable(page = currentPage.value) {
+  const revision = ++tableRevision
+  const context = catalogContext.value
+  const current = () => !disposed && revision === tableRevision && context === catalogContext.value
   tableLoading.value = true
   try {
     const result = await getProfnastilTable(calc.modelId.value, filters, page)
+    if (!current()) return
     rows.value        = result.table
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
+    if (!current()) return
     console.warn('getProfnastilTable недоступен:', e)
     rows.value = []
   } finally {
-    tableLoading.value = false
+    if (current()) tableLoading.value = false
   }
 }
 
@@ -77,19 +93,25 @@ watch(filters, () => {
 }, { deep: true })
 
 function buildSummaryParams() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Производитель материала', value: calc.materialSupplierYard.value },
-    { name: 'Материал',      value: selectedRow.value?.material ?? '' },
-    { name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
-    { name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierYard.value },
+    { paramCode: 'material', name: 'Материал',      value: selectedRow.value?.material ?? '' },
+    { paramCode: 'sheetThickness', name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
+    { paramCode: 'coating', name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
   ]
   if (calc.colorYard.value) {
-    params.push({ name: 'Цвет', value: calc.colorYard.value })
+    params.push({ paramCode: 'color', name: 'Цвет', value: calc.colorYard.value })
   }
   return params
 }
 
 async function save(row: ProfnastilRow): Promise<boolean> {
+  const descriptor = parseFillingDrawingDescriptor(row.drawingProfile, row.drawingProfileProblem)
+  calc.fillingProfileYard.value = descriptor.profile
+  calc.fillingProfileYardProblem.value = descriptor.problem
+  calc.profileTypeYardId.value = row.profileTypeId ?? null
+  calc.typeOfCoatingYardId.value = row.typeOfCoatingId ?? null
+  calc.sidingFormYardId.value = null
   calc.idYard.value                = row.id
   calc.materialYard.value          = row.material
   calc.formYard.value              = ''
@@ -99,7 +121,7 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
 
   try {
     await saveWicketData({
@@ -129,14 +151,14 @@ async function saveAppearance() {
   try {
     if (await save(selectedRow.value)) {
       if (appearanceSave.recordSuccess(attempt)) {
-        calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+        calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
         await doRecalculate()
       }
       return
     }
 
     if (appearanceSave.recordFailure(attempt)) {
-      calc.updateOrCreateBlock('Заполнение (двор)', buildSummaryParams())
+      calc.updateOrCreateBlock('fillingYard', buildSummaryParams(), 'Заполнение (двор)')
     }
   } finally {
     appearanceSave.finishSave()
@@ -210,6 +232,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    drawingProfile: calc.fillingProfileYard.value,
+    drawingProfileProblem: calc.fillingProfileYardProblem.value,
     name:          calc.materialYard.value,
     material:      calc.materialYard.value,
     thickness:     calc.thicknessYard.value,
@@ -235,7 +259,7 @@ watch(() => calc.idYard.value, async (val) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  const page = calc.materialYardGlob.value === 'Профлист'
+  const page = calc.materialYardGlob.value === 'profnastil'
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
   calc.setActivePage(page)
@@ -286,7 +310,7 @@ onMounted(async () => {
       v-if="selectedRow"
       ref="appearanceFields"
       :model-id="calc.modelId.value"
-      material-group="Профлист"
+      material-group="profnastil"
       side="yard"
       @change="saveAppearance"
     />

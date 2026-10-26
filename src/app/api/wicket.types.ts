@@ -1,15 +1,61 @@
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
+import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
+import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
+import type { FillingMaterialGroup, FillingSide } from '../fillingMaterialGroups'
+import type { FillingSideCount } from '../fillingSideCounts'
+import type { FillingOrientation } from '../fillingOrientations'
+import type { FrameSubtypeCode } from '../frameSubtypes'
+import type { GrilleSide } from '../grilleSides'
+
+export interface GrilleSideProperties { grilleSideCode?: GrilleSide | null }
+export interface GrilleSideProblem { code: 'missing' | 'invalid'; message: string }
+
+export interface FrameSubtypeProperties { frameSubtypeCode?: FrameSubtypeCode | null }
+export interface FrameSubtypeProblem { code: 'missing' | 'invalid'; message: string }
+
+export interface FillingOrientationProperties { fillingOrientationCode?: FillingOrientation | null }
+export interface FillingOrientationProblem { code: 'missing' | 'invalid'; message: string }
+
+export interface FillingSideCountProperties { fillingSideCount?: FillingSideCount | null }
+export interface FillingSideCountProblem { code: 'missing' | 'invalid'; message: string }
+
+export interface FillingGroupProperties {
+  materialFacadeGroupCode?: FillingMaterialGroup | null
+  materialYardGroupCode?: FillingMaterialGroup | null
+}
+export type FillingGroupProblems = Partial<Record<FillingSide, { code: string; message: string } | null>>
+
+export type ParticipantRoleProperties = Partial<Record<`${ParticipantRoleField}Code`, ParticipantRole | null>>
+export type ParticipantRoleProblems = Partial<Record<ParticipantRoleField, { code: string; message: string } | null>>
 
 export type { ProductRowContext } from './productRows.types'
 
-export interface WicketSavePayload extends ProductRowContext {
+export interface OpeningOrientation {
+  opensOutward: boolean
+  hingeSide: 'left' | 'right'
+}
+
+export interface OpeningOrientationProblem {
+  code: 'invalid' | 'missing' | 'inactive'
+  message: string
+}
+
+export interface OpeningOption extends OpeningOrientation {
+  id: number
+  name: string
+  pathPhoto: string | null
+}
+
+export interface OpeningOptionsResponse {
+  options: OpeningOption[]
+  problems: Array<{ id: number; message: string }>
+}
+
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
   paintId?: number | null
   paintColorId?: number | null
   /** Compatibility input only; outgoing requests remove this alias. */
   colorShieldId?: number | null
-  providesPaintCode?: 'manufacturer' | 'customer'
-  providesPrimerCode?: 'manufacturer' | 'customer'
-  doesPaintingFrameCode?: 'manufacturer' | 'customer'
   providesPrimer?: string | null
   lockSetId?: number | null
   providesLock?: string | null
@@ -130,6 +176,19 @@ export interface PaintItem {
   colors: PaintColorItem[]
 }
 /** Historical catalog response, retained only at the API compatibility boundary. */
+export interface PaintCategory {
+  id: number
+  name: string
+  isFixedColor: boolean
+  requiresColorNote: boolean
+  isCustomerSupplied: boolean
+  requiresPaintType: boolean
+  allowsAnyPrimer: boolean
+  quantityCalculationMode: 'consumption' | 'ceilKg'
+  costCoefficient: number
+}
+
+/** Элемент списка красок. Связь с поведением задаёт paintCategoryId. */
 export interface ColorShieldItem extends SelectItem {
   isStandard?: 0 | 1
   paintCategoryName?: string
@@ -165,8 +224,10 @@ export interface SidingFilters {
   typeOfCoating: string[]
 }
 
-export interface SidingRow {
+export interface SidingRow extends FillingDrawingMetadata {
   id: string | number
+  sidingFormId?: number
+  typeOfCoatingId?: number
   material: string
   form: string
   typeOfCoating: string
@@ -195,8 +256,10 @@ export interface ProfnastilFilters {
   typeOfCoating: string[]
 }
 
-export interface ProfnastilRow {
+export interface ProfnastilRow extends FillingDrawingMetadata {
   id: string | number
+  profileTypeId?: number
+  typeOfCoatingId?: number
   name: string
   material: string
   thickness: string | number
@@ -219,8 +282,10 @@ export interface ProfnastilFormOption {
   name: string
 }
 
-export interface ProfnastilCoatingOption extends ProfnastilFormOption {
-  id: string
+export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDrawingMetadata {
+  id: number
+  colorInputMode: 'list' | 'combobox' | 'none'
+  isDoubleSided: boolean
   profnastilId: number
   thickness: string | number
   coatingHex: string | null
@@ -251,6 +316,7 @@ export interface ZhalyuziFilters {
 
 export interface ZhalyuziRow {
   id: string | number
+  typeOfCoatingId?: number | null
   company: string
   material: string
   thickness: string | number
@@ -336,6 +402,7 @@ export interface FenceFilters {
 
 export interface FenceRow {
   id: string | number
+  typeOfCoatingId?: number | null
   company: string
   material: string
   widthFence: string | number
@@ -355,7 +422,8 @@ export interface FenceTableResponse {
 
 export interface FenceGapOption {
   id: number
-  name: number
+  gapMm: number
+  label: string
   quantity: number
 }
 
@@ -405,7 +473,15 @@ export interface CompanyScopedPayload {
 }
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse {
+export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+  grilleSideProblem?: GrilleSideProblem | null
+  frameSubtypeProblem?: FrameSubtypeProblem | null
+  fillingOrientationProblem?: FillingOrientationProblem | null
+  fillingSideCountProblem?: FillingSideCountProblem | null
+  fillingGroupProblems?: FillingGroupProblems
+  participantRoleProblems?: ParticipantRoleProblems
+  openingOrientation?: OpeningOrientation | null
+  openingOrientationProblem?: OpeningOrientationProblem | null
   visitedPages: string[]
   activePage: string
   lockSetId?: number | null

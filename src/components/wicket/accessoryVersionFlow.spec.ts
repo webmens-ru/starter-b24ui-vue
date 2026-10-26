@@ -120,11 +120,11 @@ describe('wicket root/accessory version flow', () => {
 
     const lockPresence = mount(IsTherelock, mountOptions())
     await vi.waitFor(() => {
-      expect(lockPresence.find('input[value="Нет"]:checked').exists()).toBe(true)
+      expect(lockPresence.find('input[name="lock-presence"][value="0"]:checked').exists()).toBe(true)
     })
-    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(4))
-    await lockPresence.find('input[value="Предоставляет заказчик"]').setValue()
+    await lockPresence.find('input[name="providesLock"][value="customer"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(5))
     lockPresence.unmount()
 
@@ -146,8 +146,8 @@ describe('wicket root/accessory version flow', () => {
     const serverWicket: Record<string, unknown> = {
       ...context,
       lockSetId: 7,
-      providesLock: 'Предоставляет изготовитель',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLockCode: 'manufacturer',
+      lockInstallerCode: 'manufacturer',
     }
 
     api.get.mockImplementation(async (url: string) => {
@@ -167,7 +167,7 @@ describe('wicket root/accessory version flow', () => {
     })
     api.post.mockImplementation(async (url: string, payload: Record<string, unknown>) => {
       if (url === '/api/wicket/type1/data') {
-        for (const key of ['lockSetId', 'providesLock', 'lockInstaller']) {
+        for (const key of ['lockSetId', 'providesLockCode', 'lockInstallerCode']) {
           if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
         }
         serverLockVersion += 1
@@ -178,8 +178,8 @@ describe('wicket root/accessory version flow', () => {
         return { data: { data: emptyComposition(serverLockVersion) } }
       }
       if (url === '/api/order/calculate') {
-        const productPrice = serverWicket.providesLock === 'Предоставляет изготовитель' ? 500 : 0
-        const installPrice = serverWicket.lockInstaller === 'Выполняет изготовитель' ? 90 : 0
+        const productPrice = serverWicket.providesLockCode === 'manufacturer' ? 500 : 0
+        const installPrice = serverWicket.lockInstallerCode === 'manufacturer' ? 90 : 0
         serverLockVersion += 1
         const price = `${productPrice + installPrice}.00`
         return { data: { data: { priceDealer: price, priceRetail: price, lockVersion: serverLockVersion } } }
@@ -196,12 +196,12 @@ describe('wicket root/accessory version flow', () => {
     calc.loadFromApi(initial.wicketData)
 
     const presence = mount(IsTherelock, mountOptions())
-    await presence.find('input[value="Нет"]').setValue()
+    await presence.find('input[name="lock-presence"][value="0"]').setValue()
     await vi.waitFor(() => expect(serverWicket.lockSetId).toBeNull())
-    await presence.find('input[value="Есть"]').setValue()
+    await presence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(serverLockVersion).toBe(32))
-    expect(presence.find('input[value="Предоставляет изготовитель"]:checked').exists()).toBe(true)
-    expect(presence.find('input[value="Выполняет изготовитель"]:checked').exists()).toBe(true)
+    expect(presence.find('input[name="providesLock"][value="manufacturer"]:checked').exists()).toBe(true)
+    expect(presence.find('input[name="lockInstaller"][value="manufacturer"]:checked').exists()).toBe(true)
     presence.unmount()
 
     const lockType = mount(LockType, mountOptions())
@@ -214,24 +214,24 @@ describe('wicket root/accessory version flow', () => {
     const reloaded = await loadCoherentWicketState(context)
     calc.applyAccessoryComposition(reloaded.accessoryComposition)
     calc.loadFromApi(reloaded.wicketData)
-    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    expect(calc.providesLock.value).toBe('manufacturer')
+    expect(calc.lockInstaller.value).toBe('manufacturer')
     await expect(recalculate(context)).resolves.toMatchObject({ priceRetail: '590.00' })
   })
 
   it.each([
-    ['manufacturer product + manufacturer install', 70, 'Предоставляет изготовитель', 'Выполняет изготовитель', '590.00'],
-    ['manufacturer product + customer install', 71, 'Предоставляет изготовитель', 'Выполняет заказчик', '500.00'],
-    ['customer product + manufacturer install', 72, 'Предоставляет заказчик', 'Выполняет изготовитель', '90.00'],
-    ['customer product + customer install', 73, 'Предоставляет заказчик', 'Выполняет заказчик', '0.00'],
+    ['manufacturer product + manufacturer install', 70, 'manufacturer', 'manufacturer', '590.00'],
+    ['manufacturer product + customer install', 71, 'manufacturer', 'customer', '500.00'],
+    ['customer product + manufacturer install', 72, 'customer', 'manufacturer', '90.00'],
+    ['customer product + customer install', 73, 'customer', 'customer', '0.00'],
   ])('request/reload/recalculate round trip: %s', async (_case, productRowId, providesLock, lockInstaller, expectedPrice) => {
     const context = { orderId: 42, productRowId, modelId: '1' }
     let serverLockVersion = 10
     const serverWicket: Record<string, unknown> = {
       ...context,
       lockSetId: null,
-      providesLock: null,
-      lockInstaller: null,
+      providesLockCode: null,
+      lockInstallerCode: null,
     }
     const standaloneRows = [{ materialItemId: 701, relationRole: 'lock_component_installation' }]
 
@@ -247,14 +247,14 @@ describe('wicket root/accessory version flow', () => {
     api.post.mockImplementation(async (url: string, payload: Record<string, unknown>) => {
       expect(payload.lockVersion).toBe(serverLockVersion)
       if (url === '/api/wicket/type1/data') {
-        for (const key of ['lockSetId', 'providesLock', 'lockInstaller']) {
+        for (const key of ['lockSetId', 'providesLockCode', 'lockInstallerCode']) {
           if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
         }
         serverLockVersion += 1
         return { data: { data: { lockVersion: serverLockVersion } } }
       }
       if (url === '/api/order/calculate') {
-        expect(serverWicket).toMatchObject({ lockSetId: 7, providesLock, lockInstaller })
+        expect(serverWicket).toMatchObject({ lockSetId: 7, providesLockCode: providesLock, lockInstallerCode: lockInstaller })
         serverLockVersion += 1
         return {
           data: { data: { priceDealer: expectedPrice, priceRetail: expectedPrice, lockVersion: serverLockVersion } },
@@ -363,8 +363,8 @@ describe('wicket root/accessory version flow', () => {
     const serverWicket: Record<string, unknown> = {
       ...context,
       lockSetId: null,
-      providesLock: 'Предоставляет изготовитель',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLockCode: 'manufacturer',
+      lockInstallerCode: 'manufacturer',
       lockPenId: 3,
       lockPenColorId: 5,
     }
@@ -423,7 +423,7 @@ describe('wicket root/accessory version flow', () => {
       expect(payload.lockVersion).toBe(serverLockVersion)
       if (url === '/api/wicket/type1/data') {
         rootSavePayload = payload
-        for (const key of ['lockSetId', 'providesLock', 'lockInstaller', 'lockPenId', 'lockPenColorId']) {
+        for (const key of ['lockSetId', 'providesLockCode', 'lockInstallerCode', 'lockPenId', 'lockPenColorId']) {
           if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
         }
       } else if (url === '/api/wicket/accessory-composition') {
@@ -440,8 +440,8 @@ describe('wicket root/accessory version flow', () => {
           lockPenColorId: null,
         })
         expect(serverWicket).toMatchObject({
-          providesLock: 'Предоставляет изготовитель',
-          lockInstaller: 'Выполняет изготовитель',
+          providesLockCode: 'manufacturer',
+          lockInstallerCode: 'manufacturer',
         })
         const lockSetPrice = lockSetPrices.get(Number(serverWicket.lockSetId))
         expect(lockSetPrice).toBeDefined()
@@ -473,8 +473,8 @@ describe('wicket root/accessory version flow', () => {
     await vi.waitFor(() => expect(serverWicket.lockSetId).toBe(7))
     expect(rootSavePayload).toMatchObject({
       lockSetId: 7,
-      providesLock: 'Предоставляет изготовитель',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLockCode: 'manufacturer',
+      lockInstallerCode: 'manufacturer',
       lockPenId: null,
       lockPenColorId: null,
     })
@@ -526,10 +526,10 @@ describe('wicket root/accessory version flow', () => {
     calc.applyAccessoryComposition(coherent.accessoryComposition)
     const lockPresence = mount(IsTherelock, mountOptions())
     await vi.waitFor(() => {
-      expect(lockPresence.find('input[value="Нет"]:checked').exists()).toBe(true)
+      expect(lockPresence.find('input[name="lock-presence"][value="0"]:checked').exists()).toBe(true)
     })
 
-    await lockPresence.find('input[value="Есть"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
     await vi.waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
     calc.productRowId.value = 18
     calc.accessoryCompositionLockVersion.value = 99

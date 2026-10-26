@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { participantRoleLabel } from '../../../app/participantRoles'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getMaterialItems, recalculate, type MaterialItemDto } from '../../../app/api/wicket'
@@ -21,13 +22,13 @@ const loading = ref(false)
 let isRestoringSelection = false
 
 const providedOptions = [
-  { value: 'Предоставляет изготовитель', label: 'Предоставляет изготовитель' },
-  { value: 'Предоставляет заказчик', label: 'Предоставляет заказчик' },
+  { value: 'manufacturer', label: 'Предоставляет изготовитель' },
+  { value: 'customer', label: 'Предоставляет заказчик' },
 ]
 
 const installedOptions = [
-  { value: 'Устанавливает изготовитель', label: 'Устанавливает изготовитель' },
-  { value: 'Устанавливает заказчик', label: 'Устанавливает заказчик' },
+  { value: 'manufacturer', label: 'Устанавливает изготовитель' },
+  { value: 'customer', label: 'Устанавливает заказчик' },
 ]
 
 const lightboxImages = ref<string[]>([])
@@ -104,17 +105,17 @@ async function save() {
   calc.lockComponentIds.value = [...selectedIds.value]
   calc.lockComponentsInstalled.value = installed.value
   calc.replaceAccessorySelectionIds('lock_component', selectedIds.value, {
-    providedByManufacturer: provided.value === 'Предоставляет изготовитель',
-    installedByManufacturer: installed.value === 'Устанавливает изготовитель',
+    providedByManufacturer: provided.value === 'manufacturer',
+    installedByManufacturer: installed.value === 'manufacturer',
   })
-  calc.setAccessoryGroupProvided('lock_component', provided.value === 'Предоставляет изготовитель')
-  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
+  calc.setAccessoryGroupProvided('lock_component', provided.value === 'manufacturer')
+  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'manufacturer')
 
-  calc.updateOrCreateBlock('Комплектующие замка', [
-    { name: 'Комплектующие', value: marking || 'Не выбрано' },
-    { name: 'Предоставляет', value: provided.value },
-    { name: 'Устанавливает', value: installed.value },
-  ])
+  calc.updateOrCreateBlock('lockComponents', [
+    { paramCode: 'components', name: 'Комплектующие', value: marking || 'Не выбрано' },
+    { paramCode: 'provider', name: 'Предоставляет', value: participantRoleLabel('provide', provided.value) },
+    { paramCode: 'installer', name: 'Устанавливает', value: participantRoleLabel('install', installed.value) },
+  ], 'Комплектующие замка')
 
   try {
     await calc.saveAccessoryComposition()
@@ -138,13 +139,13 @@ watch(selectedIds, () => { if (!isRestoringSelection) void save() }, { deep: tru
 
 function changeProvided(): void {
   if (isRestoringSelection) return
-  calc.setAccessoryGroupProvided('lock_component', provided.value === 'Предоставляет изготовитель')
+  calc.setAccessoryGroupProvided('lock_component', provided.value === 'manufacturer')
   void save()
 }
 
 function changeInstalled(): void {
   if (isRestoringSelection) return
-  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'Устанавливает изготовитель')
+  calc.setAccessoryGroupInstalled('lock_component', installed.value === 'manufacturer')
   void save()
 }
 
@@ -168,13 +169,13 @@ onMounted(async () => {
 
     <div class="option-grid">
       <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
-        <input v-model="provided" type="radio" :value="opt.value" class="sr-only" @change="changeProvided" />
+        <input v-model="provided" name="provided" type="radio" :value="opt.value" class="sr-only" @change="changeProvided" />
         <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
     </div>
 
     <div class="option-grid">
       <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-        <input v-model="installed" type="radio" :value="opt.value" class="sr-only" @change="changeInstalled" />
+        <input v-model="installed" name="installed" type="radio" :value="opt.value" class="sr-only" @change="changeInstalled" />
         <div class="card-content"><span class="block text-sm font-semibold text-center">{{ opt.label }}</span></div></label>
     </div>
 

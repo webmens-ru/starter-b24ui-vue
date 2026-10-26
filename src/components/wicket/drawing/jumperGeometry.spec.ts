@@ -8,7 +8,7 @@ describe('computeJumperGeometry', () => {
       openingHeight: 2000,
       bottomClearance: 50,
       hasPosts: true,
-      jumperName: 'Над калиткой',
+      jumperPlacement: 'above',
       jumperHeight: 60,
     })).toEqual({
       visible: true,
@@ -26,7 +26,7 @@ describe('computeJumperGeometry', () => {
       openingHeight: 2000,
       bottomClearance: 50,
       hasPosts: true,
-      jumperName: 'За калиткой',
+      jumperPlacement: 'behind',
       jumperHeight: 60,
     })).toEqual({
       visible: true,
@@ -44,7 +44,7 @@ describe('computeJumperGeometry', () => {
       openingHeight: 40,
       bottomClearance: 50,
       hasPosts: false,
-      jumperName: 'Без перемычки',
+      jumperPlacement: 'none',
       jumperHeight: 60,
     })).toMatchObject({ visible: false, gateHeight: 0, postHeight: 0 })
   })

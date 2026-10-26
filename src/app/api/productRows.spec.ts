@@ -106,7 +106,7 @@ describe('product row API', () => {
     await saveWicketData({
       ...context,
       lockSetId: Number(loaded.lockSetId),
-      providesLock: 'Предоставляет заказчик',
+      providesLock: 'customer',
       lockPenId: loaded.lockPenId,
       lockPenColorId: loaded.lockPenColorId,
       additionalPenId: 9,
@@ -116,7 +116,7 @@ describe('product row API', () => {
     expect(api.post).toHaveBeenCalledWith('/api/wicket/type1/data', {
       ...context,
       lockSetId: 7,
-      providesLock: 'Предоставляет заказчик',
+      providesLockCode: 'customer',
       lockPenId: null,
       lockPenColorId: null,
       additionalPenId: 9,
@@ -225,6 +225,20 @@ describe('product row API', () => {
     expect(visibleConflict).toHaveBeenCalledTimes(1)
     expect(visibleConflict).toHaveBeenCalledWith(context)
     unsubscribe()
+  })
+
+  it('sends count, orientation and subtype properties without legacy captions or readonly diagnostics', async () => {
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5 } } })
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+    await loadWicketData(context)
+    await saveWicketData({ ...context, fillSide: 2, fillingSideCountProblem: null,
+      raspolozheniyePolotna: 'horizontal', fillingOrientationProblem: null,
+      shieldType: 'sideNet', frameSubtypeProblem: null, grilleLocation: 'lock', grilleSideProblem: null })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/data', {
+      ...context, fillingSideCount: 2, fillingOrientationCode: 'horizontal', frameSubtypeCode: 'sideNet', grilleSideCode: 'lock', lockPenId: null, lockPenColorId: null, lockVersion: 4,
+    })
   })
 
   it('rejects a wicket save for a never-loaded item before sending a request', async () => {

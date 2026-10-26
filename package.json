@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node ./vitest-run.mjs watch",
-    "test:run": "node ./vitest-run.mjs run",
+    "test:run": "npm run check:policy && node ./vitest-run.mjs run",
+    "check:policy": "node --test scripts/name-policy-tests.mjs && node scripts/check-name-policy.mjs",
     "lint": "eslint --ext .js,.vue src",
     "typecheck": "vue-tsc -p ./tsconfig.app.json"
   },

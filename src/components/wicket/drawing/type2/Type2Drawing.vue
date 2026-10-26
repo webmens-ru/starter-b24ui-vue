@@ -9,6 +9,8 @@ import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/FillingDrawing.vue'
+import { resolveFillingPreview } from '../fillings/fillingTypes'
+import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
 
@@ -21,22 +23,24 @@ const netPatternId = `type2-net-pattern-${instanceId}`
 const lowerNetPatternId = `type2-lower-net-pattern-${instanceId}`
 const upperNetPatternId = `type2-upper-net-pattern-${instanceId}`
 
-const geometry = computed(() => computeType2Geometry({
+const { geometry, error: drawingError } = useDrawingGeometry(() => computeType2Geometry({
   widthProyema: calc.widthProyema.value,
   heightProyema: calc.heightProyema.value,
   clearanceProyema: calc.clearanceProyema.value,
   hasStolby: calc.hasStolby.value,
-  stolbName: calc.stolbName.value,
-  openingOptionName: calc.openingOptionName.value,
+  postProfile: calc.postProfile.value,
+  postProfileProblem: calc.postProfileProblem.value,
+  jumperProfile: calc.jumperProfile.value,
+  jumperProfileProblem: calc.jumperProfileProblem.value,
+  openingOrientation: calc.openingOrientation.value,
   shieldType: calc.shieldType.value,
   heightLowerPart: calc.heightLowerPart.value,
   heightTopPart: calc.heightTopPart.value,
   widthSidePart: calc.widthSidePart.value,
   grilleLocation: calc.grilleLocation.value,
-  peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
-  peremichkaSortamentName: calc.peremichkaSortamentName.value,
-  materialFacadeGlob: calc.materialFacadeGlob.value,
-  materialFacade: calc.materialFacade.value,
+  jumperPlacement: calc.jumperPlacement.value,
+  jumperPlacementProblem: calc.jumperPlacementProblem.value,
+  postsPresenceProblem: calc.postsPresenceProblem.value,
   colorFacade: calc.colorFacade.value,
   colorFacadeHex: calc.colorFacadeHex.value,
   colorFacadeImage: calc.colorFacadeImage.value,
@@ -58,8 +62,8 @@ if (import.meta.env.DEV) {
       calc.colorFacade.value,
       calc.colorFacadeHex.value,
       calc.colorFacadeImage.value,
-      geometry.value.fill.color,
-      geometry.value.fill.image,
+      drawingError.value ? '' : geometry.value.fill.color,
+      drawingError.value ? '' : geometry.value.fill.image,
     ],
     ([idFacade, colorFacade, colorFacadeHex, colorFacadeImage, fillColor, fillImage]) => {
       console.info('[type2-drawing] SVG fill', {
@@ -78,14 +82,12 @@ if (import.meta.env.DEV) {
 const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
 const realisticColors = computed(() => colorMode.value === 'realistic')
 const viewedFromYard = computed(() => viewSide.value === 'yard')
-const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 'Одна сторона')
-const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 'Две стороны')
-const activeMaterialGroup = computed(() => yardTwoSides.value
-  ? (calc.materialYardGlob.value ?? '')
-  : (calc.materialFacadeGlob.value ?? ''))
-const activeMaterialName = computed(() => yardTwoSides.value
-  ? (calc.materialYard.value ?? '')
-  : (calc.materialFacade.value ?? ''))
+const reverseFacade = computed(() => viewedFromYard.value && calc.fillSide.value === 1)
+const yardTwoSides = computed(() => viewedFromYard.value && calc.fillSide.value === 2)
+const fillingPreview = computed(() => yardTwoSides.value
+  ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value)
+  : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value))
+const previewError = computed(() => drawingError.value || fillingPreview.value.error)
 const activeDirection = computed(() => yardTwoSides.value
   ? geometry.value.yardFill.direction
   : geometry.value.fill.direction)
@@ -121,7 +123,7 @@ const upperNetTileWidth = computed(() => Math.max(
   1,
   geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
 ))
-const opensInward = computed(() => /внутрь/i.test(String(calc.openingOptionName.value ?? '')))
+const opensInward = computed(() => !calc.openingOrientation.value!.opensOutward)
 const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
 const viewTransform = computed(() => viewedFromYard.value
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
@@ -132,14 +134,14 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
 ))
 
 watch(
-  () => geometry.value.netImage,
+  () => drawingError.value ? '' : geometry.value.netImage,
   (imageUrl) => {
     netImageWidthToHeight.value = 1
     if (!imageUrl || typeof window === 'undefined') return
 
     const image = new window.Image()
     image.onload = () => {
-      if (geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
+      if (drawingError.value || geometry.value.netImage !== imageUrl || image.naturalHeight <= 0) return
       netImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
@@ -147,14 +149,14 @@ watch(
   { immediate: true },
 )
 watch(
-  () => geometry.value.upperNetImage,
+  () => drawingError.value ? '' : geometry.value.upperNetImage,
   (imageUrl) => {
     upperNetImageWidthToHeight.value = 1
     if (!imageUrl || typeof window === 'undefined') return
 
     const image = new window.Image()
     image.onload = () => {
-      if (geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
+      if (drawingError.value || geometry.value.upperNetImage !== imageUrl || image.naturalHeight <= 0) return
       upperNetImageWidthToHeight.value = image.naturalWidth / image.naturalHeight
     }
     image.src = imageUrl
@@ -178,7 +180,8 @@ const bottomRailPath = computed(() => buildBottomRailPath({
 
 <template>
   <div class="flex flex-col gap-3">
-    <svg
+    <p v-if="previewError" role="alert">{{ previewError }}</p>
+    <svg v-else
       data-testid="type2-drawing-svg"
       class="block h-auto max-h-[650px] w-full"
       :viewBox="viewBox"
@@ -372,8 +375,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="activeMaterialGroup"
-          :material-name="activeMaterialName"
+          :profile="fillingPreview.profile"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"
@@ -533,8 +535,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       >
         <FillingDrawing
           :area="geometry.fillArea"
-          :material-group="activeMaterialGroup"
-          :material-name="activeMaterialName"
+          :profile="fillingPreview.profile"
           :direction="activeDirection"
           :color="displayedFillColor"
           :image="displayedFillImage"

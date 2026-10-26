@@ -1,13 +1,21 @@
+import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
+import { parseDrawingGrilleSide } from '../../../../app/grilleSides'
 import { computeJumperGeometry } from '../jumperGeometry'
+import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
+import { parseOpeningOrientation } from '../../openingOrientation'
 
-export interface Type2DrawingSource {
+export interface Type2DrawingSource extends DrawingPipeSource {
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
   hasStolby?: unknown
+  jumperPlacement?: unknown
+  jumperPlacementProblem?: unknown
+  postsPresenceProblem?: unknown
   stolbName?: unknown
   openingOptionName?: unknown
+  openingOrientation?: unknown
   shieldType?: unknown
   heightLowerPart?: unknown
   heightTopPart?: unknown
@@ -15,8 +23,6 @@ export interface Type2DrawingSource {
   grilleLocation?: unknown
   peremichkaPolozheniyeName?: unknown
   peremichkaSortamentName?: unknown
-  materialFacadeGlob?: unknown
-  materialFacade?: unknown
   colorFacade?: unknown
   colorFacadeHex?: unknown
   colorFacadeImage?: unknown
@@ -68,7 +74,6 @@ export interface Type2DrawingGeometry {
   hinges: DrawingRect[]
   strip: DrawingRect[]
   fill: {
-    material: 'none' | 'c8'
     color: string
     image: string
     reverseColor: string
@@ -104,13 +109,6 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function type2VisibleProfileSize(value: unknown, fallback: number): number {
-  const match = text(value).match(/(\d+(?:[.,]\d+)?)\s*[xх×/]\s*(\d+(?:[.,]\d+)?)/i)
-  const first = numberInRange(match?.[1]?.replace(',', '.'), fallback, 20, 200)
-  const second = numberInRange(match?.[2]?.replace(',', '.'), fallback, 20, 200)
-  return first === 50 ? second : first
-}
-
 function fillColor(value: unknown): string {
   const valueText = text(value)
   // Поддерживает #RRGGBB и RRGGBB (с и без решётки)
@@ -141,25 +139,27 @@ export function buildBottomRailPath(rect: DrawingRect): string {
 }
 
 export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGeometry {
+  const fillingOrientation = parseDrawingFillingOrientation(source.raspolozheniyePolotna)
   const openingWidth = numberInRange(source.widthProyema, 1000, 300, 10000)
   const openingHeight = numberInRange(source.heightProyema, 2000, 500, 5000)
   const clearance = numberInRange(source.clearanceProyema, 50, 0, 500)
-  const hasPosts = source.hasStolby === undefined ? true : Number(source.hasStolby) !== 0
-  const postWidth = type2VisibleProfileSize(source.stolbName, 50)
-  const hingeSide: 'left' | 'right' = /правая/i.test(text(source.openingOptionName)) ? 'right' : 'left'
+  const jumper = parseDrawingPipeProfiles(source, RAIL_SIZE)
+  const hasPosts = jumper.hasPosts
+  const postWidth = jumper.postWidth
+  const { hingeSide } = parseOpeningOrientation(source.openingOrientation)
   const gateSubtype = resolveFrameSubtype(source.shieldType)
-  const capabilities = frameSubtypeCapabilities(gateSubtype)
+  const capabilities = frameSubtypeCapabilities(source.shieldType)
   const lowerPartHeight = numberInRange(source.heightLowerPart, 300, 0, 1000)
   const upperPartHeight = numberInRange(source.heightTopPart, 300, 0, 1000)
   const sidePartWidth = numberInRange(source.widthSidePart, 300, 20, 3000)
-  const grilleSide: 'hinge' | 'lock' = /замк/i.test(text(source.grilleLocation)) ? 'lock' : 'hinge'
+  const grilleSide = parseDrawingGrilleSide(source.grilleLocation, capabilities.side)
 
-  const extraRailSize = type2VisibleProfileSize(source.peremichkaSortamentName, 60)
+  const extraRailSize = jumper.placement === 'above' ? jumper.overheadJumperHeight : jumper.jumperFaceSize
   const vertical = computeJumperGeometry({
     openingHeight,
     bottomClearance: clearance,
     hasPosts,
-    jumperName: source.peremichkaPolozheniyeName,
+    jumperPlacement: jumper.placement,
     jumperHeight: extraRailSize,
   })
 
@@ -295,9 +295,6 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     safeRect(stripX + widths.slice(0, index).reduce((sum, value) => sum + value, 0), gate.y, width, gate.height),
   )
 
-  const fillText = `${text(source.materialFacadeGlob)} ${text(source.materialFacade)}`
-  const material: 'none' | 'c8' = /проф|с\s*[-–]?\s*8|c\s*[-–]?\s*8/i.test(fillText) ? 'c8' : 'none'
-
   return {
     drawing: { width: openingWidth, height: openingHeight },
     opening: safeRect(0, 0, openingWidth, openingHeight),
@@ -327,17 +324,16 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     hinges,
     strip,
     fill: {
-      material,
       color: fillColor(source.colorFacadeHex),
       image: text(source.colorFacadeImage),
       reverseColor: fillColor(source.colorFacadeReverseHex || '#D7D5C6'),
       reverseImage: text(source.colorFacadeReverseImage),
-      direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
+      direction: fillingOrientation ?? 'horizontal',
     },
     yardFill: {
       color: fillColor(source.colorYardHex),
       image: text(source.colorYardImage),
-      direction: /вертик/i.test(text(source.raspolozheniyePolotna)) ? 'vertical' : 'horizontal',
+      direction: fillingOrientation ?? 'horizontal',
     },
     frameColor: frameColorHex(source.colorShieldHex),
   }

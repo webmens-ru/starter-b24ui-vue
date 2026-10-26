@@ -1,3 +1,5 @@
+import type { FillingDrawingProfile } from '../../../../app/api/fillingDrawingProfiles'
+
 export interface FillingArea {
   x: number
   y: number
@@ -20,8 +22,7 @@ export interface FillingVisualProps {
 }
 
 export interface FillingDrawingProps extends FillingVisualProps {
-  materialGroup: string
-  materialName: string
+  profile: FillingDrawingProfile | null
 }
 
 export interface ProfileSegment {

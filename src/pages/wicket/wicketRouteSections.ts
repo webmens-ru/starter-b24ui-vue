@@ -1,4 +1,10 @@
 import type { WicketRouteSection } from './wicketRoute'
+import { isFillingSideCount } from '../../app/fillingSideCounts'
+import { isFillingOrientation } from '../../app/fillingOrientations'
+import { isFrameSubtypeCode } from '../../app/frameSubtypes'
+import { isGrilleSide } from '../../app/grilleSides'
+import { isOptionPresence } from '../../app/optionPresence'
+import type { WicketSharedNavState } from './wicketNavTypes'
 
 const ok = () => ({ valid: true, errors: [] })
 const always = () => true
@@ -38,12 +44,13 @@ export function fillingSection(
   last: NonNullable<WicketRouteSection['last']>,
 ): WicketRouteSection {
   const result = section('page2', 'Заполнение', 'fill-side', pages)
-  result.next = next
+  result.next = (from, state) => isFillingSideCount(state.fillSide) ? next(from, state) : 'page2'
   result.prev = prev
-  result.last = last
+  result.last = state => isFillingSideCount(state.fillSide) ? last(state) : 'page2'
   result.validate = state => {
+    if (!isFillingSideCount(state.fillSide)) return { valid: false, errors: ['Не выбрано количество сторон заполнения'] }
     const hasFacade = state.idFacade != null && String(state.idFacade).trim() !== ''
-    const needsYard = state.fillSide === 'Две стороны'
+    const needsYard = state.fillSide === 2
     const hasYard = state.idYard != null && String(state.idYard).trim() !== ''
     if (!hasFacade) return { valid: false, errors: ['Не выбран материал фасада'] }
     if (needsYard && !hasYard) return { valid: false, errors: ['Не выбран материал двора'] }
@@ -61,7 +68,7 @@ export function fixedFillingSection(
     pages,
     (from, state) => {
       if (from === 'page2') return facadePage
-      if (from === facadePage && yardPage && state.fillSide === 'Две стороны') return yardPage
+      if (from === facadePage && yardPage && state.fillSide === 2) return yardPage
       return undefined
     },
     from => {
@@ -69,7 +76,7 @@ export function fixedFillingSection(
       if (yardPage && from === yardPage) return facadePage
       return undefined
     },
-    state => yardPage && state.fillSide === 'Две стороны' ? yardPage : facadePage,
+    state => yardPage && state.fillSide === 2 ? yardPage : facadePage,
   )
 }
 
@@ -82,11 +89,22 @@ export function postsSection(): WicketRouteSection {
 }
 
 export function shieldSection(): WicketRouteSection {
-  return section('page3', 'Тип щита', 'shield-type')
+  const result = section('page3', 'Тип щита', 'shield-type')
+  const valid = (state: WicketSharedNavState) => (state.shieldType === undefined || isFrameSubtypeCode(state.shieldType))
+    && (state.shieldType !== 'sideNet' || state.grilleLocation === undefined || isGrilleSide(state.grilleLocation))
+  result.validate = state => valid(state) ? ok() : { valid: false,
+    errors: [isFrameSubtypeCode(state.shieldType) ? 'Выберите расположение решётки' : 'Выберите тип щита'] }
+  result.next = (_from, state) => valid(state) ? undefined : 'page3'
+  return result
 }
 
 export function canvasSection(): WicketRouteSection {
-  return section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
+  const result = section('page6', 'Расположение полотна', 'raspolozheniye-polotna')
+  const valid = (state: WicketSharedNavState) => state.raspolozheniyePolotna === undefined
+    || isFillingOrientation(state.raspolozheniyePolotna)
+  result.validate = state => valid(state) ? ok() : { valid: false, errors: ['Выберите расположение полотна'] }
+  result.next = (_from, state) => valid(state) ? undefined : 'page6'
+  return result
 }
 
 export function paintingSection(): WicketRouteSection {
@@ -96,6 +114,7 @@ export function paintingSection(): WicketRouteSection {
 export function lockSection(): WicketRouteSection {
   const result = section('page9', 'Комплект замка', 'is-there-lock', ['page9', 'page_lock_type'])
   result.next = (from, state) => {
+    if (!isOptionPresence(state.isThereLock)) return 'page9'
     if (from === 'page9' && state.isThereLock === 1) {
       return 'page_lock_type'
     }
@@ -104,6 +123,7 @@ export function lockSection(): WicketRouteSection {
   result.prev = from => from === 'page_lock_type' ? 'page9' : undefined
   result.last = state => state.isThereLock === 1 ? 'page_lock_type' : 'page9'
   result.validate = state => {
+    if (!isOptionPresence(state.isThereLock)) return { valid: false, errors: ['Выберите наличие замка'] }
     if (state.isThereLock !== 1) return ok()
     return state.lockSetId == null
       ? { valid: false, errors: ['Не выбран тип замка'] }

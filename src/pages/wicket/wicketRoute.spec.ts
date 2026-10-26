@@ -7,7 +7,7 @@ import { standardTailSections } from './wicketRouteSections'
 const state: WicketSharedNavState = {
   modelId: '3',
   materialFacadeGlob: 'Штакетник',
-  fillSide: 'Одна сторона',
+  fillSide: 1,
   materialYardGlob: null,
   isThereLock: 0,
   providesLock: 'Предоставляет изготовитель',

@@ -7,14 +7,16 @@ import {
 } from './wicketRouteSections'
 
 function facadePage(state: WicketSharedNavState): string {
+  if (state.materialFacadeGlob !== 'siding' && state.materialFacadeGlob !== 'profnastil') return 'page2'
   if (state.modelId === '1') return 'page2_facade_siding'
-  return state.materialFacadeGlob === 'Профлист'
+  return state.materialFacadeGlob === 'profnastil'
     ? 'page2_facade_profnastil'
     : 'page2_facade_siding'
 }
 
 function yardPage(state: WicketSharedNavState): string {
-  return state.materialYardGlob === 'Профлист'
+  if (state.materialYardGlob !== 'siding' && state.materialYardGlob !== 'profnastil') return 'page2'
+  return state.materialYardGlob === 'profnastil'
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
 }
@@ -29,7 +31,7 @@ const fill = fillingSection(
   ],
   (from, state) => {
     if (from === 'page2') return facadePage(state)
-    if (from.startsWith('page2_facade_') && state.fillSide === 'Две стороны') {
+    if (from.startsWith('page2_facade_') && state.fillSide === 2) {
       return yardPage(state)
     }
     return undefined
@@ -39,7 +41,7 @@ const fill = fillingSection(
     if (from.startsWith('page2_yard_')) return facadePage(state)
     return undefined
   },
-  state => state.fillSide === 'Две стороны' ? yardPage(state) : facadePage(state),
+  state => state.fillSide === 2 ? yardPage(state) : facadePage(state),
 )
 
 export const type1Route = defineWicketRoute([

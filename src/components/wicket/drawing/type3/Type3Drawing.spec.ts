@@ -6,13 +6,34 @@ import { useWicketFormStore } from '../../../../stores/wicket/wicketFormStore'
 import Type3Drawing from './Type3Drawing.vue'
 
 describe('Type3Drawing', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useWicketFormStore().hasStolby = 0
+    useWicketFormStore().jumperPlacement = 'none'
+  })
   afterEach(() => vi.unstubAllGlobals())
+
+  it('renders an error, not SVG, when a used jumper has no numeric profile', () => {
+    useWicketFormStore().jumperPlacement = 'behind'
+    const wrapper = mount(Type3Drawing)
+    expect(wrapper.find('svg').exists()).toBe(false)
+    expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+    wrapper.unmount()
+  })
+
+  it.each(['jumperPlacement', 'hasStolby'] as const)('shows an error instead of SVG when %s is unknown', field => {
+    useWicketFormStore()[field] = null
+    const wrapper = mount(Type3Drawing)
+    expect(wrapper.find('svg').exists()).toBe(false)
+    expect(wrapper.get('[role="alert"]').text()).not.toBe('')
+    wrapper.unmount()
+  })
 
   it('рисует точное число штакетин и выбранные столбы', () => {
     const store = useWicketFormStore()
     store.numberOfSticks = 8
     store.hasStolby = 1
+    store.postProfile = { sizeA: 80, sizeB: 80 }
     store.stolbName = '80x80x3'
 
     const wrapper = mount(Type3Drawing)
@@ -33,7 +54,7 @@ describe('Type3Drawing', () => {
 
   it('всегда показывает стороны и скрывает одностороннее заполнение со двора', async () => {
     const store = useWicketFormStore()
-    store.fillSide = 'Одна сторона'
+    store.fillSide = 1
     store.numberOfSticks = 8
 
     const wrapper = mount(Type3Drawing)
@@ -60,7 +81,9 @@ describe('Type3Drawing', () => {
   it('передаёт выбранный профиль перемычки в геометрию', () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.jumperPlacement = 'above'
     store.peremichkaSortamentName = '80/80/3'
+    store.jumperProfile = { sizeA: 80, sizeB: 50 }
 
     const wrapper = mount(Type3Drawing)
 
@@ -73,8 +96,10 @@ describe('Type3Drawing', () => {
   it('переносит перемычку за калиткой с улицы на фон, а со двора — на передний план', async () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'За калиткой'
+    store.jumperPlacement = 'behind'
     store.peremichkaSortamentName = '60/60/2'
-    store.fillSide = 'Две стороны'
+    store.jumperProfile = { sizeA: 60, sizeB: 50 }
+    store.fillSide = 2
     const wrapper = mount(Type3Drawing)
     const html = wrapper.html()
     const background = wrapper.get('[data-testid="type3-jumper-background"]')
@@ -99,7 +124,9 @@ describe('Type3Drawing', () => {
   it('всегда рисует перемычку над калиткой сплошной на переднем плане', async () => {
     const store = useWicketFormStore()
     store.peremichkaPolozheniyeName = 'Над калиткой'
+    store.jumperPlacement = 'above'
     store.peremichkaSortamentName = '60/60/2'
+    store.jumperProfile = { sizeA: 60, sizeB: 50 }
     const wrapper = mount(Type3Drawing)
 
     expect(wrapper.get('[data-testid="type3-jumper-foreground"]').attributes('stroke-dasharray')).toBeUndefined()
@@ -110,7 +137,7 @@ describe('Type3Drawing', () => {
     expect(wrapper.find('[data-testid="type3-jumper-background"]').exists()).toBe(false)
   })
 
-  it.each(['Тип_3', 'Тип_5'])('рисует верхнюю сетку %s за рамой и сохраняет её при скрытии штакетин', async (shieldType) => {
+  it.each(['upperAndLowerNet', 'upperNet'] as const)('рисует верхнюю сетку %s за рамой и сохраняет её при скрытии штакетин', async (shieldType) => {
     const store = useWicketFormStore()
     store.widthProyema = '600'
     store.heightProyema = '1000'
@@ -138,7 +165,7 @@ describe('Type3Drawing', () => {
     expect(background.attributes('height')).toBe(net.attributes('height'))
     expect(html.indexOf('data-testid="type3-upper-net-background"')).toBeLessThan(html.indexOf('data-testid="type3-upper-net"'))
     expect(html.indexOf('data-testid="type3-upper-net"')).toBeLessThan(html.indexOf('data-testid="type3-frame"'))
-    expect(wrapper.find('[data-testid="type3-lower-rail"]').exists()).toBe(shieldType === 'Тип_3')
+    expect(wrapper.find('[data-testid="type3-lower-rail"]').exists()).toBe(shieldType === 'upperAndLowerNet')
 
     await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
     expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
@@ -150,7 +177,7 @@ describe('Type3Drawing', () => {
 
   it('uses a different upper net pattern ID for each drawing instance', () => {
     const store = useWicketFormStore()
-    store.shieldType = 'Тип_5'
+    store.shieldType = 'upperNet'
     store.heightTopPart = '300'
     store.upperGrilleNetImage = '/upper.png'
 
@@ -174,7 +201,7 @@ describe('Type3Drawing', () => {
     }
     vi.stubGlobal('Image', NetImage)
     const store = useWicketFormStore()
-    store.shieldType = 'Тип_5'
+    store.shieldType = 'upperNet'
     store.heightTopPart = '300'
     store.upperGrilleNetImage = '/old.png'
     const wrapper = mount(Type3Drawing)

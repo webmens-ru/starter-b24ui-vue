@@ -59,7 +59,7 @@ describe('FillingAppearanceFields', () => {
 
   it('requires a color and clears the error after facade color selection', async () => {
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: '1', materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: '1', materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
@@ -76,7 +76,7 @@ describe('FillingAppearanceFields', () => {
 
   it('uses the same required-color contract for the yard side', async () => {
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: '1', materialGroup: 'Профлист', side: 'yard' },
+      props: { modelId: '1', materialGroup: 'profnastil', side: 'yard' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
@@ -97,7 +97,7 @@ describe('FillingAppearanceFields', () => {
     calc.colorYardImage.value = '/colors/yard.webp'
 
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: '1', materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: '1', materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
@@ -105,7 +105,7 @@ describe('FillingAppearanceFields', () => {
     await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
     await wrapper.get('[data-testid="appearance-color"]').setValue('8')
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'Сайдинг')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'siding')
     expect(calc.manufacturerFacadeId.value).toBe(3)
     expect(calc.materialSupplierFacade.value).toBe('Фасад-Профиль')
     expect(calc.colorFacadeId.value).toBe(8)
@@ -140,7 +140,7 @@ describe('FillingAppearanceFields', () => {
     calc.colorFacadeImage.value = '/colors/facade.webp'
 
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: 2, materialGroup: 'Сайдинг', side: 'yard' },
+      props: { modelId: 2, materialGroup: 'siding', side: 'yard' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
@@ -148,7 +148,7 @@ describe('FillingAppearanceFields', () => {
     await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith(2, 'Сайдинг')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith(2, 'siding')
     expect(calc.manufacturerYardId.value).toBe(4)
     expect(calc.materialSupplierYard.value).toBe('Двор-Профиль')
     expect(calc.colorYardId.value).toBe(9)
@@ -174,7 +174,7 @@ describe('FillingAppearanceFields', () => {
 
   it('does not emit a save when the select repeats the current empty values', async () => {
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
@@ -187,7 +187,7 @@ describe('FillingAppearanceFields', () => {
 
   it('clears invalid facade IDs after a material-group reload without choosing a fallback', async () => {
     apiMocks.getFillingAppearanceOptions.mockImplementation(async (_modelId, materialGroup) => (
-      materialGroup === 'Сайдинг'
+      materialGroup === 'siding'
         ? sidingOptions
         : {
             manufacturers: [{ id: 13, name: 'Профнастил-Профиль' }],
@@ -205,15 +205,15 @@ describe('FillingAppearanceFields', () => {
     calc.colorYardId.value = 9
 
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     await flushPromises()
 
-    await wrapper.setProps({ materialGroup: 'Профлист' })
+    await wrapper.setProps({ materialGroup: 'profnastil' })
     await flushPromises()
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenLastCalledWith(1, 'Профлист')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenLastCalledWith(1, 'profnastil')
     expect(calc.manufacturerFacadeId.value).toBeNull()
     expect(calc.materialSupplierFacade.value).toBe('')
     expect(calc.colorFacadeId.value).toBeNull()
@@ -232,7 +232,7 @@ describe('FillingAppearanceFields', () => {
       })
     ))
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
     const calc = useCalculation()
@@ -273,7 +273,7 @@ describe('FillingAppearanceFields', () => {
     let resolveProfnastil!: (value: typeof profnastilOptions) => void
     apiMocks.getFillingAppearanceOptions.mockImplementation((_modelId, materialGroup) => (
       new Promise(resolve => {
-        if (materialGroup === 'Сайдинг') {
+        if (materialGroup === 'siding') {
           resolveSiding = resolve as (value: typeof sidingOptions) => void
         } else {
           resolveProfnastil = resolve as (value: typeof profnastilOptions) => void
@@ -289,18 +289,18 @@ describe('FillingAppearanceFields', () => {
     calc.colorFacadeImage.value = '/colors/profnastil.webp'
 
     const wrapper = mount(FillingAppearanceFields, {
-      props: { modelId: 1, materialGroup: 'Сайдинг', side: 'facade' },
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade' },
       global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
     })
-    await wrapper.setProps({ materialGroup: 'Профлист' })
+    await wrapper.setProps({ materialGroup: 'profnastil' })
     resolveProfnastil(profnastilOptions)
     await flushPromises()
     resolveSiding(sidingOptions)
     await flushPromises()
 
     expect(apiMocks.getFillingAppearanceOptions.mock.calls).toEqual([
-      [1, 'Сайдинг'],
-      [1, 'Профлист'],
+      [1, 'siding'],
+      [1, 'profnastil'],
     ])
     expect(wrapper.get('[data-testid="appearance-manufacturer"]').text()).toContain('Профнастил-Профиль')
     expect(wrapper.get('[data-testid="appearance-manufacturer"]').text()).not.toContain('Фасад-Профиль')

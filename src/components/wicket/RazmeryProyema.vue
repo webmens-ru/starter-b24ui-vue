@@ -26,7 +26,7 @@ const errClearance = ref('')
 // ─── Yup схема ───────────────────────────────────────────────────────────────
 const schema = yup.object({
   width:     yup.number().typeError('Только числа').required('Обязательное поле').min(700,  'От 700 до 1200 мм').max(1200, 'От 700 до 1200 мм'),
-  height:    yup.number().typeError('Только числа').required('Обязательное поле').min(1000, 'От 1000 до 2500 мм').max(2500, 'От 1000 до 2500 мм'),
+  height:    yup.number().typeError('Только числа').required('Обязательное поле').min(1500, 'От 1500 до 2500 мм').max(2500, 'От 1500 до 2500 мм'),
   clearance: yup.number().typeError('Только числа').required('Обязательное поле').min(10,   'От 10 до 100 мм').max(100,  'От 10 до 100 мм'),
 })
 
@@ -85,12 +85,12 @@ function syncCalcFields() {
 }
 
 function buildBlock() {
-  calc.updateOrCreateBlock('Проем', [
-    { name: 'Ширина',            value: calc.widthProyema.value },
-    { name: 'Высота',            value: calc.heightProyema.value },
-    { name: 'Просвет',           value: calc.clearanceProyema.value },
-    { name: 'Состояние проема',  value: calc.sostoyaniyeProyema.value },
-  ])
+  calc.updateOrCreateBlock('opening', [
+    { paramCode: 'width', name: 'Ширина',            value: calc.widthProyema.value },
+    { paramCode: 'height', name: 'Высота',            value: calc.heightProyema.value },
+    { paramCode: 'clearance', name: 'Просвет',           value: calc.clearanceProyema.value },
+    { paramCode: 'openingCondition', name: 'Состояние проема',  value: calc.sostoyaniyeProyema.value },
+  ], 'Проем')
 }
 
 async function save() {
@@ -226,7 +226,7 @@ onMounted(async () => {
             id="height"
             v-model="height"
             type="text"
-            placeholder="Введите высоту (1000–2500)"
+            placeholder="Введите высоту (1500–2500)"
             class="w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             :class="errHeight ? 'border-red-500' : 'border-gray-300'"
             @blur="validateField('height', height)"

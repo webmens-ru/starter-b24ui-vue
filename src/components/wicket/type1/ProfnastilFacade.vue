@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
+import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import {
   getProfnastilTable,
   getProfnastilColors,
@@ -46,6 +47,16 @@ const filters = reactive({
 const rows         = ref<ProfnastilRow[]>([])
 const selectedRow  = ref<ProfnastilRow | null>(null)
 const tableLoading = ref(false)
+let tableRevision = 0
+let disposed = false
+const catalogContext = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, calc.materialFacadeGlob.value]))
+onBeforeUnmount(() => { disposed = true; tableRevision++ })
+watch(catalogContext, () => {
+  tableRevision++
+  rows.value = []
+  selectedRow.value = null
+  void loadTable(1)
+})
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 
@@ -65,17 +76,22 @@ const colorSelectItems = computed(() =>
 )
 
 async function loadTable(page = currentPage.value) {
+  const revision = ++tableRevision
+  const context = catalogContext.value
+  const current = () => !disposed && revision === tableRevision && context === catalogContext.value
   tableLoading.value = true
   try {
     const result = await getProfnastilTable(calc.modelId.value, filters, page)
+    if (!current()) return
     rows.value        = result.table
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
+    if (!current()) return
     console.warn('getProfnastilTable недоступен:', e)
     rows.value = []
   } finally {
-    tableLoading.value = false
+    if (current()) tableLoading.value = false
   }
 }
 
@@ -126,18 +142,24 @@ function applySelectedColor() {
 }
 
 function buildSummaryParams() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Материал',      value: selectedRow.value?.material ?? '' },
-    { name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
-    { name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'material', name: 'Материал',      value: selectedRow.value?.material ?? '' },
+    { paramCode: 'sheetThickness', name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
+    { paramCode: 'coating', name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
   ]
   if (calc.colorFacade.value) {
-    params.push({ name: 'Цвет', value: calc.colorFacade.value })
+    params.push({ paramCode: 'color', name: 'Цвет', value: calc.colorFacade.value })
   }
   return params
 }
 
 async function save(row: ProfnastilRow): Promise<boolean> {
+  const descriptor = parseFillingDrawingDescriptor(row.drawingProfile, row.drawingProfileProblem)
+  calc.fillingProfileFacade.value = descriptor.profile
+  calc.fillingProfileFacadeProblem.value = descriptor.problem
+  calc.profileTypeFacadeId.value = row.profileTypeId ?? null
+  calc.typeOfCoatingFacadeId.value = row.typeOfCoatingId ?? null
+  calc.sidingFormFacadeId.value = null
   calc.idFacade.value                = row.id
   calc.materialFacade.value          = row.material
   calc.formFacade.value              = ''
@@ -147,7 +169,7 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.coatingFacadeImage.value      = row.coatingImage ?? ''
   calc.reliefFacadeImage.value       = row.reliefImage ?? ''
 
-  calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
 
   try {
     await saveWicketData({
@@ -173,7 +195,7 @@ async function saveColor() {
   if (!selectedRow.value) return
   applySelectedColor()
   const attempt = appearanceSave.beginSave()
-  calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+  calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
 
   try {
     await saveWicketData({
@@ -195,7 +217,7 @@ async function saveColor() {
       selectedColorId.value = calc.colorFacadeId.value === null
         ? null
         : Number(calc.colorFacadeId.value)
-      calc.updateOrCreateBlock('Заполнение (фасад)', buildSummaryParams())
+      calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
     }
   } finally {
     appearanceSave.finishSave()
@@ -238,6 +260,8 @@ async function selectRow(row: ProfnastilRow) {
 }
 
 function deselectRow() {
+  calc.fillingProfileFacade.value = null
+  calc.fillingProfileFacadeProblem.value = null
   selectedRow.value = null
   clearColor()
   calc.idFacade.value = ''
@@ -284,6 +308,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   }
   return {
     id:            calc.idFacade.value,
+    drawingProfile: calc.fillingProfileFacade.value,
+    drawingProfileProblem: calc.fillingProfileFacadeProblem.value,
     name:          calc.materialFacade.value,
     material:      calc.materialFacade.value,
     thickness:     calc.thicknessFacade.value,

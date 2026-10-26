@@ -13,6 +13,17 @@ import LockType from './LockType.vue'
 import Pen from './Pen.vue'
 import ShieldType from './ShieldType.vue'
 
+it('does not preselect a manufacturer for invalid stored root lock roles', async () => {
+  setActivePinia(createPinia())
+  const calc = useCalculation()
+  calc.loadFromApi({ lockSetId: 7, providesLockCode: 'unknown', lockInstallerCode: 'unknown' })
+  const wrapper = mount(IsTherelock, { global: { stubs: ['B24Button'] } })
+  await flushPromises()
+  expect(wrapper.find('input[name="providesLock"]:checked').exists()).toBe(false)
+  expect(wrapper.find('input[name="lockInstaller"]:checked').exists()).toBe(false)
+  wrapper.unmount()
+})
+
 const testRouter = createRouter({
   history: createMemoryHistory(),
   routes: [{ path: '/', component: { template: '<div/>' } }],
@@ -102,15 +113,15 @@ describe('saveWicketData — данные передаются на бэк', () 
       orderId: 42,
       modelId: '1',
       reachedStep: 'page2',
-      fillSide: 'Одна сторона',
-      materialFacadeGlob: 'Сайдинг',
+      fillSide: 1,
+      materialFacadeGlob: 'siding',
       materialYardGlob: null,
     })
   })
 
   it('FillSide при "Две стороны" передаёт materialYardGlob', async () => {
-    calc.fillSide.value = 'Две стороны'
-    calc.materialYardGlob.value = 'Профлист'
+    calc.fillSide.value = 2
+    calc.materialYardGlob.value = 'profnastil'
 
     mount(FillSide, {
       global: {
@@ -122,13 +133,13 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
 
     const payload = vi.mocked(saveWicketData).mock.calls[0][0]
-    expect(payload.materialYardGlob).toBe('Профлист')
+    expect(payload.materialYardGlob).toBe('profnastil')
   })
 
   it('FillSide сбрасывает все поля двора при переходе с сайдинга на профлист', async () => {
-    calc.fillSide.value = 'Две стороны'
-    calc.materialFacadeGlob.value = 'Сайдинг'
-    calc.materialYardGlob.value = 'Сайдинг'
+    calc.fillSide.value = 2
+    calc.materialFacadeGlob.value = 'siding'
+    calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
     calc.formYard.value = 'Гладкая'
@@ -145,10 +156,10 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Профлист"]').setValue(true)
+    await wrapper.get('input[value="profnastil"]').setValue(true)
     await flushPromises()
 
-    expect(calc.materialYardGlob.value).toBe('Профлист')
+    expect(calc.materialYardGlob.value).toBe('profnastil')
     expect({
       id: calc.idYard.value,
       manufacturerId: calc.manufacturerYardId.value,
@@ -165,7 +176,7 @@ describe('saveWicketData — данные передаются на бэк', () 
       color: '',
     })
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      materialYardGlob: 'Профлист',
+      materialYardGlob: 'profnastil',
       idYard: null,
       manufacturerYardId: null,
       colorYardId: null,
@@ -174,8 +185,8 @@ describe('saveWicketData — данные передаются на бэк', () 
   })
 
   it('FillSide сохраняет явные null после перехода с двух сторон на одну', async () => {
-    calc.fillSide.value = 'Две стороны'
-    calc.materialYardGlob.value = 'Сайдинг'
+    calc.fillSide.value = 2
+    calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 17
     calc.materialYard.value = 'Бревно'
     calc.manufacturerYardId.value = 4
@@ -187,7 +198,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Одна сторона"]').setValue(true)
+    await wrapper.get('input[name="fillingSideCount"][value="1"]').setValue(true)
     await flushPromises()
 
     expect(calc.materialYardGlob.value).toBeNull()
@@ -195,7 +206,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(calc.manufacturerYardId.value).toBeNull()
     expect(calc.colorYardId.value).toBeNull()
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      fillSide: 'Одна сторона',
+      fillSide: 1,
       materialYardGlob: null,
       idYard: null,
       manufacturerYardId: null,
@@ -205,9 +216,9 @@ describe('saveWicketData — данные передаются на бэк', () 
   })
 
   it('FillSide не изменяет настроенный двор при выборе материала фасада', async () => {
-    calc.fillSide.value = 'Две стороны'
+    calc.fillSide.value = 2
     calc.materialFacadeGlob.value = ''
-    calc.materialYardGlob.value = 'Профлист'
+    calc.materialYardGlob.value = 'profnastil'
     calc.idYard.value = 27
     calc.materialYard.value = 'МП-10'
     calc.formYard.value = 'Трапеция'
@@ -224,7 +235,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await flushPromises()
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.get('input[value="Сайдинг"]').setValue(true)
+    await wrapper.get('input[value="siding"]').setValue(true)
     await flushPromises()
 
     expect({
@@ -239,7 +250,7 @@ describe('saveWicketData — данные передаются на бэк', () 
       colorId: calc.colorYardId.value,
       color: calc.colorYard.value,
     }).toEqual({
-      materialGroup: 'Профлист',
+      materialGroup: 'profnastil',
       id: 27,
       material: 'МП-10',
       form: 'Трапеция',
@@ -251,8 +262,8 @@ describe('saveWicketData — данные передаются на бэк', () 
       color: 'RAL 7016',
     })
     expect(vi.mocked(saveWicketData).mock.calls[0]?.[0]).toMatchObject({
-      materialFacadeGlob: 'Сайдинг',
-      materialYardGlob: 'Профлист',
+      materialFacadeGlob: 'siding',
+      materialYardGlob: 'profnastil',
       idYard: 27,
       manufacturerYardId: 14,
       colorYardId: 19,
@@ -263,8 +274,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.isThereLock.value = 1
     calc.isThereLockName.value = 'Есть'
     calc.lockSetId.value = 7
-    calc.providesLock.value = 'Предоставляет заказчик'
-    calc.lockInstaller.value = 'Выполняет заказчик'
+    calc.providesLock.value = 'customer'
+    calc.lockInstaller.value = 'customer'
     calc.lockPenColorId.value = 7
 
     const wrapper = mount(IsTherelock, {
@@ -278,7 +289,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(saveWicketData).not.toHaveBeenCalled()
-    await wrapper.find('input[value="Выполняет изготовитель"]').setValue()
+    await wrapper.find('input[name="lockInstaller"][value="manufacturer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
@@ -289,8 +300,8 @@ describe('saveWicketData — данные передаются на бэк', () 
       productRowId: 7,
       modelId: '1',
       lockSetId: 7,
-      providesLock: 'Предоставляет заказчик',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLock: 'customer',
+      lockInstaller: 'manufacturer',
     })
     expect(payload).not.toHaveProperty('isThereCable')
     expect(wrapper.text()).not.toContain('Кабель для э/м замка')
@@ -318,16 +329,16 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 100))
     vi.mocked(saveWicketAccessoryComposition).mockClear()
 
-    expect(wrapper.find('input[value="Предоставляет заказчик"]:checked').exists()).toBe(true)
-    expect(wrapper.find('input[value="Выполняет заказчик"]:checked').exists()).toBe(true)
-    await wrapper.find('input[value="Предоставляет изготовитель"]').setValue()
+    expect(wrapper.find('input[name="providesLock"][value="customer"]:checked').exists()).toBe(true)
+    expect(wrapper.find('input[name="lockInstaller"][value="customer"]:checked').exists()).toBe(true)
+    await wrapper.find('input[name="providesLock"][value="manufacturer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
       lockSetId: 7,
-      providesLock: 'Предоставляет изготовитель',
-      lockInstaller: 'Выполняет заказчик',
+      providesLock: 'manufacturer',
+      lockInstaller: 'customer',
     })
     expect(calc.getAccessorySelections().lockComponents).toEqual([
       { role: 'lock_component', materialItemId: 701, providedByManufacturer: false, installedByManufacturer: true },
@@ -345,19 +356,19 @@ describe('saveWicketData — данные передаются на бэк', () 
     })
     await new Promise(r => setTimeout(r, 100))
 
-    await lockPresence.find('input[value="Есть"]').setValue()
-    await lockPresence.find('input[value="Предоставляет заказчик"]').setValue()
+    await lockPresence.find('input[name="lock-presence"][value="1"]').setValue()
+    await lockPresence.find('input[name="providesLock"][value="customer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(calc.isThereLock.value).toBe(1)
-    expect(calc.providesLock.value).toBe('Предоставляет заказчик')
-    expect(calc.lockInstaller.value).toBe('Выполняет изготовитель')
+    expect(calc.providesLock.value).toBe('customer')
+    expect(calc.lockInstaller.value).toBe('manufacturer')
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     const rootPayload = vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]
     expect(rootPayload).toMatchObject({
       lockSetId: null,
-      providesLock: 'Предоставляет заказчик',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLock: 'customer',
+      lockInstaller: 'manufacturer',
     })
     lockPresence.unmount()
 
@@ -376,8 +387,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
     expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
       lockSetId: 7,
-      providesLock: 'Предоставляет заказчик',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLock: 'customer',
+      lockInstaller: 'manufacturer',
     })
   })
 
@@ -385,8 +396,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.lockSetId.value = 7
     calc.isThereLock.value = 1
     calc.isThereLockName.value = 'Есть'
-    calc.providesLock.value = 'Предоставляет заказчик'
-    calc.lockInstaller.value = 'Выполняет заказчик'
+    calc.providesLock.value = 'customer'
+    calc.lockInstaller.value = 'customer'
     calc.setAccessorySelections('lock_component', [{
       role: 'lock_component',
       materialItemId: 701,
@@ -401,7 +412,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     vi.mocked(saveWicketData).mockClear()
     vi.mocked(saveWicketAccessoryComposition).mockClear()
 
-    await wrapper.find('input[value="Нет"]').setValue()
+    await wrapper.find('input[name="lock-presence"][value="0"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
     expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
@@ -422,8 +433,8 @@ describe('saveWicketData — данные передаются на бэк', () 
     calc.lockSetId.value = 7
     calc.isThereLock.value = 1
     calc.isThereLockName.value = 'Есть'
-    calc.providesLock.value = 'Предоставляет изготовитель'
-    calc.lockInstaller.value = 'Выполняет изготовитель'
+    calc.providesLock.value = 'manufacturer'
+    calc.lockInstaller.value = 'manufacturer'
     calc.priceRetail.value = 100
     const wrapper = mount(IsTherelock, {
       global: { plugins: [testRouter], stubs: ['B24Button'] },
@@ -432,13 +443,13 @@ describe('saveWicketData — данные передаются на бэк', () 
     vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('rejected'))
     vi.mocked(recalculate).mockClear()
 
-    await wrapper.find('input[value="Предоставляет заказчик"]').setValue()
+    await wrapper.find('input[name="providesLock"][value="customer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
 
-    expect(calc.providesLock.value).toBe('Предоставляет изготовитель')
-    expect(wrapper.find('input[value="Предоставляет изготовитель"]:checked').exists()).toBe(true)
+    expect(calc.providesLock.value).toBe('manufacturer')
+    expect(wrapper.find('input[name="providesLock"][value="manufacturer"]:checked').exists()).toBe(true)
     expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
-      name: 'Замок предоставляет',
+      paramCode: 'lockProvider', name: 'Замок предоставляет',
       value: 'Предоставляет изготовитель',
     })
     expect(recalculate).not.toHaveBeenCalled()
@@ -471,8 +482,8 @@ describe('saveWicketData — данные передаются на бэк', () 
       productRowId: 7,
       modelId: '2',
       lockSetId: 7,
-      providesLock: 'Предоставляет изготовитель',
-      lockInstaller: 'Выполняет изготовитель',
+      providesLock: 'manufacturer',
+      lockInstaller: 'manufacturer',
       lockPenId: null,
       lockPenColorId: null,
     })
@@ -484,6 +495,7 @@ describe('saveWicketData — данные передаются на бэк', () 
   it('Pen при редактировании не перетирает сохранённую дополнительную ручку первой из списка', async () => {
     calc.modelId.value = '2'
     calc.isTherePenName.value = 'Будет'
+    calc.isTherePen.value = 1
     calc.isTherePen.value = 1
     calc.additionalPenId.value = 9
     calc.penColorId.value = 6
@@ -548,12 +560,12 @@ describe('saveWicketData — данные передаются на бэк', () 
     await new Promise(r => setTimeout(r, 0))
     vi.mocked(saveWicketData).mockClear()
 
-    await wrapper.find('input[value="Тип_2"]').setValue(true)
+    await wrapper.find('input[value="lowerNet"]').setValue(true)
     await new Promise(r => setTimeout(r, 0))
 
     const saveCalls = vi.mocked(saveWicketData).mock.calls
     expect(saveCalls[saveCalls.length - 1]?.[0]).toMatchObject({
-      shieldType: 'Тип_2',
+      shieldType: 'lowerNet',
     })
     expect(calc.paintId.value).toBe(7)
     expect(calc.colorShieldName.value).toBe('Сохранённый цвет')

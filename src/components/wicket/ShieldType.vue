@@ -6,6 +6,9 @@ import { useCalculation } from '../../composables/useCalculation'
 import { getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
 import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
+import { frameSubtypeLabel, frameSubtypeOptions, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
+import { parseOpeningOrientation } from './openingOrientation'
+import { grilleSideLabel, grilleSideOptions, isGrilleSide, type GrilleSideSelection } from '../../app/grilleSides'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 interface GrilleNetItem {
@@ -39,7 +42,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Тип щита ────────────────────────────────────────────────────────────────
-const shieldType = ref<string>('Тип_1')
+const shieldType = ref<FrameSubtypeSelection>('')
 
 const providerOptions = [
   { value: 'executor', label: 'Предоставляет исполнитель' },
@@ -47,10 +50,7 @@ const providerOptions = [
   { value: '', label: 'Оставляем не заполненным' },
 ]
 
-const grilleLocationOptions = [
-  { value: 'Возле петель', label: 'Возле петель' },
-  { value: 'Возле замка', label: 'Возле замка' },
-]
+const grilleLocationOptions = grilleSideOptions()
 
 // Локальные refs для переключателя (надёжная реактивность в шаблоне)
 const providerTop   = ref<string>('executor')
@@ -76,7 +76,7 @@ const netWidthOptions = ref<{ id: string; name: string }[]>([])
 const heightTopPart   = ref<string>('')  // select
 const heightLowerPart = ref<string>('')  // select
 const widthSidePart   = ref<string>('')  // select
-const grilleLocation   = ref<string>('Возле петель')
+const grilleLocation   = ref<GrilleSideSelection>('hinge')
 
 const grilleNetItems         = ref<GrilleNetItem[]>([])
 const assortmentSideGrilleNetId = ref<number | null>(null)
@@ -96,8 +96,12 @@ const errWidthSide   = ref(false)
 // ─── Изображения щитов ───────────────────────────────────────────────────────
 // g - горизонтально, v - вертикально; right→g, left→v
 const panelOrientation = computed(() => {
-  const id = calc.openingOptionId.value
-  return id === 1 || id === 4 ? 'g' : 'v'
+  try {
+    if (calc.openingOrientationProblem.value) return null
+    return parseOpeningOrientation(calc.openingOrientation.value).hingeSide === 'right' ? 'g' : 'v'
+  } catch {
+    return null
+  }
 })
 
 /** Общие схемы щита для всех моделей калитки. */
@@ -111,14 +115,10 @@ const shieldOptions = computed(() => {
   const orient = panelOrientation.value
   const base = sharedShieldImgBase.value
   // z - замок, p - петля (только для Тип_4)
-  const type4Suffix = grilleLocation.value === 'Возле замка' ? 'z' : 'p'
-  return [
-    { value: 'Тип_1', label: 'Без сеток', img: `${base}/w_${orient}_1.1.png` },
-    { value: 'Тип_2', label: 'Сетка снизу', img: `${base}/w_${orient}_1.2.png` },
-    { value: 'Тип_5', label: 'Сетка сверху', img: `${base}/w_${orient}_1.5.png` },
-    { value: 'Тип_3', label: 'Сетка снизу и сверху', img: `${base}/w_${orient}_1.3.png` },
-    { value: 'Тип_4', label: 'Сетка сбоку', img: `${base}/w_${orient}_1.4_${type4Suffix}.png` },
-  ]
+  const type4Suffix = isGrilleSide(grilleLocation.value) ? (grilleLocation.value === 'lock' ? 'z' : 'p') : null
+  return frameSubtypeOptions().map(option => ({ ...option,
+    img: orient === null || (option.value === 'sideNet' && type4Suffix === null) ? null : `${base}/w_${orient}_1.${option.imageIndex}${option.value === 'sideNet' ? `_${type4Suffix}` : ''}.png`,
+  }))
 })
 
 // ─── Загрузка ширины сетки ───────────────────────────────────────────────────
@@ -298,7 +298,7 @@ async function onShieldTypeChange() {
     widthSidePart.value  = ''
     grilleNetItems.value   = []
     assortmentSideGrilleNetId.value = null
-    grilleLocation.value  = 'Возле петель'
+    grilleLocation.value  = 'hinge'
   }
   errHeightTop.value       = false
   errHeightUpperNet.value  = false
@@ -339,50 +339,52 @@ function syncCalcFields() {
   calc.upperGrilleNetImage.value = showHeightTop.value
     ? heightUpperNetItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
     : ''
-  calc.grilleLocation.value = grilleLocation.value
+  calc.grilleLocation.value = showSidePart.value ? grilleLocation.value : null
   calc.netWidthProviderTop.value = showHeightTop.value ? providerTop.value : ''
   calc.netWidthProviderLower.value = showHeightLower.value ? providerLower.value : ''
   calc.netWidthProviderSide.value = showSidePart.value ? providerSide.value : ''
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Тип щита', value: calc.shieldType.value },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'frameSubtype', name: 'Тип щита', value: frameSubtypeLabel(calc.shieldType.value) },
   ]
   const provTop = providerTop.value
   const topVal = calc.heightTopPart.value
   if (showHeightTop.value && provTop !== '' && topVal && topVal !== '0' && Number(topVal) > 0) {
-    params.push({ name: 'Высота верхней части', value: topVal })
+    params.push({ paramCode: 'upperHeight', name: 'Высота верхней части', value: topVal })
     if (provTop === 'executor') {
       const selUpperNet = heightUpperNetItems.value.find(n => n.id === assortmentHeightUpperNetId.value)
-      if (selUpperNet) params.push({ name: 'Сетка верхней части', value: selUpperNet.model })
+      if (selUpperNet) params.push({ paramCode: 'upperNet', name: 'Сетка верхней части', value: selUpperNet.model })
     }
   }
   const provLower = providerLower.value
   const lowerVal = calc.heightLowerPart.value
   if (showHeightLower.value && provLower !== '' && lowerVal && lowerVal !== '0' && Number(lowerVal) > 0) {
-    params.push({ name: 'Высота нижней части', value: lowerVal })
+    params.push({ paramCode: 'lowerHeight', name: 'Высота нижней части', value: lowerVal })
     if (provLower === 'executor') {
       const selLowerNet = heightLowerNetItems.value.find(n => n.id === assortmentHeightLowerNetId.value)
-      if (selLowerNet) params.push({ name: 'Сетка нижней части', value: selLowerNet.model })
+      if (selLowerNet) params.push({ paramCode: 'lowerNet', name: 'Сетка нижней части', value: selLowerNet.model })
     }
   }
   const provSide = providerSide.value
   const sideVal = calc.widthSidePart.value
   if (showSidePart.value && provSide !== '' && sideVal && sideVal !== '0' && Number(sideVal) > 0) {
-    params.push({ name: 'Ширина боковой части', value: sideVal })
+    params.push({ paramCode: 'sideWidth', name: 'Ширина боковой части', value: sideVal })
     if (provSide === 'executor') {
       const selNet = grilleNetItems.value.find(n => n.id === assortmentSideGrilleNetId.value)
-      if (selNet) params.push({ name: 'Сетка боковой решётки', value: selNet.model })
+      if (selNet) params.push({ paramCode: 'sideNet', name: 'Сетка боковой решётки', value: selNet.model })
     }
   }
   if (showSidePart.value && calc.grilleLocation.value) {
-    params.push({ name: 'Расположение решётки', value: calc.grilleLocation.value })
+    params.push({ paramCode: 'grilleSide', name: 'Расположение решётки', value: grilleSideLabel(calc.grilleLocation.value) })
   }
-  calc.updateOrCreateBlock('Тип щита', params)
+  calc.updateOrCreateBlock('frameSubtype', params, 'Тип щита')
 }
 
 async function save() {
+  if (!isFrameSubtypeCode(shieldType.value)) return
+  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) return
   syncCalcFields()
   buildBlock()
 
@@ -413,7 +415,7 @@ async function save() {
       assortmentHeightUpperNetId: showHeightTop.value
         ? (provTop === 'executor' ? assortmentHeightUpperNetId.value : null)
         : undefined,
-      grilleLocation:         calc.grilleLocation.value,
+      grilleSideCode: showSidePart.value && isGrilleSide(grilleLocation.value) ? grilleLocation.value : null,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
@@ -437,6 +439,14 @@ async function save() {
 
 // ─── Валидация ───────────────────────────────────────────────────────────────
 function validate(): boolean {
+  if (!isFrameSubtypeCode(shieldType.value)) {
+    openModal('Выберите тип щита')
+    return false
+  }
+  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) {
+    openModal('Выберите расположение решётки')
+    return false
+  }
   errHeightTop.value   = false
   errHeightLower.value = false
   errWidthSide.value   = false
@@ -519,7 +529,8 @@ onMounted(async () => {
   calc.setActivePage('page3')
 
   // Восстанавливаем сохранённые значения
-  if (calc.shieldType.value)       shieldType.value       = calc.shieldType.value
+  shieldType.value = calc.shieldType.value
+  const unresolvedSubtype = !isFrameSubtypeCode(shieldType.value)
   // Инициализация provider из calc (при загрузке сохранённых данных)
   const savedProvTop = calc.netWidthProviderTop.value
   const savedProvLower = calc.netWidthProviderLower.value
@@ -528,30 +539,33 @@ onMounted(async () => {
   providerLower.value = restoreShieldNetProvider(savedProvLower)
   providerSide.value = restoreShieldNetProvider(savedProvSide)
   const savedTop = calc.heightTopPart.value
-  if (showHeightTop.value && savedTop && savedTop !== '0' && Number(savedTop) > 0) {
+  if ((unresolvedSubtype || showHeightTop.value) && savedTop && savedTop !== '0' && Number(savedTop) > 0) {
     heightTopPart.value = String(savedTop)
   }
   const savedLower = calc.heightLowerPart.value
-  if (showHeightLower.value && savedLower && savedLower !== '0' && Number(savedLower) > 0) {
+  if ((unresolvedSubtype || showHeightLower.value) && savedLower && savedLower !== '0' && Number(savedLower) > 0) {
     heightLowerPart.value = String(savedLower)
   }
   const savedSide = calc.widthSidePart.value
-  if (showSidePart.value && savedSide && savedSide !== '0' && Number(savedSide) > 0) {
+  if ((unresolvedSubtype || showSidePart.value) && savedSide && savedSide !== '0' && Number(savedSide) > 0) {
     widthSidePart.value = String(savedSide)
   }
-  if (calc.grilleLocation.value)   grilleLocation.value   = calc.grilleLocation.value
+  grilleLocation.value = calc.grilleLocation.value
   await loadNetWidths()
-  if (showSidePart.value && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
-  if (showHeightLower.value && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
-  if (showHeightTop.value && heightTopPart.value) await loadHeightUpperNetsBySize(heightTopPart.value)
+  if ((unresolvedSubtype || showSidePart.value) && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
+  if ((unresolvedSubtype || showHeightLower.value) && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
+  if ((unresolvedSubtype || showHeightTop.value) && heightTopPart.value) await loadHeightUpperNetsBySize(heightTopPart.value)
   // Восстанавливаем выбор сеток после загрузки (loadXXX сбрасывает selection)
-  if (showHeightLower.value) {
+  if (unresolvedSubtype) {
+    assortmentHeightLowerNetId.value = calc.assortmentHeightLowerNetId.value === null ? null : Number(calc.assortmentHeightLowerNetId.value)
+    assortmentSideGrilleNetId.value = calc.assortmentSideGrilleNetId.value === null ? null : Number(calc.assortmentSideGrilleNetId.value)
+  } else if (showHeightLower.value) {
     const lowerId = calc.assortmentHeightLowerNetId.value ?? calc.assortmentSideGrilleNetId.value
     if (lowerId) assortmentHeightLowerNetId.value = Number(lowerId)
   } else if (showSidePart.value && calc.assortmentSideGrilleNetId.value) {
     assortmentSideGrilleNetId.value = Number(calc.assortmentSideGrilleNetId.value)
   }
-  if (calc.assortmentHeightUpperNetId.value && showHeightTop.value) {
+  if (calc.assortmentHeightUpperNetId.value && (unresolvedSubtype || showHeightTop.value)) {
     assortmentHeightUpperNetId.value = Number(calc.assortmentHeightUpperNetId.value)
   }
 
@@ -597,6 +611,7 @@ onMounted(async () => {
           />
           <div class="card-content">
             <img
+              v-if="opt.img"
               :src="opt.img"
               :alt="opt.label"
               class="w-full h-[120px] object-contain mb-2"

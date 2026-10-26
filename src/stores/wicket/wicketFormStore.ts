@@ -1,18 +1,30 @@
 import { isPaintingComplete } from './wicketStepProgress'
-import { participantRoleCode } from './participantRoleCompatibility'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
+import { isParticipantRole, participantRoleLabel } from '../../app/participantRoles'
+import { fillingMaterialGroupLabel } from '../../app/fillingMaterialGroups'
+import { fillingSideCountLabel, isFillingSideCount, type FillingSideCountSelection } from '../../app/fillingSideCounts'
+import { fillingOrientationLabel, isFillingOrientation, type FillingOrientationSelection } from '../../app/fillingOrientations'
 import type { CalcBlock } from './types'
+import type { PipeProfile, PipeProfileProblem } from '../../app/api/pipeProfiles'
+import type { FillingDrawingProfile, FillingDrawingProfileProblem } from '../../app/api/fillingDrawingProfiles'
+import type { JumperPlacement, JumperPlacementProblem } from '../../app/api/jumperProperties'
 import type {
   WicketAccessoryCompositionResponse,
   WicketAccessoryRole,
   WicketAccessorySelectionPayload,
+  OpeningOrientation,
+  OpeningOrientationProblem,
 } from '../../app/api/wicket.types'
 import { useWicketWizardStore } from './wicketWizardStore'
 import { applyWicketApiPayloadForModel } from './wicketLoadApiByModel'
 import { laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 import { onWicketProductRowLockVersionAdvanced } from '../../app/api/wicketProductRowLockVersion'
 import { frameSubtypeCapabilities } from '../../components/wicket/frameSubtype'
+import { frameSubtypeLabel, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
+import { grilleSideLabel, type GrilleSideSelection } from '../../app/grilleSides'
+import { optionPresenceLabel, presenceFromLockSetId, type OptionPresenceSelection } from '../../app/optionPresence'
+import { normalizeSummaryBlocks } from '../../app/summaryCodes'
 
 const RETIRED_STANDALONE_PAGE_IDS = new Set([
   'page_lock_components',
@@ -31,24 +43,38 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
 
 // Поставщики материала и краски, исполнитель окраски и legacy-сборка
-const providesMaterial    = ref<string>('Предоставляет изготовитель')
-const providesPaint       = ref<string>('Предоставляет изготовитель')
-const providesPrimer = ref<string>('Предоставляет изготовитель')
-const doesPaintingFrame  = ref<string>('Выполняет изготовитель')
-const doesAssembly        = ref<string>('Выполняет изготовитель')
+const providesMaterial    = ref<string>('manufacturer')
+const providesPaint       = ref<string>('manufacturer')
+const providesPrimer = ref<string>('manufacturer')
+const doesPaintingFrame  = ref<string>('manufacturer')
+const doesAssembly        = ref<string>('manufacturer')
+const participantRoleProblems = ref<Record<string, unknown> | null>(null)
 
 // Поля шага "Заполнение"
-const fillSide            = ref<string>('Одна сторона')
-const materialFacadeGlob = ref<string>('Сайдинг')
+const fillSide            = ref<FillingSideCountSelection>(1)
+const materialFacadeGlob = ref<string | null>('siding')
 const materialYardGlob   = ref<string | null>(null)
+const fillingProfileFacade = ref<FillingDrawingProfile | null>(null)
+const fillingProfileFacadeProblem = ref<FillingDrawingProfileProblem | null>(null)
+const fillingProfileYard = ref<FillingDrawingProfile | null>(null)
+const fillingProfileYardProblem = ref<FillingDrawingProfileProblem | null>(null)
 
 // Поля шага "Столбы / Вариант открытия / Перемычка"
 const nalichieStolbovName       = ref<string>('Со столбами')
-const hasStolby                  = ref<number>(1)
+const hasStolby                  = ref<0 | 1 | null>(null)
+const postsPresenceProblem = ref<JumperPlacementProblem | null>(null)
+const jumperPlacement = ref<JumperPlacement | null>(null)
+const jumperPlacementProblem = ref<JumperPlacementProblem | null>(null)
 const stolbId                    = ref<string | number>('')
+const postProfile = ref<PipeProfile | null>(null)
+const postProfileProblem = ref<PipeProfileProblem | null>(null)
+const jumperProfile = ref<PipeProfile | null>(null)
+const jumperProfileProblem = ref<PipeProfileProblem | null>(null)
 const stolbName                  = ref<string>('')
 const openingOptionName         = ref<string>('')
 const openingOptionId           = ref<number | null>(null)
+const openingOrientation = ref<OpeningOrientation | null>(null)
+const openingOrientationProblem = ref<OpeningOrientationProblem | null>(null)
 const openingOptionPathPhoto   = ref<string>('')
 const peremichkaPolozheniyeId   = ref<string>('')
 const peremichkaPolozheniyeName = ref<string>('')
@@ -57,9 +83,9 @@ const peremichkaSortamentName   = ref<string | null>(null)
 
 // Поля шага "Ручка" (дополнительная ручка / скоба)
 const isTherePenName   = ref<string>('Не будет')
-const isTherePen       = ref<number>(0)
-const penProvided        = ref<string>('Предоставляет изготовитель')
-const penInstalled       = ref<string>('Устанавливает изготовитель')
+const isTherePen       = ref<OptionPresenceSelection>(0)
+const penProvided        = ref<string>('manufacturer')
+const penInstalled       = ref<string>('manufacturer')
 const penColor           = ref<string>('')
 const penColorId         = ref<number | null>(null)
 const additionalPenId     = ref<number | null>(null)
@@ -70,7 +96,7 @@ const additionalPenMarking = ref<string>('')
 type AddonKey = 'doorCloser' | 'bumper' | 'skud'
 interface AddonState { isThere: number; provided: string; installed: string; itemId: number | null; marking: string; itemIds: number[] }
 function emptyAddon(): AddonState {
-  return { isThere: 0, provided: 'Предоставляет изготовитель', installed: 'Устанавливает изготовитель', itemId: null, marking: '', itemIds: [] }
+  return { isThere: 0, provided: 'manufacturer', installed: 'manufacturer', itemId: null, marking: '', itemIds: [] }
 }
 const addons = ref<Record<AddonKey, AddonState>>({ doorCloser: emptyAddon(), bumper: emptyAddon(), skud: emptyAddon() })
 interface AccessoryCatalogItem {
@@ -114,11 +140,11 @@ const lockComponentIds = ref<number[]>([])
 
 // Поля шага "Замок"
 const isThereLockName = ref<string>('Есть')
-const isThereLock     = ref<number>(1)
-const providesLock      = ref<string>('Предоставляет изготовитель')
-const lockInstaller     = ref<string>('Выполняет изготовитель')
-const lockComponentsProvided = ref<string>('Предоставляет изготовитель')
-const lockComponentsInstalled = ref<string>('Устанавливает изготовитель')
+const isThereLock     = ref<OptionPresenceSelection>(1)
+const providesLock      = ref<string>('manufacturer')
+const lockInstaller     = ref<string>('manufacturer')
+const lockComponentsProvided = ref<string>('manufacturer')
+const lockComponentsInstalled = ref<string>('manufacturer')
 
 // Поля шага "Проем"
 const widthProyema      = ref<string>('')
@@ -127,13 +153,13 @@ const clearanceProyema  = ref<string>('')
 const sostoyaniyeProyema = ref<string>('Готов')
 
 // Поля шага "Расположение полотна"
-const raspolozheniyePolotna = ref<string>('Вертикально')
+const raspolozheniyePolotna = ref<FillingOrientationSelection>('vertical')
 
 // Поля шага "Тип щита"
-const shieldType       = ref<string>('Тип_1')
-const doesPaintingFrameCode = computed(() => participantRoleCode(doesPaintingFrame.value))
-const providesPaintCode = computed(() => participantRoleCode(providesPaint.value))
-const providesPrimerCode = computed(() => participantRoleCode(providesPrimer.value))
+const shieldType       = ref<FrameSubtypeSelection>('noNet')
+const doesPaintingFrameCode = computed(() => isParticipantRole(doesPaintingFrame.value) ? doesPaintingFrame.value : null)
+const providesPaintCode = computed(() => isParticipantRole(providesPaint.value) ? providesPaint.value : null)
+const providesPrimerCode = computed(() => isParticipantRole(providesPrimer.value) ? providesPrimer.value : null)
 const paintName = ref('')
 const paintId = ref<number | null>(null)
 const colorShieldId = paintId
@@ -156,13 +182,17 @@ const lowerGrilleNetImage = ref<string>('')
 const upperGrilleNetImage = ref<string>('')
 const assortmentHeightUpperNetId = ref<string | number | null>(null)
 const assortmentHeightLowerNetId = ref<string | number | null>(null)
-const grilleLocation         = ref<string>('Возле петель')
+const grilleLocation         = ref<GrilleSideSelection>('hinge')
 const netWidthProviderTop  = ref<string>('executor')
 const netWidthProviderLower = ref<string>('executor')
 const netWidthProviderSide  = ref<string>('executor')
 
 // Поля шага "Заполнение (фасад)"
 const idFacade                = ref<string | number>('')
+const materialSelectionProblems = ref<Array<{ side: 'facade' | 'yard'; reason: string; message: string }>>([])
+const profileTypeFacadeId = ref<number | null>(null)
+const typeOfCoatingFacadeId = ref<number | null>(null)
+const sidingFormFacadeId = ref<number | null>(null)
 const manufacturerFacadeId    = ref<string | number | null>(null)
 const colorFacadeId           = ref<string | number | null>(null)
 const materialSupplierFacade = ref<string>('')
@@ -184,6 +214,9 @@ const numberOfSticks           = ref<number | null>(null)
 
 // Поля шага "Заполнение (двор)"
 const idYard                = ref<string | number>('')
+const profileTypeYardId = ref<number | null>(null)
+const typeOfCoatingYardId = ref<number | null>(null)
+const sidingFormYardId = ref<number | null>(null)
 const manufacturerYardId    = ref<string | number | null>(null)
 const colorYardId           = ref<string | number | null>(null)
 const materialSupplierYard = ref<string>('')
@@ -206,9 +239,9 @@ const fieldsFilled = ref<number>(0)
   /** Раздел «Заполнение» неполный: сброшен материал или не выбран материал двора при «Две стороны». */
   const isFillSectionIncomplete = computed(() => {
     const hasFacade = idFacade.value != null && String(idFacade.value).trim() !== ''
-    const needYard = fillSide.value === 'Две стороны'
+    const needYard = fillSide.value === 2
     const hasYard = idYard.value != null && String(idYard.value).trim() !== ''
-    return !hasFacade || (needYard && !hasYard)
+    return !isFillingSideCount(fillSide.value) || !hasFacade || (needYard && !hasYard)
   })
 
   function setCodedBlock(blockCode: string, blockName: string, params: Array<{ paramCode: string; name: string; value: string }>): void {
@@ -217,38 +250,45 @@ const fieldsFilled = ref<number>(0)
     else data.value.push({ blockCode, blockName, params })
   }
 
-  function updateOrCreateBlock(blockName: string, params: CalcBlock['params']) {
-    const block = data.value.find(b => b.blockName === blockName)
+  function updateOrCreateBlock(blockCode: string, params: CalcBlock['params'], blockName: string) {
+    data.value = normalizeSummaryBlocks(data.value)
+    const block = data.value.find(b => b.blockCode === blockCode)
     if (block) {
+      block.blockName = blockName
       block.params = params
     } else {
-      data.value.push({ blockName, params })
+      data.value.push({ blockCode, blockName, params })
     }
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
   function buildLockSummaryParams(): CalcBlock['params'] {
     const params: CalcBlock['params'] = [
-      { name: 'Замок есть/нет', value: isThereLockName.value },
+      { paramCode: 'presence', name: 'Замок есть/нет', value: optionPresenceLabel(isThereLock.value, 'lock') },
     ]
     if (isThereLock.value === 1) {
-      params.push({ name: 'Замок предоставляет', value: providesLock.value })
-      params.push({ name: 'Врезку замка выполняет', value: lockInstaller.value })
-      params.push({ name: 'Тип замка', value: typeLock.value || '' })
+      params.push({ paramCode: 'lockProvider', name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
+      params.push({ paramCode: 'lockInstaller', name: 'Врезку замка выполняет', value: participantRoleLabel('perform', lockInstaller.value) })
+      params.push({ paramCode: 'lockType', name: 'Тип замка', value: typeLock.value || '' })
     }
     return params
   }
 
   function rebuildLockSummaryBlock(): void {
-    updateOrCreateBlock('Замок', buildLockSummaryParams())
+    updateOrCreateBlock('lock', buildLockSummaryParams(), 'Замок')
   }
 
-  function removeAllBlocksExcept(allowedBlockNames: string[]) {
-    data.value = data.value.filter(b => allowedBlockNames.includes(b.blockName))
+  function removeAllBlocksExcept(allowedBlockCodes: string[]) {
+    data.value = data.value.filter(b => b.blockCode !== undefined && allowedBlockCodes.includes(b.blockCode))
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
   function resetFacadeFilling(): void {
+    fillingProfileFacade.value = null
+    fillingProfileFacadeProblem.value = null
+    profileTypeFacadeId.value = null
+    typeOfCoatingFacadeId.value = null
+    sidingFormFacadeId.value = null
     idFacade.value = ''
     manufacturerFacadeId.value = null
     colorFacadeId.value = null
@@ -271,6 +311,11 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    fillingProfileYard.value = null
+    fillingProfileYardProblem.value = null
+    profileTypeYardId.value = null
+    typeOfCoatingYardId.value = null
+    sidingFormYardId.value = null
     idYard.value = ''
     manufacturerYardId.value = null
     colorYardId.value = null
@@ -289,23 +334,38 @@ const fieldsFilled = ref<number>(0)
 
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
+    materialSelectionProblems.value = []
     data.value = []
     priceRetail.value = ''
     priceDealer.value = ''
-    providesMaterial.value = 'Предоставляет изготовитель'
-    providesPaint.value = 'Предоставляет изготовитель'
-    providesPrimer.value = 'Предоставляет изготовитель'
-    doesPaintingFrame.value = 'Выполняет изготовитель'
-    doesAssembly.value = 'Выполняет изготовитель'
-    fillSide.value = 'Одна сторона'
-    materialFacadeGlob.value = 'Сайдинг'
+    providesMaterial.value = 'manufacturer'
+    providesPaint.value = 'manufacturer'
+    providesPrimer.value = 'manufacturer'
+    doesPaintingFrame.value = 'manufacturer'
+    doesAssembly.value = 'manufacturer'
+    participantRoleProblems.value = null
+    fillSide.value = 1
+    materialFacadeGlob.value = 'siding'
     materialYardGlob.value = null
     nalichieStolbovName.value = 'Со столбами'
-    hasStolby.value = 1
+    hasStolby.value = null
+    postsPresenceProblem.value = null
+    jumperPlacement.value = null
+    jumperPlacementProblem.value = null
     stolbId.value = ''
+    postProfile.value = null
+    fillingProfileFacade.value = null
+    fillingProfileFacadeProblem.value = null
+    fillingProfileYard.value = null
+    fillingProfileYardProblem.value = null
+    postProfileProblem.value = null
+    jumperProfile.value = null
+    jumperProfileProblem.value = null
     stolbName.value = ''
     openingOptionName.value = ''
     openingOptionId.value = null
+    openingOrientation.value = null
+    openingOrientationProblem.value = null
     openingOptionPathPhoto.value = ''
     peremichkaPolozheniyeId.value = ''
     peremichkaPolozheniyeName.value = ''
@@ -313,8 +373,8 @@ const fieldsFilled = ref<number>(0)
     peremichkaSortamentName.value = null
     isTherePenName.value = 'Не будет'
     isTherePen.value = 0
-    penProvided.value = 'Предоставляет изготовитель'
-    penInstalled.value = 'Устанавливает изготовитель'
+    penProvided.value = 'manufacturer'
+    penInstalled.value = 'manufacturer'
     penColor.value = ''
     penColorId.value = null
     additionalPenId.value = null
@@ -332,18 +392,18 @@ const fieldsFilled = ref<number>(0)
     lockPenColor.value = ''
     lockPenColorId.value = null
     lockComponentIds.value = []
-    lockComponentsProvided.value = 'Предоставляет изготовитель'
-    lockComponentsInstalled.value = 'Устанавливает изготовитель'
+    lockComponentsProvided.value = 'manufacturer'
+    lockComponentsInstalled.value = 'manufacturer'
     isThereLockName.value = 'Есть'
     isThereLock.value = 1
-    providesLock.value = 'Предоставляет изготовитель'
-    lockInstaller.value = 'Выполняет изготовитель'
+    providesLock.value = 'manufacturer'
+    lockInstaller.value = 'manufacturer'
     widthProyema.value = ''
     heightProyema.value = ''
     clearanceProyema.value = ''
     sostoyaniyeProyema.value = 'Готов'
-    raspolozheniyePolotna.value = 'Вертикально'
-    shieldType.value = 'Тип_1'
+    raspolozheniyePolotna.value = 'vertical'
+    shieldType.value = 'noNet'
     paintName.value = ''
     paintId.value = null
     paintColorId.value = null
@@ -365,7 +425,7 @@ const fieldsFilled = ref<number>(0)
     upperGrilleNetImage.value = ''
     assortmentHeightUpperNetId.value = null
     assortmentHeightLowerNetId.value = null
-    grilleLocation.value = 'Возле петель'
+    grilleLocation.value = 'hinge'
     netWidthProviderTop.value = 'executor'
     netWidthProviderLower.value = 'executor'
     netWidthProviderSide.value = 'executor'
@@ -377,10 +437,10 @@ const fieldsFilled = ref<number>(0)
   function updatePriceBlock(dealer: string | number, retail: string | number) {
     priceDealer.value = dealer
     priceRetail.value = retail
-    updateOrCreateBlock('Цена', [
-      { name: 'Дилерская цена', value: String(dealer) },
-      { name: 'Рек. розн. цена', value: String(retail) },
-    ])
+    updateOrCreateBlock('price', [
+      { paramCode: 'dealerPrice', name: 'Дилерская цена', value: String(dealer) },
+      { paramCode: 'retailPrice', name: 'Рек. розн. цена', value: String(retail) },
+    ], 'Цена')
   }
 
   function selectionsFromRows<Role extends WicketAccessoryRole>(
@@ -417,11 +477,11 @@ const fieldsFilled = ref<number>(0)
     state.itemId = first?.materialItemId ?? null
     state.itemIds = ids
     state.provided = !first || first.providedByManufacturer
-      ? 'Предоставляет изготовитель'
-      : 'Предоставляет заказчик'
+      ? 'manufacturer'
+      : 'customer'
     state.installed = !first || selections.some(selection => selection.installedByManufacturer)
-      ? 'Устанавливает изготовитель'
-      : 'Устанавливает заказчик'
+      ? 'manufacturer'
+      : 'customer'
   }
 
   function applyAccessoryComposition(composition: WicketAccessoryCompositionResponse): void {
@@ -439,11 +499,11 @@ const fieldsFilled = ref<number>(0)
     lockComponentIds.value = lockSelections.map(selection => selection.materialItemId)
     const hasLockComponents = lockSelections.length > 0
     lockComponentsProvided.value = !hasLockComponents || lockSelections.some(selection => selection.providedByManufacturer)
-      ? 'Предоставляет изготовитель'
-      : 'Предоставляет заказчик'
+      ? 'manufacturer'
+      : 'customer'
     lockComponentsInstalled.value = !hasLockComponents || lockSelections.some(selection => selection.installedByManufacturer)
-      ? 'Устанавливает изготовитель'
-      : 'Устанавливает заказчик'
+      ? 'manufacturer'
+      : 'customer'
     applyAddonSelections('skud', skudSelections)
     applyAddonSelections('doorCloser', doorCloserSelections)
     applyAddonSelections('bumper', bumperSelections)
@@ -566,13 +626,13 @@ const fieldsFilled = ref<number>(0)
       let completed = false
       switch (pageId) {
         case 'page2':
-          completed = notEmpty(fillSide.value) || !!(idFacade.value && String(idFacade.value)) || !!(idYard.value && String(idYard.value))
+          completed = isFillingSideCount(fillSide.value)
           break
         case 'page2_facade_profnastil':
           completed = !!(idFacade.value && String(idFacade.value))
           break
         case 'page3':
-          completed = notEmpty(shieldType.value)
+          completed = isFrameSubtypeCode(shieldType.value)
           break
         case 'page_painting':
           completed = isPaintingComplete({ performerCode: doesPaintingFrameCode.value, paintId: paintId.value, paintColorId: paintColorId.value, selection: paintSelection.value, note: colorShieldNote.value, unavailable: paintSelectionUnavailable.value, savedPaintId: savedPaintId.value, savedPaintColorId: savedPaintColorId.value })
@@ -581,7 +641,7 @@ const fieldsFilled = ref<number>(0)
           completed = openingOptionId.value != null && (Number(openingOptionId.value) || 0) > 0
           break
         case 'page6':
-          completed = notEmpty(raspolozheniyePolotna.value)
+          completed = isFillingOrientation(raspolozheniyePolotna.value)
           break
         case 'page7':
           completed = numGt(widthProyema.value as string | number, 0) && numGt(heightProyema.value as string | number, 0)
@@ -614,6 +674,7 @@ const fieldsFilled = ref<number>(0)
 
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
+    materialSelectionProblems.value = []
     const wizard = useWicketWizardStore()
     const w = storeToRefs(wizard)
     const refMap: Record<string, { value: unknown }> = {
@@ -625,17 +686,31 @@ const fieldsFilled = ref<number>(0)
       providesMaterial,
       providesPaint,
       providesPrimer,
+      participantRoleProblems,
       doesPaintingFrame,
       doesAssembly,
       fillSide,
       materialFacadeGlob,
       materialYardGlob,
+      fillingProfileFacade,
+      fillingProfileFacadeProblem,
+      fillingProfileYard,
+      fillingProfileYardProblem,
       nalichieStolbovName,
       hasStolby,
+      postsPresenceProblem,
+      jumperPlacement,
+      jumperPlacementProblem,
       stolbId,
+      postProfile,
+      postProfileProblem,
+      jumperProfile,
+      jumperProfileProblem,
       stolbName,
       openingOptionName,
       openingOptionId,
+      openingOrientation,
+      openingOrientationProblem,
       openingOptionPathPhoto,
       peremichkaPolozheniyeId,
       peremichkaPolozheniyeName,
@@ -689,6 +764,10 @@ const fieldsFilled = ref<number>(0)
       netWidthProviderLower,
       netWidthProviderSide,
       idFacade,
+      materialSelectionProblems,
+      profileTypeFacadeId,
+      typeOfCoatingFacadeId,
+      sidingFormFacadeId,
       manufacturerFacadeId,
       colorFacadeId,
       materialSupplierFacade,
@@ -708,6 +787,9 @@ const fieldsFilled = ref<number>(0)
       gapName,
       numberOfSticks,
       idYard,
+      profileTypeYardId,
+      typeOfCoatingYardId,
+      sidingFormYardId,
       manufacturerYardId,
       colorYardId,
       materialSupplierYard,
@@ -751,8 +833,8 @@ const fieldsFilled = ref<number>(0)
         refMap[key].value = null
       }
     }
-    isThereLock.value = lockSetId.value == null ? 0 : 1
-    isThereLockName.value = isThereLock.value === 1 ? 'Есть' : 'Нет'
+    isThereLock.value = presenceFromLockSetId(lockSetId.value)
+    isThereLockName.value = optionPresenceLabel(isThereLock.value, 'lock')
     if (import.meta.env.DEV && modelIdForLoad === '2') {
       console.info('[type2-drawing] Pinia after loadFromApi', {
         idFacade: idFacade.value,
@@ -812,158 +894,158 @@ const fieldsFilled = ref<number>(0)
 
     // Заполнение
     const fillParams: CalcBlock['params'] = [
-      { name: 'Материал заполнения', value: providesMaterial.value },
-      { name: 'Сторона заполнения', value: fillSide.value },
-      { name: 'Материал заполнения (фасад)', value: materialFacadeGlob.value },
+      { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', providesMaterial.value) },
+      { paramCode: 'sideCount', name: 'Сторона заполнения', value: fillingSideCountLabel(fillSide.value) },
+      { paramCode: 'facadeGroup', name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(materialFacadeGlob.value) },
     ]
-    if (fillSide.value === 'Две стороны') {
-      fillParams.push({ name: 'Материал заполнения (двор)', value: materialYardGlob.value ?? '' })
+    if (fillSide.value === 2) {
+      fillParams.push({ paramCode: 'yardGroup', name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(materialYardGlob.value) })
     }
-    blocks.push({ blockName: 'Заполнение', params: fillParams })
+    blocks.push({ blockCode: 'filling', blockName: 'Заполнение', params: fillParams })
 
     // Заполнение (фасад) — сайдинг или профлист
     if (idFacade.value || materialFacade.value) {
-      const isProfnastil = materialFacadeGlob.value === 'Профлист'
+      const isProfnastil = materialFacadeGlob.value === 'profnastil'
       blocks.push({
-        blockName: 'Заполнение (фасад)',
+        blockCode: 'fillingFacade', blockName: 'Заполнение (фасад)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: materialSupplierFacade.value },
-              { name: 'Материал', value: materialFacade.value },
-              { name: 'Толщина листа', value: thicknessFacade.value },
-              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
-              { name: 'Цвет', value: colorFacade.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierFacade.value },
+              { paramCode: 'material', name: 'Материал', value: materialFacade.value },
+              { paramCode: 'sheetThickness', name: 'Толщина листа', value: thicknessFacade.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { paramCode: 'color', name: 'Цвет', value: colorFacade.value },
             ]
           : [
-              { name: 'Производитель материала', value: materialSupplierFacade.value },
-              { name: 'Материал', value: materialFacade.value },
-              { name: 'Форма', value: formFacade.value },
-              { name: 'Тип покрытия', value: typeOfCoatingFacade.value },
-              { name: 'Цвет', value: colorFacade.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierFacade.value },
+              { paramCode: 'material', name: 'Материал', value: materialFacade.value },
+              { paramCode: 'form', name: 'Форма', value: formFacade.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingFacade.value },
+              { paramCode: 'color', name: 'Цвет', value: colorFacade.value },
             ],
       })
     }
 
     // Заполнение (двор) — только при "Две стороны"
-    if (fillSide.value === 'Две стороны' && (idYard.value || materialYard.value)) {
-      const isProfnastil = materialYardGlob.value === 'Профлист'
+    if (fillSide.value === 2 && (idYard.value || materialYard.value)) {
+      const isProfnastil = materialYardGlob.value === 'profnastil'
       blocks.push({
-        blockName: 'Заполнение (двор)',
+        blockCode: 'fillingYard', blockName: 'Заполнение (двор)',
         params: isProfnastil
           ? [
-              { name: 'Производитель материала', value: materialSupplierYard.value },
-              { name: 'Материал', value: materialYard.value },
-              { name: 'Толщина листа', value: thicknessYard.value },
-              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
-              { name: 'Цвет', value: colorYard.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierYard.value },
+              { paramCode: 'material', name: 'Материал', value: materialYard.value },
+              { paramCode: 'sheetThickness', name: 'Толщина листа', value: thicknessYard.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { paramCode: 'color', name: 'Цвет', value: colorYard.value },
             ]
           : [
-              { name: 'Производитель материала', value: materialSupplierYard.value },
-              { name: 'Материал', value: materialYard.value },
-              { name: 'Форма', value: formYard.value },
-              { name: 'Тип покрытия', value: typeOfCoatingYard.value },
-              { name: 'Цвет', value: colorYard.value },
+              { paramCode: 'materialManufacturer', name: 'Производитель материала', value: materialSupplierYard.value },
+              { paramCode: 'material', name: 'Материал', value: materialYard.value },
+              { paramCode: 'form', name: 'Форма', value: formYard.value },
+              { paramCode: 'coating', name: 'Тип покрытия', value: typeOfCoatingYard.value },
+              { paramCode: 'color', name: 'Цвет', value: colorYard.value },
             ],
       })
     }
 
     // Столбы / вариант открытия / перемычка
     const stolbParams: CalcBlock['params'] = [
-      { name: 'Наличие столбов', value: nalichieStolbovName.value },
+      { paramCode: 'postsPresence', name: 'Наличие столбов', value: nalichieStolbovName.value },
     ]
     if (hasStolby.value === 1 && stolbName.value) {
-      stolbParams.push({ name: 'Сортамент столбов', value: stolbName.value })
+      stolbParams.push({ paramCode: 'postProfile', name: 'Сортамент столбов', value: stolbName.value })
     }
     if (openingOptionName.value) {
-      stolbParams.push({ name: 'Вариант открытия', value: openingOptionName.value })
+      stolbParams.push({ paramCode: 'openingOption', name: 'Вариант открытия', value: openingOptionName.value })
     }
     if (peremichkaPolozheniyeName.value) {
-      stolbParams.push({ name: 'Положение перемычки', value: peremichkaPolozheniyeName.value })
+      stolbParams.push({ paramCode: 'jumperPlacement', name: 'Положение перемычки', value: peremichkaPolozheniyeName.value })
     }
     if (peremichkaSortamentName.value) {
-      stolbParams.push({ name: 'Сортамент перемычки', value: peremichkaSortamentName.value })
+      stolbParams.push({ paramCode: 'jumperProfile', name: 'Сортамент перемычки', value: peremichkaSortamentName.value })
     }
-    blocks.push({ blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
+    blocks.push({ blockCode: 'postsOpeningJumper', blockName: 'Столбы / вариант открытия / перемычка', params: stolbParams })
 
     // Расположение полотна
     blocks.push({
-      blockName: 'Расположение полотна',
-      params: [{ name: 'Расположение полотна', value: raspolozheniyePolotna.value }],
+      blockCode: 'fillingOrientation', blockName: 'Расположение полотна',
+      params: [{ paramCode: 'fillingOrientation', name: 'Расположение полотна', value: fillingOrientationLabel(raspolozheniyePolotna.value) }],
     })
 
     // Тип щита
     const shieldParams: CalcBlock['params'] = [
-      { name: 'Тип щита', value: shieldType.value },
+      { paramCode: 'frameSubtype', name: 'Тип щита', value: frameSubtypeLabel(shieldType.value) },
     ]
     const shieldCapabilities = frameSubtypeCapabilities(shieldType.value)
     if (shieldCapabilities.top && heightTopPart.value && heightTopPart.value !== '0') {
-      shieldParams.push({ name: 'Высота верхней части', value: heightTopPart.value })
+      shieldParams.push({ paramCode: 'upperHeight', name: 'Высота верхней части', value: heightTopPart.value })
     }
     if (shieldCapabilities.lower && heightLowerPart.value && heightLowerPart.value !== '0') {
-      shieldParams.push({ name: 'Высота нижней части', value: heightLowerPart.value })
+      shieldParams.push({ paramCode: 'lowerHeight', name: 'Высота нижней части', value: heightLowerPart.value })
     }
     if (shieldCapabilities.side) {
       if (widthSidePart.value && widthSidePart.value !== '0') {
-        shieldParams.push({ name: 'Ширина боковой части', value: widthSidePart.value })
+        shieldParams.push({ paramCode: 'sideWidth', name: 'Ширина боковой части', value: widthSidePart.value })
       }
       if (grilleLocation.value) {
-        shieldParams.push({ name: 'Расположение решётки', value: grilleLocation.value })
+        shieldParams.push({ paramCode: 'grilleSide', name: 'Расположение решётки', value: grilleSideLabel(grilleLocation.value) })
       }
     }
-    blocks.push({ blockName: 'Тип щита', params: shieldParams })
+    blocks.push({ blockCode: 'frameSubtype', blockName: 'Тип щита', params: shieldParams })
 
     const paintingParams: CalcBlock['params'] = [
-      { paramCode: 'paintProvider', name: 'Поставщик краски', value: providesPaint.value },
-      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: doesPaintingFrame.value },
+      { paramCode: 'paintProvider', name: 'Поставщик краски', value: participantRoleLabel('provide', providesPaint.value) },
+      { paramCode: 'paintingPerformer', name: 'Окраска каркаса', value: participantRoleLabel('perform', doesPaintingFrame.value) },
     ]
     if (paintName.value) paintingParams.push({ paramCode: 'paintProduct', name: 'Краска', value: paintName.value })
     if (colorShieldName.value) paintingParams.push({ paramCode: 'color', name: 'Цвет рамы', value: colorShieldName.value })
     if (colorShieldNote.value) paintingParams.push({ paramCode: 'paintNote', name: 'Примечание к цвету краски', value: colorShieldNote.value })
     if (primerName.value) paintingParams.push(
       { paramCode: 'primer', name: 'Грунтовка', value: primerName.value },
-      { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: providesPrimer.value },
+      { paramCode: 'primerProvider', name: 'Поставщик грунтовки', value: participantRoleLabel('provide', providesPrimer.value) },
     )
     blocks.push({ blockCode: 'painting', blockName: 'Окраска', params: paintingParams })
 
     // Проем
     if (widthProyema.value || heightProyema.value || clearanceProyema.value) {
       blocks.push({
-        blockName: 'Проем',
+        blockCode: 'opening', blockName: 'Проем',
         params: [
-          { name: 'Ширина', value: widthProyema.value },
-          { name: 'Высота', value: heightProyema.value },
-          { name: 'Просвет', value: clearanceProyema.value },
-          { name: 'Состояние проема', value: sostoyaniyeProyema.value },
+          { paramCode: 'width', name: 'Ширина', value: widthProyema.value },
+          { paramCode: 'height', name: 'Высота', value: heightProyema.value },
+          { paramCode: 'clearance', name: 'Просвет', value: clearanceProyema.value },
+          { paramCode: 'openingCondition', name: 'Состояние проема', value: sostoyaniyeProyema.value },
         ],
       })
     }
 
     // Замок
-    blocks.push({ blockName: 'Замок', params: buildLockSummaryParams() })
+    blocks.push({ blockCode: 'lock', blockName: 'Замок', params: buildLockSummaryParams() })
 
     // Дополнительная ручка (скоба)
     const penParams: CalcBlock['params'] = [
-      { name: 'Дополнительная ручка', value: isTherePenName.value },
+      { paramCode: 'presence', name: 'Дополнительная ручка', value: optionPresenceLabel(isTherePen.value, 'optional') },
     ]
     if (isTherePen.value === 1) {
-      penParams.push({ name: 'Ручку предоставляет', value: penProvided.value })
-      penParams.push({ name: 'Ручку устанавливает', value: penInstalled.value })
-      if (penProvided.value === 'Предоставляет изготовитель') {
+      penParams.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
+      penParams.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
+      if (penProvided.value === 'manufacturer') {
         if (additionalPenId.value != null && additionalPenMarking.value) {
-          penParams.push({ name: 'Модель ручки', value: additionalPenMarking.value })
+          penParams.push({ paramCode: 'penModel', name: 'Модель ручки', value: additionalPenMarking.value })
         }
-        penParams.push({ name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
+        penParams.push({ paramCode: 'penColor', name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
       }
     }
-    blocks.push({ blockName: 'Дополнительная ручка (скоба)', params: penParams })
+    blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
     // Цена
     if (priceDealer.value || priceRetail.value) {
       blocks.push({
-        blockName: 'Цена',
+        blockCode: 'price', blockName: 'Цена',
         params: [
-          { name: 'Дилерская цена', value: String(priceDealer.value) },
-          { name: 'Рек. розн. цена', value: String(priceRetail.value) },
+          { paramCode: 'dealerPrice', name: 'Дилерская цена', value: String(priceDealer.value) },
+          { paramCode: 'retailPrice', name: 'Рек. розн. цена', value: String(priceRetail.value) },
         ],
       })
     }
@@ -977,6 +1059,7 @@ const fieldsFilled = ref<number>(0)
     providesMaterial,
     providesPaint,
     providesPrimer,
+    participantRoleProblems,
     doesPaintingFrame,
     doesAssembly,
     fillSide,
@@ -984,10 +1067,23 @@ const fieldsFilled = ref<number>(0)
     materialYardGlob,
     nalichieStolbovName,
     hasStolby,
+    postsPresenceProblem,
+    jumperPlacement,
+    jumperPlacementProblem,
     stolbId,
+    postProfile,
+    fillingProfileFacade,
+    fillingProfileFacadeProblem,
+    fillingProfileYard,
+    fillingProfileYardProblem,
+    postProfileProblem,
+    jumperProfile,
+    jumperProfileProblem,
     stolbName,
     openingOptionName,
     openingOptionId,
+    openingOrientation,
+    openingOrientationProblem,
     openingOptionPathPhoto,
     peremichkaPolozheniyeId,
     peremichkaPolozheniyeName,
@@ -1042,6 +1138,10 @@ const fieldsFilled = ref<number>(0)
     netWidthProviderLower,
     netWidthProviderSide,
     idFacade,
+    materialSelectionProblems,
+    profileTypeFacadeId,
+    typeOfCoatingFacadeId,
+    sidingFormFacadeId,
     manufacturerFacadeId,
     colorFacadeId,
     materialSupplierFacade,
@@ -1061,6 +1161,9 @@ const fieldsFilled = ref<number>(0)
     gapName,
     numberOfSticks,
     idYard,
+    profileTypeYardId,
+    typeOfCoatingYardId,
+    sidingFormYardId,
     manufacturerYardId,
     colorYardId,
     materialSupplierYard,

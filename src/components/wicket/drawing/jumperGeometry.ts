@@ -1,17 +1,18 @@
-export type JumperPlacement = 'above' | 'behind'
+import { isJumperPlacement, type JumperPlacement } from '../../../app/api/jumperProperties'
+export type JumperProjection = 'above' | 'behind'
 export type WicketView = 'street' | 'yard'
 
 export interface JumperGeometryInput {
   openingHeight: number
   bottomClearance: number
   hasPosts: boolean
-  jumperName: unknown
+  jumperPlacement: JumperPlacement
   jumperHeight: number
 }
 
 export interface JumperGeometry {
   visible: boolean
-  placement: JumperPlacement
+  placement: JumperProjection
   railY: number
   gateY: number
   gateHeight: number
@@ -25,9 +26,12 @@ export interface JumperPresentation {
 }
 
 export function computeJumperGeometry(input: JumperGeometryInput): JumperGeometry {
-  const name = typeof input.jumperName === 'string' ? input.jumperName.trim() : ''
-  const visible = name !== '' && !/без/i.test(name)
-  const placement: JumperPlacement = /за/i.test(name) ? 'behind' : 'above'
+  if (!isJumperPlacement(input.jumperPlacement) || typeof input.hasPosts !== 'boolean') {
+    throw new Error('Для геометрии нужны явные свойства перемычки и столбов.')
+  }
+  const visible = input.jumperPlacement !== 'none'
+  // Explicit none has a hidden overhead projection, matching saved BE geometry.
+  const placement: JumperProjection = input.jumperPlacement === 'behind' ? 'behind' : 'above'
   const topDeduction = visible && placement === 'above'
     ? Math.max(0, input.jumperHeight) + 5
     : 0
@@ -41,7 +45,7 @@ export function computeJumperGeometry(input: JumperGeometryInput): JumperGeometr
 }
 
 export function resolveJumperPresentation(
-  placement: JumperPlacement,
+  placement: JumperProjection,
   view: WicketView,
 ): JumperPresentation {
   const background = placement === 'behind' && view === 'street'

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
+import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import { getSidingTable, saveWicketData, recalculate, type SidingRow, type SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from './FilterDropdown.vue'
 import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
@@ -42,6 +43,16 @@ const filters = reactive({
 const rows         = ref<SidingRow[]>([])
 const selectedRow  = ref<SidingRow | null>(null)
 const tableLoading = ref(false)
+let tableRevision = 0
+let disposed = false
+const catalogContext = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, calc.materialYardGlob.value]))
+onBeforeUnmount(() => { disposed = true; tableRevision++ })
+watch(catalogContext, () => {
+  tableRevision++
+  rows.value = []
+  selectedRow.value = null
+  void loadTable(1)
+})
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 const appearanceSave = createFillingAppearanceSaveCoordinator(calc, 'yard')
@@ -50,17 +61,22 @@ const appearanceSaving = appearanceSave.saving
 const appearanceSaveFailed = appearanceSave.failed
 
 async function loadTable(page = currentPage.value) {
+  const revision = ++tableRevision
+  const context = catalogContext.value
+  const current = () => !disposed && revision === tableRevision && context === catalogContext.value
   tableLoading.value = true
   try {
     const result = await getSidingTable(calc.modelId.value, filters, page)
+    if (!current()) return
     rows.value       = result.table
     pagination.value = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
+    if (!current()) return
     console.warn('getSidingTable недоступен:', e)
     rows.value = []
   } finally {
-    tableLoading.value = false
+    if (current()) tableLoading.value = false
   }
 }
 
@@ -94,6 +110,8 @@ function restoreFromCalc(): SidingRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    drawingProfile: calc.fillingProfileYard.value,
+    drawingProfileProblem: calc.fillingProfileYardProblem.value,
     material:      calc.materialYard.value,
     form:          calc.formYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
@@ -105,6 +123,12 @@ function restoreFromCalc(): SidingRow | null {
 
 // ─── Сохранение ──────────────────────────────────────────────────────────────
 async function save(row: SidingRow): Promise<boolean> {
+  const descriptor = parseFillingDrawingDescriptor(row.drawingProfile, row.drawingProfileProblem)
+  calc.fillingProfileYard.value = descriptor.profile
+  calc.fillingProfileYardProblem.value = descriptor.problem
+  calc.sidingFormYardId.value = row.sidingFormId ?? null
+  calc.typeOfCoatingYardId.value = row.typeOfCoatingId ?? null
+  calc.profileTypeYardId.value = null
   calc.idYard.value                = row.id
   calc.materialYard.value          = row.material
   calc.formYard.value              = row.form
@@ -136,13 +160,13 @@ async function save(row: SidingRow): Promise<boolean> {
 }
 
 function updateSummary(row: SidingRow): void {
-  calc.updateOrCreateBlock('Заполнение (двор)', [
-    { name: 'Производитель материала', value: calc.materialSupplierYard.value },
-    { name: 'Материал',                value: row.material },
-    { name: 'Форма',                   value: row.form },
-    { name: 'Тип покрытия',            value: row.typeOfCoating },
-    { name: 'Цвет',                    value: calc.colorYard.value },
-  ])
+  calc.updateOrCreateBlock('fillingYard', [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierYard.value },
+    { paramCode: 'material', name: 'Материал',                value: row.material },
+    { paramCode: 'form', name: 'Форма',                   value: row.form },
+    { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет',                    value: calc.colorYard.value },
+  ], 'Заполнение (двор)')
 }
 
 async function doRecalculate() {
@@ -230,7 +254,7 @@ defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
-  const page = calc.materialYardGlob.value === 'Профлист'
+  const page = calc.materialYardGlob.value === 'profnastil'
     ? 'page2_yard_profnastil'
     : 'page2_yard_siding'
   calc.setActivePage(page)
@@ -290,7 +314,7 @@ onMounted(async () => {
       v-if="selectedRow"
       ref="appearanceFields"
       :model-id="calc.modelId.value"
-      material-group="Сайдинг"
+      material-group="siding"
       side="yard"
       @change="saveAppearance"
     />

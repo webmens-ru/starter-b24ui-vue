@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 import { useCalculation } from '../../composables/useCalculation'
 import {
   getAssortmentStolb,
+  getOpeningOptions,
   getPolozhenieJumper,
   getAssortmentJumper,
   saveWicketData,
   recalculate,
 } from '../../app/api/wicket'
-import type { SelectItem } from '../../app/api/wicket'
+import type { JumperOption, OpeningOption, PipeOption } from '../../app/api/wicket'
+import { parsePipeProfileDescriptor, type PipeProfileDescriptor, type PipeProfileProblem } from '../../app/api/pipeProfiles'
+import { parseOpeningOrientation } from './openingOrientation'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 const emit = defineEmits<{
@@ -18,6 +21,14 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const context = { orderId: calc.orderId.value, productRowId: calc.productRowId.value, modelId: calc.modelId.value }
+let disposed = false
+let editVersion = 0
+function isCurrent() {
+  return !disposed && calc.orderId.value === context.orderId
+    && calc.productRowId.value === context.productRowId && calc.modelId.value === context.modelId
+}
+onBeforeUnmount(() => { disposed = true })
 
 // ─── Модальное окно ───────────────────────────────────────────────────────────
 const showModal  = ref(false)
@@ -31,191 +42,338 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 // ─── Столбы ──────────────────────────────────────────────────────────────────
-const stolbOptions      = ref<SelectItem[]>([])
-const nalichieStolbovName  = ref<'Со столбами' | 'Без столбов'>('Со столбами')
+const stolbOptions      = ref<PipeOption[]>([])
+const postsChoice = ref<0 | 1 | null>(null)
 const stolbId          = ref<string>('')
-const showStolbList     = computed(() => nalichieStolbovName.value === 'Со столбами')
+const showStolbList = computed(() => postsChoice.value === 1)
+const stolbLoading = ref(true)
+const stolbError = ref('')
 
 // ─── Вариант открытия ────────────────────────────────────────────────────────
-const openingOptions = computed(() => {
-  return [
-    { label: 'Наружу / Правая', id: 1, img: '/img/wicket_opening_diagram_02.jpg' },
-    { label: 'Наружу / Левая',  id: 3, img: '/img/wicket_opening_diagram_01.jpg' },
-    { label: 'Внутрь / Левая',  id: 2, img: '/img/wicket_opening_diagram_03.jpg' },
-    { label: 'Внутрь / Правая', id: 4, img: '/img/wicket_opening_diagram_04.jpg' },
-  ]
-})
 const openingOptionId = ref<number | null>(null)
+const availableOpeningOptions = ref<OpeningOption[]>([])
+const openingCatalogProblems = ref<Array<{ id: number; message: string }>>([])
+const openingLoading = ref(true)
+const openingLoadError = ref('')
+const selectedOpening = computed(() => availableOpeningOptions.value.find(option => option.id === openingOptionId.value))
+const openingProblem = computed(() => {
+  if (openingLoading.value) return 'Варианты открытия загружаются.'
+  if (openingLoadError.value) return openingLoadError.value
+  if (openingOptionId.value === null || selectedOpening.value) return ''
+  return calc.openingOrientationProblem.value?.message
+    || openingCatalogProblems.value.find(problem => problem.id === openingOptionId.value)?.message
+    || 'Выбранный вариант открытия недоступен. Выберите действующий вариант.'
+})
+const openingOptions = computed(() => {
+  const items = availableOpeningOptions.value.map(option => ({ id: option.id, label: option.name, img: option.pathPhoto, available: true }))
+  if (openingOptionId.value !== null && !selectedOpening.value) {
+    items.push({ id: openingOptionId.value, label: calc.openingOptionName.value || 'Сохранённый вариант открытия', img: calc.openingOptionPathPhoto.value, available: false })
+  }
+  return items
+})
+
+function syncOpeningFields() {
+  const option = selectedOpening.value
+  calc.openingOptionId.value = openingOptionId.value
+  calc.openingOptionName.value = option?.name ?? ''
+  calc.openingOptionPathPhoto.value = option?.pathPhoto ?? ''
+  calc.openingOrientation.value = option ? parseOpeningOrientation(option) : null
+  calc.openingOrientationProblem.value = null
+}
+
+async function loadOpeningOptions() {
+  try {
+    const response = await getOpeningOptions()
+    if (!isCurrent()) return
+    availableOpeningOptions.value = response.options
+    openingCatalogProblems.value = response.problems
+    if (selectedOpening.value) syncOpeningFields()
+  } catch {
+    openingLoadError.value = 'Не удалось загрузить варианты открытия. Повторите загрузку страницы.'
+  } finally {
+    openingLoading.value = false
+  }
+}
 
 // ─── Перемычка ───────────────────────────────────────────────────────────────
-const showPeremichka         = ref(false)
-const peremichkaOptions      = ref<SelectItem[]>([])
+const showPeremichka = computed(() => openingOptionId.value !== null)
+const peremichkaOptions = ref<JumperOption[]>([])
 const peremichkaPolozheniyeId = ref<string>('')
-const showSortament          = ref(false)
-const sortamentOptions       = ref<SelectItem[]>([])
+const selectedJumper = computed(() => peremichkaOptions.value.find(option => String(option.id) === peremichkaPolozheniyeId.value))
+const showSortament = computed(() => selectedJumper.value?.hasJumper === true)
+const jumperLoading = ref(false)
+const jumperError = ref('')
+const sortamentLoading = ref(false)
+const sortamentError = ref('')
+const jumperProblem = computed(() => {
+  if (jumperLoading.value) return 'Положения перемычки загружаются.'
+  if (jumperError.value) return jumperError.value
+  if (selectedJumper.value?.placement === 'behind' && !selectedOpening.value?.opensOutward) return 'Перемычка за створкой доступна только при открывании наружу.'
+  if (!peremichkaPolozheniyeId.value || selectedJumper.value) return ''
+  return calc.jumperPlacementProblem.value?.message || 'Сохранённая перемычка недоступна. Выберите действующее положение.'
+})
+const sortamentOptions       = ref<PipeOption[]>([])
 const assortmentJumperId      = ref<string>('')
 
 // Формат для B24SelectMenu: { id, label }
-const stolbSelectItems       = computed(() => stolbOptions.value.map(o => ({ id: String(o.id), label: o.name })))
-const peremichkaSelectItems  = computed(() => peremichkaOptions.value.map(o => ({ id: String(o.id), label: o.name })))
-const sortamentSelectItems   = computed(() => sortamentOptions.value.map(o => ({ id: String(o.id), label: o.name })))
+function pipeItems(options: PipeOption[], id: string, name: string) {
+  const items = options.map(o => ({ id: String(o.id), label: o.name, disabled: o.disabled }))
+  if (id && !options.some(o => String(o.id) === id)) {
+    items.push({ id, label: name || 'Сохранённая труба', disabled: true })
+  }
+  return items
+}
+const stolbSelectItems = computed(() => pipeItems(stolbOptions.value, stolbId.value, calc.stolbName.value))
+const peremichkaSelectItems = computed(() => {
+  const items = peremichkaOptions.value.map(o => ({ id: String(o.id), label: o.name, disabled: false }))
+  if (peremichkaPolozheniyeId.value && !selectedJumper.value) {
+    items.push({ id: peremichkaPolozheniyeId.value, label: calc.peremichkaPolozheniyeName.value || 'Сохранённая перемычка', disabled: true })
+  }
+  return items
+})
+const sortamentSelectItems = computed(() => pipeItems(sortamentOptions.value, assortmentJumperId.value, calc.peremichkaSortamentName.value ?? ''))
+
+function pipeDescriptor(options: PipeOption[], id: string, savedProblem: PipeProfileProblem | null): PipeProfileDescriptor {
+  if (!id) return { profile: null, profileProblem: { code: 'missing', message: 'Выберите необходимую трубу.' } }
+  const item = options.find(o => String(o.id) === id)
+  if (!item) return { profile: null, profileProblem: savedProblem ?? { code: 'unavailable', message: 'Выбранная труба недоступна. Выберите действующую.' } }
+  return parsePipeProfileDescriptor(item.disabled ? null : item.profile, item.profileProblem)
+}
+const postDescriptor = computed(() => pipeDescriptor(stolbOptions.value, stolbId.value, calc.postProfileProblem.value))
+const jumperDescriptor = computed(() => pipeDescriptor(sortamentOptions.value, assortmentJumperId.value, calc.jumperProfileProblem.value))
+const postProfileProblem = computed(() => postsChoice.value === 1 && !stolbLoading.value && !stolbError.value ? postDescriptor.value.profileProblem?.message ?? '' : '')
+const jumperProfileProblem = computed(() => showSortament.value && !sortamentLoading.value && !sortamentError.value ? jumperDescriptor.value.profileProblem?.message ?? '' : '')
+
+function syncPostProfile() {
+  const post = postsChoice.value === 1 ? postDescriptor.value : { profile: null, profileProblem: null }
+  calc.postProfile.value = post.profile
+  calc.postProfileProblem.value = post.profileProblem
+}
+
+function syncJumperProfile() {
+  const jumper = showSortament.value ? jumperDescriptor.value : { profile: null, profileProblem: null }
+  calc.jumperProfile.value = jumper.profile
+  calc.jumperProfileProblem.value = jumper.profileProblem
+}
+
+function syncPipeProfiles() {
+  syncPostProfile()
+  syncJumperProfile()
+}
 
 // ─── Загрузка данных ─────────────────────────────────────────────────────────
 async function loadStolbOptions() {
   try {
     const res = await getAssortmentStolb(calc.modelId.value)
+    if (!isCurrent()) return
     stolbOptions.value = res.assortmentPipe
-    // Дефолтный выбор id=7 при первом открытии
-    if (!stolbId.value) {
-      const defaultItem = stolbOptions.value.find(i => i.id === 7)
-      stolbId.value = String(defaultItem?.id ?? stolbOptions.value[0]?.id ?? '')
-    }
   } catch (e) {
-    console.warn('getAssortmentStolb:', e)
+    if (isCurrent()) stolbError.value = 'Не удалось загрузить сортамент столбов.'
+  } finally {
+    if (isCurrent()) stolbLoading.value = false
   }
 }
 
-async function loadPolozhenieOptions(openingId: number) {
+let openingRequestVersion = 0
+async function loadPolozhenieOptions(openingId: number): Promise<boolean> {
+  const version = ++openingRequestVersion
+  jumperLoading.value = true
+  jumperError.value = ''
   try {
     const res = await getPolozhenieJumper(calc.modelId.value, openingId)
+    if (!isCurrent() || version !== openingRequestVersion || openingId !== openingOptionId.value) return false
     peremichkaOptions.value = res.availablePolozheniyeJumper
-    if (!peremichkaPolozheniyeId.value) {
-      peremichkaPolozheniyeId.value = String(peremichkaOptions.value[0]?.id ?? '')
-    }
+    return true
   } catch (e) {
-    console.warn('getPolozhenieJumper:', e)
+    if (isCurrent() && version === openingRequestVersion) jumperError.value = 'Не удалось загрузить положения перемычки.'
+    return false
+  } finally {
+    if (isCurrent() && version === openingRequestVersion) jumperLoading.value = false
   }
 }
 
-async function loadSortamentOptions() {
+let sortamentRequestVersion = 0
+async function loadSortamentOptions(): Promise<boolean> {
+  const version = ++sortamentRequestVersion
+  const selectedId = peremichkaPolozheniyeId.value
+  sortamentLoading.value = true
+  sortamentError.value = ''
   try {
     const res = await getAssortmentJumper(calc.modelId.value)
+    if (!isCurrent() || version !== sortamentRequestVersion || selectedId !== peremichkaPolozheniyeId.value) return false
     sortamentOptions.value = res.assortmentJumper
-    // Дефолтный выбор id=11 при первом открытии
-    if (!assortmentJumperId.value) {
-      const defaultItem = sortamentOptions.value.find(i => i.id === 11)
-      assortmentJumperId.value = String(defaultItem?.id ?? sortamentOptions.value[0]?.id ?? '')
-    }
+    return true
   } catch (e) {
-    console.warn('getAssortmentJumper:', e)
+    if (isCurrent() && version === sortamentRequestVersion) sortamentError.value = 'Не удалось загрузить сортамент перемычки.'
+    return false
+  } finally {
+    if (isCurrent() && version === sortamentRequestVersion) sortamentLoading.value = false
   }
 }
 
 // ─── Обработчики ─────────────────────────────────────────────────────────────
 async function onNalichieChange() {
+  if (!isCurrent()) return
+  ++editVersion
+  calc.postsPresenceProblem.value = null
+  syncPostFields()
   await save()
 }
 
 async function onStolbChange() {
+  if (!isCurrent()) return
+  ++editVersion
+  syncPostFields()
   await save()
 }
 
 async function onOpeningOptionChange() {
-  if (openingOptionId.value === null) return
-  showPeremichka.value = true
-  showSortament.value  = false
+  if (!isCurrent() || openingOptionId.value === null || openingProblem.value) return
+  const version = ++editVersion
+  syncOpeningFields()
+  ++sortamentRequestVersion
+  sortamentLoading.value = false
+  sortamentError.value = ''
   assortmentJumperId.value = ''
   peremichkaOptions.value    = []
   sortamentOptions.value     = []
   calc.peremichkaPolozheniyeId.value   = ''
   calc.peremichkaPolozheniyeName.value = ''
+  calc.jumperPlacement.value = null
+  calc.jumperPlacementProblem.value = null
   calc.assortmentJumperId.value         = null
+  calc.jumperProfile.value = null
+  calc.jumperProfileProblem.value = null
   calc.peremichkaSortamentName.value   = null
   peremichkaPolozheniyeId.value = ''
-  await loadPolozhenieOptions(openingOptionId.value)
-  await save()
+  if (!await loadPolozhenieOptions(openingOptionId.value)) return
+  await save(version)
 }
 
 async function onPolozhenieChange() {
-  showSortament.value = peremichkaPolozheniyeId.value !== '1'
+  if (!isCurrent()) return
+  const version = ++editVersion
+  ++sortamentRequestVersion
+  sortamentLoading.value = false
+  sortamentError.value = ''
   sortamentOptions.value = []
   assortmentJumperId.value = ''
+  syncJumperFields()
   if (showSortament.value) {
-    await loadSortamentOptions()
+    if (!await loadSortamentOptions()) return
   }
-  await save()
+  await save(version)
 }
 
 async function onSortamentChange() {
+  if (!isCurrent()) return
+  ++editVersion
+  syncJumperFields()
   await save()
 }
 
 // ─── Синхронизация + сохранение ──────────────────────────────────────────────
-function syncCalcFields() {
-  calc.nalichieStolbovName.value = nalichieStolbovName.value
-  calc.hasStolby.value   = nalichieStolbovName.value === 'Со столбами' ? 1 : 0
+function syncPostFields() {
+  calc.hasStolby.value = postsChoice.value
+  calc.nalichieStolbovName.value = postsChoice.value === 1 ? 'Со столбами' : postsChoice.value === 0 ? 'Без столбов' : ''
 
-  if (nalichieStolbovName.value === 'Со столбами') {
+  if (postsChoice.value === 1) {
+    const previousName = String(calc.stolbId.value) === stolbId.value ? calc.stolbName.value : ''
     calc.stolbId.value   = stolbId.value
     const item = stolbOptions.value.find(i => String(i.id) === stolbId.value)
-    calc.stolbName.value = item?.name ?? ''
+    calc.stolbName.value = item?.name ?? previousName
   } else {
     calc.stolbId.value   = ''
     calc.stolbName.value = ''
   }
 
-  const openingItem = openingOptions.value.find(o => o.id === openingOptionId.value)
-  calc.openingOptionName.value       = openingItem?.label ?? ''
-  calc.openingOptionId.value         = openingOptionId.value
-  calc.openingOptionPathPhoto.value = openingItem?.img ?? ''
+  syncPostProfile()
+}
 
+function syncJumperFields() {
   calc.peremichkaPolozheniyeId.value = peremichkaPolozheniyeId.value
   const polItem = peremichkaOptions.value.find(i => String(i.id) === peremichkaPolozheniyeId.value)
   calc.peremichkaPolozheniyeName.value = polItem?.name ?? ''
+  calc.jumperPlacement.value = polItem?.placement ?? null
+  calc.jumperPlacementProblem.value = null
 
-  if (calc.peremichkaPolozheniyeName.value && calc.peremichkaPolozheniyeName.value !== 'Без перемычки') {
+  if (polItem?.hasJumper) {
+    const previousName = String(calc.assortmentJumperId.value) === assortmentJumperId.value ? calc.peremichkaSortamentName.value : null
     calc.assortmentJumperId.value = assortmentJumperId.value || null
     const sortItem = sortamentOptions.value.find(i => String(i.id) === assortmentJumperId.value)
-    calc.peremichkaSortamentName.value = sortItem?.name ?? null
+    calc.peremichkaSortamentName.value = sortItem?.name ?? previousName
   } else {
     calc.assortmentJumperId.value       = null
     calc.peremichkaSortamentName.value = null
   }
+  syncJumperProfile()
+}
+
+function syncCalcFields() {
+  syncPostFields()
+  syncOpeningFields()
+  syncJumperFields()
 }
 
 function buildBlock() {
-  const params: { name: string; value: string }[] = [
-    { name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
+  const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'postsPresence', name: 'Наличие столбов', value: calc.nalichieStolbovName.value },
   ]
-  if (nalichieStolbovName.value === 'Со столбами' && calc.stolbName.value) {
-    params.push({ name: 'Сортамент столбов', value: calc.stolbName.value })
+  if (postsChoice.value === 1 && calc.stolbName.value) {
+    params.push({ paramCode: 'postProfile', name: 'Сортамент столбов', value: calc.stolbName.value })
   }
   if (calc.openingOptionName.value) {
-    params.push({ name: 'Вариант открытия', value: calc.openingOptionName.value })
+    params.push({ paramCode: 'openingOption', name: 'Вариант открытия', value: calc.openingOptionName.value })
   }
   if (calc.peremichkaPolozheniyeName.value) {
-    params.push({ name: 'Положение перемычки', value: calc.peremichkaPolozheniyeName.value })
+    params.push({ paramCode: 'jumperPlacement', name: 'Положение перемычки', value: calc.peremichkaPolozheniyeName.value })
   }
   if (calc.peremichkaSortamentName.value) {
-    params.push({ name: 'Сортамент перемычки', value: calc.peremichkaSortamentName.value })
+    params.push({ paramCode: 'jumperProfile', name: 'Сортамент перемычки', value: calc.peremichkaSortamentName.value })
   }
-  calc.updateOrCreateBlock('Столбы / вариант открытия / перемычка', params)
+  calc.updateOrCreateBlock('postsOpeningJumper', params, 'Столбы / вариант открытия / перемычка')
 }
 
-async function save() {
+function selectionProblem(): string {
+  return openingProblem.value || (openingOptionId.value === null ? '' : jumperProblem.value)
+    || (postsChoice.value === 1 ? (stolbLoading.value ? 'Сортамент столбов загружается.' : stolbError.value) : '')
+    || (showSortament.value ? (sortamentLoading.value ? 'Сортамент перемычки загружается.' : sortamentError.value) : '')
+    || calc.postsPresenceProblem.value?.message || ''
+}
+
+function isComplete(): boolean {
+  return postsChoice.value !== null && !!selectedOpening.value && !!selectedJumper.value
+    && (postsChoice.value === 0 || postDescriptor.value.profile !== null)
+    && (!showSortament.value || jumperDescriptor.value.profile !== null)
+}
+
+async function save(version = editVersion): Promise<boolean> {
+  if (!isCurrent() || version !== editVersion) return false
+  const problem = selectionProblem()
+  if (problem) {
+    openModal(problem)
+    return false
+  }
   syncCalcFields()
   buildBlock()
 
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      nalichieStolbovName:     calc.nalichieStolbovName.value,
-      hasStolby:               calc.hasStolby.value,
-      stolbName:                calc.stolbName.value,
-      stolbId:                  calc.stolbId.value,
-      openingOptionName:       calc.openingOptionName.value,
+      ...(calc.hasStolby.value === null ? {} : { hasStolby: calc.hasStolby.value }),
+      stolbId:                  calc.stolbId.value || null,
       openingOptionId:         calc.openingOptionId.value,
-      openingOptionPathPhoto: calc.openingOptionPathPhoto.value,
-      peremichkaPolozheniyeName: calc.peremichkaPolozheniyeName.value,
-      peremichkaPolozheniyeId:   calc.peremichkaPolozheniyeId.value,
-      peremichkaSortamentName:   calc.peremichkaSortamentName.value,
+      peremichkaPolozheniyeId:   calc.peremichkaPolozheniyeId.value || null,
       assortmentJumperId:        calc.assortmentJumperId.value,
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
+    if (isCurrent() && version === editVersion) openModal('Не удалось сохранить выбранную конфигурацию. Повторите попытку.')
+    return false
   }
 
-  if (calc.priceRetail.value) {
+  if (!isCurrent() || version !== editVersion) return false
+  if (calc.priceRetail.value && isComplete()) {
     try {
       const result = await recalculate({
         orderId: Number(calc.number.value),
@@ -224,21 +382,35 @@ async function save() {
         model:              calc.model.value,
         modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+      if (isCurrent() && version === editVersion) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
   }
+  return isCurrent() && version === editVersion
 }
 
 // ─── Кнопка «Далее» ──────────────────────────────────────────────────────────
 async function validateAndSave(): Promise<boolean> {
+  if (!isCurrent()) return false
+  const problem = selectionProblem() || postProfileProblem.value || jumperProfileProblem.value
+  if (problem) {
+    openModal(problem)
+    return false
+  }
   if (openingOptionId.value === null) {
     openModal('Выберите вариант открытия')
     return false
   }
-  await save()
-  return true
+  if (postsChoice.value === null) {
+    openModal('Выберите наличие столбов')
+    return false
+  }
+  if (!isComplete()) {
+    openModal('Выберите действующее положение перемычки и необходимый сортамент.')
+    return false
+  }
+  return await save()
 }
 
 const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
@@ -248,43 +420,31 @@ defineExpose({ validateBeforeLeave })
 
 // ─── Монтирование ────────────────────────────────────────────────────────────
 onMounted(async () => {
+  const mountingVersion = editVersion
   calc.setActivePage('page5')
 
   // Восстанавливаем сохранённые значения
   // Важно: восстанавливаем через hasStolby (1/0), а не через nalichieStolbovName,
   // потому что бэкенд возвращает 'Есть'/'Нет', а компонент использует 'Со столбами'/'Без столбов'
-  if (calc.hasStolby.value === 1) {
-    nalichieStolbovName.value = 'Со столбами'
-  } else if (calc.hasStolby.value === 0) {
-    nalichieStolbovName.value = 'Без столбов'
-  }
+  postsChoice.value = calc.hasStolby.value
+  stolbId.value = String(calc.stolbId.value || '')
+  peremichkaPolozheniyeId.value = String(calc.peremichkaPolozheniyeId.value || '')
+  assortmentJumperId.value = String(calc.assortmentJumperId.value || '')
   if (calc.openingOptionId.value !== null) {
     openingOptionId.value = calc.openingOptionId.value
   }
 
-  await loadStolbOptions()
+  await Promise.all([loadStolbOptions(), loadOpeningOptions()])
+  if (!isCurrent() || mountingVersion !== editVersion) return
 
-  // Восстанавливаем stolbId после загрузки списка
-  if (calc.stolbId.value) {
-    stolbId.value = String(calc.stolbId.value)
-  }
-
-  if (openingOptionId.value !== null) {
-    showPeremichka.value = true
-    await loadPolozhenieOptions(openingOptionId.value)
-    if (calc.peremichkaPolozheniyeId.value) {
-      peremichkaPolozheniyeId.value = String(calc.peremichkaPolozheniyeId.value)
-    }
-    if (peremichkaPolozheniyeId.value && peremichkaPolozheniyeId.value !== '1') {
-      showSortament.value = true
+  if (selectedOpening.value && !openingProblem.value) {
+    if (!await loadPolozhenieOptions(selectedOpening.value.id)) return
+    if (showSortament.value) {
       await loadSortamentOptions()
-      if (calc.assortmentJumperId.value) {
-        assortmentJumperId.value = String(calc.assortmentJumperId.value)
-      }
     }
   }
-
-  await save()
+  if (!isCurrent() || mountingVersion !== editVersion) return
+  syncPipeProfiles()
 })
 </script>
 
@@ -315,9 +475,9 @@ onMounted(async () => {
         <div class="stolb-grid">
           <label class="lock-card">
             <input
-              v-model="nalichieStolbovName"
+              v-model="postsChoice"
               type="radio"
-              value="Со столбами"
+              :value="1"
               class="sr-only"
               @change="onNalichieChange"
             />
@@ -327,9 +487,9 @@ onMounted(async () => {
           </label>
           <label class="lock-card">
             <input
-              v-model="nalichieStolbovName"
+              v-model="postsChoice"
               type="radio"
-              value="Без столбов"
+              :value="0"
               class="sr-only"
               @change="onNalichieChange"
             />
@@ -354,6 +514,8 @@ onMounted(async () => {
       </div>
 
       <!-- Вариант открытия -->
+      <p v-if="postProfileProblem" role="alert" class="text-red-600">{{ postProfileProblem }}</p>
+      <p v-if="openingProblem" role="alert" class="text-red-600">{{ openingProblem }}</p>
       <div class="opening-grid">
         <label
           v-for="opt in openingOptions"
@@ -364,11 +526,13 @@ onMounted(async () => {
             v-model="openingOptionId"
             type="radio"
             :value="opt.id"
+            :disabled="openingLoading || !opt.available"
             class="sr-only"
             @change="onOpeningOptionChange"
           />
           <div class="card-content">
             <img
+              v-if="opt.img"
               :src="opt.img"
               :alt="opt.label"
               class="w-full h-[140px] object-contain mb-2"
@@ -379,6 +543,10 @@ onMounted(async () => {
       </div>
 
       <!-- Перемычка -->
+      <p v-if="calc.postsPresenceProblem.value" role="alert" class="text-red-600">{{ calc.postsPresenceProblem.value.message }}</p>
+      <p v-if="jumperProblem" role="alert" class="text-red-600">{{ jumperProblem }}</p>
+      <p v-if="showSortament && sortamentError" role="alert" class="text-red-600">{{ sortamentError }}</p>
+      <p v-if="jumperProfileProblem" role="alert" class="text-red-600">{{ jumperProfileProblem }}</p>
       <div v-show="showPeremichka" class="flex flex-col items-start gap-2 w-full">
         <div class="peremichka-select-wrap">
           <span class="text-sm font-semibold whitespace-nowrap">Перемычка:</span>
@@ -388,6 +556,7 @@ onMounted(async () => {
               value-key="id"
               :items="peremichkaSelectItems"
               placeholder="Выберите перемычку"
+              :disabled="jumperLoading || !!openingProblem"
               class="w-full"
               @update:model-value="onPolozhenieChange"
             />

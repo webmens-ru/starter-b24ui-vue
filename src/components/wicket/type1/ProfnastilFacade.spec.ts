@@ -45,6 +45,22 @@ function mountFacade() {
 }
 
 describe('ProfnastilFacade color contract', () => {
+  it('ignores a late material catalog response after the product row context changes', async () => {
+    let resolve!: (value: unknown) => void
+    apiMocks.getProfnastilTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const wrapper = mountFacade()
+    const calc = useCalculation()
+    calc.productRowId.value = 99
+    calc.fillingProfileFacade.value = { kind: 'mp20' }
+    await flushPromises()
+    resolve({ table: [{ id: 997, name: 'Просроченный каталог', material: 'Просроченный каталог', form: 'Форма', thickness: '0.45', typeOfCoating: 'Покрытие', drawingProfile: { kind: 'c8' }, drawingProfileProblem: null }],
+      pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Просроченный каталог')
+    expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp20' })
+    wrapper.unmount()
+  })
+
   it('layers the color menu above surrounding content', () => {
     expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
   })
@@ -59,7 +75,7 @@ describe('ProfnastilFacade color contract', () => {
     calc.materialFacadeGlob.value = 'Профнастил'
     apiMocks.getProfnastilTable.mockReset()
     apiMocks.getProfnastilTable.mockResolvedValue({
-      table: [{ id: 7, name: 'Профлист С-8, 0,5 мм, Полиэстер', material: 'С-8', thickness: '0.5', typeOfCoating: 'Полиэстер' }],
+      table: [{ id: 7, drawingProfile: { kind: 'c8' }, drawingProfileProblem: null, name: 'Профлист С-8, 0,5 мм, Полиэстер', material: 'С-8', thickness: '0.5', typeOfCoating: 'Полиэстер' }],
       pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 },
     })
     apiMocks.getProfnastilColors.mockReset()
@@ -94,6 +110,8 @@ describe('ProfnastilFacade color contract', () => {
 
     const calc = useCalculation()
     expect(calc.colorFacadeId.value).toBe(8)
+    expect(calc.fillingProfileFacade.value).toEqual({ kind: 'c8' })
+    expect(calc.fillingProfileFacadeProblem.value).toBeNull()
     expect(calc.colorFacade.value).toBe('RAL 8017')
     expect(apiMocks.saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: 8 }))
   })

@@ -147,7 +147,7 @@ async function onModelSelect(item: (typeof models)[0]) {
     calc.modelId.value = item.id
     calc.model.value = item.model
     calc.productType.value = 'Калитка'
-    calc.updateOrCreateBlock('Модель', [{ name: 'Модель', value: item.model }])
+    calc.updateOrCreateBlock('model', [{ paramCode: 'model', name: 'Модель', value: item.model }], 'Модель')
 
     await router.push({
       path: item.route,

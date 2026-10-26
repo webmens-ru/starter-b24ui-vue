@@ -2,7 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAdditionalPens, saveWicketData } from '../../app/api/wicket'
+import { getAdditionalPens, saveWicketData, recalculate } from '../../app/api/wicket'
 import { useCalculation } from '../../composables/useCalculation'
 import Pen from './Pen.vue'
 
@@ -44,6 +44,23 @@ function getNextButton(wrapper: VueWrapper) {
 }
 
 describe('Pen frame color capability', () => {
+  it('does not promote an invalid stored supplier or installer code to manufacturer on mount', async () => {
+    setActivePinia(createPinia())
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [] })
+    const calc = useCalculation()
+    calc.orderId.value = 42
+    calc.productRowId.value = 7
+    calc.loadFromApi({ isTherePen: 1, isTherePenName: 'Будет', penProvided: 'Предоставляет изготовитель', penProvidedCode: 'unknown',
+      penInstalled: 'Устанавливает изготовитель', penInstalledCode: 'unknown' })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(wrapper.findAll('input[name="penProvided"]')).toHaveLength(2)
+    expect(wrapper.find('input[name="penProvided"]:checked').exists()).toBe(false)
+    expect(wrapper.find('input[name="penInstalled"]:checked').exists()).toBe(false)
+    expect(calc.penProvided.value).toBe('')
+    expect(calc.penInstalled.value).toBe('')
+    wrapper.unmount()
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -53,8 +70,98 @@ describe('Pen frame color capability', () => {
     calc.productRowId.value = 7
     calc.modelId.value = '1'
     calc.isTherePenName.value = 'Будет'
-    calc.penProvided.value = 'Предоставляет изготовитель'
-    calc.penInstalled.value = 'Устанавливает изготовитель'
+    calc.isTherePen.value = 1
+    calc.penProvided.value = 'manufacturer'
+    calc.penInstalled.value = 'manufacturer'
+  })
+
+  it('uses numeric presence even when the saved caption says absent', async () => {
+    const calc = useCalculation()
+    calc.isTherePen.value = 1
+    calc.isTherePenName.value = 'Не будет'
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ id: 7, marking: 'СК-7', canUseFrameColor: false,
+      colors: [{ id: 3, name: 'Иное название' }], imageUrls: [] }] })
+    calc.additionalPenId.value = 7
+    calc.penColorId.value = 3
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(calc.isTherePen.value).toBe(1)
+    expect(wrapper.get('input[name="pen-presence"][value="1"]').element).toHaveProperty('checked', true)
+    expect(calc.additionalPenId.value).toBe(7)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('isTherePenName')
+    wrapper.unmount()
+  })
+
+  it('preserves pending selection on invalid presence mount and repairs it only after numeric choice', async () => {
+    const calc = useCalculation()
+    calc.isTherePen.value = null
+    calc.isTherePenName.value = 'Будет'
+    calc.additionalPenId.value = 7
+    calc.penColorId.value = 3
+    calc.priceRetail.value = 1000
+    vi.mocked(recalculate).mockResolvedValue({ priceRetail: 1000, priceDealer: 900 })
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ id: 7, marking: 'СК-7', canUseFrameColor: false,
+      colors: [{ id: 3, name: 'Иное название' }], imageUrls: [] }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(recalculate).not.toHaveBeenCalled()
+    expect(calc.isTherePen.value).toBe(null)
+    expect(calc.additionalPenId.value).toBe(7)
+    expect(calc.penColorId.value).toBe(3)
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(wrapper.text()).toContain('Выберите наличие дополнительной ручки')
+    await wrapper.get('input[name="pen-presence"][value="1"]').setValue()
+    await flushPromises()
+    expect(calc.isTherePen.value).toBe(1)
+    expect(calc.additionalPenId.value).toBe(7)
+    expect(calc.penColorId.value).toBe(3)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ isTherePen: 1, additionalPenId: 7, penColorId: 3 }))
+    expect(wrapper.text()).not.toContain('Выберите наличие дополнительной ручки')
+    wrapper.unmount()
+  })
+
+  it('preserves pending frame colour when repairing unresolved presence', async () => {
+    const calc = useCalculation()
+    calc.isTherePen.value = null
+    calc.additionalPenId.value = 7
+    calc.penColorId.value = null
+    calc.additionalPenColor.value = 'Цвет каркаса'
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ id: 7, marking: 'СК-7', canUseFrameColor: true,
+      colors: [], imageUrls: [] }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    await wrapper.get('input[name="pen-presence"][value="1"]').setValue()
+    await flushPromises()
+    expect(calc.additionalPenColor.value).toBe('Цвет каркаса')
+    expect(calc.penColorId.value).toBe(null)
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('does not clear a pending pen or colour while saved participant roles are unresolved', async () => {
+    const calc = useCalculation()
+    calc.penProvided.value = ''
+    calc.penInstalled.value = ''
+    calc.additionalPenId.value = 7
+    calc.penColorId.value = 3
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ id: 7, marking: 'СК-7', canUseFrameColor: false,
+      colors: [{ id: 3, name: 'Иное название' }], imageUrls: [] }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.additionalPenId.value).toBe(7)
+    expect(calc.penColorId.value).toBe(3)
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(wrapper.text()).toContain('Выберите поставщика и исполнителя ручки')
+    await wrapper.get('input[name="penProvided"][value="manufacturer"]').setValue()
+    await wrapper.get('input[name="penInstalled"][value="manufacturer"]').setValue()
+    await flushPromises()
+    expect(calc.additionalPenId.value).toBe(7)
+    expect(calc.penColorId.value).toBe(3)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenId: 7, penColorId: 3 }))
+    wrapper.unmount()
   })
 
   it('offers frame color together with explicit colors and saves it as null', async () => {
@@ -141,6 +248,7 @@ describe('Pen frame color capability', () => {
 
   it('accepts the branch without a manufacturer-selected pen', async () => {
     useCalculation().isTherePenName.value = 'Не будет'
+    useCalculation().isTherePen.value = 0
     vi.mocked(getAdditionalPens).mockResolvedValue({ items: [] })
     const wrapper = mountPen()
     await flushPromises()
