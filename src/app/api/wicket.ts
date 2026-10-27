@@ -759,6 +759,8 @@ export interface MaterialUnitDto {
 }
 
 export interface MaterialTypeDto {
+  /** Default copied to new items; existing items keep their own permission. */
+  isStandaloneSaleAllowed?: boolean
   id: number
   code: string
   name: string
@@ -789,6 +791,7 @@ export interface MaterialDocumentDto {
 }
 
 export interface MaterialItemDto {
+  isStandaloneSaleAllowed?: boolean
   id: number
   typeCode: string
   name: string
