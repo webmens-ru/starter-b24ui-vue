@@ -85,6 +85,7 @@ async function save() {
   await saveWicketData({
     ...calc.getBaseSavePayload(),
     providesMaterial: calc.providesMaterial.value,
+    fillingOrientationCode: calc.raspolozheniyePolotna.value,
     fillSide:                calc.fillSide.value,
     materialFacadeGlob:     calc.materialFacadeGlob.value,
     materialYardGlob:       calc.materialYardGlob.value,

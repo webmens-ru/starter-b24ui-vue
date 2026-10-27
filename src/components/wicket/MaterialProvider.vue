@@ -28,7 +28,11 @@ const choice = computed({
       calc.fillSide.value = 0
       calc.clearFilling()
     } else if (value === 'manufacturer' || value === 'customer') {
-      if (calc.fillSide.value === 0) { calc.clearFilling(); calc.fillSide.value = 1 }
+      if (calc.fillSide.value === 0) {
+        calc.clearFilling()
+        calc.raspolozheniyePolotna.value = 'vertical'
+        calc.fillSide.value = 1
+      }
       calc.providesMaterial.value = value
     }
   },
