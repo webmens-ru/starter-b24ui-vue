@@ -117,16 +117,16 @@ export function lockSection(): WicketRouteSection {
   const result = section('page9', 'Комплект замка', 'is-there-lock', ['page9', 'page_lock_type'])
   result.next = (from, state) => {
     if (!isOptionPresence(state.isThereLock)) return 'page9'
-    if (from === 'page9' && state.isThereLock === 1) {
+    if (from === 'page9' && state.isThereLock === 1 && state.providesLock !== 'customer') {
       return 'page_lock_type'
     }
     return undefined
   }
   result.prev = from => from === 'page_lock_type' ? 'page9' : undefined
-  result.last = state => state.isThereLock === 1 ? 'page_lock_type' : 'page9'
+  result.last = state => state.isThereLock === 1 && state.providesLock !== 'customer' ? 'page_lock_type' : 'page9'
   result.validate = state => {
     if (!isOptionPresence(state.isThereLock)) return { valid: false, errors: ['Выберите наличие замка'] }
-    if (state.isThereLock !== 1) return ok()
+    if (state.isThereLock !== 1 || state.providesLock === 'customer') return ok()
     return state.lockSetId == null
       ? { valid: false, errors: ['Не выбран тип замка'] }
       : ok()

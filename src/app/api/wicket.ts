@@ -490,6 +490,7 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
   return data
 }
 
+/** Customer-provided lock sets persist a null lockSetId together with the participant role codes. */
 export async function saveWicketData(payload: WicketSavePayload): Promise<WicketRootMutationResponse> {
   const canonicalPayload = canonicalizeWicketRootSavePayload(payload)
   assertProductRowContext(canonicalPayload)

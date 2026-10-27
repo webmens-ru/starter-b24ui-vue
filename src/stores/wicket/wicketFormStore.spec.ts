@@ -456,3 +456,13 @@ describe('canonical painting selection', () => {
     expect(store.data[0]?.params[0]?.paramCode).toBe('color')
   })
 })
+
+ describe('customer lock set loading', () => {
+  it('restores presence without a catalog ID using the stable provider code', () => {
+    setActivePinia(createPinia())
+    const store = useWicketFormStore()
+    store.loadFromApi({ lockSetId: null, providesLockCode: 'customer', lockInstallerCode: 'manufacturer' })
+    expect(store.isThereLock).toBe(1)
+    expect(store.providesLock).toBe('customer')
+  })
+})

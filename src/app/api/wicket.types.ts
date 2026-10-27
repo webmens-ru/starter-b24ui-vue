@@ -57,6 +57,7 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   /** Compatibility input only; outgoing requests remove this alias. */
   colorShieldId?: number | null
   providesPrimer?: string | null
+  /** Null for a customer-provided set; providesLockCode preserves its presence. */
   lockSetId?: number | null
   providesLock?: string | null
   lockInstaller?: string | null
@@ -484,6 +485,7 @@ export interface WicketGetDataResponse extends ParticipantRoleProperties, Fillin
   openingOrientationProblem?: OpeningOrientationProblem | null
   visitedPages: string[]
   activePage: string
+  /** Null for a customer-provided set; providesLockCode preserves its presence. */
   lockSetId?: number | null
   providesLock?: string | null
   lockInstaller?: string | null

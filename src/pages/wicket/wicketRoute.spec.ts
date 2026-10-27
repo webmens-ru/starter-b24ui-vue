@@ -99,3 +99,13 @@ describe('defineWicketRoute', () => {
     expect(menuPages).not.toContain('page11')
   })
 })
+
+ describe('customer lock set navigation', () => {
+  it('skips the catalog forward and backward and accepts a customer set without ID', () => {
+    const route = defineWicketRoute(standardTailSections())
+    const customer = { ...state, isThereLock: 1, providesLock: 'customer', lockSetId: null }
+    expect(route.next('page9', customer)).toBe('page10')
+    expect(route.prev('page10', customer)).toBe('page9')
+    expect(route.sections.find(section => section.menu.page === 'page9')?.validate(customer).valid).toBe(true)
+  })
+})

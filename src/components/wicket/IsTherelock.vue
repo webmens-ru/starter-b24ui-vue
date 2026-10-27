@@ -38,8 +38,16 @@ function syncCalcFields() {
   calc.isThereLock.value = presence.value
 
   if (showLockDetails.value) {
+    const switchedToCustomer = providesLock.value === 'customer' && calc.providesLock.value !== 'customer'
     calc.providesLock.value = providesLock.value
     calc.lockInstaller.value = lockInstaller.value
+    if (switchedToCustomer) {
+      calc.typeLock.value = ''
+      calc.lockSetId.value = null
+      calc.lockPenId.value = null
+      calc.lockPenColor.value = ''
+      calc.lockPenColorId.value = null
+    }
   } else {
     calc.providesLock.value  = ''
     calc.lockInstaller.value = ''
@@ -58,6 +66,9 @@ function buildBlock() {
   if (showLockDetails.value) {
     params.push({ paramCode: 'lockProvider', name: 'Замок предоставляет',    value: participantRoleLabel('provide', calc.providesLock.value) })
     params.push({ paramCode: 'lockInstaller', name: 'Врезку замка выполняет', value: participantRoleLabel('perform', calc.lockInstaller.value) })
+    if (calc.providesLock.value === 'customer') {
+      params.push({ paramCode: 'lockType', name: 'Тип замка', value: 'Комплект заказчика' })
+    }
   }
   calc.updateOrCreateBlock('lock', params, 'Замок')
 }

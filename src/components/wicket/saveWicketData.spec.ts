@@ -345,6 +345,23 @@ describe('saveWicketData — данные передаются на бэк', () 
     ])
   })
 
+  it('clears the catalog set when switching its provider to customer and preserves standalone rows', async () => {
+    calc.isThereLock.value = 1
+    calc.lockSetId.value = 7
+    calc.providesLock.value = 'manufacturer'
+    calc.lockInstaller.value = 'manufacturer'
+    const wrapper = mount(IsTherelock, { global: { plugins: [testRouter], stubs: ['B24Button'] } })
+    await new Promise(r => setTimeout(r, 100))
+    await wrapper.find('input[name="providesLock"][value="customer"]').setValue()
+    await new Promise(r => setTimeout(r, 100))
+    expect(calc.lockSetId.value).toBeNull()
+    expect(vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]).toMatchObject({
+      lockSetId: null, providesLock: 'customer', lockInstaller: 'manufacturer',
+    })
+    expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('сохраняет выбранный customer-owned комплект отдельно от состава комплектующих', async () => {
     calc.applyAccessoryComposition({
       lockVersion: 1,

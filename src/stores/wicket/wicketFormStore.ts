@@ -276,7 +276,7 @@ const fieldsFilled = ref<number>(0)
     if (isThereLock.value === 1) {
       params.push({ paramCode: 'lockProvider', name: 'Замок предоставляет', value: participantRoleLabel('provide', providesLock.value) })
       params.push({ paramCode: 'lockInstaller', name: 'Врезку замка выполняет', value: participantRoleLabel('perform', lockInstaller.value) })
-      params.push({ paramCode: 'lockType', name: 'Тип замка', value: typeLock.value || '' })
+      params.push({ paramCode: 'lockType', name: 'Тип замка', value: providesLock.value === 'customer' ? 'Комплект заказчика' : typeLock.value || '' })
     }
     return params
   }
@@ -673,7 +673,7 @@ const fieldsFilled = ref<number>(0)
           completed = isThereLock.value !== null
           break
         case 'page_lock_type':
-          completed = isThereLock.value !== 1 || lockComponentIds.value.length > 0
+          completed = isThereLock.value !== 1 || providesLock.value === 'customer' || lockSetId.value != null
           break
         case 'page10':
           completed = isTherePen.value !== null
@@ -873,7 +873,7 @@ const fieldsFilled = ref<number>(0)
         refMap[key].value = null
       }
     }
-    isThereLock.value = presenceFromLockSetId(lockSetId.value)
+    isThereLock.value = providesLock.value === 'customer' ? 1 : presenceFromLockSetId(lockSetId.value)
     isThereLockName.value = optionPresenceLabel(isThereLock.value, 'lock')
     if (import.meta.env.DEV && modelIdForLoad === '2') {
       console.info('[type2-drawing] Pinia after loadFromApi', {

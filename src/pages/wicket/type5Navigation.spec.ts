@@ -45,7 +45,7 @@ describe('type5Navigation', () => {
         expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
       })
       it('Замок есть + заказчик → page10 (пропуск выбора комплекта)', () => {
-        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
+        expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page10')
       })
       it('Замок нет (id=0) → page10 напрямую', () => {
         expect(getNextPage('page9', state({ isThereLock: 0 }))).toBe('page10')
@@ -100,8 +100,8 @@ describe('type5Navigation', () => {
       it('page10, замок есть + изготовитель → page_lock_type', () => {
         expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
       })
-      it('page10, замок есть + заказчик → page_lock_type', () => {
-        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page_lock_type')
+      it('page10, замок есть + заказчик → page9', () => {
+        expect(getPrevPage('page10', state({ isThereLock: 1, providesLock: 'customer' }))).toBe('page9')
       })
       it('page10, замок нет → page9', () => {
         expect(getPrevPage('page10', state({ isThereLock: 0 }))).toBe('page9')
