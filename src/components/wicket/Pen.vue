@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { participantRoleLabel, isParticipantRole } from '../../app/participantRoles'
-import { isOptionPresence, optionPresenceLabel, optionPresenceOptions, parseOptionPresence, type OptionPresenceSelection } from '../../app/optionPresence'
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { participantRoleLabel } from '../../app/participantRoles'
 import { useCalculation } from '../../composables/useCalculation'
 import { getAdditionalPens, saveWicketData, recalculate } from '../../app/api/wicket'
 import ImageViewer from './ImageViewer.vue'
@@ -14,446 +13,229 @@ interface PenItem {
   colors: { id: number; name: string }[]
   imageUrls?: string[]
 }
-
 type ColorChoice = number | 'frame' | null
-
-const emit = defineEmits<{
-  (e: 'next'): void
-  (e: 'back'): void
-}>()
-
+const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
-
 const penItems = ref<PenItem[]>([])
 const loading = ref(true)
-const presence = ref<OptionPresenceSelection>(0)
-const presenceOptions = optionPresenceOptions('optional')
-const penProvided = ref<string>('manufacturer')
-const penInstalled = ref<string>('manufacturer')
-const selectedPenId = ref<number | null>(null)
-const selectedColor = ref<ColorChoice>(null)
-const colorError = ref('')
-let isRestoringSelection = false
-const selectedColorModel = computed<number | 'frame' | undefined>({
-  get: () => selectedColor.value ?? undefined,
-  set: value => { selectedColor.value = value ?? null },
+const loadFailed = ref(false)
+const error = ref('')
+const configured = calc.additionalPenSidesConfigured.value === 1
+const legacyPending = !configured && (calc.additionalPenId.value != null || calc.isTherePen.value === 1 || calc.isTherePen.value === null)
+const sides = reactive([
+  { code: 'street', label: 'Ручка с улицы', id: configured ? calc.additionalPenStreetId.value : null, color: (configured ? calc.additionalPenStreetColorId.value : null) as ColorChoice, touched: false },
+  { code: 'yard', label: 'Ручка со двора', id: configured ? calc.additionalPenYardId.value : null, color: (configured ? calc.additionalPenYardColorId.value : null) as ColorChoice, touched: false },
+])
+const hasPens = computed(() => sides.some(side => side.id != null))
+const legacyDescription = computed(() => {
+  const pen = penItems.value.find(item => item.id === calc.additionalPenId.value)
+  const color = pen?.colors.find(item => item.id === calc.penColorId.value)?.name
+    ?? (calc.penColorId.value == null && pen?.canUseFrameColor ? 'Цвет каркаса' : calc.additionalPenColor.value || calc.penColor.value)
+  return [pen?.marking ?? calc.additionalPenMarking.value, color].filter(Boolean).join(', ')
 })
+const legacyResolved = computed(() => !legacyPending || hasPens.value || sides.every(side => side.touched))
 
-const showDetails = computed(() => presence.value === 1)
-
-/** Блок выбора ручки показываем только если её предоставляет изготовитель */
-const showPenSelection = computed(() => penProvided.value === 'manufacturer')
-
-/** Цвета для выпадающего списка — из выбранной ручки */
-const colorSelectItems = computed(() => {
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  if (!pen) return []
-  return [
-    ...(pen.canUseFrameColor ? [{ id: 'frame' as const, label: 'Цвет каркаса' }] : []),
-    ...pen.colors.map(c => ({ id: c.id, label: c.name })),
-  ]
-})
-
-const providedOptions = [
-  { value: 'manufacturer', label: 'Предоставляет изготовитель' },
-  { value: 'customer', label: 'Предоставляет заказчик' },
-]
-const installedOptions = [
-  { value: 'manufacturer', label: 'Устанавливает изготовитель' },
-  { value: 'customer', label: 'Устанавливает заказчик' },
-]
-
-function canSyncSelection(): boolean {
-  return isOptionPresence(presence.value) && (presence.value === 0
-    || (isParticipantRole(penProvided.value) && isParticipantRole(penInstalled.value)))
+function colorsFor(id: number | null) {
+  const pen = penItems.value.find(item => item.id === id)
+  return pen ? [...(pen.canUseFrameColor ? [{ id: 'frame' as const, label: 'Цвет каркаса' }] : []), ...pen.colors.map(color => ({ id: color.id, label: color.name }))] : []
 }
-
-function syncCalcFields() {
-  if (!canSyncSelection()) return
-  calc.isTherePenName.value = optionPresenceLabel(presence.value, 'optional')
-  calc.isTherePen.value = presence.value
-
-  if (showDetails.value) {
-    calc.penProvided.value = penProvided.value
-    calc.penInstalled.value = penInstalled.value
-    if (showPenSelection.value) {
-      calc.additionalPenId.value = selectedPenId.value
-      const pen = penItems.value.find(p => p.id === selectedPenId.value)
-      const isFrameColor = selectedColor.value === 'frame'
-      const colorObj = typeof selectedColor.value === 'number'
-        ? pen?.colors.find(c => c.id === selectedColor.value)
-        : undefined
-      const colorName = isFrameColor ? 'Цвет каркаса' : (colorObj?.name ?? '')
-      calc.penColorId.value = colorObj?.id ?? null
-      calc.additionalPenColor.value = colorName
-      calc.penColor.value = colorName
-      calc.additionalPenMarking.value = pen?.marking ?? ''
+function validationError(): string {
+  if (loading.value || loadFailed.value) return 'Не удалось загрузить справочник ручек'
+  if (!legacyResolved.value) return 'Выберите сторону для ранее выбранной ручки или укажите «Не требуется» с обеих сторон'
+  for (const side of sides) {
+    if (side.id == null) continue
+    const pen = penItems.value.find(item => item.id === side.id)
+    if (!pen) return 'Выберите доступную модель ручки'
+    if (!(side.color === 'frame' ? pen.canUseFrameColor : typeof side.color === 'number' && pen.colors.some(color => color.id === side.color))) return 'Выберите доступный цвет ручки'
+  }
+  return ''
+}
+function syncFields() {
+  calc.additionalPenSidesConfigured.value = 1
+  calc.isTherePen.value = hasPens.value ? 1 : 0
+  calc.isTherePenName.value = hasPens.value ? 'Будет' : 'Не будет'
+  calc.penProvided.value = hasPens.value ? 'manufacturer' : ''
+  calc.penInstalled.value = hasPens.value ? 'manufacturer' : ''
+  calc.additionalPenId.value = null
+  calc.penColorId.value = null
+  calc.additionalPenColor.value = ''
+  calc.additionalPenMarking.value = ''
+  calc.penColor.value = ''
+  const params = []
+  for (const side of sides) {
+    const pen = penItems.value.find(item => item.id === side.id)
+    const colorId = side.id != null && typeof side.color === 'number' ? side.color : null
+    const colorName = side.id == null ? '' : side.color === 'frame' ? 'Цвет каркаса' : pen?.colors.find(color => color.id === colorId)?.name ?? ''
+    if (side.code === 'street') {
+      calc.additionalPenStreetId.value = side.id
+      calc.additionalPenStreetColorId.value = colorId
+      calc.additionalPenStreetMarking.value = pen?.marking ?? ''
+      calc.additionalPenStreetColorName.value = colorName
     } else {
-      calc.additionalPenId.value = null
-      calc.additionalPenColor.value = ''
-      calc.additionalPenMarking.value = ''
-      calc.penColorId.value = null
-      calc.penColor.value = ''
+      calc.additionalPenYardId.value = side.id
+      calc.additionalPenYardColorId.value = colorId
+      calc.additionalPenYardMarking.value = pen?.marking ?? ''
+      calc.additionalPenYardColorName.value = colorName
     }
-  } else {
-    calc.penProvided.value = ''
-    calc.penInstalled.value = ''
-    calc.additionalPenId.value = null
-    calc.additionalPenColor.value = ''
-    calc.additionalPenMarking.value = ''
-    calc.penColorId.value = null
-    calc.penColor.value = ''
+    params.push({ paramCode: `${side.code}PenModel`, name: side.label, value: pen?.marking ?? 'Не требуется' })
+    if (pen) params.push({ paramCode: `${side.code}PenColor`, name: `Цвет: ${side.label}`, value: colorName })
   }
+  if (hasPens.value) {
+    params.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', 'manufacturer') })
+    params.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', 'manufacturer') })
+  }
+  calc.updateOrCreateBlock('additionalPen', params, 'Дополнительные ручки (скобы)')
 }
-
-function buildBlock() {
-  const params: { paramCode?: string; name: string; value: string }[] = [
-    { paramCode: 'presence', name: 'Дополнительная ручка', value: optionPresenceLabel(calc.isTherePen.value, 'optional') },
+function captureRef<T>(target: { value: T }): () => void {
+  const value = target.value
+  return () => { target.value = value }
+}
+function capturePersistedSelection(): () => void {
+  const restoreFields = [
+    captureRef(calc.additionalPenSidesConfigured),
+    captureRef(calc.additionalPenStreetId),
+    captureRef(calc.additionalPenStreetColorId),
+    captureRef(calc.additionalPenYardId),
+    captureRef(calc.additionalPenYardColorId),
+    captureRef(calc.additionalPenStreetMarking),
+    captureRef(calc.additionalPenYardMarking),
+    captureRef(calc.additionalPenStreetColorName),
+    captureRef(calc.additionalPenYardColorName),
+    captureRef(calc.isTherePen),
+    captureRef(calc.isTherePenName),
+    captureRef(calc.penProvided),
+    captureRef(calc.penInstalled),
+    captureRef(calc.additionalPenId),
+    captureRef(calc.penColorId),
+    captureRef(calc.additionalPenColor),
+    captureRef(calc.additionalPenMarking),
+    captureRef(calc.penColor),
   ]
-  if (showDetails.value) {
-    params.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', calc.penProvided.value) })
-    params.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', calc.penInstalled.value) })
-    if (showPenSelection.value) {
-      if (calc.additionalPenId.value != null && calc.additionalPenMarking.value) {
-        params.push({ paramCode: 'penModel', name: 'Модель ручки', value: calc.additionalPenMarking.value })
+  const index = calc.data.value.findIndex(block => block.blockCode === 'additionalPen')
+  const previous = calc.data.value[index]
+  const previousBlock = previous ? { ...previous, params: previous.params.map(param => ({ ...param })) } : undefined
+  return () => {
+    restoreFields.forEach(restore => restore())
+    const currentIndex = calc.data.value.findIndex(block => block.blockCode === 'additionalPen')
+    if (currentIndex !== -1) calc.data.value.splice(currentIndex, 1)
+    if (previousBlock) calc.data.value.splice(Math.min(index, calc.data.value.length), 0, previousBlock)
+  }
+}
+let revision = 0
+let saveQueue: Promise<boolean> = Promise.resolve(true)
+// Each queued operation reads the entire latest selection after the preceding request finishes.
+function save(): Promise<boolean> {
+  const operation = saveQueue.then(async () => {
+    const invalid = validationError()
+    if (invalid) { error.value = invalid; return false }
+    const restorePersistedSelection = capturePersistedSelection()
+    let persisted = false
+    syncFields()
+    try {
+      await saveWicketData({ ...calc.getBaseSavePayload(),
+        additionalPenSidesConfigured: 1,
+        additionalPenStreetId: calc.additionalPenStreetId.value,
+        additionalPenStreetColorId: calc.additionalPenStreetColorId.value,
+        additionalPenYardId: calc.additionalPenYardId.value,
+        additionalPenYardColorId: calc.additionalPenYardColorId.value,
+        isTherePen: calc.isTherePen.value,
+        penProvided: calc.penProvided.value || null,
+        penInstalled: calc.penInstalled.value || null,
+        additionalPenId: null, penColorId: null })
+      persisted = true
+      if (calc.priceRetail.value) {
+        const result = await recalculate({ orderId: Number(calc.number.value), productRowId: calc.getCurrentProductRowContext().productRowId, productType: calc.productType.value, model: calc.model.value, modelId: calc.modelId.value })
+        calc.updatePriceBlock(result.priceDealer, result.priceRetail)
       }
-      params.push({ paramCode: 'penColor', name: 'Цвет ручки', value: calc.additionalPenColor.value || calc.penColor.value })
+      error.value = ''
+      return true
+    } catch {
+      if (!persisted) restorePersistedSelection()
+      error.value = persisted
+        ? 'Ручки сохранены, но не удалось обновить стоимость. Повторите попытку.'
+        : 'Не удалось сохранить ручки. Повторите попытку.'
+      return false
     }
-  }
-  calc.updateOrCreateBlock('additionalPen', params, 'Дополнительная ручка (скоба)')
+  })
+  saveQueue = operation
+  return operation
 }
-
-async function loadAdditionalPens() {
-  loading.value = true
-  try {
-    const res = await getAdditionalPens()
-    penItems.value = res.items
-    if (res.items.length > 0 && !res.items.some(p => p.id === selectedPenId.value)) {
-      selectedPenId.value = res.items[0].id
-    } else if (res.items.length === 0) {
-      selectedPenId.value = null
-    }
-  } catch (e) {
-    console.warn('getAdditionalPens:', e)
-    penItems.value = []
-    selectedPenId.value = null
-  } finally {
-    loading.value = false
-  }
+function changed() {
+  revision++
+  error.value = ''
+  if (!validationError()) void save()
 }
-
-watch(selectedPenId, (id) => {
-  if (isRestoringSelection || !canSyncSelection()) return
-  calc.additionalPenId.value = id
-  const pen = penItems.value.find(p => p.id === id)
-  calc.additionalPenMarking.value = pen?.marking ?? ''
-  const colors = pen?.colors ?? []
-  const currentColorIsAvailable = selectedColor.value === 'frame'
-    ? Boolean(pen?.canUseFrameColor)
-    : colors.some(c => c.id === selectedColor.value)
-  if (!currentColorIsAvailable) {
-    selectedColor.value = pen?.canUseFrameColor ? 'frame' : (colors[0]?.id ?? null)
+function selectPen(index: number, id: number | null) {
+  const side = sides[index]!
+  side.touched = true
+  if (side.id !== id) {
+    side.id = id
+    const pen = penItems.value.find(item => item.id === id)
+    side.color = pen?.canUseFrameColor ? 'frame' : null
   }
-  colorError.value = ''
-  syncCalcFields()
-  buildBlock()
-  save()
-})
-
-watch(selectedColor, () => {
-  if (isRestoringSelection || !canSyncSelection()) return
-  colorError.value = ''
-  syncCalcFields()
-  buildBlock()
-  save()
-})
-
-watch(presence, () => {
-  if (isRestoringSelection || !canSyncSelection()) return
-  colorError.value = ''
-  syncCalcFields()
-  buildBlock()
-  save()
-})
-
-watch([penProvided, penInstalled], () => {
-  if (isRestoringSelection || !canSyncSelection()) return
-  colorError.value = ''
-  syncCalcFields()
-  buildBlock()
-  save()
-})
-
-function applySavedSelection() {
-  if (!penItems.value.length) return
-  const savedPenId = calc.additionalPenId.value
-  if (savedPenId != null && penItems.value.some(p => p.id === savedPenId)) {
-    selectedPenId.value = savedPenId
-  } else {
-    selectedPenId.value = penItems.value[0].id
-  }
-
-  const savedColorId = calc.penColorId.value
-  const pen = penItems.value.find(p => p.id === selectedPenId.value)
-  const colors = pen?.colors ?? []
-  if (savedColorId != null && colors.some(c => c.id === savedColorId)) {
-    selectedColor.value = savedColorId
-  } else if (savedColorId == null && pen?.canUseFrameColor) {
-    selectedColor.value = 'frame'
-  } else if (colors.length) {
-    selectedColor.value = colors[0].id
-  } else {
-    selectedColor.value = null
-  }
+  changed()
 }
-
+function selectColor(index: number, value: unknown) {
+  sides[index]!.color = value === 'frame' || typeof value === 'number' ? value : null
+  changed()
+}
 async function validateAndSave(): Promise<boolean> {
-  if (!isOptionPresence(presence.value)) {
-    colorError.value = 'Выберите наличие дополнительной ручки'
-    return false
-  }
-  if (!canSyncSelection()) {
-    colorError.value = 'Выберите поставщика и исполнителя ручки'
-    return false
-  }
-  if (showDetails.value && showPenSelection.value && selectedPenId.value != null && selectedColor.value == null) {
-    colorError.value = 'Для выбранной ручки не настроен доступный цвет'
-    return false
-  }
-  colorError.value = ''
-  await save()
+  error.value = validationError()
+  if (error.value) return false
+  let currentRevision: number
+  do {
+    currentRevision = revision
+    if (!await save()) return false
+    // Edits made during a request must also finish before navigation.
+  } while (currentRevision !== revision)
   return true
 }
-
-const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
-const { validateBeforeLeave, next: continueToNext } = leaveAttempt
-
+const { validateBeforeLeave, next: continueToNext } = createStepLeaveAttempt(validateAndSave, () => emit('next'))
 defineExpose({ validateBeforeLeave })
-
-async function save() {
-  if (!canSyncSelection()) return
-  syncCalcFields()
-  buildBlock()
-
-  try {
-    await saveWicketData({
-      ...calc.getBaseSavePayload(),
-      isTherePen: calc.isTherePen.value,
-      penProvided: calc.penProvided.value || null,
-      penInstalled: calc.penInstalled.value || null,
-      penColorId: calc.penColorId.value,
-      additionalPenId: calc.additionalPenId.value,
-      additionalPenColor: calc.additionalPenColor.value || null,
-    })
-  } catch (e) {
-    console.warn('saveWicketData:', e)
-  }
-
-  if (calc.priceRetail.value) {
-    try {
-      const result = await recalculate({
-        orderId: Number(calc.number.value),
-        productRowId: calc.getCurrentProductRowContext().productRowId,
-        productType: calc.productType.value,
-        model: calc.model.value,
-        modelId: calc.modelId.value,
-      })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-    } catch (e) {
-      console.warn('recalculate:', e)
-    }
-  }
-}
-
 onMounted(async () => {
   calc.setActivePage('page10')
-  isRestoringSelection = true
-
-  presence.value = parseOptionPresence(calc.isTherePen.value)
-  penProvided.value = calc.penProvided.value
-  penInstalled.value = calc.penInstalled.value
-  selectedPenId.value = calc.additionalPenId.value
-  selectedColor.value = calc.penColorId.value
-
-  await loadAdditionalPens()
-  if (showDetails.value && penItems.value.length) {
-    applySavedSelection()
-  } else if (presence.value === null && calc.penColorId.value == null
-    && penItems.value.some(pen => pen.id === selectedPenId.value && pen.canUseFrameColor)) {
-    // Restore the pending capability-based choice without selecting a fallback pen or saving.
-    selectedColor.value = 'frame'
-  }
-
-  isRestoringSelection = false
-  await save()
+  try {
+    penItems.value = (await getAdditionalPens(calc.modelId.value, 'welding')).items
+    for (const side of sides) {
+      if (side.id != null && side.color == null && penItems.value.find(pen => pen.id === side.id)?.canUseFrameColor) side.color = 'frame'
+    }
+  } catch { loadFailed.value = true } finally { loading.value = false }
 })
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-
-    <!-- Заголовок + кнопки -->
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold flex-1 text-center">Дополнительная ручка (скоба)</span>
+      <span class="text-2xl font-bold flex-1 text-center">Дополнительные ручки (скобы)</span>
       <B24Button label="Далее" color="air-secondary" @click="continueToNext" />
     </div>
-
-    <div class="flex flex-col gap-6" style="padding-inline: 4px;">
-
-      <!-- Будет / Не будет -->
-      <div class="option-grid">
-        <label v-for="option in presenceOptions" :key="option.value" class="lock-card">
-          <input v-model="presence" name="pen-presence" type="radio" :value="option.value" class="sr-only" />
-          <div class="card-content">
-            <span class="block text-sm font-semibold text-center">{{ option.label }}</span>
-          </div>
-        </label>
-      </div>
-
-      <p v-if="colorError" class="text-sm text-red-600" role="alert">{{ colorError }}</p>
-
-      <!-- Детали (только при "Будет") -->
-      <template v-if="showDetails">
-
-        <!-- Кто предоставляет -->
-        <div class="option-grid">
-          <label v-for="opt in providedOptions" :key="opt.value" class="lock-card">
-            <input v-model="penProvided" name="penProvided" type="radio" :value="opt.value" class="sr-only" />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
+    <p v-if="legacyPending && !legacyResolved" role="status">Ранее выбрана одна ручка без указания стороны: {{ legacyDescription }}. Выберите сторону или укажите «Не требуется» с обеих сторон.</p>
+    <p v-if="error" class="text-sm text-red-600" role="alert">{{ error }}</p>
+    <p v-if="loading">Загрузка...</p>
+    <p v-else-if="loadFailed" role="alert">Не удалось загрузить справочник ручек. Повторите открытие шага.</p>
+    <template v-else>
+      <section v-for="(side, index) in sides" :key="side.code" class="flex flex-col gap-3">
+        <h2 class="text-lg font-semibold">{{ side.label }}</h2>
+        <div class="pen-cards-row">
+          <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" value="none" :checked="side.id == null && (!legacyPending || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
+          <label v-for="pen in penItems" :key="pen.id" class="pen-card">
+            <input :name="`${side.code}-pen`" type="radio" :value="pen.id" :checked="side.id === pen.id" @change="selectPen(index, pen.id)" />
+            <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" image-height="100px" />
+            <span>{{ pen.marking }}</span>
           </label>
         </div>
-
-        <!-- Кто устанавливает -->
-        <div class="option-grid">
-          <label v-for="opt in installedOptions" :key="opt.value" class="lock-card">
-            <input v-model="penInstalled" name="penInstalled" type="radio" :value="opt.value" class="sr-only" />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
+        <div v-if="side.id != null" class="flex flex-col gap-2">
+          <label :for="`${side.code}-color`">Цвет ручки</label>
+          <B24SelectMenu :id="`${side.code}-color`" :model-value="side.color ?? undefined" :items="colorsFor(side.id)" value-key="id" placeholder="Выберите цвет" @update:model-value="selectColor(index, $event)" />
         </div>
-
-        <!-- Выбор ручки из справочника (только если предоставляет изготовитель) -->
-        <template v-if="showPenSelection">
-          <div>
-            <h2 class="text-lg font-semibold mb-2 text-center">Модель ручки</h2>
-            <div v-if="loading" class="px-2 py-4 text-sm text-gray-400 text-center">Загрузка...</div>
-            <div v-else-if="penItems.length" class="pen-cards-row">
-              <label
-                v-for="pen in penItems"
-                :key="pen.id"
-                class="lock-viewer-card pen-card"
-              >
-                <input
-                  v-model="selectedPenId"
-                  type="radio"
-                  :value="pen.id"
-                  class="sr-only"
-                />
-                <div class="card-content">
-                  <ImageViewer
-                    v-if="pen.imageUrls?.length"
-                    :title="pen.marking"
-                    :images="pen.imageUrls"
-                    image-height="100px"
-                  />
-                  <div v-else class="pen-placeholder" aria-hidden="true" />
-                  <span class="block text-sm font-semibold text-center mt-2">{{ pen.marking }}</span>
-                </div>
-              </label>
-            </div>
-            <div v-else class="px-2 py-4 text-sm text-gray-500 text-center">Нет доступных ручек</div>
-          </div>
-
-          <!-- Выбор цвета (из цветов выбранной ручки) -->
-          <div v-if="selectedPenId" class="flex flex-col gap-2 items-start w-full">
-            <h2 class="text-lg font-semibold mb-2">Цвет ручки</h2>
-            <div class="select-full-width w-full">
-              <B24SelectMenu
-                v-model="selectedColorModel"
-                value-key="id"
-                :items="colorSelectItems"
-                placeholder="Выберите цвет"
-                class="w-full"
-              />
-            </div>
-          </div>
-        </template>
-
-      </template>
-
-    </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.option-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 4px;
-}
-
-@media (min-width: 640px) {
-  .option-grid {
-    grid-template-columns: repeat(2, 1fr);
-    min-width: 350px;
-    max-width: 600px;
-    margin-inline: auto;
-  }
-}
-
-.pen-cards-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px 24px;
-  padding: 4px;
-  width: 100%;
-  min-width: 0;
-}
-
-@media (min-width: 900px) {
-  .pen-cards-row {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    max-width: 1424px;
-    margin: 0 auto;
-  }
-}
-
-.pen-placeholder {
-  width: 100%;
-  height: 100px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.lock-card,
-.lock-viewer-card {
-  cursor: pointer;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-
-.lock-card:hover,
-.lock-viewer-card:hover {
-  border-color: #93c5fd;
-}
-
-.lock-card:has(input[type="radio"]:checked),
-.lock-viewer-card:has(input[type="radio"]:checked) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  background: #eff6ff;
-}
-
-.card-content {
-  padding: 12px;
-}
+.pen-cards-row,.option-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.pen-card { display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; cursor:pointer; border:2px solid #e5e7eb; border-radius:12px; background:white; }
+.pen-card:has(input:checked) { border-color:#3b82f6; background:#eff6ff; }
 </style>

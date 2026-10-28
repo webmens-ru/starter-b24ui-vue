@@ -526,15 +526,9 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     await new Promise(r => setTimeout(r, 100))
 
-    expect(saveWicketData).toHaveBeenCalled()
-    const saveCalls = vi.mocked(saveWicketData).mock.calls
-    const payload = saveCalls[saveCalls.length - 1]?.[0]
-    expect(payload).toMatchObject({
-      isTherePen: 1,
-      additionalPenId: 9,
-      penColorId: 6,
-      additionalPenColor: 'Сохранённый цвет',
-    })
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.additionalPenId.value).toBe(9)
+    expect(calc.penColorId.value).toBe(6)
   })
 
   it('ShieldType сохраняет выбранный цвет при смене типа щита', async () => {

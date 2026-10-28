@@ -725,6 +725,15 @@ describe('useCalculation', () => {
       expect(payload).not.toHaveProperty('materialSupplierYard')
     })
 
+    it('preserves customer lock roles without lockSetId when saving two pens', () => {
+      calc.lockSetId.value = null
+      calc.providesLock.value = 'customer'
+      calc.lockInstaller.value = 'manufacturer'
+      calc.additionalPenSidesConfigured.value = 1
+      calc.additionalPenStreetId.value = 7
+      expect(calc.getFullSavePayload()).toMatchObject({ providesLockCode: 'customer', lockInstallerCode: 'manufacturer', additionalPenSidesConfigured: 1, additionalPenStreetId: 7 })
+    })
+
     it('getFullSavePayload повторно отправляет очищенные root-поля после reload без комплекта', () => {
       calc.loadFromApi({
         lockSetId: null,
@@ -737,8 +746,7 @@ describe('useCalculation', () => {
       })
       expect(calc.getFullSavePayload()).not.toHaveProperty('providesLock')
       expect(calc.getFullSavePayload()).not.toHaveProperty('lockInstaller')
-      expect(calc.getFullSavePayload()).not.toHaveProperty('providesLockCode')
-      expect(calc.getFullSavePayload()).not.toHaveProperty('lockInstallerCode')
+      expect(calc.getFullSavePayload()).toMatchObject({ providesLockCode: 'manufacturer', lockInstallerCode: 'manufacturer' })
     })
 
     it('сериализует полный состав комплектующих только для composition API', () => {

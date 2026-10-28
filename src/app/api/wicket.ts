@@ -635,11 +635,12 @@ export async function getPensByLock(lockSetId: number): Promise<{
 }
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
-export async function getAdditionalPens(): Promise<{
+export async function getAdditionalPens(modelId?: number | string, mountingType?: 'welding' | 'threaded'): Promise<{
   items: Array<{ id: number; marking: string; canUseFrameColor: boolean; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
-  const { data } = await api.get('/api/dict/additional-pen/get-list')
+  const params = { ...(modelId == null || modelId === '' ? {} : { modelId }), ...(mountingType == null ? {} : { mountingType }) }
+  const { data } = await api.get('/api/dict/additional-pen/get-list', Object.keys(params).length ? { params } : undefined)
   return data.data
 }
 

@@ -90,6 +90,15 @@ const penProvided        = ref<string>('manufacturer')
 const penInstalled       = ref<string>('manufacturer')
 const penColor           = ref<string>('')
 const penColorId         = ref<number | null>(null)
+const additionalPenSidesConfigured = ref<number>(0)
+const additionalPenStreetId = ref<number | null>(null)
+const additionalPenStreetColorId = ref<number | null>(null)
+const additionalPenYardId = ref<number | null>(null)
+const additionalPenYardColorId = ref<number | null>(null)
+const additionalPenStreetMarking = ref<string>('')
+const additionalPenYardMarking = ref<string>('')
+const additionalPenStreetColorName = ref<string>('')
+const additionalPenYardColorName = ref<string>('')
 const additionalPenId     = ref<number | null>(null)
 const additionalPenColor  = ref<string>('')
 const additionalPenMarking = ref<string>('')
@@ -399,6 +408,15 @@ const fieldsFilled = ref<number>(0)
     penInstalled.value = 'manufacturer'
     penColor.value = ''
     penColorId.value = null
+    additionalPenSidesConfigured.value = 0
+    additionalPenStreetId.value = null
+    additionalPenStreetColorId.value = null
+    additionalPenYardId.value = null
+    additionalPenYardColorId.value = null
+    additionalPenStreetMarking.value = ''
+    additionalPenYardMarking.value = ''
+    additionalPenStreetColorName.value = ''
+    additionalPenYardColorName.value = ''
     additionalPenId.value = null
     additionalPenColor.value = ''
     additionalPenMarking.value = ''
@@ -755,6 +773,15 @@ const fieldsFilled = ref<number>(0)
       penInstalled,
       penColor,
       penColorId,
+      additionalPenSidesConfigured,
+      additionalPenStreetId,
+      additionalPenStreetColorId,
+      additionalPenYardId,
+      additionalPenYardColorId,
+      additionalPenStreetMarking,
+      additionalPenYardMarking,
+      additionalPenStreetColorName,
+      additionalPenYardColorName,
       additionalPenId,
       additionalPenColor,
       additionalPenMarking,
@@ -1074,12 +1101,18 @@ const fieldsFilled = ref<number>(0)
     if (isTherePen.value === 1) {
       penParams.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
       penParams.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
-      if (penProvided.value === 'manufacturer') {
+      if (additionalPenSidesConfigured.value !== 1 && penProvided.value === 'manufacturer') {
         if (additionalPenId.value != null && additionalPenMarking.value) {
           penParams.push({ paramCode: 'penModel', name: 'Модель ручки', value: additionalPenMarking.value })
         }
         penParams.push({ paramCode: 'penColor', name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
       }
+    }
+    if (additionalPenSidesConfigured.value === 1) {
+      penParams.push({ paramCode: 'streetPenModel', name: 'Ручка с улицы', value: additionalPenStreetId.value == null ? 'Не требуется' : additionalPenStreetMarking.value })
+      if (additionalPenStreetId.value != null) penParams.push({ paramCode: 'streetPenColor', name: 'Цвет ручки с улицы', value: additionalPenStreetColorName.value })
+      penParams.push({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: additionalPenYardId.value == null ? 'Не требуется' : additionalPenYardMarking.value })
+      if (additionalPenYardId.value != null) penParams.push({ paramCode: 'yardPenColor', name: 'Цвет ручки со двора', value: additionalPenYardColorName.value })
     }
     blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка (скоба)', params: penParams })
 
@@ -1140,6 +1173,15 @@ const fieldsFilled = ref<number>(0)
     penColor,
     penColorId,
     additionalPenMarking,
+    additionalPenSidesConfigured,
+    additionalPenStreetId,
+    additionalPenStreetColorId,
+    additionalPenYardId,
+    additionalPenYardColorId,
+    additionalPenStreetMarking,
+    additionalPenYardMarking,
+    additionalPenStreetColorName,
+    additionalPenYardColorName,
     additionalPenId,
     additionalPenColor,
     typeLock,

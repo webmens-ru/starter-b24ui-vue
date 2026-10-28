@@ -466,3 +466,28 @@ describe('canonical painting selection', () => {
     expect(store.providesLock).toBe('customer')
   })
 })
+
+ describe('two pen root fields', () => {
+  it('loads canonical numeric FKs and resets them', () => {
+    setActivePinia(createPinia())
+    const store = useWicketFormStore()
+    store.loadFromApi({ additionalPenSidesConfigured: '1', additionalPenStreetId: '7', additionalPenStreetColorId: '3', additionalPenYardId: '8', additionalPenYardColorId: null })
+    expect(store.additionalPenStreetId).toBe(7)
+    expect(store.additionalPenYardId).toBe(8)
+    expect(store.additionalPenSidesConfigured).toBe(1)
+    store.resetFormFields()
+    expect(store.additionalPenStreetId).toBe(null)
+    expect(store.additionalPenSidesConfigured).toBe(0)
+  })
+})
+
+ describe('two pen summaries', () => {
+  it.each([0, 1])('restores stable side codes with presence %s', isTherePen => {
+    setActivePinia(createPinia())
+    const store = useWicketFormStore()
+    store.loadFromApi({ additionalPenSidesConfigured: 1, isTherePen, additionalPenStreetId: isTherePen ? 7 : null, additionalPenStreetMarking: 'Renamed', additionalPenStreetColorName: 'Renamed color', additionalPenYardId: null, penProvidedCode: 'customer', penInstalledCode: 'manufacturer' })
+    const params = store.data.find(block => block.blockCode === 'additionalPen')?.params
+    expect(params).toContainEqual({ paramCode: 'streetPenModel', name: 'Ручка с улицы', value: isTherePen ? 'Renamed' : 'Не требуется' })
+    expect(params).toContainEqual({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: 'Не требуется' })
+  })
+})
