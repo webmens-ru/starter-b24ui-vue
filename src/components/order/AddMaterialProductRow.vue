@@ -2,13 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { getMaterialTypes, getStandaloneMaterialItems, type MaterialItemDto, type MaterialTypeDto } from '../../app/api/wicket'
-import type { ProductRowInstallationRole } from '../../app/api/productRows'
+import type { MaterialParameterSelection, ProductRowInstallationRole } from '../../app/api/productRows'
 
 export interface StandaloneMaterialSubmission {
   materialItemId: number
   quantity: number
   installationRole: ProductRowInstallationRole | null
   customerOwned: boolean
+  parameters: MaterialParameterSelection[]
 }
 
 defineProps<{ orderId: number, disabled?: boolean }>()
@@ -22,6 +23,7 @@ const types = ref<MaterialTypeDto[]>([])
 const items = ref<MaterialItemDto[]>([])
 const selectedTypeCode = ref('')
 const selectedMaterialItemId = ref<number | null>(null)
+const parameterValues = ref<Record<number, number | null>>({})
 const quantity = ref(1)
 const customerOwned = ref(false)
 const withInstallation = ref(false)
@@ -49,8 +51,16 @@ const filteredItems = computed(() => {
 })
 
 const selectedItem = computed(() => items.value.find(item => item.id === selectedMaterialItemId.value) ?? null)
+const orderParameters = computed(() => selectedItem.value?.orderParameters ?? [])
+const visibleParameters = computed(() => orderParameters.value.filter(parameter => parameter.values.length > 0))
+const unavailableParameters = computed(() => orderParameters.value.filter(parameter => parameter.required && parameter.values.length === 0))
+const parametersValid = computed(() => orderParameters.value.every(parameter => {
+  const selectedId = parameterValues.value[parameter.attributeId]
+  return selectedId == null ? !parameter.required : parameter.values.some(value => value.id === selectedId)
+}))
 const installationRole = computed(() => installationRoleByType[selectedTypeCode.value] ?? null)
 const canSubmit = computed(() => selectedItem.value !== null
+  && parametersValid.value
   && Number.isInteger(quantity.value)
   && quantity.value > 0
   && (!customerOwned.value || (withInstallation.value && installationRole.value !== null)))
@@ -71,7 +81,10 @@ async function loadItems(typeCode: string): Promise<void> {
   const loadId = ++latestItemsLoad
   items.value = []
   selectedMaterialItemId.value = null
-  if (typeCode === '') return
+  if (typeCode === '') {
+    loadingItems.value = false
+    return
+  }
   loadingItems.value = true
   errorMessage.value = null
   try {
@@ -92,8 +105,23 @@ function submit(): void {
     quantity: quantity.value,
     installationRole: withInstallation.value ? installationRole.value : null,
     customerOwned: customerOwned.value,
+    parameters: orderParameters.value.flatMap((parameter): MaterialParameterSelection[] => {
+      const valueId = parameterValues.value[parameter.attributeId]
+      if (valueId == null) return []
+      switch (parameter.dataType) {
+        case 'option': return [{ attributeId: parameter.attributeId, optionId: valueId }]
+        case 'color': return [{ attributeId: parameter.attributeId, colorId: valueId }]
+        case 'coating': return [{ attributeId: parameter.attributeId, coatingId: valueId }]
+      }
+    }),
   })
 }
+
+watch(selectedItem, item => {
+  parameterValues.value = Object.fromEntries((item?.orderParameters ?? []).map(parameter => [
+    parameter.attributeId, parameter.values.length === 1 ? parameter.values[0]!.id : null,
+  ]))
+}, { flush: 'sync' })
 
 watch(selectedTypeCode, typeCode => {
   withInstallation.value = false
@@ -126,6 +154,16 @@ onMounted(() => { void loadTypes() })
         <select v-model.number="selectedMaterialItemId" aria-label="Материал" :disabled="disabled || loadingItems || selectedTypeCode === ''" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
           <option :value="null">Выберите материал</option>
           <option v-for="item in filteredItems" :key="item.id" :value="item.id">{{ item.name }}<template v-if="item.article"> · {{ item.article }}</template></option>
+        </select>
+      </label>
+      <p v-for="parameter in unavailableParameters" :key="parameter.attributeId" role="alert" class="text-sm text-red-700">
+        Для обязательного свойства «{{ parameter.name }}» нет доступных значений. Материал нельзя добавить.
+      </p>
+      <label v-for="parameter in visibleParameters" :key="parameter.attributeId" class="text-sm text-gray-700">
+        {{ parameter.name }}<span v-if="parameter.required"> *</span>
+        <select v-model.number="parameterValues[parameter.attributeId]" :data-material-parameter="parameter.attributeId" :aria-label="parameter.name" :disabled="disabled" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+          <option :value="null">{{ parameter.required ? 'Выберите значение' : 'Не выбрано' }}</option>
+          <option v-for="value in parameter.values" :key="value.id" :value="value.id">{{ value.label }}</option>
         </select>
       </label>
       <label class="text-sm text-gray-700">Количество

@@ -328,6 +328,7 @@ describe('product row API', () => {
       providedByManufacturer: true,
       installationRole: 'lock_component_installation' as const,
       idempotencyKey: 'request-123',
+      parameters: [{ attributeId: 7, colorId: 29 }],
     }
 
     await createStandaloneProductRows(payload)

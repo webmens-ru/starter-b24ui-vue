@@ -28,6 +28,13 @@ async function openActions(wrapper: ReturnType<typeof mountRows>, id = 7): Promi
 }
 
 describe('ProductRowTableRows', () => {
+  it('displays immutable material parameter labels as escaped text', () => {
+    const wrapper = mountRows(makeProductRow({ materialParameters: [{ attributeId: 7, code: 'finish', name: '<b>Цвет</b>', dataType: 'color', valueId: 29, valueName: '<img src=x onerror=alert(1)>' }] }))
+    expect(wrapper.get('[data-material-parameters]').text()).toContain('<b>Цвет</b>: <img src=x onerror=alert(1)>')
+    expect(wrapper.get('[data-material-parameters]').find('img').exists()).toBe(false)
+    expect(wrapper.get('[data-material-parameters]').find('b').exists()).toBe(false)
+  })
+
   it('forwards the page-provided PDF URL to the actions menu', async () => {
     const wrapper = mountRows(makeProductRow(), {
       pdfUrl: '/pdf-for-production?order_id=42&productRowId=7&model_id=3',

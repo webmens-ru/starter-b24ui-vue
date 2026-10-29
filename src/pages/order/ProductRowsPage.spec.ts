@@ -6,6 +6,7 @@ import type {
   ProductRowCollectionMutationResponse,
   ProductRowListResponse,
   ProductRowSummary,
+  MaterialParameterSelection,
 } from '../../app/api/productRows'
 import ProductRowsPage from './ProductRowsPage.vue'
 
@@ -27,6 +28,7 @@ const mocks = vi.hoisted(() => ({
     quantity: 2,
     installationRole: 'lock_component_installation',
     customerOwned: false,
+    parameters: [] as MaterialParameterSelection[],
   },
 }))
 
@@ -233,6 +235,7 @@ describe('ProductRowsPage', () => {
       quantity: 2,
       installationRole: 'lock_component_installation',
       customerOwned: false,
+    parameters: [] as MaterialParameterSelection[],
     }
   })
 
@@ -392,6 +395,7 @@ describe('ProductRowsPage', () => {
       providedByManufacturer: true,
       installationRole: 'lock_component_installation',
       idempotencyKey: expect.any(String),
+      parameters: [],
     })
     expect(mocks.listProductRows).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
@@ -424,6 +428,7 @@ describe('ProductRowsPage', () => {
       quantity: 1,
       installationRole: 'lock_component_installation',
       customerOwned: true,
+      parameters: [],
     }
     await wrapper.get('[aria-label="Добавить материал в заказ 43"]').trigger('click')
     await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
@@ -436,6 +441,7 @@ describe('ProductRowsPage', () => {
       providedByManufacturer: false,
       installationRole: 'lock_component_installation',
       idempotencyKey: expect.any(String),
+      parameters: [],
     })
   })
 
@@ -469,6 +475,25 @@ describe('ProductRowsPage', () => {
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(false)
     expect(document.activeElement).toBe(trigger.element)
     wrapper.unmount()
+  })
+
+  it('passes parameter IDs and changes retry identity when the variant changes', async () => {
+    mocks.createStandaloneProductRows.mockRejectedValue(new Error('private server error'))
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.get('[aria-label="Добавить материал в заказ 42"]').trigger('click')
+    mocks.materialSubmission.parameters = [{ attributeId: 7, colorId: 29 }]
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+    const first = mocks.createStandaloneProductRows.mock.calls[0][0]
+    expect(first.parameters).toEqual([{ attributeId: 7, colorId: 29 }])
+    mocks.materialSubmission.parameters = [{ attributeId: 7, colorId: 30 }]
+    await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
+    await flushPromises()
+    const second = mocks.createStandaloneProductRows.mock.calls[1][0]
+    expect(second.parameters).toEqual([{ attributeId: 7, colorId: 30 }])
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey)
+    expect(wrapper.text()).not.toContain('private server error')
   })
 
   it('reloads canonical rows with a conflict notice for standalone creation conflicts', async () => {
@@ -643,6 +668,22 @@ describe('ProductRowsPage', () => {
     await openProductRowActions(wrapper, 7)
     expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
     expect(wrapper.find('[aria-label="Сформировать HTML товарной позиции 7"]').exists()).toBe(false)
+  })
+
+  it.each(['material', 'service'])('offers the existing PDF action for a %s snapshot without a model id', async (productType) => {
+    mocks.listProductRows.mockResolvedValue(makeOrderResponse([makeProductRow(7, { productType, modelId: null })]))
+    const wrapper = mountPage({ placementParams: { productRowPdfUrlTemplate: '/pdf-for-production?order_id=42&productRowId={productRowId}&model_id={modelId}' } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.get('[aria-label="Сформировать PDF товарной позиции 7"]').attributes('href')).toBe('/pdf-for-production?order_id=42&productRowId=7')
+  })
+
+  it('rejects foreign PDF URLs for material snapshots', async () => {
+    mocks.listProductRows.mockResolvedValue(makeOrderResponse([makeProductRow(7, { productType: 'material', modelId: null })]))
+    const wrapper = mountPage({ placementParams: { productRowPdfUrlTemplate: 'https://foreign.test/pdf?order_id=42&productRowId={productRowId}&model_id={modelId}' } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.find('[aria-label="Сформировать PDF товарной позиции 7"]').exists()).toBe(false)
   })
 
   it('hides the PDF action for non-wicket rows', async () => {

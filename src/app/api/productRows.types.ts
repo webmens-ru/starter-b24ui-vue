@@ -1,3 +1,18 @@
+export type MaterialParameterSelection = { attributeId: number } & (
+  | { optionId: number, colorId?: never, coatingId?: never }
+  | { colorId: number, optionId?: never, coatingId?: never }
+  | { coatingId: number, optionId?: never, colorId?: never }
+)
+
+export interface MaterialParameterSnapshot {
+  attributeId: number
+  code: string
+  name: string
+  dataType: 'option' | 'color' | 'coating'
+  valueId: number
+  valueName: string
+}
+
 export type ProductRowAllowedAction =
   | 'product_row.edit_configuration'
   | 'product_row.change_quantity'
@@ -23,6 +38,7 @@ export interface ProductRowContext {
 }
 
 export interface ProductRowSummary {
+  materialParameters?: MaterialParameterSnapshot[]
   id: number
   orderId: number
   productType: string
@@ -88,18 +104,21 @@ export interface CreateProductRowPayload {
 }
 
 export interface CreateMaterialProductRowPayload {
+  parameters?: MaterialParameterSelection[]
   orderId: number
   materialItemId: number
   quantity: number
 }
 
 export interface CreateInstallationProductRowPayload {
+  parameters?: MaterialParameterSelection[]
   orderId: number
   materialItemId: number
   relationRole: ProductRowInstallationRole
 }
 
 export interface CreateStandaloneProductRowsPayload {
+  parameters?: MaterialParameterSelection[]
   orderId: number
   materialItemId: number
   quantity: number

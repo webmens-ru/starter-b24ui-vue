@@ -136,6 +136,9 @@ function emitDeadline(): void {
           <div data-product-row-title class="font-medium text-gray-800">
             {{ productRow.name }}<template v-if="productRow.article"> · {{ productRow.article }}</template>
           </div>
+          <ul v-if="productRow.materialParameters?.length" data-material-parameters class="mt-1 text-sm text-gray-600">
+            <li v-for="parameter in productRow.materialParameters" :key="parameter.attributeId">{{ parameter.name }}: {{ parameter.valueName }}</li>
+          </ul>
           <div v-if="productRow.unit" class="text-xs text-gray-500">{{ productRow.unit.name }} ({{ productRow.unit.symbol }})</div>
           <div class="mt-1 text-sm text-gray-600">{{ productRow.isActual ? 'Расчёт актуален' : 'Требуется расчёт' }}</div>
         </div>

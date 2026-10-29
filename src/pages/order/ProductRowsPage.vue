@@ -157,8 +157,10 @@ function costDetailsUrl(productRowId: number): string | undefined {
 }
 
 function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
-  if (productRow.productType !== 'wicket' || !Number.isSafeInteger(productRow.id) || productRow.id <= 0) return undefined
-  if (typeof productRow.modelId !== 'string' || !/^[1-9]\d*$/.test(productRow.modelId)) return undefined
+  if (!Number.isSafeInteger(productRow.id) || productRow.id <= 0) return undefined
+  const materialSnapshot = (productRow.productType === 'material' || productRow.productType === 'service') && productRow.modelId === null
+  if (!materialSnapshot && (productRow.productType !== 'wicket' || typeof productRow.modelId !== 'string' || !/^[1-9]\d*$/.test(productRow.modelId))) return undefined
+  const modelId = materialSnapshot ? '' : productRow.modelId!
 
   const template = window._PARAMS_?.placementOptions?.params?.productRowPdfUrlTemplate
   if (
@@ -172,7 +174,7 @@ function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
 
   const url = template
     .replace('{productRowId}', String(productRow.id))
-    .replace('{modelId}', productRow.modelId)
+    .replace('{modelId}', modelId)
   let parsed: URL
   try {
     parsed = new URL(url, window.location.origin)
@@ -189,9 +191,13 @@ function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
     || productRowIds.length !== 1
     || productRowIds[0] !== String(productRow.id)
     || modelIds.length !== 1
-    || modelIds[0] !== productRow.modelId
+    || modelIds[0] !== modelId
   ) return undefined
 
+  if (materialSnapshot) {
+    parsed.searchParams.delete('model_id')
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  }
   return url
 }
 
@@ -528,6 +534,7 @@ function standaloneRequestIdentity(
     quantity: submission.quantity,
     providedByManufacturer: !submission.customerOwned,
     installationRole: submission.installationRole,
+    parameters: [...(submission.parameters ?? [])].sort((left, right) => left.attributeId - right.attributeId),
   })
   if (pendingStandaloneRequest?.fingerprint === fingerprint) return pendingStandaloneRequest
   const idempotencyKey = globalThis.crypto?.randomUUID?.()
@@ -555,6 +562,7 @@ async function addMaterial(submission: StandaloneMaterialSubmission): Promise<vo
       quantity: submission.quantity,
       providedByManufacturer: !submission.customerOwned,
       installationRole: submission.installationRole,
+      parameters: submission.parameters ?? [],
       idempotencyKey: request.idempotencyKey,
     })
     if (!isCurrentRoute(generation, mutationOrderId)) return

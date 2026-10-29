@@ -19,6 +19,8 @@ import type {
 } from './productRows.types'
 
 export type {
+  MaterialParameterSelection,
+  MaterialParameterSnapshot,
   CopyProductRowPayload,
   CalculateProductRowPayload,
   CreateProductRowPayload,

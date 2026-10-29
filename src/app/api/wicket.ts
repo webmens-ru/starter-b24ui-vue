@@ -791,7 +791,17 @@ export interface MaterialDocumentDto {
   sizeBytes: number
 }
 
+export interface MaterialOrderParameterDefinition {
+  attributeId: number
+  code: string
+  name: string
+  dataType: 'option' | 'color' | 'coating'
+  required: boolean
+  values: Array<{ id: number, label: string }>
+}
+
 export interface MaterialItemDto {
+  orderParameters?: MaterialOrderParameterDefinition[]
   isStandaloneSaleAllowed?: boolean
   id: number
   typeCode: string
