@@ -1,3 +1,4 @@
+import { coverStripError } from '../../components/wicket/coverStripState'
 import type { WicketRouteSection } from './wicketRoute'
 import { isFillingSideCount } from '../../app/fillingSideCounts'
 import { isFillingOrientation } from '../../app/fillingOrientations'
@@ -138,6 +139,12 @@ export function penSection(): WicketRouteSection {
   return section('page10', 'Дополнительная ручка', 'pen')
 }
 
+export function coverStripSection(): WicketRouteSection {
+  const result = section('page_cover_strip', 'Нащельник', 'cover-strip')
+  result.validate = state => { const error = coverStripError(state.coverStripDrafts ?? []); return error ? { valid: false, errors: [error] } : ok() }
+  return result
+}
+
 export function calculateSection(): WicketRouteSection {
   return section('page12', 'Рассчитать', 'end')
 }
@@ -149,6 +156,7 @@ export function standardTailSections(): WicketRouteSection[] {
     paintingSection(),
     lockSection(),
     penSection(),
+    coverStripSection(),
     calculateSection(),
   ]
 }

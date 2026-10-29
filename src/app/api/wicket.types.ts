@@ -52,6 +52,8 @@ export interface OpeningOptionsResponse {
 }
 
 export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+  coverStrips?: CoverStripSelection[]
+
   paintId?: number | null
   paintColorId?: number | null
   /** Compatibility input only; outgoing requests remove this alias. */
@@ -529,4 +531,27 @@ export interface WicketGetDataResponse extends ParticipantRoleProperties, Fillin
   primerId?: number | null
   providesPrimer?: string | null
   [key: string]: unknown
+}
+
+export interface CoverStripSelection {
+  materialItemId: number
+  parameters: { attributeId: number; colorId: number }[]
+}
+export interface CoverStripCatalogItem {
+  materialItemId: number
+  name: string
+  article: string
+  price: number
+  attributes: Record<string, string | number | boolean | null>
+  orderParameters: { attributeId: number; code: string; name: string; dataType: string; required: boolean; values: { id: number; label: string }[] }[]
+}
+
+export interface CoverStripSummary {
+  blockCode: 'coverStrips'
+  blockName: string
+  params: { paramCode: string; name: string; value: string; materialItemId: number; pieceIndex: number; parameters: Record<string, unknown>[] }[]
+}
+export interface WicketConfigurationResponse extends Record<string, unknown> {
+  coverStrips?: CoverStripSelection[]
+  coverStripSummary?: CoverStripSummary | null
 }

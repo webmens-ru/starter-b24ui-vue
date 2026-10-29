@@ -1,3 +1,4 @@
+import { parseCoverStripSelections } from '../../components/wicket/coverStripState'
 import type { WicketSavePayload } from './wicket.types'
 import { isParticipantRole, participantRoleFields } from '../participantRoles'
 import { isFillingMaterialGroup } from '../fillingMaterialGroups'
@@ -68,6 +69,9 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYard
   void _fillingProfileYardProblem
 
+  delete canonicalPayload.coverStripDrafts
+  delete canonicalPayload.coverStripDescriptions
+  if (Object.prototype.hasOwnProperty.call(canonicalPayload, 'coverStrips')) canonicalPayload.coverStrips = parseCoverStripSelections(canonicalPayload.coverStrips)
   delete canonicalPayload.participantRoleProblems
   delete canonicalPayload.isThereLock
   delete canonicalPayload.isThereLockName

@@ -211,6 +211,7 @@ watch(isMobile, (mobile) => {
 })
 
 const sectionState = computed(() => ({
+  coverStripDrafts: calc.coverStripDrafts.value,
   modelId: String(calc.modelId.value ?? ''),
   materialFacadeGlob: calc.materialFacadeGlob.value,
   fillSide: calc.fillSide.value,
@@ -244,6 +245,7 @@ const incompletePages = computed(() =>
 
 function getNavState(): WicketSharedNavState {
   return {
+    coverStripDrafts: calc.coverStripDrafts.value,
     modelId: String(calc.modelId.value ?? ''),
     materialFacadeGlob: calc.materialFacadeGlob.value,
     fillSide: calc.fillSide.value,

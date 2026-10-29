@@ -14,6 +14,7 @@ import RaspolozheniyePolotna from '../../components/wicket/RaspolozheniyePolotna
 import RazmeryProyema from '../../components/wicket/RazmeryProyema.vue'
 import IsTherelock from '../../components/wicket/IsTherelock.vue'
 import LockType from '../../components/wicket/LockType.vue'
+import CoverStrip from '../../components/wicket/CoverStrip.vue'
 import Pen from '../../components/wicket/Pen.vue'
 import End from '../../components/wicket/End.vue'
 import { type1Route } from './type1Route'
@@ -32,6 +33,7 @@ const stepComponents: Record<string, Component> = {
   page9: IsTherelock,
   page_lock_type: LockType,
   page10: Pen,
+  page_cover_strip: CoverStrip,
   page12: End,
 }
 </script>

@@ -1,3 +1,5 @@
+import { coverStripError, parseCoverStripSelections, type CoverStripDraft } from '../../components/wicket/coverStripState'
+import type { CoverStripSelection } from '../../app/api/wicket.types'
 import { isPaintingComplete } from './wicketStepProgress'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose, watch } from 'vue'
@@ -41,6 +43,10 @@ const RETIRED_WICKET_PAGES: Record<string, string> = {
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
 export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
+  // Persisted wire choices and editable drafts are separate: incomplete cards must remain visible to validation.
+  const coverStrips = ref<CoverStripSelection[]>([])
+  const coverStripDrafts = ref<CoverStripDraft[]>([])
+  const coverStripDescriptions = ref<string[]>([])
 
 // Поставщики материала и краски, исполнитель окраски и legacy-сборка
 const providesMaterial    = ref<string>('manufacturer')
@@ -369,6 +375,9 @@ const fieldsFilled = ref<number>(0)
   function resetFormFields() {
     materialSelectionProblems.value = []
     fillingSaveBlocked.value = false
+    coverStrips.value = []
+    coverStripDrafts.value = []
+    coverStripDescriptions.value = []
     data.value = []
     priceRetail.value = ''
     priceDealer.value = ''
@@ -654,9 +663,10 @@ const fieldsFilled = ref<number>(0)
           'page9',
           'page_lock_type',
           'page10',
+          'page_cover_strip',
           'page12',
         ]
-      : ['page7', 'page5', 'page2', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page12']
+      : ['page7', 'page5', 'page2', 'page6', 'page3', 'page_painting', 'page9', 'page10', 'page_cover_strip', 'page12']
     const visited: string[] = []
     let active = 'page7'
 
@@ -702,6 +712,9 @@ const fieldsFilled = ref<number>(0)
         case 'page10':
           completed = isTherePen.value !== null
           break
+        case 'page_cover_strip':
+          completed = !coverStripError(coverStripDrafts.value)
+          break
         case 'page12':
           completed = notEmpty(priceRetail.value)
           break
@@ -731,6 +744,10 @@ const fieldsFilled = ref<number>(0)
 
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
+    coverStrips.value = parseCoverStripSelections(apiData.coverStrips ?? [])
+    coverStripDrafts.value = coverStrips.value.map(row => ({ ...row, parameters: row.parameters.map(p => ({ ...p })) }))
+    const summary = normalizeSummaryBlocks(apiData.coverStripSummary && typeof apiData.coverStripSummary === 'object' ? [apiData.coverStripSummary as CalcBlock] : Array.isArray(apiData.orders) ? apiData.orders : Array.isArray(apiData.data) ? apiData.data : [])
+    coverStripDescriptions.value = summary.find(block => block.blockCode === 'coverStrips')?.params.map(param => String(param.value)) ?? []
     materialSelectionProblems.value = []
     const wizard = useWicketWizardStore()
     const w = storeToRefs(wizard)
@@ -1136,11 +1153,13 @@ const fieldsFilled = ref<number>(0)
       })
     }
 
+    if (coverStrips.value.length) blocks.push({ blockCode: 'coverStrips', blockName: 'Нащельники', params: coverStrips.value.map((row, index) => ({ paramCode: `coverStrip${index + 1}`, name: `Нащельник ${index + 1}`, value: coverStripDescriptions.value[index] ?? `Нащельник #${row.materialItemId}` })) })
     data.value = blocks
     document.dispatchEvent(new Event('dataUpdated'))
   }
 
   return {
+    coverStrips, coverStripDrafts, coverStripDescriptions,
     data,
     providesMaterial,
     providesPaint,

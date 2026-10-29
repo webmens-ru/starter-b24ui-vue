@@ -1,3 +1,6 @@
+import { parseCoverStripSelections } from '../../components/wicket/coverStripState'
+import type { CoverStripSelection } from './wicket.types'
+import type { CoverStripCatalogItem } from './wicket.types'
 import type { PipeOption } from './pipeProfiles'
 import type {
   PaintItem,
@@ -648,8 +651,10 @@ export async function mockFetchWicketPage(_modelId: number | string, _url: strin
   return ''
 }
 
+const mockCoverStrips = new Map<string, CoverStripSelection[]>()
+
 export async function mockSaveWicketData(_payload: Record<string, unknown>): Promise<WicketRootMutationResponse> {
-  void _payload
+  if (Object.prototype.hasOwnProperty.call(_payload, 'coverStrips')) mockCoverStrips.set(`${_payload.orderId}:${_payload.productRowId}`, parseCoverStripSelections(_payload.coverStrips))
   return { lockVersion: 1 }
 }
 
@@ -668,10 +673,12 @@ export async function mockCreateOrder(): Promise<{
 
 export async function mockLoadWicketData(
   _orderId: number,
+  productRowId?: number,
 ): Promise<Record<string, unknown>> {
   void _orderId
   await delay(200)
   return {
+    coverStrips: parseCoverStripSelections(mockCoverStrips.get(`${_orderId}:${productRowId}`) ?? []),
     orderId: 42,
     modelId: '1',
     providesMaterialCode: 'manufacturer',
@@ -776,4 +783,8 @@ export async function mockRecalculate(
     priceDealer: 10000,
     priceRetail: 13500,
   }
+}
+
+export async function mockGetCoverStrips(): Promise<{ items: CoverStripCatalogItem[] }> {
+  return { items: [{ materialItemId: 501, name: 'Нащельник прямой', article: 'CS-40', price: 350, attributes: { width: 40, height: 2000 }, orderParameters: [{ attributeId: 51, code: 'color', name: 'Цвет', dataType: 'color', required: true, values: [{ id: 52, label: 'Белый' }, { id: 53, label: 'Коричневый' }] }] }] }
 }

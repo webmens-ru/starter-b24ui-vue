@@ -1,3 +1,4 @@
+import { coverStripWire } from '../components/wicket/coverStripState'
 import { storeToRefs } from 'pinia'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
@@ -73,6 +74,7 @@ export function useCalculation() {
 
     return canonicalizeWicketRootSavePayload({
       ...getBaseSavePayload(),
+      coverStrips: coverStripWire(form.coverStripDrafts),
       ...supplierPayload,
       providesMaterial: form.providesMaterial,
       providesPaintCode: form.providesPaintCode,
