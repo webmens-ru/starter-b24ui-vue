@@ -8,6 +8,7 @@ export const WICKET_PROGRESS_STEP_ORDER = [
   'page_painting',
   'page9',
   'page10',
+  'page_cover_strip',
   'page12',
 ] as const
 

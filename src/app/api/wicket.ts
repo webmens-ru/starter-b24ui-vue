@@ -1,3 +1,5 @@
+import type { CoverStripCatalogItem, WicketConfigurationResponse } from './wicket.types'
+import { mockGetCoverStrips } from './mockWicket'
 import api from '.'
 import { parseJumperOptions, type JumperOptionsResponse } from './jumperProperties'
 export type { JumperPlacement, JumperOption, JumperOptionsResponse } from './jumperProperties'
@@ -230,23 +232,23 @@ export async function createWicketMainMenu(payload: WicketMainMenuPayload): Prom
 }
 
 /** Загружает данные расчёта для редактирования (при открытии из Bitrix24 с placementOptions.id). */
-export async function loadWicketData(context: ProductRowContext): Promise<Record<string, unknown>> {
+export async function loadWicketData(context: ProductRowContext): Promise<WicketConfigurationResponse> {
   assertProductRowContext(context)
-  if (isMock) return mockLoadWicketData(context.orderId)
+  if (isMock) return mockLoadWicketData(context.orderId, context.productRowId)
   return fetchWicketData(context, true)
 }
 
 async function fetchWicketData(
   context: ProductRowContext,
   rememberVersion: boolean,
-): Promise<Record<string, unknown>> {
+): Promise<WicketConfigurationResponse> {
   const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
   if (rememberVersion) rememberWicketProductRowLockVersion(context, data.data.lockVersion)
   return data.data
 }
 
 export async function loadCoherentWicketState(context: ProductRowContext): Promise<{
-  wicketData: Record<string, unknown>
+  wicketData: WicketConfigurationResponse
   accessoryComposition: WicketAccessoryCompositionResponse
 }> {
   assertProductRowContext(context)
@@ -852,4 +854,11 @@ export async function getStandaloneMaterialItems(typeCode: string): Promise<Mate
 export async function getMaterialItem(id: number): Promise<MaterialItemDto> {
   const { data } = await api.get('/api/dict/material/view', { params: { id } })
   return data.data.items[0]
+}
+
+/** Shared material catalog, independent of wicket model and standalone sale flags. */
+export async function getCoverStrips(): Promise<{ items: CoverStripCatalogItem[] }> {
+  if (isMock) return mockGetCoverStrips()
+  const { data } = await api.get('/api/dict/cover-strip/get-list')
+  return { items: data.data.items }
 }

@@ -1,7 +1,9 @@
+import type { CoverStripDraft } from '../../components/wicket/coverStripState'
 /**
  * Общее состояние для ветвления маршрутов всех типов калиток.
  */
 export interface WicketSharedNavState {
+  coverStripDrafts?: CoverStripDraft[]
   modelId: string
   materialFacadeGlob: string | null
   fillSide: number | null | ''

@@ -349,3 +349,11 @@ describe('wicket accessory composition API', () => {
     unsubscribe()
   })
 })
+
+it('loads shared cover-strip definitions from the real GET endpoint', async () => {
+  const { getCoverStrips } = await import('./wicket')
+  const item = { materialItemId: 10, name: 'Renamed', article: '', price: 5, attributes: {}, orderParameters: [{ attributeId: 9, code: 'color', dataType: 'color', name: 'Renamed attribute', required: true, values: [{ id: 7, label: 'Renamed color' }] }] }
+  api.get.mockResolvedValue({ data: { data: { items: [item] } } })
+  expect(await getCoverStrips()).toEqual({ items: [item] })
+  expect(api.get).toHaveBeenLastCalledWith('/api/dict/cover-strip/get-list')
+})

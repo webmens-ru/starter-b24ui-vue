@@ -63,3 +63,14 @@ describe('mock wicket filling API', () => {
     })
   })
 })
+
+it('persists mock cover strips per product row, preserves omitted and clears explicit empty', async () => {
+  const { mockSaveWicketData, mockLoadWicketData } = await import('./mockWicket')
+  const choices = [{ materialItemId: 501, parameters: [{ attributeId: 51, colorId: 52 }] }]
+  await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1', coverStrips: choices })
+  await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1' })
+  expect((await mockLoadWicketData(77, 801)).coverStrips).toEqual(choices)
+  expect((await mockLoadWicketData(77, 802)).coverStrips).toEqual([])
+  await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1', coverStrips: [] })
+  expect((await mockLoadWicketData(77, 801)).coverStrips).toEqual([])
+})

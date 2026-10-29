@@ -41,7 +41,7 @@ describe('defineWicketRoute', () => {
     const route = defineWicketRoute(standardTailSections())
     expect(route.menu(state).map(item => item.label)).toEqual([
       'Расположение полотна', 'Тип щита',
-      'Окраска', 'Комплект замка', 'Дополнительная ручка', 'Рассчитать',
+      'Окраска', 'Комплект замка', 'Дополнительная ручка', 'Нащельник', 'Рассчитать',
     ])
     expect(route.next('page6', state)).toBe('page3')
     expect(route.next('page3', state)).toBe('page_painting')
@@ -94,8 +94,8 @@ describe('defineWicketRoute', () => {
     const stateWithLock = { ...state, isThereLock: 1 }
     expect(route.next('page_lock_type', stateWithLock)).toBe('page10')
     expect(route.prev('page10', stateWithLock)).toBe('page_lock_type')
-    expect(route.next('page10', state)).toBe('page12')
-    expect(route.prev('page12', state)).toBe('page10')
+    expect(route.next('page10', state)).toBe('page_cover_strip')
+    expect(route.prev('page12', state)).toBe('page_cover_strip')
     expect(menuPages).not.toContain('page11')
   })
 })
