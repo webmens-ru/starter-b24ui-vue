@@ -7,6 +7,7 @@ import { saveWicketData, recalculate } from '../../app/api/wicket'
 import * as groups from '../../app/fillingMaterialGroups'
 import * as sideCounts from '../../app/fillingSideCounts'
 import { getNextPage } from '../../pages/wicket/type2Route'
+import { getNextPage as getType1NextPage } from '../../pages/wicket/type1Route'
 
 vi.mock('../../app/api/wicket', async original => ({
   ...(await original<typeof import('../../app/api/wicket')>()),
@@ -214,6 +215,30 @@ describe('material provider in filling', () => {
     expect(calc.fillSide.value).toBe(1)
     expect(calc.idFacade.value).toBe('')
     expect(calc.isFillSectionIncomplete.value).toBe(true)
+    wrapper.unmount()
+  })
+  it.each(cases)('type %s restores its default material group when enabling previously absent filling', async (modelId, component) => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.fillSide.value = 0
+    calc.clearFilling()
+    const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    await wrapper.get('input[value="manufacturer"]').setValue()
+    await flushPromises()
+    const expectedGroup = ({ '1': 'siding', '2': 'siding', '3': 'fence', '4': 'lamella', '5': 'spSiding',
+      '6': 'louver', '7': 'siding', '8': 'sheet', '9': 'profnastil', '10': 'profnastil', '11': 'profnastil' } as Record<string, string>)[modelId]
+    expect(calc.materialFacadeGlob.value).toBe(expectedGroup)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ materialFacadeGlob: expectedGroup }))
+    expect(calc.fillSide.value).toBe(1)
+    expect(calc.idFacade.value).toBe('')
+    expect(calc.idYard.value).toBe('')
+    if (modelId === '1' || modelId === '2') {
+      const next = modelId === '1' ? getType1NextPage : getNextPage
+      expect(next('page2', { modelId, materialFacadeGlob: calc.materialFacadeGlob.value,
+        materialYardGlob: calc.materialYardGlob.value, fillSide: calc.fillSide.value,
+        isThereLock: 1, providesLock: 'manufacturer', availableSections: [] })).toBe('page2_facade_siding')
+    }
     wrapper.unmount()
   })
   it('shows a failed no-filling save and keeps navigation disabled until retry succeeds', async () => {

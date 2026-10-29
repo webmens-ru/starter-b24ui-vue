@@ -146,7 +146,7 @@ onMounted(async () => {
       <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <MaterialProvider :persist="save" />
+    <MaterialProvider :persist="save" default-facade-group="lamella" />
 
     <!-- Группы карточек -->
     <div v-if="calc.fillSide.value !== 0" class="flex flex-col gap-6 mt-4">

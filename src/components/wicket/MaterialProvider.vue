@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { participantRoleOptions } from '../../app/participantRoles'
+import type { FillingMaterialGroup } from '../../app/fillingMaterialGroups'
 import { hasInvalidFillingGroupSelection } from '../../app/fillingMaterialGroups'
 import { hasInvalidFillingSideCountSelection } from '../../app/fillingSideCounts'
 import { useCalculation } from '../../composables/useCalculation'
 
 const calc = useCalculation()
-const props = defineProps<{ persist: () => Promise<void> }>()
+const props = defineProps<{ persist: () => Promise<void>; defaultFacadeGroup: FillingMaterialGroup }>()
 const busy = ref(false)
 const saveError = ref('')
 async function persist(): Promise<void> {
@@ -32,6 +33,7 @@ const choice = computed({
         calc.clearFilling()
         calc.raspolozheniyePolotna.value = 'vertical'
         calc.fillSide.value = 1
+        calc.materialFacadeGlob.value = props.defaultFacadeGroup
       }
       calc.providesMaterial.value = value
     }
