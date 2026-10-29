@@ -1,3 +1,4 @@
+import { defineComponent } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, it, vi } from 'vitest'
@@ -7,7 +8,12 @@ import CoverStrip from './CoverStrip.vue'
 
 vi.mock('../../app/api/wicket', async original => ({ ...await original<typeof import('../../app/api/wicket')>(), getCoverStrips: vi.fn(), saveWicketData: vi.fn(async () => ({ lockVersion: 1 })), recalculate: vi.fn() }))
 const item = (materialItemId: number, colors = [2, 3]) => ({ materialItemId, name: `Материал ${materialItemId}`, article: '', price: 10, attributes: {}, orderParameters: [{ attributeId: 5, code: 'color', name: 'Переименованный цвет', dataType: 'color', required: true, values: colors.map(id => ({ id, label: `Цвет ${id}` })) }] })
-const setup = async () => { const wrapper = mount(CoverStrip); await flushPromises(); return wrapper }
+const ButtonStub = defineComponent({ props: ['label'], template: '<button>{{ label }}</button>' })
+const SelectStub = defineComponent({ props: ['modelValue', 'items', 'placeholder'], emits: ['update:modelValue'], template: `<select :value="modelValue ?? ''" @change="$emit('update:modelValue', Number($event.target.value) || undefined)"><option value="">{{ placeholder }}</option><option v-for="item in items" :key="item.id" :value="item.id">{{ item.label }}</option></select>` })
+const mountCoverStrip = () => mount(CoverStrip, { global: { stubs: {
+  B24Button: ButtonStub, Button: ButtonStub, B24SelectMenu: SelectStub, SelectMenu: SelectStub,
+} } })
+const setup = async () => { const wrapper = mountCoverStrip(); await flushPromises(); return wrapper }
 const click = async (wrapper: ReturnType<typeof mount>, text: string) => { await wrapper.findAll('button').find(b => b.text() === text)!.trigger('click'); await flushPromises() }
 beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(getCoverStrips).mockResolvedValue({ items: [item(10), item(11, [4])] }); vi.mocked(saveWicketData).mockResolvedValue({ lockVersion: 1 }); const calc = useCalculation(); calc.orderId.value = 1; calc.productRowId.value = 2; calc.modelId.value = '1' })
 it('starts with none and retains at most four incomplete cards in shared validation', async () => {
@@ -56,7 +62,7 @@ it('serializes latest complete list while a save is in flight and drains before 
 it('does not apply late catalog response to another product row', async () => {
   let release!: (value: { items: ReturnType<typeof item>[] }) => void
   vi.mocked(getCoverStrips).mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
-  const wrapper = mount(CoverStrip)
+  const wrapper = mountCoverStrip()
   const calc = useCalculation()
   calc.loadFromApi({ orderId: 1, productRowId: 3, modelId: '1', coverStrips: [{ materialItemId: 11, parameters: [{ attributeId: 5, colorId: 4 }] }] })
   release({ items: [] }); await flushPromises()
