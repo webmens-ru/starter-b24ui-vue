@@ -24,6 +24,7 @@ let persistedDescriptions = [...calc.coverStripDescriptions.value]
 let revision = 0
 let queue: Promise<boolean> = Promise.resolve(true)
 const itemFor = (id: number | null) => items.value.find(item => item.materialItemId === id)
+const materialOptions = computed(() => items.value.map(item => ({ id: item.materialItemId, label: materialLabel(item) })))
 function markAvailability() {
   for (const row of rows.value) row.unavailable = !isCoverStripAvailable(row, items.value)
 }
@@ -102,15 +103,15 @@ function add() {
 }
 function remove(index: number) { rows.value.splice(index, 1); changed() }
 function none() { rows.value = []; changed() }
-function materialChanged(index: number, event: Event) {
-  const id = Number((event.target as HTMLSelectElement).value)
+function materialChanged(index: number, value: unknown) {
+  const id = Number(value)
   const item = itemFor(id)
   rows.value[index] = item ? newCoverStripDraft(item) : { materialItemId: null, parameters: [] }
   changed()
 }
-function colorChanged(index: number, attributeId: number, event: Event) {
+function colorChanged(index: number, attributeId: number, value: unknown) {
   const parameter = rows.value[index]?.parameters.find(p => p.attributeId === attributeId)
-  if (parameter) parameter.colorId = Number((event.target as HTMLSelectElement).value) || null
+  if (parameter) parameter.colorId = Number(value) || null
   changed()
 }
 async function validateAndSave(): Promise<boolean> {
@@ -135,37 +136,50 @@ onMounted(async () => {
 
 <template>
   <div class="flex flex-col gap-6">
-    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2">
-      <button type="button" class="px-4 py-2 rounded border" @click="emit('back')">Назад</button>
-      <h2 class="text-2xl font-bold">Нащельник</h2>
-      <button type="button" class="px-4 py-2 rounded border" @click="next">Далее</button>
+    <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
+      <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
+      <h2 class="text-2xl font-bold flex-1 text-center">Нащельник</h2>
+      <B24Button label="Далее" color="air-secondary" @click="next" />
     </div>
-    <p v-if="error" role="alert" class="text-red-600">{{ error }}</p>
+    <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
     <p v-if="loading">Загрузка...</p>
     <p v-else-if="loadFailed" role="alert">Не удалось загрузить справочник нащельников. Повторите открытие шага.</p>
     <template v-else>
-      <div class="flex gap-3 items-center">
-        <button type="button" class="px-4 py-2 rounded border" :aria-pressed="!rows.length" @click="none">Не требуется</button>
-        <button type="button" class="px-4 py-2 rounded border" :disabled="rows.length >= 4" @click="add">Добавить нащельник</button>
+      <div class="flex flex-wrap gap-3 items-center">
+        <B24Button label="Не требуется" :color="!rows.length ? 'air-primary' : 'air-secondary'" :aria-pressed="!rows.length" @click="none" />
+        <B24Button label="Добавить нащельник" color="air-secondary" :disabled="rows.length >= 4" @click="add" />
       </div>
       <p class="text-sm text-gray-600">Одна карточка — один нащельник. Можно добавить до четырёх, в том числе одинаковых.</p>
-      <section v-for="(row, index) in rows" :key="index" class="rounded border p-4 flex flex-col gap-3">
-        <div class="flex justify-between items-center"><h3 class="font-semibold">Нащельник {{ index + 1 }}</h3><button type="button" class="px-3 py-1 rounded border" @click="remove(index)">Удалить</button></div>
+      <section v-for="(row, index) in rows" :key="index" class="cover-strip-card flex flex-col gap-4">
+        <div class="flex justify-between items-center"><h3 class="font-semibold">Нащельник {{ index + 1 }}</h3><B24Button label="Удалить" color="air-secondary" size="sm" @click="remove(index)" /></div>
         <p v-if="row.unavailable" role="alert">{{ calc.coverStripDescriptions.value[index] ?? `Нащельник #${row.materialItemId}` }}. Сохранённый материал или цвет недоступен. Замените выбор.</p>
-        <label class="flex flex-col gap-1">Материал
-          <select data-material class="rounded border p-2" :value="row.materialItemId ?? ''" @change="materialChanged(index, $event)">
-            <option value="">Выберите материал</option>
-            <option v-if="row.materialItemId && !itemFor(row.materialItemId)" :value="row.materialItemId" disabled>Сохранённый материал недоступен</option>
-            <option v-for="item in items" :key="item.materialItemId" :value="item.materialItemId">{{ materialLabel(item) }}</option>
-          </select>
-        </label>
-        <label v-for="definition in itemFor(row.materialItemId)?.orderParameters.filter(def => def.code === 'color' && def.dataType === 'color') ?? []" :key="definition.attributeId" class="flex flex-col gap-1">{{ definition.name }}
-          <select data-color class="rounded border p-2" :value="row.parameters.find(p => p.attributeId === definition.attributeId)?.colorId ?? ''" @change="colorChanged(index, definition.attributeId, $event)">
-            <option value="">Выберите цвет</option>
-            <option v-for="color in definition.values" :key="color.id" :value="color.id">{{ color.label }}</option>
-          </select>
-        </label>
+        <div class="flex flex-col gap-2">
+          <label :for="`cover-strip-material-${index}`" class="font-semibold">Материал</label>
+          <B24SelectMenu
+            :id="`cover-strip-material-${index}`" data-material
+            :model-value="row.materialItemId ?? undefined" :items="materialOptions" value-key="id"
+            placeholder="Выберите материал" @update:model-value="materialChanged(index, $event)"
+          />
+        </div>
+        <div v-for="definition in itemFor(row.materialItemId)?.orderParameters.filter(def => def.code === 'color' && def.dataType === 'color') ?? []" :key="definition.attributeId" class="flex flex-col gap-2">
+          <label :for="`cover-strip-color-${index}-${definition.attributeId}`" class="font-semibold">{{ definition.name }}</label>
+          <B24SelectMenu
+            :id="`cover-strip-color-${index}-${definition.attributeId}`" data-color
+            :model-value="row.parameters.find(p => p.attributeId === definition.attributeId)?.colorId ?? undefined"
+            :items="definition.values" value-key="id" placeholder="Выберите цвет"
+            @update:model-value="colorChanged(index, definition.attributeId, $event)"
+          />
+        </div>
       </section>
     </template>
   </div>
 </template>
+
+<style scoped>
+.cover-strip-card {
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+}
+</style>
