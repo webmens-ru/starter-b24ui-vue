@@ -84,7 +84,7 @@ function syncFields() {
     params.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', 'manufacturer') })
     params.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', 'manufacturer') })
   }
-  calc.updateOrCreateBlock('additionalPen', params, 'Дополнительные ручки (скобы)')
+  calc.updateOrCreateBlock('additionalPen', params, 'Дополнительные ручки')
 }
 function captureRef<T>(target: { value: T }): () => void {
   const value = target.value
@@ -207,7 +207,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-6">
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
-      <span class="text-2xl font-bold flex-1 text-center">Дополнительные ручки (скобы)</span>
+      <span class="text-2xl font-bold flex-1 text-center">Дополнительные ручки</span>
       <B24Button label="Далее" color="air-secondary" @click="continueToNext" />
     </div>
     <p v-if="legacyPending && !legacyResolved" role="status">Ранее выбрана одна ручка без указания стороны: {{ legacyDescription }}. Выберите сторону или укажите «Не требуется» с обеих сторон.</p>

@@ -564,7 +564,7 @@ export async function mockGetPensByLock(_lockSetId: number): Promise<{
 }
 
 export async function mockGetAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; canUseFrameColor: boolean; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ id: number; marking: string; canUseFrameColor: boolean; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   await delay(80)
   return {

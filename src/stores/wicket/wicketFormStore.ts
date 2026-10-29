@@ -1094,7 +1094,7 @@ const fieldsFilled = ref<number>(0)
     // Замок
     blocks.push({ blockCode: 'lock', blockName: 'Замок', params: buildLockSummaryParams() })
 
-    // Дополнительная ручка (скоба)
+    // Дополнительная ручка
     const penParams: CalcBlock['params'] = [
       { paramCode: 'presence', name: 'Дополнительная ручка', value: optionPresenceLabel(isTherePen.value, 'optional') },
     ]
@@ -1114,7 +1114,7 @@ const fieldsFilled = ref<number>(0)
       penParams.push({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: additionalPenYardId.value == null ? 'Не требуется' : additionalPenYardMarking.value })
       if (additionalPenYardId.value != null) penParams.push({ paramCode: 'yardPenColor', name: 'Цвет ручки со двора', value: additionalPenYardColorName.value })
     }
-    blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка (скоба)', params: penParams })
+    blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка', params: penParams })
 
     // Цена
     if (priceDealer.value || priceRetail.value) {
