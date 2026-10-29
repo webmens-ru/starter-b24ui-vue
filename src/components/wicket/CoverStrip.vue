@@ -11,6 +11,8 @@ const calc = useCalculation()
 const items = ref<CoverStripCatalogItem[]>([])
 const selectMenuUi = {
   content: 'w-[var(--reka-combobox-trigger-width)] max-w-[calc(100vw-2rem)]',
+  viewport: 'w-full',
+  item: 'h-auto min-h-[36px] py-2',
   itemLabel: 'whitespace-normal break-words text-clip',
 }
 const loading = ref(true)
