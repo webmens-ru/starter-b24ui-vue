@@ -9,6 +9,10 @@ import { createStepLeaveAttempt } from './stepLeaveAttempt'
 const emit = defineEmits<{ next: []; back: [] }>()
 const calc = useCalculation()
 const items = ref<CoverStripCatalogItem[]>([])
+const selectMenuUi = {
+  content: 'w-[var(--reka-combobox-trigger-width)] max-w-[calc(100vw-2rem)]',
+  itemLabel: 'whitespace-normal break-words text-clip',
+}
 const loading = ref(true)
 const loadFailed = ref(false)
 const error = ref('')
@@ -155,7 +159,7 @@ onMounted(async () => {
         <p v-if="row.unavailable" role="alert">{{ calc.coverStripDescriptions.value[index] ?? `Нащельник #${row.materialItemId}` }}. Сохранённый материал или цвет недоступен. Замените выбор.</p>
         <div class="flex flex-col gap-2">
           <label :for="`cover-strip-material-${index}`" class="font-semibold">Материал</label>
-          <B24SelectMenu
+          <B24SelectMenu :b24ui="selectMenuUi" :content="{ align: 'start' }"
             :id="`cover-strip-material-${index}`" data-material
             :model-value="row.materialItemId ?? undefined" :items="materialOptions" value-key="id"
             placeholder="Выберите материал" @update:model-value="materialChanged(index, $event)"
@@ -163,7 +167,7 @@ onMounted(async () => {
         </div>
         <div v-for="definition in itemFor(row.materialItemId)?.orderParameters.filter(def => def.code === 'color' && def.dataType === 'color') ?? []" :key="definition.attributeId" class="flex flex-col gap-2">
           <label :for="`cover-strip-color-${index}-${definition.attributeId}`" class="font-semibold">{{ definition.name }}</label>
-          <B24SelectMenu
+          <B24SelectMenu :b24ui="selectMenuUi" :content="{ align: 'start' }"
             :id="`cover-strip-color-${index}-${definition.attributeId}`" data-color
             :model-value="row.parameters.find(p => p.attributeId === definition.attributeId)?.colorId ?? undefined"
             :items="definition.values" value-key="id" placeholder="Выберите цвет"
