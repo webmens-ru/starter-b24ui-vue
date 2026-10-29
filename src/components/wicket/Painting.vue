@@ -23,7 +23,6 @@ const draftNote = ref(calc.colorShieldNote.value)
 const submitted = ref(false)
 const error = ref('')
 const catalogError = ref('')
-const calculationWarning = ref('')
 const selectedPaint = computed(() => paints.value.find(item => item.id === draftPaintId.value))
 const selectedColor = computed(() => selectedPaint.value?.colors.find(item => item.id === draftColorId.value))
 const customerPainting = computed(() => calc.doesPaintingFrameCode.value === 'customer')
@@ -66,33 +65,6 @@ async function onPrimerChange(value: string | number | null): Promise<void> {
   calc.primerId.value = value === 'none' ? null : numberId(value)
   await save()
 }
-function requestErrorMessage(cause: unknown, fallback: string): string {
-  if (typeof cause === 'object' && cause !== null && 'response' in cause) {
-    const response = cause.response
-    if (typeof response === 'object' && response !== null && 'data' in response) {
-      const data = response.data
-      if (typeof data === 'object' && data !== null) {
-        const messages: string[] = []
-        if ('problems' in data && Array.isArray(data.problems)) {
-          for (const problem of data.problems) {
-            if (typeof problem === 'object' && problem !== null && typeof problem.message === 'string') messages.push(problem.message)
-          }
-        }
-        if ('errors' in data && typeof data.errors === 'object' && data.errors !== null) {
-          for (const value of Object.values(data.errors).flat()) {
-            if (typeof value === 'string') messages.push(value)
-          }
-        }
-        if (messages.length) return [...new Set(messages)].join('\n')
-        if ('error' in data && typeof data.error === 'string') return data.error
-        if ('message' in data && typeof data.message === 'string') return data.message
-      }
-    }
-  }
-  return cause instanceof Error ? cause.message : fallback
-}
-
-
 function syncSummary(): void {
   const params = [
     { paramCode: 'paintProduct', name: 'Краска', value: calc.paintName.value },
@@ -158,7 +130,7 @@ async function saveSelection(): Promise<boolean> {
     }
     syncSummary()
     error.value = ''
-  } catch (cause) { error.value = requestErrorMessage(cause, 'Не удалось сохранить окраску'); return false }
+  } catch { error.value = 'Не удалось сохранить окраску'; return false }
   if (calc.priceRetail.value) {
     try {
       const result = await recalculate({
@@ -167,9 +139,7 @@ async function saveSelection(): Promise<boolean> {
         model: calc.model.value,
       })
       calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-      calculationWarning.value = ''
-    } catch (e) {
-      calculationWarning.value = `Окраска сохранена. Стоимость не пересчитана:\n${requestErrorMessage(e, 'Не удалось пересчитать стоимость')}`
+    } catch {
       calc.priceRetail.value = ''
       calc.priceDealer.value = ''
       calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
@@ -193,7 +163,7 @@ async function load(): Promise<void> {
     }
     categories.value = response.paintCategories ?? []
     category.value = selectedPaint.value?.paintCategoryId ?? categories.value[0]?.id ?? null
-  } catch (cause) { catalogError.value = requestErrorMessage(cause, 'Не удалось загрузить краски') }
+  } catch { catalogError.value = 'Не удалось загрузить краски' }
   finally { loading.value = false }
 }
 onMounted(async () => { calc.setActivePage('page_painting'); await load() })
@@ -216,7 +186,6 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
       <p v-if="loading">Загрузка красок…</p>
       <p v-if="!loading && !paintItems.length" role="status">В этой категории пока нет доступных красок.</p>
       <div v-if="error || catalogError" role="alert" class="text-red-600 whitespace-pre-line">{{ error || catalogError }}<B24Button v-if="catalogError" label="Повторить загрузку" :disabled="saving" @click="load" /></div>
-      <p v-if="calculationWarning" role="status" class="text-amber-700 whitespace-pre-line">{{ calculationWarning }}</p>
       <label class="flex flex-col gap-2"><span class="font-semibold">Краска</span>
         <B24SelectMenu data-testid="paint-product" :model-value="draftPaintId == null ? '' : String(draftPaintId)" :items="paintItems" value-key="id" placeholder="Выберите краску" :disabled="loading || saving" @update:model-value="onPaintChange" />
       </label>

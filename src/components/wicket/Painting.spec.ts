@@ -104,23 +104,32 @@ describe('separate paint and color', () => {
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({primerId:null}))
   w.unmount()
  })
- it('shows server field validation details and blocks leaving', async () => {
+ it('does not expose server field validation details and blocks leaving', async () => {
   const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91})
   const w=render();await flushPromises()
   vi.mocked(saveWicketData).mockRejectedValueOnce({response:{data:{errors:{paintColorId:['Incompatible color']}}}})
   expect(await w.vm.validateBeforeLeave()).toBe(false)
-  expect(w.text()).toContain('Incompatible color')
+  expect(w.text()).not.toContain('Incompatible color')
+  expect(w.text()).toContain('Не удалось сохранить окраску')
   w.unmount()
  })
  it('allows leaving after saved painting when recalculation fails', async () => {
   const c=useCalculation();c.loadFromApi({paintId:1,paintColorId:91});c.priceRetail.value='1000'
   const w=render();await flushPromises()
   c.data.value.push({ blockCode: 'price', blockName: 'Renamed price', params: [] })
-  vi.mocked(recalculate).mockRejectedValueOnce(new Error('Price failed'))
+  vi.mocked(recalculate).mockRejectedValueOnce({ response: { data: { problems: [{ message: 'Price failed' }] } } })
   expect(await w.vm.validateBeforeLeave()).toBe(true)
-  expect(w.text()).toContain('Окраска сохранена')
-  expect(w.text()).toContain('Price failed')
+  expect(w.text()).not.toContain('Окраска сохранена')
+  expect(w.text()).not.toContain('Price failed')
   expect(c.data.value.some(block => block.blockCode === 'price')).toBe(false)
+  w.unmount()
+ })
+ it('does not expose catalog error responses', async () => {
+  vi.mocked(getColorShield).mockRejectedValueOnce(new Error('Private server catalog failure'))
+  const w = render()
+  await flushPromises()
+  expect(w.text()).not.toContain('Private server catalog failure')
+  expect(w.text()).toContain('Не удалось загрузить краски')
   w.unmount()
  })
  it('does not preserve an unavailable paint through the unavailable-color exception', async () => {

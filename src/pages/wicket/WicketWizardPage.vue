@@ -99,7 +99,9 @@ async function resolveProductRowContext(): Promise<ProductRowContext | null> {
     return { orderId: routeOrderId, productRowId: routeProductRowId, modelId: resolvedModelId() }
   }
   if (parsedOrderId.kind === 'invalid' || parsedProductRowId.kind === 'invalid') {
-    throw new Error('Некорректный контекст товарной позиции')
+    loadError.value = 'Некорректный контекст товарной позиции'
+    showLoadErrorModal.value = true
+    return null
   }
 
   initGeneration += 1
@@ -150,7 +152,7 @@ async function initCalculation(): Promise<void> {
     switchTo(calc.activePage.value)
   } catch (e: unknown) {
     if (!isCurrentInitialization(generation)) return
-    loadError.value = e instanceof Error ? e.message : 'Ошибка загрузки расчёта'
+    loadError.value = 'Ошибка загрузки расчёта'
     showLoadErrorModal.value = true
   } finally {
     if (isCurrentInitialization(generation)) loadPending.value = false

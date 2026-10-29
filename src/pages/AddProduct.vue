@@ -83,7 +83,7 @@ async function onProductTypeSelect(item: (typeof productTypes)[0]) {
       query: { orderId: String(currentOrderId.value) },
     })
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании расчёта'
+    errorMessage.value = 'Произошла ошибка при создании расчёта'
   } finally {
     loading.value = null
   }
@@ -115,7 +115,7 @@ onMounted(async () => {
     }
   } catch (e) {
     if (!isCurrentLifecycle(generation)) return
-    errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при создании заказа'
+    errorMessage.value = 'Не удалось создать заказ'
   } finally {
     if (isCurrentLifecycle(generation)) loading.value = null
   }

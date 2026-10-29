@@ -102,15 +102,16 @@ describe('AddProduct order flow', () => {
   )
 
   it('announces an initial order creation failure accessibly', async () => {
-    mocks.createOrder.mockRejectedValueOnce(new Error('Не удалось создать заказ'))
+    mocks.createOrder.mockRejectedValueOnce(new Error('Private server order failure'))
     const wrapper = mountPage()
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось создать заказ')
+    expect(wrapper.text()).not.toContain('Private server order failure')
   })
 
   it('explains that a product row needs an order before product selection', async () => {
-    mocks.createOrder.mockRejectedValueOnce(new Error('Не удалось создать заказ'))
+    mocks.createOrder.mockRejectedValueOnce(new Error('Private server order failure'))
     const wrapper = mountPage()
     await flushPromises()
 

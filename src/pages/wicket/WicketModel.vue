@@ -158,7 +158,7 @@ async function onModelSelect(item: (typeof models)[0]) {
     })
   } catch (e) {
     if (!isCurrentRequest(generation, selectedOrderId)) return
-    errorMessage.value = e instanceof Error ? e.message : 'Произошла ошибка при выполнении запроса'
+    errorMessage.value = 'Произошла ошибка при выполнении запроса'
   } finally {
     if (isCurrentRequest(generation, selectedOrderId)) loading.value = null
   }

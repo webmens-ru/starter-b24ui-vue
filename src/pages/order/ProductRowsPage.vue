@@ -237,13 +237,8 @@ function isConflict(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409
 }
 
-function mutationMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const serverMessage = error.response?.data?.message
-      ?? error.response?.data?.error?.message
-    if (typeof serverMessage === 'string' && serverMessage.trim() !== '') return serverMessage
-  }
-  return error instanceof Error ? error.message : 'Не удалось выполнить действие с товарной позицией'
+function mutationMessage(_error: unknown): string {
+  return 'Не удалось выполнить действие с товарной позицией'
 }
 
 type LoadResult = 'loaded' | 'failed' | 'stale'

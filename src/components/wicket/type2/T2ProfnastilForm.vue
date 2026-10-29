@@ -153,7 +153,7 @@ async function load(profileValue: number | null, coatingValue: number | null) {
     return true
   } catch (error) {
     if (!current()) return false
-    loadError.value = error instanceof Error ? error.message : 'Не удалось загрузить справочник покрытий.'
+    loadError.value = 'Не удалось загрузить справочник покрытий.'
     return false
   } finally {
     if (current()) loading.value = false

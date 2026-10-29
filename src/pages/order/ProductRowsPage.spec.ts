@@ -455,6 +455,8 @@ describe('ProductRowsPage', () => {
     await flushPromises()
 
     expect(mocks.createStandaloneProductRows).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).not.toContain('Ответ потерян')
+    expect(wrapper.text()).toContain('Не удалось выполнить действие с товарной позицией')
     expect(wrapper.find('[aria-label="Подтвердить добавление материала"]').exists()).toBe(true)
     await wrapper.get('[aria-label="Подтвердить добавление материала"]').trigger('click')
     await flushPromises()
