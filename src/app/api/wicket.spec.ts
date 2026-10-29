@@ -156,6 +156,13 @@ describe('wicket accessory composition API', () => {
     })
   })
 
+  it('loads universal handles through the explicit material catalog contract', async () => {
+    const response = { items: [{ materialItemId: 107, marking: 'Handle', canUseFrameColor: true, colors: [] }] }
+    api.get.mockResolvedValueOnce({ data: { data: response } })
+    const { getAdditionalPens } = await import('./wicket')
+    expect(await getAdditionalPens(2, 'welding')).toEqual(response)
+    expect(api.get).toHaveBeenLastCalledWith('/api/dict/additional-pen/get-material-list', { params: { modelId: 2, mountingType: 'welding' } })
+  })
   it('loads lock sets scoped to the wicket model without their composition', async () => {
     const response = {
       items: [{ id: 7, marking: 'Set 7', imageUrls: [] }],

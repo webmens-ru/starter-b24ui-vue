@@ -564,20 +564,20 @@ export async function mockGetPensByLock(_lockSetId: number): Promise<{
 }
 
 export async function mockGetAdditionalPens(): Promise<{
-  items: Array<{ id: number; marking: string; canUseFrameColor: boolean; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ materialItemId: number; marking: string; canUseFrameColor: boolean; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   await delay(80)
   return {
     items: [
       {
-        id: 1,
+        materialItemId: 1,
         marking: 'Скоба СК-101',
         canUseFrameColor: true,
         colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }, { id: 3, name: 'Белая' }],
         imageUrls: [],
       },
       {
-        id: 2,
+        materialItemId: 2,
         marking: 'Скоба СК-102',
         canUseFrameColor: false,
         colors: [{ id: 1, name: 'Черная' }, { id: 2, name: 'Коричневая' }],

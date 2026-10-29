@@ -56,8 +56,8 @@ describe('independent additional pens', () => {
     calc.penProvided.value = 'manufacturer'
     calc.penInstalled.value = 'manufacturer'
     vi.mocked(getAdditionalPens).mockResolvedValue({ items: [
-      { id: 7, marking: 'Renamed', canUseFrameColor: true, colors: [{ id: 3, name: 'Any caption' }] },
-      { id: 8, marking: 'Other', canUseFrameColor: false, colors: [{ id: 4, name: 'Цвет каркаса' }] },
+      { materialItemId: 7, marking: 'Renamed', canUseFrameColor: true, colors: [{ id: 3, name: 'Any caption' }] },
+      { materialItemId: 8, marking: 'Other', canUseFrameColor: false, colors: [{ id: 4, name: 'Цвет каркаса' }] },
     ] })
   })
   it('does not select a first model or save on mount', async () => {
@@ -80,14 +80,51 @@ describe('independent additional pens', () => {
     await flushPromises()
     expect(await validateBeforeLeave(wrapper)).toBe(true)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
-      additionalPenSidesConfigured: 1, additionalPenStreetId: 7, additionalPenStreetColorId: null,
-      additionalPenYardId: 8, additionalPenYardColorId: 4, additionalPenId: null, penColorId: null,
+      additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 7, additionalPenStreetColorId: null,
+      additionalPenYardMaterialItemId: 8, additionalPenYardColorId: 4, additionalPenMaterialItemId: null, penColorId: null,
       isTherePen: 1, penProvided: 'manufacturer', penInstalled: 'manufacturer',
     }))
+  })
+  it('saves universal references in explicit material item fields', async () => {
+    const wrapper = mountPen()
+    await flushPromises()
+    await wrapper.get('input[name="street-pen"][value="7"]').setValue()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetMaterialItemId: 7 }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.not.objectContaining({ additionalPenStreetId: 7 }))
+  })
+  it('keeps distinct legacy and universal ID namespaces when restoring and saving', async () => {
+    const calc = useCalculation()
+    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetId: 7, additionalPenStreetMaterialItemId: 107 })
+    vi.mocked(getAdditionalPens).mockResolvedValue({ items: [{ materialItemId: 107, marking: 'Universal', canUseFrameColor: true, colors: [] }] })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(wrapper.get('input[name="street-pen"][value="107"]').element).toHaveProperty('checked', true)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetMaterialItemId: 107 }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.not.objectContaining({ additionalPenStreetId: 107 }))
+    expect(calc.additionalPenStreetId.value).toBeNull()
+  })
+  it('does not guess a matching numeric material ID when legacy mapping is missing', async () => {
+    const calc = useCalculation()
+    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetId: 7 })
+    const wrapper = mountPen()
+    await flushPromises()
+    expect(wrapper.findAll('input[name="street-pen"]:checked')).toHaveLength(0)
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(saveWicketData).not.toHaveBeenCalled()
+    expect(calc.additionalPenStreetId.value).toBe(7)
+    await wrapper.get('input[name="street-pen"][value="none"]').setValue()
+    await flushPromises()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetMaterialItemId: null, isTherePen: 0 }))
   })
   it('preserves legacy choice without assigning a side and requires explicit resolution', async () => {
     const calc = useCalculation()
     calc.additionalPenId.value = 7
+    calc.additionalPenMaterialItemId.value = 7
     calc.penColorId.value = 3
     const wrapper = mountPen()
     await flushPromises()
@@ -100,11 +137,11 @@ describe('independent additional pens', () => {
     await wrapper.get('input[name="yard-pen"][value="none"]').setValue()
     await flushPromises()
     expect(await validateBeforeLeave(wrapper)).toBe(true)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ isTherePen: 0, additionalPenId: null }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ isTherePen: 0, additionalPenMaterialItemId: null }))
   })
   it('blocks unknown IDs and unavailable colours', async () => {
     const calc = useCalculation()
-    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetId: 999, additionalPenYardId: null })
+    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 999, additionalPenYardMaterialItemId: null })
     const wrapper = mountPen()
     await flushPromises()
     expect(await validateBeforeLeave(wrapper)).toBe(false)
@@ -121,11 +158,11 @@ describe('independent additional pens', () => {
     expect(wrapper.text()).toContain('Не удалось сохранить')
     vi.mocked(saveWicketData).mockResolvedValue(undefined as never)
     expect(await validateBeforeLeave(wrapper)).toBe(true)
-    expect(useCalculation().additionalPenStreetId.value).toBe(7)
+    expect(useCalculation().additionalPenStreetMaterialItemId.value).toBe(7)
   })
   it('restores both numeric FK selections and captions without saving', async () => {
     const calc = useCalculation()
-    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetId: 7, additionalPenStreetColorId: null, additionalPenYardId: 8, additionalPenYardColorId: 4, penProvidedCode: 'manufacturer', penInstalledCode: 'customer' })
+    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 7, additionalPenStreetColorId: null, additionalPenYardMaterialItemId: 8, additionalPenYardColorId: 4, penProvidedCode: 'manufacturer', penInstalledCode: 'customer' })
     const wrapper = mountPen()
     await flushPromises()
     expect(wrapper.get('input[name="street-pen"][value="7"]').element).toHaveProperty('checked', true)
@@ -136,7 +173,7 @@ describe('independent additional pens', () => {
   })
   it('requests welded pens and fixes roles without exposing participant controls', async () => {
     const calc = useCalculation()
-    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetId: 7, penProvidedCode: 'customer', penInstalledCode: 'unknown' })
+    calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 7, penProvidedCode: 'customer', penInstalledCode: 'unknown' })
     const wrapper = mountPen()
     await flushPromises()
     expect(getAdditionalPens).toHaveBeenCalledWith('1', 'welding')
@@ -161,12 +198,13 @@ describe('independent additional pens', () => {
     expect(wrapper.emitted('next')).toBeUndefined()
     finishLatest(undefined as never)
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetId: 7 }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetMaterialItemId: 7 }))
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
   it('restores legacy store and summary on rejection while keeping the UI ready to retry', async () => {
     const calc = useCalculation()
     calc.additionalPenId.value = 7
+    calc.additionalPenMaterialItemId.value = 7
     calc.penColorId.value = 3
     calc.additionalPenMarking.value = 'Previous'
     calc.updateOrCreateBlock('additionalPen', [{ paramCode: 'penModel', name: 'Модель', value: 'Previous' }], 'Дополнительная ручка')
@@ -180,17 +218,18 @@ describe('independent additional pens', () => {
     expect(calc.additionalPenId.value).toBe(7)
     expect(calc.penColorId.value).toBe(3)
     expect(calc.additionalPenSidesConfigured.value).toBe(0)
-    expect(calc.additionalPenStreetId.value).toBe(null)
+    expect(calc.additionalPenStreetMaterialItemId.value).toBe(null)
     expect(calc.data.value.find(block => block.blockCode === 'additionalPen')).toEqual(previous)
     expect(wrapper.get('input[name="street-pen"][value="7"]').element).toHaveProperty('checked', true)
     vi.mocked(saveWicketData).mockResolvedValue(undefined as never)
     expect(await validateBeforeLeave(wrapper)).toBe(true)
     expect(calc.additionalPenId.value).toBe(null)
-    expect(calc.additionalPenStreetId.value).toBe(7)
+    expect(calc.additionalPenStreetMaterialItemId.value).toBe(7)
   })
   it('keeps successfully persisted fields when recalculation fails', async () => {
     const calc = useCalculation()
     calc.additionalPenId.value = 7
+    calc.additionalPenMaterialItemId.value = 7
     calc.priceRetail.value = 1000
     vi.mocked(recalculate).mockRejectedValue(new Error('recalculation failed'))
     const wrapper = mountPen()
@@ -199,9 +238,9 @@ describe('independent additional pens', () => {
     await flushPromises()
     expect(calc.additionalPenSidesConfigured.value).toBe(1)
     expect(calc.additionalPenId.value).toBe(null)
-    expect(calc.additionalPenStreetId.value).toBe(7)
+    expect(calc.additionalPenStreetMaterialItemId.value).toBe(7)
     expect(await validateBeforeLeave(wrapper)).toBe(false)
-    expect(calc.additionalPenStreetId.value).toBe(7)
+    expect(calc.additionalPenStreetMaterialItemId.value).toBe(7)
   })
   it('queues changes while saving and sends the latest complete selection', async () => {
     const wrapper = mountPen()
@@ -213,6 +252,6 @@ describe('independent additional pens', () => {
     await wrapper.get('input[name="yard-pen"][value="7"]').setValue()
     resolve(undefined as never)
     await flushPromises()
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetId: 7, additionalPenYardId: 7 }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ additionalPenStreetMaterialItemId: 7, additionalPenYardMaterialItemId: 7 }))
   })
 })

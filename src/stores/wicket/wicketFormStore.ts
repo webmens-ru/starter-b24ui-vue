@@ -90,6 +90,9 @@ const penProvided        = ref<string>('manufacturer')
 const penInstalled       = ref<string>('manufacturer')
 const penColor           = ref<string>('')
 const penColorId         = ref<number | null>(null)
+const additionalPenMaterialItemId = ref<number | null>(null)
+const additionalPenStreetMaterialItemId = ref<number | null>(null)
+const additionalPenYardMaterialItemId = ref<number | null>(null)
 const additionalPenSidesConfigured = ref<number>(0)
 const additionalPenStreetId = ref<number | null>(null)
 const additionalPenStreetColorId = ref<number | null>(null)
@@ -408,6 +411,9 @@ const fieldsFilled = ref<number>(0)
     penInstalled.value = 'manufacturer'
     penColor.value = ''
     penColorId.value = null
+    additionalPenMaterialItemId.value = null
+    additionalPenStreetMaterialItemId.value = null
+    additionalPenYardMaterialItemId.value = null
     additionalPenSidesConfigured.value = 0
     additionalPenStreetId.value = null
     additionalPenStreetColorId.value = null
@@ -773,6 +779,9 @@ const fieldsFilled = ref<number>(0)
       penInstalled,
       penColor,
       penColorId,
+      additionalPenMaterialItemId,
+      additionalPenStreetMaterialItemId,
+      additionalPenYardMaterialItemId,
       additionalPenSidesConfigured,
       additionalPenStreetId,
       additionalPenStreetColorId,
@@ -1102,17 +1111,17 @@ const fieldsFilled = ref<number>(0)
       penParams.push({ paramCode: 'penProvider', name: 'Ручку предоставляет', value: participantRoleLabel('provide', penProvided.value) })
       penParams.push({ paramCode: 'penInstaller', name: 'Ручку устанавливает', value: participantRoleLabel('install', penInstalled.value) })
       if (additionalPenSidesConfigured.value !== 1 && penProvided.value === 'manufacturer') {
-        if (additionalPenId.value != null && additionalPenMarking.value) {
+        if ((additionalPenMaterialItemId.value ?? additionalPenId.value) != null && additionalPenMarking.value) {
           penParams.push({ paramCode: 'penModel', name: 'Модель ручки', value: additionalPenMarking.value })
         }
         penParams.push({ paramCode: 'penColor', name: 'Цвет ручки', value: additionalPenColor.value || penColor.value })
       }
     }
     if (additionalPenSidesConfigured.value === 1) {
-      penParams.push({ paramCode: 'streetPenModel', name: 'Ручка с улицы', value: additionalPenStreetId.value == null ? 'Не требуется' : additionalPenStreetMarking.value })
-      if (additionalPenStreetId.value != null) penParams.push({ paramCode: 'streetPenColor', name: 'Цвет ручки с улицы', value: additionalPenStreetColorName.value })
-      penParams.push({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: additionalPenYardId.value == null ? 'Не требуется' : additionalPenYardMarking.value })
-      if (additionalPenYardId.value != null) penParams.push({ paramCode: 'yardPenColor', name: 'Цвет ручки со двора', value: additionalPenYardColorName.value })
+      penParams.push({ paramCode: 'streetPenModel', name: 'Ручка с улицы', value: (additionalPenStreetMaterialItemId.value ?? additionalPenStreetId.value) == null ? 'Не требуется' : additionalPenStreetMarking.value })
+      if ((additionalPenStreetMaterialItemId.value ?? additionalPenStreetId.value) != null) penParams.push({ paramCode: 'streetPenColor', name: 'Цвет ручки с улицы', value: additionalPenStreetColorName.value })
+      penParams.push({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: (additionalPenYardMaterialItemId.value ?? additionalPenYardId.value) == null ? 'Не требуется' : additionalPenYardMarking.value })
+      if ((additionalPenYardMaterialItemId.value ?? additionalPenYardId.value) != null) penParams.push({ paramCode: 'yardPenColor', name: 'Цвет ручки со двора', value: additionalPenYardColorName.value })
     }
     blocks.push({ blockCode: 'additionalPen', blockName: 'Дополнительная ручка', params: penParams })
 
@@ -1173,6 +1182,9 @@ const fieldsFilled = ref<number>(0)
     penColor,
     penColorId,
     additionalPenMarking,
+    additionalPenMaterialItemId,
+    additionalPenStreetMaterialItemId,
+    additionalPenYardMaterialItemId,
     additionalPenSidesConfigured,
     additionalPenStreetId,
     additionalPenStreetColorId,

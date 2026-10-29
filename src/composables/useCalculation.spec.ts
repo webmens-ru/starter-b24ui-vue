@@ -24,7 +24,16 @@ describe('useCalculation', () => {
   })
 
   describe('loadFromApi — данные не теряются при загрузке', () => {
-    it('восстанавливает ссылки формы профнастила Type 2', () => {
+    it('preserves explicit universal handle references in the full save payload', () => {
+    const calc = useCalculation()
+    calc.loadFromApi({ additionalPenMaterialItemId: 101, additionalPenStreetMaterialItemId: 107, additionalPenYardMaterialItemId: 108 })
+    expect(calc.getFullSavePayload()).toEqual(expect.objectContaining({ additionalPenMaterialItemId: 101, additionalPenStreetMaterialItemId: 107, additionalPenYardMaterialItemId: 108 }))
+    calc.reset()
+    expect(calc.additionalPenMaterialItemId.value).toBeNull()
+    expect(calc.additionalPenStreetMaterialItemId.value).toBeNull()
+    expect(calc.additionalPenYardMaterialItemId.value).toBeNull()
+  })
+  it('восстанавливает ссылки формы профнастила Type 2', () => {
       const calc = useCalculation()
 
       calc.loadFromApi({

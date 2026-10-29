@@ -58,6 +58,9 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   colorShieldId?: number | null
   providesPrimer?: string | null
   /** Null for a customer-provided set; providesLockCode preserves its presence. */
+  additionalPenMaterialItemId?: number | null
+  additionalPenStreetMaterialItemId?: number | null
+  additionalPenYardMaterialItemId?: number | null
   additionalPenSidesConfigured?: number
   additionalPenStreetId?: number | null
   additionalPenStreetColorId?: number | null
@@ -495,6 +498,9 @@ export interface WicketGetDataResponse extends ParticipantRoleProperties, Fillin
   visitedPages: string[]
   activePage: string
   /** Null for a customer-provided set; providesLockCode preserves its presence. */
+  additionalPenMaterialItemId?: number | null
+  additionalPenStreetMaterialItemId?: number | null
+  additionalPenYardMaterialItemId?: number | null
   additionalPenSidesConfigured?: number
   additionalPenStreetId?: number | null
   additionalPenStreetColorId?: number | null

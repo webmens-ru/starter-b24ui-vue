@@ -7,7 +7,7 @@ import ImageViewer from './ImageViewer.vue'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 interface PenItem {
-  id: number
+  materialItemId: number
   marking: string
   canUseFrameColor: boolean
   colors: { id: number; name: string }[]
@@ -21,14 +21,14 @@ const loading = ref(true)
 const loadFailed = ref(false)
 const error = ref('')
 const configured = calc.additionalPenSidesConfigured.value === 1
-const legacyPending = !configured && (calc.additionalPenId.value != null || calc.isTherePen.value === 1 || calc.isTherePen.value === null)
+const legacyPending = !configured && (calc.additionalPenId.value != null || calc.additionalPenMaterialItemId.value != null || calc.isTherePen.value === 1 || calc.isTherePen.value === null)
 const sides = reactive([
-  { code: 'street', label: 'Ручка с улицы', id: configured ? calc.additionalPenStreetId.value : null, color: (configured ? calc.additionalPenStreetColorId.value : null) as ColorChoice, touched: false },
-  { code: 'yard', label: 'Ручка со двора', id: configured ? calc.additionalPenYardId.value : null, color: (configured ? calc.additionalPenYardColorId.value : null) as ColorChoice, touched: false },
+  { code: 'street', label: 'Ручка с улицы', id: configured ? calc.additionalPenStreetMaterialItemId.value : null, color: (configured ? calc.additionalPenStreetColorId.value : null) as ColorChoice, touched: false, needsMapping: configured && calc.additionalPenStreetId.value != null && calc.additionalPenStreetMaterialItemId.value == null },
+  { code: 'yard', label: 'Ручка со двора', id: configured ? calc.additionalPenYardMaterialItemId.value : null, color: (configured ? calc.additionalPenYardColorId.value : null) as ColorChoice, touched: false, needsMapping: configured && calc.additionalPenYardId.value != null && calc.additionalPenYardMaterialItemId.value == null },
 ])
 const hasPens = computed(() => sides.some(side => side.id != null))
 const legacyDescription = computed(() => {
-  const pen = penItems.value.find(item => item.id === calc.additionalPenId.value)
+  const pen = penItems.value.find(item => item.materialItemId === calc.additionalPenMaterialItemId.value)
   const color = pen?.colors.find(item => item.id === calc.penColorId.value)?.name
     ?? (calc.penColorId.value == null && pen?.canUseFrameColor ? 'Цвет каркаса' : calc.additionalPenColor.value || calc.penColor.value)
   return [pen?.marking ?? calc.additionalPenMarking.value, color].filter(Boolean).join(', ')
@@ -36,15 +36,16 @@ const legacyDescription = computed(() => {
 const legacyResolved = computed(() => !legacyPending || hasPens.value || sides.every(side => side.touched))
 
 function colorsFor(id: number | null) {
-  const pen = penItems.value.find(item => item.id === id)
+  const pen = penItems.value.find(item => item.materialItemId === id)
   return pen ? [...(pen.canUseFrameColor ? [{ id: 'frame' as const, label: 'Цвет каркаса' }] : []), ...pen.colors.map(color => ({ id: color.id, label: color.name }))] : []
 }
 function validationError(): string {
   if (loading.value || loadFailed.value) return 'Не удалось загрузить справочник ручек'
   if (!legacyResolved.value) return 'Выберите сторону для ранее выбранной ручки или укажите «Не требуется» с обеих сторон'
   for (const side of sides) {
+    if (side.needsMapping && !side.touched) return 'Выберите доступную модель ручки заново или укажите «Не требуется»'
     if (side.id == null) continue
-    const pen = penItems.value.find(item => item.id === side.id)
+    const pen = penItems.value.find(item => item.materialItemId === side.id)
     if (!pen) return 'Выберите доступную модель ручки'
     if (!(side.color === 'frame' ? pen.canUseFrameColor : typeof side.color === 'number' && pen.colors.some(color => color.id === side.color))) return 'Выберите доступный цвет ручки'
   }
@@ -57,22 +58,25 @@ function syncFields() {
   calc.penProvided.value = hasPens.value ? 'manufacturer' : ''
   calc.penInstalled.value = hasPens.value ? 'manufacturer' : ''
   calc.additionalPenId.value = null
+  calc.additionalPenMaterialItemId.value = null
+  calc.additionalPenStreetId.value = null
+  calc.additionalPenYardId.value = null
   calc.penColorId.value = null
   calc.additionalPenColor.value = ''
   calc.additionalPenMarking.value = ''
   calc.penColor.value = ''
   const params = []
   for (const side of sides) {
-    const pen = penItems.value.find(item => item.id === side.id)
+    const pen = penItems.value.find(item => item.materialItemId === side.id)
     const colorId = side.id != null && typeof side.color === 'number' ? side.color : null
     const colorName = side.id == null ? '' : side.color === 'frame' ? 'Цвет каркаса' : pen?.colors.find(color => color.id === colorId)?.name ?? ''
     if (side.code === 'street') {
-      calc.additionalPenStreetId.value = side.id
+      calc.additionalPenStreetMaterialItemId.value = side.id
       calc.additionalPenStreetColorId.value = colorId
       calc.additionalPenStreetMarking.value = pen?.marking ?? ''
       calc.additionalPenStreetColorName.value = colorName
     } else {
-      calc.additionalPenYardId.value = side.id
+      calc.additionalPenYardMaterialItemId.value = side.id
       calc.additionalPenYardColorId.value = colorId
       calc.additionalPenYardMarking.value = pen?.marking ?? ''
       calc.additionalPenYardColorName.value = colorName
@@ -92,6 +96,9 @@ function captureRef<T>(target: { value: T }): () => void {
 }
 function capturePersistedSelection(): () => void {
   const restoreFields = [
+    captureRef(calc.additionalPenMaterialItemId),
+    captureRef(calc.additionalPenStreetMaterialItemId),
+    captureRef(calc.additionalPenYardMaterialItemId),
     captureRef(calc.additionalPenSidesConfigured),
     captureRef(calc.additionalPenStreetId),
     captureRef(calc.additionalPenStreetColorId),
@@ -134,14 +141,14 @@ function save(): Promise<boolean> {
     try {
       await saveWicketData({ ...calc.getBaseSavePayload(),
         additionalPenSidesConfigured: 1,
-        additionalPenStreetId: calc.additionalPenStreetId.value,
+        additionalPenStreetMaterialItemId: calc.additionalPenStreetMaterialItemId.value,
         additionalPenStreetColorId: calc.additionalPenStreetColorId.value,
-        additionalPenYardId: calc.additionalPenYardId.value,
+        additionalPenYardMaterialItemId: calc.additionalPenYardMaterialItemId.value,
         additionalPenYardColorId: calc.additionalPenYardColorId.value,
         isTherePen: calc.isTherePen.value,
         penProvided: calc.penProvided.value || null,
         penInstalled: calc.penInstalled.value || null,
-        additionalPenId: null, penColorId: null })
+        additionalPenMaterialItemId: null, penColorId: null })
       persisted = true
       if (calc.priceRetail.value) {
         const result = await recalculate({ orderId: Number(calc.number.value), productRowId: calc.getCurrentProductRowContext().productRowId, productType: calc.productType.value, model: calc.model.value, modelId: calc.modelId.value })
@@ -170,7 +177,7 @@ function selectPen(index: number, id: number | null) {
   side.touched = true
   if (side.id !== id) {
     side.id = id
-    const pen = penItems.value.find(item => item.id === id)
+    const pen = penItems.value.find(item => item.materialItemId === id)
     side.color = pen?.canUseFrameColor ? 'frame' : null
   }
   changed()
@@ -197,7 +204,7 @@ onMounted(async () => {
   try {
     penItems.value = (await getAdditionalPens(calc.modelId.value, 'welding')).items
     for (const side of sides) {
-      if (side.id != null && side.color == null && penItems.value.find(pen => pen.id === side.id)?.canUseFrameColor) side.color = 'frame'
+      if (side.id != null && side.color == null && penItems.value.find(pen => pen.materialItemId === side.id)?.canUseFrameColor) side.color = 'frame'
     }
   } catch { loadFailed.value = true } finally { loading.value = false }
 })
@@ -218,9 +225,9 @@ onMounted(async () => {
       <section v-for="(side, index) in sides" :key="side.code" class="flex flex-col gap-3">
         <h2 class="text-lg font-semibold">{{ side.label }}</h2>
         <div class="pen-cards-row">
-          <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" value="none" :checked="side.id == null && (!legacyPending || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
-          <label v-for="pen in penItems" :key="pen.id" class="pen-card">
-            <input :name="`${side.code}-pen`" type="radio" :value="pen.id" :checked="side.id === pen.id" @change="selectPen(index, pen.id)" />
+          <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" value="none" :checked="side.id == null && (!legacyPending || side.touched) && (!side.needsMapping || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
+          <label v-for="pen in penItems" :key="pen.materialItemId" class="pen-card">
+            <input :name="`${side.code}-pen`" type="radio" :value="pen.materialItemId" :checked="side.id === pen.materialItemId" @change="selectPen(index, pen.materialItemId)" />
             <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" image-height="100px" />
             <span>{{ pen.marking }}</span>
           </label>
