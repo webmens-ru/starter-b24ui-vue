@@ -1,3 +1,4 @@
+import { computeWicketBase, type WicketBaseGeometry } from '../wicketBaseGeometry'
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
 import { parseOpeningOrientation } from '../../openingOrientation'
@@ -37,6 +38,7 @@ export interface Type3Rect { x: number; y: number; width: number; height: number
 interface VisibleRect extends Type3Rect { visible: boolean }
 
 export interface Type3Geometry {
+  base: WicketBaseGeometry
   drawing: { width: number; height: number }
   opening: Type3Rect
   gate: Type3Rect
@@ -90,18 +92,9 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     jumperHeight: extraRailSize,
   })
   const orientation = source.openingOrientation == null ? null : parseOpeningOrientation(source.openingOrientation)
-  const gate = rect(postSize + (orientation?.hingeSide === 'right' ? 10 : 4), verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
-  const hingeX = orientation?.hingeSide === 'right' ? gate.x + gate.width - 6 : gate.x - 10
-  const hinges = orientation ? [gate.y + 100, gate.y + gate.height - 250].flatMap(y => [
-    rect(hingeX, y, 16, 75),
-    rect(hingeX, y + 75, 16, 75),
-  ]) : []
-  const stripX = orientation?.hingeSide === 'right' ? gate.x - 25 : gate.x + gate.width - 15
-  const strip = orientation ? [14, 12, 14].map((partWidth, index, widths) => rect(
-    stripX + widths.slice(0, index).reduce((total, part) => total + part, 0),
-    gate.y, partWidth, gate.height,
-  )) : []
   const rail = 50
+  const base = computeWicketBase({ profileSize: rail, openingWidth: width, vertical: verticalGeometry, hasPosts: postsVisible, postWidth: postSize, orientation })
+  const { gate, hinges, strip } = base
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
   resolveFrameSubtype(source.shieldType)
@@ -140,16 +133,13 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     : rect(activeFill.x + index * (visiblePicketWidth + gap), activeFill.y, visiblePicketWidth, activeFill.height))
 
   return {
+    base,
     drawing: { width, height },
     opening: rect(0, 0, width, height),
     gate,
     hinges,
     strip,
-    posts: {
-      visible: postsVisible,
-      left: rect(0, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
-      right: rect(width - postSize, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
-    },
+    posts: base.posts,
     frame: [
       rect(gate.x, gate.y, gate.width, rail),
       rect(gate.x, gate.y + gate.height - rail, gate.width, rail),

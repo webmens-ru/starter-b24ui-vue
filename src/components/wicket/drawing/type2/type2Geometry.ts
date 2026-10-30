@@ -1,3 +1,4 @@
+import { baseRailPath, computeWicketBase, type WicketBaseGeometry } from '../wicketBaseGeometry'
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { parseDrawingGrilleSide } from '../../../../app/grilleSides'
 import { computeJumperGeometry } from '../jumperGeometry'
@@ -51,6 +52,7 @@ interface VisibleRect extends DrawingRect {
 export type Type2GateSubtype = 'type1' | 'type2' | 'type3' | 'type4' | 'type5'
 
 export interface Type2DrawingGeometry {
+  base: WicketBaseGeometry
   drawing: { width: number; height: number }
   opening: DrawingRect
   gateZone: DrawingRect
@@ -92,11 +94,6 @@ const RAIL_SIZE = 50
 const INNER_FRAME_SIZE = 20
 const SUBTYPE_RAIL_SIZE = 50
 const CENTER_RAIL_SIZE = 40
-const HINGE_WIDTH = 16
-const HINGE_HEIGHT = 75
-const HINGE_OFFSET = 100
-const GAP_HINGE_SIDE = 4
-const GAP_LOCK_SIDE = 10
 
 function numberInRange(value: unknown, fallback: number, min: number, max: number): number {
   const empty = value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
@@ -129,13 +126,11 @@ function safeRect(x: number, y: number, width: number, height: number): DrawingR
 }
 
 export function buildTopRailPath(rect: DrawingRect): string {
-  const inset = Math.min(rect.height, rect.width / 2)
-  return `M${rect.x},${rect.y} L${rect.x + rect.width},${rect.y} L${rect.x + rect.width - inset},${rect.y + rect.height} L${rect.x + inset},${rect.y + rect.height} Z`
+  return baseRailPath(rect)
 }
 
 export function buildBottomRailPath(rect: DrawingRect): string {
-  const inset = Math.min(rect.height, rect.width / 2)
-  return `M${rect.x},${rect.y + rect.height} L${rect.x + rect.width},${rect.y + rect.height} L${rect.x + rect.width - inset},${rect.y} L${rect.x + inset},${rect.y} Z`
+  return baseRailPath(rect, true)
 }
 
 export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGeometry {
@@ -163,12 +158,8 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     jumperHeight: extraRailSize,
   })
 
-  const gateZoneX = hasPosts ? postWidth : 0
-  const gateZoneWidth = Math.max(0, openingWidth - (hasPosts ? 2 * postWidth : 0))
-  const gateWidth = Math.max(0, gateZoneWidth - GAP_HINGE_SIDE - GAP_LOCK_SIDE)
-  const gateX = gateZoneX + (hingeSide === 'left' ? GAP_HINGE_SIDE : GAP_LOCK_SIDE)
-  const gate = safeRect(gateX, vertical.gateY, gateWidth, vertical.gateHeight)
-  const gateZone = safeRect(gateZoneX, vertical.gateY, gateZoneWidth, vertical.gateHeight)
+  const base = computeWicketBase({ profileSize: RAIL_SIZE, openingWidth, vertical, hasPosts, postWidth, orientation: parseOpeningOrientation(source.openingOrientation) })
+  const { gate, gateZone, hinges, strip } = base
 
   const gateInner = safeRect(
     gate.x + RAIL_SIZE,
@@ -282,29 +273,14 @@ export function computeType2Geometry(source: Type2DrawingSource): Type2DrawingGe
     visible: meshArea.width > 0 && meshArea.height > 0,
   }
 
-  const hingeX = hingeSide === 'left' ? gate.x - HINGE_WIDTH + 6 : gate.x + gate.width - 6
-  const upperHingeY = gate.y + HINGE_OFFSET
-  const lowerHingeY = gate.y + Math.max(0, gate.height - HINGE_OFFSET - 2 * HINGE_HEIGHT)
-  const hinges = [0, 1].flatMap((index) => [
-    safeRect(hingeX, upperHingeY + index * HINGE_HEIGHT, HINGE_WIDTH, HINGE_HEIGHT),
-    safeRect(hingeX, lowerHingeY + index * HINGE_HEIGHT, HINGE_WIDTH, HINGE_HEIGHT),
-  ])
-
-  const stripX = hingeSide === 'left' ? gate.x + gate.width - 15 : gate.x - 25
-  const strip = [14, 12, 14].map((width, index, widths) =>
-    safeRect(stripX + widths.slice(0, index).reduce((sum, value) => sum + value, 0), gate.y, width, gate.height),
-  )
 
   return {
+    base,
     drawing: { width: openingWidth, height: openingHeight },
     opening: safeRect(0, 0, openingWidth, openingHeight),
     gateZone,
     gate,
-    posts: {
-      visible: hasPosts,
-      left: safeRect(0, vertical.postY, postWidth, vertical.postHeight),
-      right: safeRect(openingWidth - postWidth, vertical.postY, postWidth, vertical.postHeight),
-    },
+    posts: base.posts,
     subtype: gateSubtype,
     hingeSide,
     fillArea,

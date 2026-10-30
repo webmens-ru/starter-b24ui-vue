@@ -5,6 +5,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
 
 <script setup lang="ts">
+import WicketBaseDrawing from '../WicketBaseDrawing.vue'
 import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
@@ -12,7 +13,7 @@ import FillingDrawing from '../fillings/MaterialFillingDrawing.vue'
 import { resolveFillingPreview } from '../fillings/fillingTypes'
 import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
-import { buildBottomRailPath, buildTopRailPath, computeType2Geometry } from './type2Geometry'
+import { computeType2Geometry } from './type2Geometry'
 
 const calc = useCalculation()
 const showFill = ref(true)
@@ -126,8 +127,6 @@ const upperNetTileWidth = computed(() => Math.max(
   1,
   geometry.value.upperNetArea.height * upperNetImageWidthToHeight.value,
 ))
-const opensInward = computed(() => !calc.openingOrientation.value!.opensOutward)
-const hingesBehind = computed(() => opensInward.value !== viewedFromYard.value)
 const viewTransform = computed(() => viewedFromYard.value
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
   : undefined)
@@ -166,18 +165,6 @@ watch(
   },
   { immediate: true },
 )
-const topRailPath = computed(() => buildTopRailPath({
-  x: geometry.value.gate.x,
-  y: geometry.value.gate.y,
-  width: geometry.value.gate.width,
-  height: Math.min(50, geometry.value.gate.height),
-}))
-const bottomRailPath = computed(() => buildBottomRailPath({
-  x: geometry.value.gate.x,
-  y: geometry.value.gate.y + Math.max(0, geometry.value.gate.height - 50),
-  width: geometry.value.gate.width,
-  height: Math.min(50, geometry.value.gate.height),
-}))
 
 </script>
 
@@ -232,23 +219,8 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       />
 
       <!-- При открывании внутрь петли находятся за рамой -->
-      <g
-        v-if="hingesBehind"
-        data-testid="type2-drawing-hinges"
-        fill="#e8b923"
-        stroke="#000"
-        stroke-width="1"
-        vector-effect="non-scaling-stroke"
-      >
-        <rect
-          v-for="(hinge, index) in geometry.hinges"
-          :key="`back-hinge-${index}`"
-          :x="hinge.x"
-          :y="hinge.y"
-          :width="hinge.width"
-          :height="hinge.height"
-        />
-      </g>
+      <WicketBaseDrawing :geometry="geometry.base" :orientation="calc.openingOrientation.value" :yard="viewedFromYard" :color="displayedFrameColor" test-prefix="type2-drawing">
+      <template #background>
 
       <!-- Выбранная сетка в боковой области подтипа 4 -->
       <defs v-if="geometry.subtype === 'type4' && geometry.netArea.visible && geometry.netImage">
@@ -390,25 +362,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         />
       </g>
 
-      <!-- Со двора притворная полоса находится за рамой -->
-      <g
-        v-if="viewedFromYard"
-        data-testid="type2-drawing-strip"
-        :fill="displayedFrameColor"
-        stroke="#000"
-        stroke-width="1"
-        vector-effect="non-scaling-stroke"
-      >
-        <rect
-          v-for="(strip, index) in geometry.strip"
-          :key="`back-strip-${index}`"
-          :x="strip.x"
-          :y="strip.y"
-          :width="strip.width"
-          :height="strip.height"
-        />
-      </g>
-
+      </template><template #inner>
       <!-- Внутренний каркас и подтипные рейки -->
       <g data-testid="type2-drawing-frame" :fill="displayedFrameColor" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
         <rect
@@ -465,72 +419,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
         />
       </g>
 
-      <!-- Боковые рамки (лево/право) -->
-      <g :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
-        <rect :x="geometry.gate.x" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
-        <rect :x="geometry.gate.x + Math.max(0, geometry.gate.width - 50)" :y="geometry.gate.y" width="50" :height="geometry.gate.height"/>
-      </g>
-
-      <!-- Направляющие верх/низ — поверх боковых рамок для видимости трапеции -->
-      <g :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
-        <path :d="topRailPath"/>
-        <path :d="bottomRailPath"/>
-      </g>
-
-      <!-- Столбы -->
-      <g v-if="geometry.posts.visible" data-testid="type2-drawing-posts" :fill="displayedFrameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke">
-        <rect
-          :x="geometry.posts.left.x"
-          :y="geometry.posts.left.y"
-          :width="geometry.posts.left.width"
-          :height="geometry.posts.left.height"
-        />
-        <rect
-          :x="geometry.posts.right.x"
-          :y="geometry.posts.right.y"
-          :width="geometry.posts.right.width"
-          :height="geometry.posts.right.height"
-        />
-      </g>
-
-      <!-- Петли -->
-      <g
-        v-if="!hingesBehind"
-        data-testid="type2-drawing-hinges"
-        fill="#e8b923"
-        stroke="#000"
-        stroke-width="1"
-        vector-effect="non-scaling-stroke"
-      >
-        <rect
-          v-for="(hinge, index) in geometry.hinges"
-          :key="`hinge-${index}`"
-          :x="hinge.x"
-          :y="hinge.y"
-          :width="hinge.width"
-          :height="hinge.height"
-        />
-      </g>
-
-      <!-- Притворная полоса с улицы -->
-      <g
-        v-if="!viewedFromYard"
-        data-testid="type2-drawing-strip"
-        :fill="displayedFrameColor"
-        stroke="#000"
-        stroke-width="1"
-        vector-effect="non-scaling-stroke"
-      >
-        <rect
-          v-for="(strip, index) in geometry.strip"
-          :key="`strip-${index}`"
-          :x="strip.x"
-          :y="strip.y"
-          :width="strip.width"
-          :height="strip.height"
-        />
-      </g>
-
+      </template><template #foreground>
       <!-- С улицы профлист находится перед каркасом -->
       <g
         v-if="(!viewedFromYard || yardTwoSides) && showFill && hasMaterial"
@@ -551,6 +440,7 @@ const bottomRailPath = computed(() => buildBottomRailPath({
       </g>
 
       <!-- Перемычка переднего плана -->
+      </template></WicketBaseDrawing>
       <rect
         v-if="geometry.extraRail.visible && jumperPresentation.layer === 'foreground'"
         data-testid="type2-drawing-jumper-foreground"

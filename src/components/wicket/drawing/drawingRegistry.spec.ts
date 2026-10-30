@@ -16,6 +16,6 @@ describe('resolveDrawingComponent', () => {
   })
 
   it('не подставляет чертёж другого типа', () => {
-    expect(resolveDrawingComponent('11')).toBeNull()
+    expect(resolveDrawingComponent('12')).toBeNull()
   })
 })

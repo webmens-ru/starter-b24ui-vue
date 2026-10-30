@@ -5,6 +5,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 </script>
 
 <script setup lang="ts">
+import WicketBaseDrawing from '../WicketBaseDrawing.vue'
 import { computed, ref, watch } from 'vue'
 
 import { useCalculation } from '../../../../composables/useCalculation'
@@ -97,9 +98,6 @@ const viewBox = computed(() => {
   const padding = Math.max(0, ...hinges.map(part => Math.max(-part.x, part.x + part.width - drawing.width)))
   return `${-padding} 0 ${drawing.width + 2 * padding} ${drawing.height}`
 })
-const hingesBehind = computed(() => calc.openingOrientation.value
-  ? !calc.openingOrientation.value.opensOutward !== (viewSide.value === 'yard')
-  : false)
 const viewTransform = computed(() => viewSide.value === 'yard'
   ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
   : undefined)
@@ -163,13 +161,8 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         stroke-width="1"
         :stroke-dasharray="jumperPresentation.dashed ? '12 8' : undefined"
       />
-      <g v-if="viewSide === 'yard' && geometry.strip.length" data-testid="type3-strip" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
-        <rect v-for="(part, index) in geometry.strip" :key="`strip-${index}`" v-bind="part" />
-      </g>
-      <g v-if="geometry.posts.visible" data-testid="type3-posts" :fill="displayedFrameColor">
-        <rect v-bind="geometry.posts.left" />
-        <rect v-bind="geometry.posts.right" />
-      </g>
+      <WicketBaseDrawing :geometry="geometry.base" :orientation="calc.openingOrientation.value" :yard="viewSide === 'yard'" :color="displayedFrameColor" test-prefix="type3">
+      <template #background>
       <rect
         v-if="geometry.upperNetArea.visible && geometry.upperNetImage"
         data-testid="type3-upper-net-background"
@@ -182,20 +175,15 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         v-bind="geometry.upperNetArea"
         :fill="`url(#${upperNetPatternId})`"
       />
-      <g v-if="hingesBehind && geometry.hinges.length" data-testid="type3-hinges" fill="#e8b923" stroke="#20242a" stroke-width="1">
-        <rect v-for="(hinge, index) in geometry.hinges" :key="`hinge-${index}`" v-bind="hinge" />
-      </g>
+      </template><template #inner>
       <g data-testid="type3-frame" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
-        <rect v-for="(part, index) in geometry.frame" :key="`frame-${index}`" v-bind="part" />
         <rect v-for="(part, index) in geometry.innerHorizontal" :key="`detail-5-${index}`" data-testid="type3-detail-5" v-bind="part" />
         <rect data-testid="type3-detail-6" v-bind="geometry.lockRail" />
         <rect v-if="geometry.rails.lower.visible" data-testid="type3-lower-rail" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
       </g>
-      <g v-if="viewSide === 'street' && geometry.strip.length" data-testid="type3-strip" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
-        <rect v-for="(part, index) in geometry.strip" :key="`strip-${index}`" v-bind="part" />
-      </g>
+      </template><template #foreground>
       <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
         <rect
           v-for="(picket, index) in viewedPickets"
@@ -204,6 +192,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
           v-bind="picket"
         />
       </g>
+      </template></WicketBaseDrawing>
       <rect
         v-if="geometry.extraRail.visible && jumperPresentation.layer === 'foreground'"
         data-testid="type3-jumper-foreground"
@@ -215,9 +204,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         stroke="#20242a"
         stroke-width="1"
       />
-      <g v-if="!hingesBehind && geometry.hinges.length" data-testid="type3-hinges" fill="#e8b923" stroke="#20242a" stroke-width="1">
-        <rect v-for="(hinge, index) in geometry.hinges" :key="`hinge-${index}`" v-bind="hinge" />
-      </g>
+
       </g>
     </svg>
 

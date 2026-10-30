@@ -37,6 +37,14 @@ describe('Type3Drawing', () => {
       expect(x).toBe(orientation.hingeSide === 'left' ? '-6' : '890')
       const behind = wrapper.html().indexOf('data-testid="type3-hinges"') < wrapper.html().indexOf('data-testid="type3-frame"')
       expect(behind).toBe(!orientation.opensOutward !== yard)
+      store.hasStolby = 1
+      store.postProfile = { sizeA: 80, sizeB: 80 }
+      await wrapper.vm.$nextTick()
+      const behindPosts = wrapper.html().indexOf('data-testid="type3-hinges"') < wrapper.html().indexOf('data-testid="type3-posts"')
+      expect(behindPosts).toBe(!orientation.opensOutward !== yard)
+      store.hasStolby = 0
+      store.postProfile = null
+      await wrapper.vm.$nextTick()
       expect(wrapper.get('[data-testid="type3-drawing-view"]').attributes('transform')).toBe(yard ? 'translate(900 0) scale(-1 1)' : undefined)
     }
     wrapper.unmount()

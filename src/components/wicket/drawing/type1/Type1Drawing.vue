@@ -3,12 +3,13 @@ let idSeed=0
 </script>
 <script setup lang="ts">
 import {computed,ref,watch} from 'vue'
+import WicketBaseDrawing from '../WicketBaseDrawing.vue'
 import {useCalculation} from '../../../../composables/useCalculation'
 import FillingDrawing from '../fillings/MaterialFillingDrawing.vue'
 import {resolveFillingPreview} from '../fillings/fillingTypes'
 import { useDrawingGeometry } from '../useDrawingGeometry'
 import {resolveJumperPresentation} from '../jumperGeometry'
-import {bottomPath,computeType1Geometry,topPath} from './type1Geometry'
+import {computeType1Geometry} from './type1Geometry'
 const id=idSeed++,calc=useCalculation(),showFill=ref(true),colors=ref<'realistic'|'schematic'>('realistic'),side=ref<'street'|'yard'>('street')
 const {geometry:g,error:drawingError}=useDrawingGeometry(()=>computeType1Geometry({widthProyema:calc.widthProyema.value,heightProyema:calc.heightProyema.value,clearanceProyema:calc.clearanceProyema.value,hasStolby:calc.hasStolby.value,postProfile:calc.postProfile.value,postProfileProblem:calc.postProfileProblem.value,jumperProfile:calc.jumperProfile.value,jumperProfileProblem:calc.jumperProfileProblem.value,openingOrientation:calc.openingOrientation.value,shieldType:calc.shieldType.value,heightLowerPart:calc.heightLowerPart.value,heightTopPart:calc.heightTopPart.value,widthSidePart:calc.widthSidePart.value,grilleLocation:calc.grilleLocation.value,jumperPlacement:calc.jumperPlacement.value,jumperPlacementProblem:calc.jumperPlacementProblem.value,postsPresenceProblem:calc.postsPresenceProblem.value,colorFacadeHex:calc.colorFacadeHex.value,colorFacadeImage:calc.colorFacadeImage.value,colorFacadeReverseHex:calc.colorFacadeReverseHex?.value,colorFacadeReverseImage:calc.colorFacadeReverseImage?.value,colorYardHex:calc.colorYardHex?.value,colorYardImage:calc.colorYardImage?.value,raspolozheniyePolotna:calc.fillSide.value===0?undefined:calc.raspolozheniyePolotna.value,colorShieldHex:calc.colorShieldHex.value,sideGrilleNetImage:calc.sideGrilleNetImage?.value,lowerGrilleNetImage:calc.lowerGrilleNetImage?.value,upperGrilleNetImage:calc.upperGrilleNetImage?.value}))
 const yard=computed(()=>side.value==='yard'),real=computed(()=>colors.value==='realistic'),frameColor=computed(()=>real.value?g.value.frameColor:'#d1d5db')
@@ -27,11 +28,8 @@ const coatingImage=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(
 const reliefImage=computed(()=>yardTwoSides.value?(calc.reliefYardImage?.value??''):(calc.reliefFacadeImage?.value??''))
 const reliefAlongMode=computed(()=>yardTwoSides.value?calc.reliefYardAlongMode?.value:calc.reliefFacadeAlongMode?.value)
 const reliefAcrossMode=computed(()=>yardTwoSides.value?calc.reliefYardAcrossMode?.value:calc.reliefFacadeAcrossMode?.value)
-const inward=computed(()=>!calc.openingOrientation.value!.opensOutward),behind=computed(()=>inward.value!==yard.value)
 const transform=computed(()=>yard.value?`translate(${g.value.drawing.width} 0) scale(-1 1)`:undefined)
 const jumperPresentation=computed(()=>resolveJumperPresentation(g.value.extraRail.placement,side.value))
-const top=computed(()=>topPath({x:g.value.gate.x,y:g.value.gate.y,width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
-const bottom=computed(()=>bottomPath({x:g.value.gate.x,y:g.value.gate.y+Math.max(0,g.value.gate.height-60),width:g.value.gate.width,height:Math.min(60,g.value.gate.height)}))
 const netRatio=ref(1),upperRatio=ref(1)
 function track(url:string,set:(v:number)=>void){set(1);if(!url||typeof window==='undefined')return;const image=new window.Image();image.onload=()=>{if(image.naturalHeight>0)set(image.naturalWidth/image.naturalHeight)};image.src=url}
 watch(()=>drawingError.value?'':g.value.netImage,v=>track(v,x=>netRatio.value=x),{immediate:true});watch(()=>drawingError.value?'':g.value.upperNetImage,v=>track(v,x=>upperRatio.value=x),{immediate:true})
@@ -44,7 +42,8 @@ const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),ne
    <rect v-bind="g.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" vector-effect="non-scaling-stroke"/>
    <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='background'" data-testid="type1-jumper-background" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" fill="none" stroke="#000" :stroke-dasharray="jumperPresentation.dashed?'12 8':undefined"/>
    <rect v-bind="g.gateZone" fill="rgba(37,99,235,.08)"/>
-   <g v-if="behind" data-testid="type1-hinges" fill="#e8b923" stroke="#000"><rect v-for="(r,i) in g.hinges" :key="`bh${i}`" v-bind="r"/></g>
+   <WicketBaseDrawing :geometry="g.base" :orientation="calc.openingOrientation.value" :yard="yard" :color="frameColor" test-prefix="type1">
+   <template #background>
    <defs v-if="g.netArea.visible&&g.netImage">
     <pattern v-if="g.subtype==='type4'" :id="`t1-side-${id}`" patternUnits="userSpaceOnUse" :x="g.netArea.x" :y="g.netArea.y" :width="g.netArea.width" :height="netTileH"><image data-testid="type1-drawing-side-net-image" :href="g.netImage" :x="-netTileH/2" :y="-g.netArea.width/2" :width="netTileH" :height="g.netArea.width" :transform="`translate(${g.netArea.width/2} ${netTileH/2}) rotate(90)`" preserveAspectRatio="xMidYMid meet"/></pattern>
     <pattern v-else-if="g.subtype==='type2'||g.subtype==='type3'" :id="`t1-lower-${id}`" patternUnits="userSpaceOnUse" :x="g.netArea.x" :y="g.netArea.y" :width="netTileW" :height="g.netArea.height"><image data-testid="type1-drawing-net-image" :href="g.netImage" x="0" y="0" :width="netTileW" :height="g.netArea.height" preserveAspectRatio="xMidYMid meet"/></pattern>
@@ -55,13 +54,11 @@ const netTileH=computed(()=>Math.max(1,g.value.netArea.width*netRatio.value)),ne
    <rect v-if="g.rails.upper.visible&&g.upperNetArea.visible&&g.upperNetImage" data-testid="type1-upper-net-background" v-bind="g.upperNetArea" :fill="frameColor"/>
    <rect v-if="g.rails.upper.visible&&g.upperNetArea.visible&&g.upperNetImage" data-testid="type1-upper-net" v-bind="g.upperNetArea" :fill="`url(#t1-upper-${id})`"/>
    <g v-if="yard&&!yardTwoSides&&showFill&&hasMaterial" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
-   <g v-if="yard" data-testid="type1-strip" :fill="frameColor" stroke="#000"><rect v-for="(r,i) in g.strip" :key="`bs${i}`" v-bind="r"/></g>
+   </template><template #inner>
    <g data-testid="type1-frame" :fill="frameColor" stroke="#000" vector-effect="non-scaling-stroke"><rect v-for="(r,k) in g.innerFrame" :key="k" v-bind="r"/><rect v-for="(r,i) in g.lockPipes" :key="`lock${i}`" data-testid="type1-lock-pipe" v-bind="r"/><rect v-if="g.rails.lower.visible" v-bind="g.rails.lower"/><rect v-if="g.rails.upper.visible" v-bind="g.rails.upper"/><rect v-if="g.rails.vertical.visible" v-bind="g.rails.vertical"/></g>
-   <g :fill="frameColor" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke"><rect v-bind="g.frame.left"/><rect v-bind="g.frame.right"/><path :d="top"/><path :d="bottom"/></g>
-   <g v-if="g.posts.visible" :fill="frameColor" stroke="#000" stroke-width="2"><rect v-bind="g.posts.left"/><rect v-bind="g.posts.right"/></g>
-   <g v-if="!behind" data-testid="type1-hinges" fill="#e8b923" stroke="#000"><rect v-for="(r,i) in g.hinges" :key="`fh${i}`" v-bind="r"/></g>
-   <g v-if="!yard" data-testid="type1-strip" :fill="frameColor" stroke="#000"><rect v-for="(r,i) in g.strip" :key="`fs${i}`" v-bind="r"/></g>
+   </template><template #foreground>
    <g v-if="(!yard||yardTwoSides)&&showFill&&hasMaterial" data-testid="type1-fill"><FillingDrawing :area="g.fillArea" :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode" :direction="activeDirection" :color="fillColor" :image="fillImage" :coating-color="coatingColor" :coating-image="coatingImage" :relief-image="reliefImage" :appearance-mode="real?'coating':'solid'" :id-prefix="`type1-${id}-${yard?'yard':'street'}`"/></g>
+   </template></WicketBaseDrawing>
    <rect v-if="g.extraRail.visible&&jumperPresentation.layer==='foreground'" data-testid="type1-jumper-foreground" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" :fill="frameColor" stroke="#000"/>
   </g>
  </svg>
