@@ -204,7 +204,8 @@ describe('material provider in filling', () => {
     expect(calc.idFacade.value).toBe('')
     expect(calc.idYard.value).toBe('')
     expect(calc.paintId.value).toBe(7)
-    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillingSideCount: 0, idFacade: null, idYard: null }))
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillingSideCount: 0 }))
+    expect(vi.mocked(saveWicketData).mock.lastCall![0]).not.toHaveProperty('idYard')
     expect(calc.data.value.find(block => block.blockCode === 'filling')?.params).toEqual([
       { paramCode: 'sideCount', name: 'Сторона заполнения', value: 'Без заполнения' },
     ])

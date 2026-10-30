@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
-import { recalculate } from '../../app/api/wicket'
+import { recalculate, saveWicketData } from '../../app/api/wicket'
 import { saveNoFilling } from './saveNoFilling'
 
 vi.mock('../../app/api/wicket', async original => ({
@@ -16,6 +16,26 @@ beforeEach(() => {
 })
 
 describe('saved no filling price invalidation', () => {
+  it.each(Array.from({ length: 11 }, (_, index) => String(index + 1)))('sends a schema-independent no-filling mutation for model %s', async modelId => {
+    const calc = useCalculation()
+    calc.orderId.value = 42
+    calc.productRowId.value = 7
+    calc.modelId.value = modelId
+    calc.fillSide.value = 0
+    calc.idFacade.value = 21
+    calc.idYard.value = 39
+    vi.mocked(saveWicketData).mockImplementationOnce(async payload => {
+      if (Object.prototype.hasOwnProperty.call(payload, 'idYard')) throw new Error('Unknown property Type4::idYard')
+      return { lockVersion: 2 }
+    })
+    await expect(saveNoFilling(calc)).resolves.toBe(true)
+    const payload = vi.mocked(saveWicketData).mock.lastCall![0]
+    expect(payload).toEqual({ ...calc.getBaseSavePayload(), fillingSideCount: 0, providesMaterial: calc.providesMaterial.value })
+    expect(calc.idFacade.value).toBe('')
+    expect(calc.idYard.value).toBe('')
+    expect(calc.fillSide.value).toBe(0)
+  })
+
   it.each(['Цена', 'Переименованная стоимость'])('clears stale prices by code after recalculation fails with caption %s', async caption => {
     const calc = useCalculation()
     calc.orderId.value = 42

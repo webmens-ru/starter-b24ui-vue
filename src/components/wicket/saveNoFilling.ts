@@ -3,7 +3,7 @@ import { withoutSummaryBlock } from '../../app/summaryCodes'
 import { fillingSideCountLabel } from '../../app/fillingSideCounts'
 import type { useCalculation } from '../../composables/useCalculation'
 
-/** Explicit zero clears current filling choices through the usual configuration mutation. */
+/** The server clears model-specific selections atomically when receiving explicit zero. */
 export async function saveNoFilling(calc: ReturnType<typeof useCalculation>): Promise<boolean> {
   if (calc.fillSide.value !== 0) return false
   calc.clearFilling()
@@ -14,21 +14,6 @@ export async function saveNoFilling(calc: ReturnType<typeof useCalculation>): Pr
     ...calc.getBaseSavePayload(),
     fillingSideCount: 0,
     providesMaterial: calc.providesMaterial.value,
-    materialFacadeGroupCode: null,
-    materialYardGroupCode: null,
-    fillingOrientationCode: null,
-    idFacade: null, idYard: null,
-    manufacturerFacadeId: null, manufacturerYardId: null,
-    colorFacadeId: null, colorYardId: null,
-    profileTypeFacadeId: null, profileTypeYardId: null,
-    typeOfCoatingFacadeId: null, typeOfCoatingYardId: null,
-    sidingFormFacadeId: null, sidingFormYardId: null,
-    materialFacade: null, materialYard: null,
-    formFacade: null, formYard: null,
-    thicknessFacade: null, thicknessYard: null,
-    typeOfCoatingFacade: null, typeOfCoatingYard: null,
-    colorFacade: null, colorYard: null,
-    gapId: null, gapName: null, numberOfSticks: null,
   })
   if (calc.priceRetail.value) {
     try {

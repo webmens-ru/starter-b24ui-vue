@@ -493,8 +493,13 @@ export interface CompanyScopedPayload {
   companyId?: number
 }
 
+/** Shared structural metadata; individual filling schemas are not part of this contract. */
+export interface WicketStructureProperties {
+  baseFrameProfileSize?: 50 | 60
+}
+
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
-export interface WicketGetDataResponse extends ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+export interface WicketGetDataResponse extends WicketStructureProperties, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
   grilleSideProblem?: GrilleSideProblem | null
   frameSubtypeProblem?: FrameSubtypeProblem | null
   fillingOrientationProblem?: FillingOrientationProblem | null
@@ -568,7 +573,7 @@ export interface CoverStripSummary {
   blockName: string
   params: { paramCode: string; name: string; value: string; materialItemId: number; pieceIndex: number; parameters: Record<string, unknown>[] }[]
 }
-export interface WicketConfigurationResponse extends Record<string, unknown> {
+export interface WicketConfigurationResponse extends Record<string, unknown>, WicketStructureProperties {
   coverStripFrameColor?: CoverStripFrameColor
   coverStrips?: CoverStripSelection[]
   coverStripSummary?: CoverStripSummary | null
