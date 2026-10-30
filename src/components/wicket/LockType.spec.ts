@@ -34,7 +34,7 @@ const lockSet8 = {
 
 function mountLockType() {
   return mount(LockType, {
-    global: { stubs: ['B24Button', 'B24SelectMenu', 'ImageViewer'] },
+    global: { stubs: { B24Button: true, B24SelectMenu: true, ImageViewer: true, teleport: true } },
   })
 }
 
@@ -63,6 +63,7 @@ describe('LockType', () => {
     await wrapper.find('input[type="radio"][value="7"]').setValue()
     await flushPromises()
 
+    await wrapper.get('[data-description-id="7"]').trigger('click')
     expect(wrapper.text()).toContain('Состав комплекта')
     expect(wrapper.text()).toContain('Корпус чёрный')
     expect(wrapper.text()).toContain('Ответная планка')
@@ -83,6 +84,7 @@ describe('LockType', () => {
     await wrapper.find('input[type="radio"][value="8"]').setValue()
     await flushPromises()
 
+    await wrapper.get('[data-description-id="8"]').trigger('click')
     expect(wrapper.text()).toContain('Корпус белый')
     expect(wrapper.text()).not.toContain('Корпус чёрный')
     expect(wrapper.text()).not.toContain('Ответная планка')
@@ -101,7 +103,24 @@ describe('LockType', () => {
     await emptyWrapper.find('input[type="radio"][value="7"]').setValue()
     await flushPromises()
 
+    await emptyWrapper.get('[data-description-id="7"]').trigger('click')
     expect(emptyWrapper.text()).toContain('Состав комплекта не указан')
+  })
+
+  it('combines component photos and opens descriptions without selecting or saving', async () => {
+    const wrapper = mountLockType()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Корпус чёрный')
+    const viewers = wrapper.findAllComponents({ name: 'ImageViewer' })
+    expect(viewers[0]!.props('images')).toEqual(lockSet7.components[0]!.imageUrls)
+    expect(viewers[1]!.props('images')).toEqual(lockSet8.components[0]!.imageUrls)
+    await wrapper.get('[data-description-id="8"]').trigger('click')
+    expect(wrapper.text()).toContain('Корпус белый')
+    expect(wrapper.find('input:checked').exists()).toBe(false)
+    expect(apiMocks.saveWicketData).not.toHaveBeenCalled()
+    await wrapper.get('[aria-label="Закрыть описание"]').trigger('click')
+    expect(wrapper.text()).not.toContain('Корпус белый')
+    wrapper.unmount()
   })
 
   it('reuses a successfully loaded catalog when the lock step mounts again', async () => {
@@ -130,6 +149,7 @@ describe('LockType', () => {
 
     await flushPromises()
 
+    await wrapper.get('[data-description-id="7"]').trigger('click')
     expect(wrapper.find('input[type="radio"][value="7"]:checked').exists()).toBe(true)
     expect(wrapper.text()).toContain('Корпус чёрный')
     expect(wrapper.text()).toContain('Ответная планка')
@@ -167,6 +187,7 @@ describe('LockType', () => {
     expect(calc.lockPenId.value).toBeNull()
     expect(calc.lockPenColorId.value).toBeNull()
     expect(calc.lockPenColor.value).toBe('')
+    await wrapper.get('[data-description-id="7"]').trigger('click')
     expect(wrapper.find('input[type="radio"][value="7"]:checked').exists()).toBe(true)
     expect(wrapper.text()).toContain('Корпус чёрный')
     expect(wrapper.text()).toContain('Ответная планка')

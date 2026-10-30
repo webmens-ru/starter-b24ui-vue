@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
 import type { LockSetListItem } from '../../app/api/wicket'
@@ -19,6 +19,20 @@ const loading = ref(true)
 /** Выбранный комплект замка (id из get-list) */
 const selectedLockId = ref<number | null>(null)
 let isRestoringSelection = false
+const descriptionDialog = ref<HTMLDialogElement | null>(null)
+const descriptionLock = ref<LockSetListItem | null>(null)
+function lockImages(lock: LockSetListItem): string[] {
+  return [...new Set([...(lock.imageUrls ?? []), ...(lock.components ?? []).flatMap(component => component.imageUrls ?? [])])]
+}
+function openDescription(lock: LockSetListItem) {
+  descriptionLock.value = lock
+  descriptionDialog.value?.showModal()
+}
+function closeDescription() {
+  descriptionDialog.value?.close()
+  descriptionLock.value = null
+}
+onBeforeUnmount(() => descriptionDialog.value?.close())
 
 const selectedLock = computed(() =>
   lockItems.value.find(lock => lock.id === selectedLockId.value) ?? null,
@@ -157,35 +171,41 @@ onMounted(async () => {
           <div class="card-content">
             <ImageViewer
               :title="lock.marking"
-              :images="lock.imageUrls ?? []"
+              :images="lockImages(lock)"
+              enlarge
               image-height="160px"
             />
             <span class="block text-sm font-semibold text-center mt-2">{{ lock.marking }}</span>
+            <button type="button" class="lock-description-button" :data-description-id="lock.id" @click.stop.prevent="openDescription(lock)">Описание</button>
           </div>
         </label>
       </div>
     </div>
 
-    <section v-if="selectedLock" aria-label="Состав комплекта">
-      <h2>Состав комплекта</h2>
-      <div v-if="selectedLock.components?.length">
-        <article v-for="component in selectedLock.components ?? []" :key="component.id">
-          <h3>{{ component.name }}</h3>
-          <ImageViewer
-            v-if="component.imageUrls.length"
-            :title="component.name"
-            :images="component.imageUrls"
-            image-height="140px"
-          />
-        </article>
-      </div>
-      <p v-else>Состав комплекта не указан</p>
-    </section>
+    <Teleport to="body">
+      <dialog ref="descriptionDialog" class="lock-description-dialog" aria-label="Описание комплекта" @close="descriptionLock = null" @click.stop="($event.target === descriptionDialog) && closeDescription()">
+        <template v-if="descriptionLock">
+          <header><h2>{{ descriptionLock.marking }}</h2><button type="button" aria-label="Закрыть описание" @click.stop.prevent="closeDescription">×</button></header>
+          <h3>Состав комплекта</h3>
+          <ul v-if="descriptionLock.components?.length"><li v-for="component in descriptionLock.components" :key="component.id">{{ component.name }}</li></ul>
+          <p v-else>Состав комплекта не указан</p>
+        </template>
+      </dialog>
+    </Teleport>
 
   </div>
 </template>
 
 <style scoped>
+.lock-description-button { display:block; margin:12px auto 0; padding:8px 16px; border-radius:8px; background:#e5f2ff; color:#1d4ed8; cursor:pointer; }
+.lock-description-dialog { position:fixed; inset:0; margin:auto; width:min(640px,calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 32px); overflow:auto; padding:24px; border:0; border-radius:12px; background:white; color:#1f2937; }
+.lock-description-dialog::backdrop { background:rgba(0,30,60,.4); backdrop-filter:blur(2px); }
+.lock-description-dialog header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
+.lock-description-dialog h2 { font-size:20px; font-weight:600; }
+.lock-description-dialog h3 { font-weight:600; margin-bottom:12px; }
+.lock-description-dialog li { margin-bottom:8px; }
+.lock-description-dialog header button { width:40px; height:40px; flex-shrink:0; font-size:28px; cursor:pointer; }
+
 .locks-viewer-grid {
   display: grid;
   grid-template-columns: 1fr;
