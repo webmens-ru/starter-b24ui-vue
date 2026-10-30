@@ -163,6 +163,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         stroke-width="1"
         :stroke-dasharray="jumperPresentation.dashed ? '12 8' : undefined"
       />
+      <g v-if="viewSide === 'yard' && geometry.strip.length" data-testid="type3-strip" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
+        <rect v-for="(part, index) in geometry.strip" :key="`strip-${index}`" v-bind="part" />
+      </g>
       <g v-if="geometry.posts.visible" data-testid="type3-posts" :fill="displayedFrameColor">
         <rect v-bind="geometry.posts.left" />
         <rect v-bind="geometry.posts.right" />
@@ -189,6 +192,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <rect v-if="geometry.rails.lower.visible" data-testid="type3-lower-rail" v-bind="geometry.rails.lower" />
         <rect v-if="geometry.rails.upper.visible" v-bind="geometry.rails.upper" />
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
+      </g>
+      <g v-if="viewSide === 'street' && geometry.strip.length" data-testid="type3-strip" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
+        <rect v-for="(part, index) in geometry.strip" :key="`strip-${index}`" v-bind="part" />
       </g>
       <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
         <rect

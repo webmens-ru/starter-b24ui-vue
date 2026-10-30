@@ -16,6 +16,18 @@ const base = {
 }
 
 describe('buildType3Geometry', () => {
+  it.each(['left', 'right'] as const)('keeps a 4 mm hinge gap and a 10 mm lock gap for %s hinges', hingeSide => {
+    const geometry = buildType3Geometry({ ...base, widthProyema: 1000, heightProyema: 2000,
+      hasStolby: 1, postProfile: { sizeA: 50, sizeB: 50 }, openingOrientation: { opensOutward: true, hingeSide } })
+    const leftGap = geometry.gate.x - (geometry.posts.left.x + geometry.posts.left.width)
+    const rightGap = geometry.posts.right.x - (geometry.gate.x + geometry.gate.width)
+    expect([leftGap, rightGap]).toEqual(hingeSide === 'left' ? [4, 10] : [10, 4])
+    expect(geometry.strip).toHaveLength(3)
+    expect(geometry.strip.reduce((width, part) => width + part.width, 0)).toBe(40)
+    expect(geometry.strip.every(part => part.y === geometry.gate.y && part.height === geometry.gate.height)).toBe(true)
+    expect(geometry.strip[0]!.x).toBe(hingeSide === 'right' ? geometry.gate.x - 25 : geometry.gate.x + geometry.gate.width - 15)
+  })
+
   it.each(['left', 'right'] as const)('places two split hinges on the %s frame edge', hingeSide => {
     const geometry = buildType3Geometry({ ...base, openingOrientation: { opensOutward: true, hingeSide } })
     expect(geometry.hinges).toHaveLength(4)

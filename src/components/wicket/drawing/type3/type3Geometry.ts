@@ -42,6 +42,7 @@ export interface Type3Geometry {
   gate: Type3Rect
   posts: { visible: boolean; left: Type3Rect; right: Type3Rect }
   hinges: Type3Rect[]
+  strip: Type3Rect[]
   frame: Type3Rect[]
   innerHorizontal: Type3Rect[]
   lockRail: Type3Rect
@@ -88,13 +89,18 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     jumperPlacement: jumper.placement,
     jumperHeight: extraRailSize,
   })
-  const gate = rect(postSize + 4, verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
   const orientation = source.openingOrientation == null ? null : parseOpeningOrientation(source.openingOrientation)
+  const gate = rect(postSize + (orientation?.hingeSide === 'right' ? 10 : 4), verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
   const hingeX = orientation?.hingeSide === 'right' ? gate.x + gate.width - 6 : gate.x - 10
   const hinges = orientation ? [gate.y + 100, gate.y + gate.height - 250].flatMap(y => [
     rect(hingeX, y, 16, 75),
     rect(hingeX, y + 75, 16, 75),
   ]) : []
+  const stripX = orientation?.hingeSide === 'right' ? gate.x - 25 : gate.x + gate.width - 15
+  const strip = orientation ? [14, 12, 14].map((partWidth, index, widths) => rect(
+    stripX + widths.slice(0, index).reduce((total, part) => total + part, 0),
+    gate.y, partWidth, gate.height,
+  )) : []
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
@@ -138,6 +144,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     opening: rect(0, 0, width, height),
     gate,
     hinges,
+    strip,
     posts: {
       visible: postsVisible,
       left: rect(0, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
