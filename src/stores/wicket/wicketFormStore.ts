@@ -1,5 +1,6 @@
 import { coverStripError, parseCoverStripSelections, type CoverStripDraft } from '../../components/wicket/coverStripState'
-import type { CoverStripSelection } from '../../app/api/wicket.types'
+import { onWicketConfigurationMutation } from '../../app/api/wicketConfigurationMutation'
+import type { ProductRowContext, WicketRootMutationResponse, CoverStripSelection, CoverStripFrameColor } from '../../app/api/wicket.types'
 import { isPaintingComplete } from './wicketStepProgress'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, computed, onScopeDispose, watch } from 'vue'
@@ -44,9 +45,44 @@ const RETIRED_WICKET_PAGES: Record<string, string> = {
 export const useWicketFormStore = defineStore('wicket-form', () => {
   const data = ref<CalcBlock[]>([])
   // Persisted wire choices and editable drafts are separate: incomplete cards must remain visible to validation.
+  const coverStripFrameColor = ref<CoverStripFrameColor | null>(null)
   const coverStrips = ref<CoverStripSelection[]>([])
   const coverStripDrafts = ref<CoverStripDraft[]>([])
   const coverStripDescriptions = ref<string[]>([])
+  let configurationGeneration = 0
+  let coverMetadataVersion = 0
+  const coverSnapshot = () => JSON.stringify(coverStripDrafts.value.map(({ unavailable: _unavailable, ...row }) => row))
+  function beginCoverStripMutation(context: ProductRowContext): (response: WicketRootMutationResponse | undefined) => boolean {
+    const generation = configurationGeneration
+    const snapshot = coverSnapshot()
+    const wizard = useWicketWizardStore()
+    const current = () => generation === configurationGeneration && wizard.orderId === context.orderId
+      && wizard.productRowId === context.productRowId && String(wizard.modelId) === String(context.modelId)
+    if (!current()) return () => false
+    return response => {
+      if (!current()) return false
+      if (!response) return true
+      if (response.lockVersion < coverMetadataVersion) return false
+      // Missing fields in older responses never erase existing review requirements.
+      const pieces = response.coverStrips === undefined ? undefined : parseCoverStripSelections(response.coverStrips)
+      if (response.coverStripFrameColor !== undefined) coverStripFrameColor.value = { ...response.coverStripFrameColor }
+      if (pieces !== undefined) {
+        coverStrips.value = pieces
+        if (coverSnapshot() === snapshot) {
+          coverStripDrafts.value = pieces.map(row => ({ ...row, parameters: row.parameters.map(p => ({ ...p })) }))
+        } else if (response.coverStripFrameColor !== undefined) {
+          // Keep newer typed edits, but never let a stale acknowledgement bypass review.
+          const token = response.coverStripFrameColor.token
+          for (const row of coverStripDrafts.value) {
+            if (row.frameColorToken && row.frameColorToken !== token) row.requiresColorConfirmation = true
+          }
+        }
+      }
+      coverMetadataVersion = response.lockVersion
+      return true
+    }
+  }
+  onScopeDispose(onWicketConfigurationMutation(beginCoverStripMutation))
 
 // Поставщики материала и краски, исполнитель окраски и legacy-сборка
 const providesMaterial    = ref<string>('manufacturer')
@@ -373,8 +409,11 @@ const fieldsFilled = ref<number>(0)
 
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
   function resetFormFields() {
+    configurationGeneration++
+    coverMetadataVersion = 0
     materialSelectionProblems.value = []
     fillingSaveBlocked.value = false
+    coverStripFrameColor.value = null
     coverStrips.value = []
     coverStripDrafts.value = []
     coverStripDescriptions.value = []
@@ -744,6 +783,9 @@ const fieldsFilled = ref<number>(0)
 
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
+    configurationGeneration++
+    coverMetadataVersion = typeof apiData.lockVersion === 'number' ? apiData.lockVersion : 0
+    coverStripFrameColor.value = (apiData.coverStripFrameColor as CoverStripFrameColor | undefined) ?? null
     coverStrips.value = parseCoverStripSelections(apiData.coverStrips ?? [])
     coverStripDrafts.value = coverStrips.value.map(row => ({ ...row, parameters: row.parameters.map(p => ({ ...p })) }))
     const summary = normalizeSummaryBlocks(apiData.coverStripSummary && typeof apiData.coverStripSummary === 'object' ? [apiData.coverStripSummary as CalcBlock] : Array.isArray(apiData.orders) ? apiData.orders : Array.isArray(apiData.data) ? apiData.data : [])
@@ -1159,7 +1201,7 @@ const fieldsFilled = ref<number>(0)
   }
 
   return {
-    coverStrips, coverStripDrafts, coverStripDescriptions,
+    beginCoverStripMutation, coverStripFrameColor, coverStrips, coverStripDrafts, coverStripDescriptions,
     data,
     providesMaterial,
     providesPaint,

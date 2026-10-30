@@ -1,3 +1,4 @@
+import { beginWicketConfigurationMutation } from './wicketConfigurationMutation'
 import type { CoverStripCatalogItem, WicketConfigurationResponse } from './wicket.types'
 import { mockGetCoverStrips } from './mockWicket'
 import api from '.'
@@ -496,12 +497,18 @@ export async function fetchWicketPage(modelId: number | string, url: string): Pr
 export async function saveWicketData(payload: WicketSavePayload): Promise<WicketRootMutationResponse> {
   const canonicalPayload = canonicalizeWicketRootSavePayload(payload)
   assertProductRowContext(canonicalPayload)
-  if (isMock) return mockSaveWicketData(canonicalPayload)
+  if (isMock) {
+    const complete = beginWicketConfigurationMutation(canonicalPayload)
+    const response = await mockSaveWicketData(canonicalPayload)
+    complete(response)
+    return response
+  }
   const context = {
     orderId: canonicalPayload.orderId,
     productRowId: canonicalPayload.productRowId,
     modelId: canonicalPayload.modelId,
   }
+  const complete = beginWicketConfigurationMutation(context)
   return runWicketProductRowLockMutation(context, async lockVersion => {
     const { data } = await api.post(`/api/wicket/type${canonicalPayload.modelId}/data`, {
       ...canonicalPayload,
@@ -509,7 +516,13 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
     })
     rememberWicketProductRowLockVersion(context, data.data.lockVersion)
     notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
-    return { lockVersion: data.data.lockVersion }
+    const response: WicketRootMutationResponse = {
+      lockVersion: data.data.lockVersion,
+      ...(data.data.coverStripFrameColor === undefined ? {} : { coverStripFrameColor: data.data.coverStripFrameColor }),
+      ...(data.data.coverStrips === undefined ? {} : { coverStrips: data.data.coverStrips }),
+    }
+    complete(response)
+    return response
   })
 }
 

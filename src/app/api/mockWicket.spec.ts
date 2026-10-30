@@ -69,8 +69,22 @@ it('persists mock cover strips per product row, preserves omitted and clears exp
   const choices = [{ materialItemId: 501, parameters: [{ attributeId: 51, colorId: 52 }] }]
   await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1', coverStrips: choices })
   await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1' })
-  expect((await mockLoadWicketData(77, 801)).coverStrips).toEqual(choices)
+  expect((await mockLoadWicketData(77, 801)).coverStrips).toMatchObject(choices)
   expect((await mockLoadWicketData(77, 802)).coverStrips).toEqual([])
   await mockSaveWicketData({ orderId: 77, productRowId: 801, modelId: '1', coverStrips: [] })
   expect((await mockLoadWicketData(77, 801)).coverStrips).toEqual([])
+})
+it('mock preserves per-piece review across painting, reload and independent acknowledgements', async () => {
+  const { mockSaveWicketData, mockLoadWicketData } = await import('./mockWicket')
+  const base = { orderId: 78, productRowId: 803, modelId: '1' }
+  const piece = { materialItemId: 501, parameters: [{ attributeId: 51, colorId: 52 }] }
+  const original = await mockSaveWicketData({ ...base, paintId: 1, paintColorId: 91, coverStrips: [piece, piece] })
+  const changed = await mockSaveWicketData({ ...base, paintId: 2, paintColorId: 92 })
+  expect(changed.coverStripFrameColor?.token).not.toBe(original.coverStripFrameColor?.token)
+  expect(changed.coverStrips?.map(p => p.requiresColorConfirmation)).toEqual([true, true])
+  const result = await mockSaveWicketData({ ...base, coverStrips: changed.coverStrips!.map((p, i) => i === 0 ? { ...p, frameColorToken: changed.coverStripFrameColor!.token } : p) })
+  expect(result.coverStrips?.map(p => p.requiresColorConfirmation)).toEqual([false, true])
+  expect((await mockLoadWicketData(78, 803)).coverStrips).toEqual(result.coverStrips)
+  const same = await mockSaveWicketData({ ...base, paintId: 1, paintColorId: 92 })
+  expect(same.coverStripFrameColor?.token).toBe(changed.coverStripFrameColor?.token)
 })

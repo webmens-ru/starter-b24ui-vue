@@ -86,6 +86,46 @@ describe('product row API', () => {
     })
   })
 
+  it('returns canonical cover metadata from configuration saves', async () => {
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    const descriptor = { token: 'b'.repeat(64), paintId: 1, colorId: 9, mode: 'fixed', colorName: 'Display', note: null }
+    const pieces = [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }]
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5, coverStripFrameColor: descriptor, coverStrips: pieces } } })
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+    await loadWicketData(context)
+    await expect(saveWicketData({ ...context, paintId: 1, paintColorId: 9 })).resolves.toEqual({ lockVersion: 5, coverStripFrameColor: descriptor, coverStrips: pieces })
+  })
+
+  it('applies partial-save metadata through the real API and fences already queued saves after reload', async () => {
+    const { createPinia, setActivePinia } = await import('pinia')
+    setActivePinia(createPinia())
+    const { useCalculation } = await import('../../composables/useCalculation')
+    const c = useCalculation()
+    const context = { orderId: 42, productRowId: 7, modelId: '1' }
+    const frame = { token: 'b'.repeat(64), paintId: 1, colorId: 9, mode: 'fixed' as const, colorName: 'Saved', note: null }
+    const piece = { materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }
+    api.get.mockResolvedValueOnce({ data: { data: { ...context, lockVersion: 4 } } })
+    const { loadWicketData, saveWicketData } = await import('./wicket')
+    await loadWicketData(context)
+    c.loadFromApi({ ...context, lockVersion: 4, coverStrips: [{ ...piece, requiresColorConfirmation: false }] })
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 5, coverStripFrameColor: frame, coverStrips: [piece] } } })
+    await saveWicketData({ ...context, paintId: 1, paintColorId: 9 })
+    expect(c.coverStripFrameColor.value).toEqual(frame)
+    expect(c.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+    let finish!: (response: unknown) => void
+    api.post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    api.post.mockResolvedValueOnce({ data: { data: { lockVersion: 7, coverStripFrameColor: frame, coverStrips: [piece] } } })
+    const first = saveWicketData({ ...context, widthProyema: 900 })
+    const queued = saveWicketData({ ...context, heightProyema: 1900 })
+    await vi.waitFor(() => expect(api.post).toHaveBeenCalledTimes(2))
+    c.loadFromApi({ ...context, lockVersion: 5, coverStripFrameColor: { ...frame, token: 'c'.repeat(64) }, coverStrips: [] })
+    finish({ data: { data: { lockVersion: 6, coverStripFrameColor: frame, coverStrips: [piece] } } })
+    await first; await queued
+    expect(c.coverStripFrameColor.value?.token).toBe('c'.repeat(64))
+    expect(c.coverStripDrafts.value).toEqual([])
+  })
+
   it('clears legacy lock-handle IDs on every root save without changing the selected set or additional handle', async () => {
     const context = { orderId: 42, productRowId: 7, modelId: '1' }
     api.get.mockResolvedValueOnce({

@@ -88,6 +88,8 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
 }
 
 export interface WicketRootMutationResponse {
+  coverStripFrameColor?: CoverStripFrameColor
+  coverStrips?: CoverStripSelection[]
   lockVersion: number
 }
 
@@ -533,7 +535,18 @@ export interface WicketGetDataResponse extends ParticipantRoleProperties, Fillin
   [key: string]: unknown
 }
 
+export interface CoverStripFrameColor {
+  token: string
+  paintId: number | null
+  colorId: number | null
+  mode: 'unset' | 'fixed' | 'custom'
+  colorName: string | null
+  note: string | null
+}
+
 export interface CoverStripSelection {
+  frameColorToken?: string | null
+  requiresColorConfirmation?: boolean
   materialItemId: number
   parameters: { attributeId: number; colorId: number }[]
 }
@@ -552,6 +565,7 @@ export interface CoverStripSummary {
   params: { paramCode: string; name: string; value: string; materialItemId: number; pieceIndex: number; parameters: Record<string, unknown>[] }[]
 }
 export interface WicketConfigurationResponse extends Record<string, unknown> {
+  coverStripFrameColor?: CoverStripFrameColor
   coverStrips?: CoverStripSelection[]
   coverStripSummary?: CoverStripSummary | null
 }

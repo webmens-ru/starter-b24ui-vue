@@ -163,6 +163,25 @@ describe('WicketWizardPage guarded navigation', () => {
     expect(guard).toHaveBeenCalledTimes(2)
   })
 
+  it('blocks a previously visited calculation menu after the active save returns pending cover colors', async () => {
+    const wrapper = mountNavigationPage(); await flushPromises()
+    await wrapper.setProps({ stepComponents: { page7: GuardedStep, page12: EmptyStep } })
+    const c = useCalculation(); c.visitedPages.value.push('page12')
+    guard.mockImplementation(() => {
+      c.coverStripDrafts.value = [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }]
+      return true
+    })
+    wrapper.findComponent(MenuStub).vm.$emit('select', { page: 'page12' }); await flushPromises()
+    expect(c.activePage.value).toBe('page7'); wrapper.unmount()
+  })
+
+  it('restores a pending calculation page onto the cover-strip step after reload', async () => {
+    mocks.loadWicketData.mockResolvedValueOnce({ orderId: 42, productRowId: 7, modelId: '1', activePage: 'page12', reachedStep: 'page12', visitedPages: ['page7', 'page_cover_strip', 'page12'], coverStrips: [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }] })
+    const wrapper = mountNavigationPage()
+    await wrapper.setProps({ stepComponents: { page7: GuardedStep, page12: EmptyStep, page_cover_strip: EmptyStep } }); await flushPromises()
+    expect(useCalculation().activePage.value).toBe('page_cover_strip'); wrapper.unmount()
+  })
+
   it('awaits the active step guard before a side-menu transition', async () => {
     let resolveGuard!: (allowed: boolean) => void
     guard.mockReturnValue(new Promise(resolve => { resolveGuard = resolve }))

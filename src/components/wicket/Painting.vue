@@ -3,7 +3,7 @@ import { participantRoleLabel, participantRoleOptions } from '../../app/particip
 import { withoutSummaryBlock } from '../../app/summaryCodes'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { getColorShield, recalculate, saveWicketData } from '../../app/api/wicket'
 import type { PaintItem, PaintCategoryItem } from '../../app/api/wicket.types'
@@ -11,6 +11,11 @@ import { selectPaintColor } from './paintSelection'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
+const contextKey = () => `${calc.orderId.value}:${calc.productRowId.value}:${calc.modelId.value}`
+const initialContext = contextKey()
+let mounted = true
+const current = () => mounted && contextKey() === initialContext
+onUnmounted(() => { mounted = false })
 const paints = ref<PaintItem[]>([])
 const categories = ref<PaintCategoryItem[]>([])
 const category = ref<number | null>(null)
@@ -87,6 +92,7 @@ function save(): Promise<boolean> {
 }
 
 async function saveSelection(): Promise<boolean> {
+  if (!current()) return false
   const paint = selectedPaint.value
   const color = selectedColor.value
   if (!customerPainting.value && !unchangedUnavailable.value) {
@@ -105,8 +111,9 @@ async function saveSelection(): Promise<boolean> {
   const paintColorId = preserve ? calc.paintColorId.value : paint?.isFixedColor ? draftColorId.value : null
   const primer = primers.value.find(item => item.id === calc.primerId.value)
   const primerId = preserve ? calc.primerId.value : primer?.id ?? null
+  const applyResponse = calc.beginCoverStripMutation()
   try {
-    await saveWicketData({
+    const response = await saveWicketData({
       ...calc.getBaseSavePayload(),
       providesPaintCode: preserve ? calc.providesPaintCode.value : paint?.isCustomerSupplied ? 'customer' : 'manufacturer',
       providesPrimerCode: calc.providesPrimerCode.value,
@@ -115,6 +122,7 @@ async function saveSelection(): Promise<boolean> {
       paintId, paintColorId, primerId,
       colorShieldNote: note,
     })
+    if (!current() || !applyResponse(response)) return false
     calc.colorShieldNote.value = note
     if (!preserve && paint) {
       calc.paintName.value = paint.name
@@ -130,16 +138,18 @@ async function saveSelection(): Promise<boolean> {
     }
     syncSummary()
     error.value = ''
-  } catch { error.value = 'Не удалось сохранить окраску'; return false }
-  if (calc.priceRetail.value) {
+  } catch { if (current()) error.value = 'Не удалось сохранить окраску'; return false }
+  if (calc.priceRetail.value && !calc.coverStrips.value.some(row => row.requiresColorConfirmation)) {
     try {
       const result = await recalculate({
         ...calc.getCurrentProductRowContext(),
         productType: calc.productType.value,
         model: calc.model.value,
       })
+      if (!current() || !applyResponse(undefined)) return false
       calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch {
+      if (!current() || !applyResponse(undefined)) return false
       calc.priceRetail.value = ''
       calc.priceDealer.value = ''
       calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
@@ -157,14 +167,15 @@ async function load(): Promise<void> {
   catalogError.value = ''
   try {
     const response = await getColorShield(calc.modelId.value)
+    if (!current()) return
     paints.value = response.colorShield
     if (selectedPaint.value && !calc.paintSelectionUnavailable.value) {
       draftColorId.value = selectPaintColor(selectedPaint.value.colors, draftColorId.value)
     }
     categories.value = response.paintCategories ?? []
     category.value = selectedPaint.value?.paintCategoryId ?? categories.value[0]?.id ?? null
-  } catch { catalogError.value = 'Не удалось загрузить краски' }
-  finally { loading.value = false }
+  } catch { if (current()) catalogError.value = 'Не удалось загрузить краски' }
+  finally { if (current()) loading.value = false }
 }
 onMounted(async () => { calc.setActivePage('page_painting'); await load() })
 </script>

@@ -3,6 +3,7 @@ import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type
 import { useRoute } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
+import { coverStripError } from '../../components/wicket/coverStripState'
 import { useCalculation } from '../../composables/useCalculation'
 import { useWicketLockCatalogStore } from '../../stores/wicket/wicketLockCatalogStore'
 import {
@@ -149,7 +150,9 @@ async function initCalculation(): Promise<void> {
     calc.orderId.value = context.orderId
     calc.productRowId.value = context.productRowId
     calc.modelId.value = context.modelId
-    switchTo(calc.activePage.value)
+    const restoredPage = calc.activePage.value === 'page12' && coverStripError(calc.coverStripDrafts.value)
+      ? 'page_cover_strip' : calc.activePage.value
+    switchTo(restoredPage)
   } catch (e: unknown) {
     if (!isCurrentInitialization(generation)) return
     loadError.value = 'Ошибка загрузки расчёта'
@@ -273,6 +276,10 @@ function getPrevPage(from: string): string | null {
 }
 
 function switchTo(page: string) {
+  if (page === 'page12' && coverStripError(calc.coverStripDrafts.value)) {
+    showWarningModal.value = true
+    return
+  }
   const component = props.stepComponents[page]
   if (component) {
     currentComponent.value = component

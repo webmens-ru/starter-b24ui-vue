@@ -1,4 +1,4 @@
-import { coverStripWire } from '../components/wicket/coverStripState'
+import { coverStripError, coverStripWire } from '../components/wicket/coverStripState'
 import { storeToRefs } from 'pinia'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
@@ -65,6 +65,8 @@ export function useCalculation() {
   }
 
   function getFullSavePayload(): WicketSavePayload {
+    const coverError = coverStripError(form.coverStripDrafts)
+    if (coverError) throw new TypeError(coverError)
     const supplierPayload = String(wizard.modelId) === '2'
       ? {}
       : {
@@ -186,6 +188,7 @@ export function useCalculation() {
     setActivePage: wizard.setActivePage,
     isPageAccessible: wizard.isPageAccessible,
     getBaseSavePayload,
+    beginCoverStripMutation: () => form.beginCoverStripMutation(getCurrentProductRowContext()),
     getCurrentProductRowContext,
     getFullSavePayload,
     getAccessoryCompositionPayload,
