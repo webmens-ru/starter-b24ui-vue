@@ -46,7 +46,6 @@ const modelDefinitions = [
     model: 'Калитка «Стандарт» 50/50/ламель RH77',
     route: '/wicket/type4',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
-    soon: true,
   },
   {
     id: '5',

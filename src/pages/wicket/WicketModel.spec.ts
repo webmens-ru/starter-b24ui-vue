@@ -63,6 +63,19 @@ describe('WicketModel', () => {
     expect(type3Button?.text()).not.toContain('Скоро')
   })
 
+  it('opens type 4 without a coming-soon flag and preserves routing after renaming', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '4', name: 'Переименованная ламельная калитка' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('Переименованная ламельная калитка'))!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '4' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type4', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('uses editable labels while routing by the same stable model id', async () => {
     mocks.getWicketModelNames.mockResolvedValue([{ modelId: '3', name: 'Новое название модели' }])
     const wrapper = mountPage()
