@@ -34,6 +34,7 @@ onBeforeUnmount(() => { disposed = true })
 const showModal  = ref(false)
 const modalTitle = ref('Внимание')
 const modalMsg   = ref('')
+const saveError = ref('')
 
 function openModal(msg: string, title = 'Внимание') {
   modalTitle.value = title
@@ -349,6 +350,7 @@ function isComplete(): boolean {
 
 async function save(version = editVersion): Promise<boolean> {
   if (!isCurrent() || version !== editVersion) return false
+  saveError.value = ''
   const problem = selectionProblem()
   if (problem) {
     openModal(problem)
@@ -368,7 +370,7 @@ async function save(version = editVersion): Promise<boolean> {
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
-    if (isCurrent() && version === editVersion) openModal('Не удалось сохранить выбранную конфигурацию. Повторите попытку.')
+    if (isCurrent() && version === editVersion) saveError.value = 'Не удалось сохранить выбранную конфигурацию. Повторите попытку.'
     return false
   }
 
@@ -467,6 +469,8 @@ onMounted(async () => {
       <span class="text-2xl font-bold flex-1 text-center">Столбы / Вариант открытия / Перемычка</span>
       <B24Button label="Далее"  color="air-secondary" @click="handleNext" />
     </div>
+
+    <p v-if="saveError" data-testid="posts-save-error" role="alert" class="text-sm text-red-600">{{ saveError }}</p>
 
     <div class="flex flex-col gap-6" style="padding-inline: 4px;">
 

@@ -385,6 +385,24 @@ describe('StolbVariantOtkritiya navigation', () => {
     expect(recalculate).not.toHaveBeenCalled()
   })
 
+  it.each(Array.from({ length: 11 }, (_, index) => String(index + 1)))('keeps save failures inline without a popup for model %s', async modelId => {
+    const calc = useCalculation()
+    calc.modelId.value = modelId
+    calc.openingOptionId.value = 819
+    const wrapper = mountComponent()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('HTTP 422'))
+    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    await flushPromises()
+    expect(Array.from(document.querySelectorAll('[role="dialog"]')).some(dialog => dialog.textContent?.includes('Не удалось сохранить выбранную конфигурацию'))).toBe(false)
+    expect(wrapper.get('[data-testid="posts-save-error"]').text()).toContain('Не удалось сохранить')
+    expect(wrapper.emitted('next')).toBeUndefined()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="posts-save-error"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('does not advance or recalculate when saving is rejected', async () => {
     useCalculation().openingOptionId.value = 819
     const wrapper = mountComponent()
