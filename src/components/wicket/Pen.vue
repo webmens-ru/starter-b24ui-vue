@@ -13,7 +13,6 @@ interface PenItem {
   colors: { id: number; name: string }[]
   imageUrls?: string[]
 }
-type ColorChoice = number | 'frame' | null
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
 const penItems = ref<PenItem[]>([])
@@ -23,8 +22,8 @@ const error = ref('')
 const configured = calc.additionalPenSidesConfigured.value === 1
 const legacyPending = !configured && (calc.additionalPenId.value != null || calc.additionalPenMaterialItemId.value != null || calc.isTherePen.value === 1 || calc.isTherePen.value === null)
 const sides = reactive([
-  { code: 'street', label: 'Ручка с улицы', id: configured ? calc.additionalPenStreetMaterialItemId.value : null, color: (configured ? calc.additionalPenStreetColorId.value : null) as ColorChoice, touched: false, needsMapping: configured && calc.additionalPenStreetId.value != null && calc.additionalPenStreetMaterialItemId.value == null },
-  { code: 'yard', label: 'Ручка со двора', id: configured ? calc.additionalPenYardMaterialItemId.value : null, color: (configured ? calc.additionalPenYardColorId.value : null) as ColorChoice, touched: false, needsMapping: configured && calc.additionalPenYardId.value != null && calc.additionalPenYardMaterialItemId.value == null },
+  { code: 'street', label: 'Ручка с улицы', id: configured ? calc.additionalPenStreetMaterialItemId.value : null, touched: false, needsMapping: configured && calc.additionalPenStreetId.value != null && calc.additionalPenStreetMaterialItemId.value == null },
+  { code: 'yard', label: 'Ручка со двора', id: configured ? calc.additionalPenYardMaterialItemId.value : null, touched: false, needsMapping: configured && calc.additionalPenYardId.value != null && calc.additionalPenYardMaterialItemId.value == null },
 ])
 const hasPens = computed(() => sides.some(side => side.id != null))
 const legacyDescription = computed(() => {
@@ -35,10 +34,6 @@ const legacyDescription = computed(() => {
 })
 const legacyResolved = computed(() => !legacyPending || hasPens.value || sides.every(side => side.touched))
 
-function colorsFor(id: number | null) {
-  const pen = penItems.value.find(item => item.materialItemId === id)
-  return pen ? [...(pen.canUseFrameColor ? [{ id: 'frame' as const, label: 'Цвет каркаса' }] : []), ...pen.colors.map(color => ({ id: color.id, label: color.name }))] : []
-}
 function validationError(): string {
   if (loading.value || loadFailed.value) return 'Не удалось загрузить справочник ручек'
   if (!legacyResolved.value) return 'Выберите сторону для ранее выбранной ручки или укажите «Не требуется» с обеих сторон'
@@ -47,7 +42,6 @@ function validationError(): string {
     if (side.id == null) continue
     const pen = penItems.value.find(item => item.materialItemId === side.id)
     if (!pen) return 'Выберите доступную модель ручки'
-    if (!(side.color === 'frame' ? pen.canUseFrameColor : typeof side.color === 'number' && pen.colors.some(color => color.id === side.color))) return 'Выберите доступный цвет ручки'
   }
   return ''
 }
@@ -68,8 +62,8 @@ function syncFields() {
   const params = []
   for (const side of sides) {
     const pen = penItems.value.find(item => item.materialItemId === side.id)
-    const colorId = side.id != null && typeof side.color === 'number' ? side.color : null
-    const colorName = side.id == null ? '' : side.color === 'frame' ? 'Цвет каркаса' : pen?.colors.find(color => color.id === colorId)?.name ?? ''
+    const colorId = null
+    const colorName = side.id == null ? '' : 'Цвет каркаса'
     if (side.code === 'street') {
       calc.additionalPenStreetMaterialItemId.value = side.id
       calc.additionalPenStreetColorId.value = colorId
@@ -177,13 +171,7 @@ function selectPen(index: number, id: number | null) {
   side.touched = true
   if (side.id !== id) {
     side.id = id
-    const pen = penItems.value.find(item => item.materialItemId === id)
-    side.color = pen?.canUseFrameColor ? 'frame' : null
   }
-  changed()
-}
-function selectColor(index: number, value: unknown) {
-  sides[index]!.color = value === 'frame' || typeof value === 'number' ? value : null
   changed()
 }
 async function validateAndSave(): Promise<boolean> {
@@ -203,9 +191,7 @@ onMounted(async () => {
   calc.setActivePage('page10')
   try {
     penItems.value = (await getAdditionalPens(calc.modelId.value, 'welding')).items
-    for (const side of sides) {
-      if (side.id != null && side.color == null && penItems.value.find(pen => pen.materialItemId === side.id)?.canUseFrameColor) side.color = 'frame'
-    }
+
   } catch { loadFailed.value = true } finally { loading.value = false }
 })
 </script>
@@ -232,10 +218,7 @@ onMounted(async () => {
             <span>{{ pen.marking }}</span>
           </label>
         </div>
-        <div v-if="side.id != null" class="flex flex-col gap-2">
-          <label :for="`${side.code}-color`">Цвет ручки</label>
-          <B24SelectMenu :b24ui="{ content: 'z-[1100]' }" :id="`${side.code}-color`" :model-value="side.color ?? undefined" :items="colorsFor(side.id)" value-key="id" placeholder="Выберите цвет" @update:model-value="selectColor(index, $event)" />
-        </div>
+        <p v-if="side.id != null" class="text-sm text-gray-600">Окрашивается в цвет каркаса</p>
       </section>
     </template>
   </div>

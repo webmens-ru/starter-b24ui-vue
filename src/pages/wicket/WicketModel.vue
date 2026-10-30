@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { useCalculation } from '../../composables/useCalculation'
+import { getWicketModelNames } from '../../app/api/wicket'
 import { createProductRow } from '../../app/api/productRows'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 
@@ -20,54 +21,65 @@ const modalIndex = ref(0)
 let mounted = true
 let requestGeneration = 0
 
-const models = [
+const modelNames = ref<Record<string, string>>({})
+const modelDefinitions = [
   {
     id: '1',
-    model: '"Стандарт" 60/60/C20/сайдинг',
+    model: 'Калитка «Стандарт» 60/60/С20/сайдинг',
     route: '/wicket/type1',
     images: ['/k2.jpg', '/60_60_c20.jpg', '/r_60_60_c20.jpg', '/k3.jpg'],
   },
   {
     id: '2',
-    model: '"Стандарт" 50/50/МП8',
+    model: 'Калитка «Стандарт» 50/50/МП8',
     route: '/wicket/type2',
     images: ['/k3.jpg', '/r_60_60_c20.jpg', '/k2.jpg', '/k3.jpg', '/r_60_60_c20.jpg'],
   },
   {
     id: '3',
-    model: '"Стандарт" 50/50/штакетник',
+    model: 'Калитка «Стандарт» 50/50/штакетник',
     route: '/wicket/type3',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
   },
   {
     id: '4',
-    model: '"Стандарт" 50/50/ламель RH77',
+    model: 'Калитка «Стандарт» 50/50/ламель RH77',
     route: '/wicket/type4',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
     soon: true,
   },
   {
     id: '5',
-    model: '"Стандарт" 60/60/СП40',
+    model: 'Калитка «Стандарт» 60/60/СП40',
     route: '/wicket/type5',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
     soon: true,
   },
   {
     id: '7',
-    model: '"Стандарт" 50/50/СП50',
+    model: 'Калитка «Стандарт» 50/50/СП50',
     route: '/wicket/type7',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
     soon: true,
   },
   {
     id: '8',
-    model: '"Стандарт" 60/60/для накладного заполнения листовым материалом',
+    model: 'Калитка «Стандарт» 60/60/для накладного заполнения листовым материалом',
     route: '/wicket/type8',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
     soon: true,
   },
 ]
+
+const models = computed(() => modelDefinitions.map(item => ({ ...item, model: modelNames.value[item.id] ?? item.model })))
+onMounted(async () => {
+  try {
+    const items = await getWicketModelNames()
+    if (mounted) modelNames.value = Object.fromEntries(items.map(item => [item.modelId, item.name]))
+  } catch {
+    // Keep initial display labels if the directory cannot be loaded.
+  }
+})
 
 const orderIdState = computed(() => parsePositiveDecimalId(route.query.orderId))
 const currentOrderId = computed(() => orderIdState.value.kind === 'valid' ? orderIdState.value.value : null)
@@ -118,7 +130,7 @@ function onImageError(e: Event) {
   (e.target as HTMLImageElement).src = placeholderImg
 }
 
-async function onModelSelect(item: (typeof models)[0]) {
+async function onModelSelect(item: (typeof modelDefinitions)[0]) {
   if (loading.value || item.soon) return
   if (orderIdState.value.kind === 'invalid') {
     errorMessage.value = 'Некорректный номер заказа'

@@ -875,3 +875,9 @@ export async function getCoverStrips(): Promise<{ items: CoverStripCatalogItem[]
   const { data } = await api.get('/api/dict/cover-strip/get-list')
   return { items: data.data.items }
 }
+
+/** Presentation labels keyed by stable model identity; availability and routes are independent. */
+export async function getWicketModelNames(): Promise<Array<{ modelId: string, name: string }>> {
+  const { data } = await api.get('/api/dict/wicket-model/get-list')
+  return data.data.items
+}

@@ -74,14 +74,11 @@ describe('independent additional pens', () => {
     await wrapper.get('input[name="street-pen"][value="7"]').setValue()
     await wrapper.get('input[name="yard-pen"][value="8"]').setValue()
     await flushPromises()
-    const selects = wrapper.findAllComponents(SelectStub)
-    expect(selects[1]!.props('items')).toEqual([{ id: 4, label: 'Цвет каркаса' }])
-    selects[1]!.vm.$emit('update:modelValue', 4)
-    await flushPromises()
+    expect(wrapper.findAllComponents(SelectStub)).toHaveLength(0)
     expect(await validateBeforeLeave(wrapper)).toBe(true)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
       additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 7, additionalPenStreetColorId: null,
-      additionalPenYardMaterialItemId: 8, additionalPenYardColorId: 4, additionalPenMaterialItemId: null, penColorId: null,
+      additionalPenYardMaterialItemId: 8, additionalPenYardColorId: null, additionalPenMaterialItemId: null, penColorId: null,
       isTherePen: 1, penProvided: 'manufacturer', penInstalled: 'manufacturer',
     }))
   })
@@ -139,14 +136,14 @@ describe('independent additional pens', () => {
     expect(await validateBeforeLeave(wrapper)).toBe(true)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ isTherePen: 0, additionalPenMaterialItemId: null }))
   })
-  it('blocks unknown IDs and unavailable colours', async () => {
+  it('blocks unknown IDs and accepts welded handles without separate colours', async () => {
     const calc = useCalculation()
     calc.loadFromApi({ additionalPenSidesConfigured: 1, additionalPenStreetMaterialItemId: 999, additionalPenYardMaterialItemId: null })
     const wrapper = mountPen()
     await flushPromises()
     expect(await validateBeforeLeave(wrapper)).toBe(false)
     await wrapper.get('input[name="street-pen"][value="8"]').setValue()
-    expect(await validateBeforeLeave(wrapper)).toBe(false)
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
   })
   it('blocks Next on save failure and retries without losing either side', async () => {
     const wrapper = mountPen()
@@ -167,7 +164,8 @@ describe('independent additional pens', () => {
     await flushPromises()
     expect(wrapper.get('input[name="street-pen"][value="7"]').element).toHaveProperty('checked', true)
     expect(wrapper.get('input[name="yard-pen"][value="8"]').element).toHaveProperty('checked', true)
-    expect(wrapper.findAllComponents(SelectStub)[0]!.props('modelValue')).toBe('frame')
+    expect(wrapper.findAllComponents(SelectStub)).toHaveLength(0)
+    expect(wrapper.text()).toContain('Окрашивается в цвет каркаса')
     expect(saveWicketData).not.toHaveBeenCalled()
     expect(await validateBeforeLeave(wrapper)).toBe(true)
   })

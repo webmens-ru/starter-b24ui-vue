@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   route: { query: { orderId: '42' } as Record<string, unknown> } as { query: Record<string, unknown> },
   push: vi.fn(),
   createProductRow: vi.fn(),
+  getWicketModelNames: vi.fn(),
   navigateToProductRows: vi.fn(),
 }))
 
@@ -17,6 +18,8 @@ vi.mock('vue-router', () => ({
   useRoute: () => mocks.route,
   useRouter: () => ({ push: mocks.push }),
 }))
+
+vi.mock('../../app/api/wicket', () => ({ getWicketModelNames: mocks.getWicketModelNames }))
 
 vi.mock('../../app/api/productRows', () => ({ createProductRow: mocks.createProductRow }))
 vi.mock('../../app/productRowReturnNavigation', () => ({ navigateToProductRows: mocks.navigateToProductRows }))
@@ -27,6 +30,7 @@ describe('WicketModel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    mocks.getWicketModelNames.mockResolvedValue([])
     mocks.route = reactive({ query: { orderId: '42' } })
     mocks.createProductRow.mockResolvedValue({
       productRow: { id: 7, orderId: 42 },
@@ -59,6 +63,16 @@ describe('WicketModel', () => {
     expect(type3Button?.text()).not.toContain('Скоро')
   })
 
+  it('uses editable labels while routing by the same stable model id', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '3', name: 'Новое название модели' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text().includes('Новое название модели'))!.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '3', model: 'Новое название модели' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type3', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('loads model images from the public web root', () => {
     const wrapper = mountPage()
     const sources = wrapper.findAll('img').map(image => image.attributes('src'))
@@ -78,7 +92,7 @@ describe('WicketModel', () => {
       orderId: 42,
       productType: 'wicket',
       modelId: '3',
-      model: '"Стандарт" 50/50/штакетник',
+      model: 'Калитка «Стандарт» 50/50/штакетник',
     })
     expect(mocks.push).toHaveBeenCalledWith({
       path: '/wicket/type3',
