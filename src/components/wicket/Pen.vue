@@ -228,7 +228,7 @@ onMounted(async () => {
           <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" class="sr-only" value="none" :checked="side.id == null && (!legacyPending || side.touched) && (!side.needsMapping || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
           <label v-for="pen in penItems" :key="pen.materialItemId" class="pen-card">
             <input :name="`${side.code}-pen`" type="radio" class="sr-only" :value="pen.materialItemId" :checked="side.id === pen.materialItemId" @change="selectPen(index, pen.materialItemId)" />
-            <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" image-height="100px" />
+            <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" enlarge image-height="100px" />
             <span>{{ pen.marking }}</span>
           </label>
         </div>
