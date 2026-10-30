@@ -4,7 +4,7 @@ import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMate
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { saveNoFilling } from '../saveNoFilling'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../../app/api/wicket'
 
@@ -14,11 +14,14 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
-defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value })
+const unsupportedGroup = computed(() => calc.fillSide.value !== 0
+  && ((calc.materialFacadeGlob.value !== null && calc.materialFacadeGlob.value !== 'profnastil')
+    || (calc.fillSide.value === 2 && calc.materialYardGlob.value !== null && calc.materialYardGlob.value !== 'profnastil')))
+defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value && !unsupportedGroup.value })
 
 const fillSideOptions = fillingSideCountOptions()
 
-const materialOptions = fillingMaterialGroupOptions(['siding', 'profnastil'])
+const materialOptions = fillingMaterialGroupOptions(['profnastil'])
 
 function clearFacadeSelection() {
   calc.resetFacadeFilling()
@@ -108,10 +111,10 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page2')
   if (calc.fillSide.value === 0) { calc.clearFilling(); await save(); return }
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
+  if (unsupportedGroup.value || hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
     || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
   if (calc.fillSide.value === null) calc.fillSide.value = 1
-  if (calc.materialFacadeGlob.value === null) calc.materialFacadeGlob.value = 'siding'
+  if (calc.materialFacadeGlob.value === null) calc.materialFacadeGlob.value = 'profnastil'
   await save()
 })
 </script>
@@ -123,10 +126,12 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение</span>
-      <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value || unsupportedGroup" color="air-secondary" @click="emit('next')" />
     </div>
 
-    <MaterialProvider :persist="save" default-facade-group="siding" />
+    <MaterialProvider :persist="save" default-facade-group="profnastil" />
+
+    <p v-if="unsupportedGroup" role="alert" class="text-red-500">Для калитки типа 2 выберите металлопрофиль с высотой волны не более 8 мм.</p>
 
     <!-- Группы карточек -->
     <div v-if="calc.fillSide.value !== 0" class="flex flex-col gap-6 mt-4">

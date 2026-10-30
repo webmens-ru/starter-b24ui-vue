@@ -281,7 +281,7 @@ it('shows a load error and blocks submission without changing historical state',
   vi.mocked(getType2ProfnastilFormOptions).mockRejectedValue(new Error('Справочник недоступен'))
   const wrapper = render()
   await flushPromises()
-  expect(wrapper.get('[role="alert"]').text()).toContain('Справочник недоступен')
+  expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось загрузить справочник')
   expect(await validate(wrapper)).toBe(false)
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(useCalculation().colorFacadeId.value).toBe(603)

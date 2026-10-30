@@ -26,7 +26,7 @@ describe('type2Navigation', () => {
       })
 
       it('Сайдинг → page2_facade_siding', () => {
-        expect(getNextPage('page2', state({ materialFacadeGlob: 'siding' }))).toBe('page2_facade_siding')
+        expect(getNextPage('page2', state({ materialFacadeGlob: 'siding' }))).toBe('page2')
       })
     })
 
@@ -36,7 +36,7 @@ describe('type2Navigation', () => {
         expect(getNextPage('page2_facade_siding', state({
           fillSide: 1,
           materialFacadeGlob: 'siding',
-        }))).toBe('page6')
+        }))).toBe('page2')
       })
 
       it('Две стороны + Профлист двор → page2_yard_profnastil', () => {
@@ -51,7 +51,7 @@ describe('type2Navigation', () => {
           materialFacadeGlob: 'siding',
           fillSide: 2,
           materialYardGlob: 'siding',
-        }))).toBe('page2_yard_siding')
+        }))).toBe('page2')
       })
     })
 
@@ -62,7 +62,7 @@ describe('type2Navigation', () => {
           materialFacadeGlob: 'siding',
           fillSide: 2,
           materialYardGlob: 'siding',
-        }))).toBe('page6')
+        }))).toBe('page2')
       })
     })
 
@@ -109,7 +109,7 @@ describe('type2Navigation', () => {
           materialFacadeGlob: 'siding',
           fillSide: 2,
           materialYardGlob: 'siding',
-        }))).toBe('page2_facade_siding')
+        }))).toBe('page2')
       })
     })
 
@@ -119,7 +119,7 @@ describe('type2Navigation', () => {
         expect(getPrevPage('page6', state({
           fillSide: 1,
           materialFacadeGlob: 'siding',
-        }))).toBe('page2_facade_siding')
+        }))).toBe('page2')
       })
 
       it('Две стороны → выбранный yard', () => {
@@ -131,7 +131,7 @@ describe('type2Navigation', () => {
           materialFacadeGlob: 'siding',
           fillSide: 2,
           materialYardGlob: 'siding',
-        }))).toBe('page2_yard_siding')
+        }))).toBe('page2')
       })
     })
 

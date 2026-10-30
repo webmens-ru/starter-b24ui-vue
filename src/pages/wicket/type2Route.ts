@@ -7,17 +7,11 @@ import {
 } from './wicketRouteSections'
 
 function facadePage(state: WicketSharedNavState): string {
-  if (state.materialFacadeGlob !== 'siding' && state.materialFacadeGlob !== 'profnastil') return 'page2'
-  return state.materialFacadeGlob === 'siding'
-    ? 'page2_facade_siding'
-    : 'page2_facade_profnastil'
+  return state.materialFacadeGlob === 'profnastil' ? 'page2_facade_profnastil' : 'page2'
 }
 
 function yardPage(state: WicketSharedNavState): string {
-  if (state.materialYardGlob !== 'siding' && state.materialYardGlob !== 'profnastil') return 'page2'
-  return state.materialYardGlob === 'siding'
-    ? 'page2_yard_siding'
-    : 'page2_yard_profnastil'
+  return state.materialYardGlob === 'profnastil' ? 'page2_yard_profnastil' : 'page2'
 }
 
 const fill = fillingSection(
@@ -29,6 +23,7 @@ const fill = fillingSection(
     'page2_yard_profnastil',
   ],
   (from, state) => {
+    if (from.endsWith('_siding')) return 'page2'
     if (from === 'page2') return facadePage(state)
     if (from.startsWith('page2_facade_') && state.fillSide === 2) {
       return yardPage(state)
@@ -36,6 +31,7 @@ const fill = fillingSection(
     return undefined
   },
   (from, state) => {
+    if (from.endsWith('_siding')) return 'page2'
     if (from.startsWith('page2_facade_')) return 'page2'
     if (from.startsWith('page2_yard_')) return facadePage(state)
     return undefined

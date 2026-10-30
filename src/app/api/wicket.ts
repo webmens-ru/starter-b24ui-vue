@@ -348,6 +348,7 @@ export async function getProfnastilColors(
   return data.data
 }
 
+/** Type 2 options include only active metal sheets with profileHeight <= 8 mm. */
 export async function getType2ProfnastilFormOptions(
   profileTypeId?: number,
   typeOfCoatingId?: number,

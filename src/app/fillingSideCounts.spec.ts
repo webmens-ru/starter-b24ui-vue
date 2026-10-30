@@ -8,7 +8,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
 
 describe('numeric filling side count boundary', () => {
-  const navigation = { modelId: '2', materialFacadeGlob: 'siding', materialYardGlob: 'profnastil',
+  const navigation = { modelId: '2', materialFacadeGlob: 'profnastil', materialYardGlob: 'profnastil',
     fillSide: 1, isThereLock: 1, providesLock: 'manufacturer', availableSections: [], idFacade: 21, idYard: null }
   it.each([null, '', 3] as const)('keeps unresolved count %s at the choice page instead of choosing a side layout', fillSide => {
     const state = { ...navigation, fillSide }
@@ -18,7 +18,7 @@ describe('numeric filling side count boundary', () => {
   })
   it('requires and routes to the yard for numeric Double independently of captions', () => {
     const state = { ...navigation, fillSide: 2 }
-    expect(type2Route.next('page2_facade_siding', state)).toBe('page2_yard_profnastil')
+    expect(type2Route.next('page2_facade_profnastil', state)).toBe('page2_yard_profnastil')
     expect(type2Route.validations(state).get('page2')?.valid).toBe(false)
     expect(type2Route.validations({ ...state, idYard: 39 }).get('page2')?.valid).toBe(true)
   })

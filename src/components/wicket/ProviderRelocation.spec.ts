@@ -23,7 +23,7 @@ describe('material provider in filling', () => {
     const calc = useCalculation()
     calc.modelId.value = modelId
     calc.fillSide.value = 1
-    calc.materialFacadeGlob.value = ({ '1': 'siding', '2': 'siding', '3': 'fence', '4': 'lamella', '5': 'spSiding' } as Record<string, string>)[modelId]!
+    calc.materialFacadeGlob.value = ({ '1': 'siding', '2': 'profnastil', '3': 'fence', '4': 'lamella', '5': 'spSiding' } as Record<string, string>)[modelId]!
     calc.materialYardGlob.value = ''
     calc.priceRetail.value = 1000
     const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
@@ -226,7 +226,7 @@ describe('material provider in filling', () => {
     await flushPromises()
     await wrapper.get('input[value="manufacturer"]').setValue()
     await flushPromises()
-    const expectedGroup = ({ '1': 'siding', '2': 'siding', '3': 'fence', '4': 'lamella', '5': 'spSiding',
+    const expectedGroup = ({ '1': 'siding', '2': 'profnastil', '3': 'fence', '4': 'lamella', '5': 'spSiding',
       '6': 'louver', '7': 'siding', '8': 'sheet', '9': 'profnastil', '10': 'profnastil', '11': 'profnastil' } as Record<string, string>)[modelId]
     expect(calc.materialFacadeGlob.value).toBe(expectedGroup)
     expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ materialFacadeGlob: expectedGroup }))
@@ -237,7 +237,7 @@ describe('material provider in filling', () => {
       const next = modelId === '1' ? getType1NextPage : getNextPage
       expect(next('page2', { modelId, materialFacadeGlob: calc.materialFacadeGlob.value,
         materialYardGlob: calc.materialYardGlob.value, fillSide: calc.fillSide.value,
-        isThereLock: 1, providesLock: 'manufacturer', availableSections: [] })).toBe('page2_facade_siding')
+        isThereLock: 1, providesLock: 'manufacturer', availableSections: [] })).toBe(modelId === '2' ? 'page2_facade_profnastil' : 'page2_facade_siding')
     }
     wrapper.unmount()
   })
@@ -268,6 +268,7 @@ describe('material provider in filling', () => {
     const calc = useCalculation()
     calc.modelId.value = modelId
     calc.providesMaterial.value = 'customer'
+    if (modelId === '2') calc.materialFacadeGlob.value = 'profnastil'
     const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
     await flushPromises()
     expect(wrapper.get('fieldset legend').text()).toBe('Материал заполнения')

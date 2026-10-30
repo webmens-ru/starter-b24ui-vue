@@ -2,39 +2,20 @@ import { defineComponent } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SidingRow } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
-import SidingFacade from '../type1/SidingFacade.vue'
-import SidingYard from '../type1/SidingYard.vue'
 import T2FillSide from './T2FillSide.vue'
 import Type2 from '../../../pages/wicket/Type2.vue'
 
 const apiMocks = vi.hoisted(() => ({
-  getSidingTable: vi.fn(),
-  getFillingAppearanceOptions: vi.fn(),
   saveWicketData: vi.fn(),
   recalculate: vi.fn(),
 }))
 
 vi.mock('../../../app/api/wicket', async importOriginal => ({
   ...await importOriginal<typeof import('../../../app/api/wicket')>(),
-  getSidingTable: apiMocks.getSidingTable,
-  getFillingAppearanceOptions: apiMocks.getFillingAppearanceOptions,
   saveWicketData: apiMocks.saveWicketData,
   recalculate: apiMocks.recalculate,
 }))
-
-const SelectMenuStub = defineComponent({
-  name: 'B24SelectMenu',
-  props: ['modelValue', 'items'],
-  emits: ['update:modelValue'],
-  template: `
-    <select :value="modelValue ?? ''" @change="$emit('update:modelValue', $event.target.value)">
-      <option value="">Не выбран</option>
-      <option v-for="item in items" :key="item.id" :value="item.id">{{ item.label }}</option>
-    </select>
-  `,
-})
 
 const WizardStub = defineComponent({
   name: 'WicketWizardPage',
@@ -42,32 +23,7 @@ const WizardStub = defineComponent({
   template: '<div />',
 })
 
-const row: SidingRow = {
-  drawingProfile: { kind: 'logSiding' },
-  drawingProfileProblem: null,
-  id: 27,
-  material: 'Бревно Type 2',
-  form: 'Гладкая',
-  typeOfCoating: 'Глянец',
-}
-
-function mountSidingFacade() {
-  return mount(SidingFacade, {
-    global: {
-      stubs: {
-        B24Button: true,
-        Button: true,
-        B24Modal: true,
-        Modal: true,
-        B24SelectMenu: SelectMenuStub,
-        SelectMenu: SelectMenuStub,
-        FilterDropdown: true,
-      },
-    },
-  })
-}
-
-describe('Type 2 siding flow', () => {
+describe('Type 2 historical siding correction', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const calc = useCalculation()
@@ -76,63 +32,25 @@ describe('Type 2 siding flow', () => {
     calc.productRowId.value = 72
     calc.modelId.value = '2'
     calc.materialFacadeGlob.value = 'siding'
-    apiMocks.getSidingTable.mockReset()
-    apiMocks.getSidingTable.mockResolvedValue({
-      table: [row],
-      pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 },
-    })
-    apiMocks.getFillingAppearanceOptions.mockReset()
-    apiMocks.getFillingAppearanceOptions.mockResolvedValue({
-      manufacturers: [{ id: 13, name: 'Type 2 Профиль' }],
-      colors: [{ id: 18, name: 'RAL 7016', hex: '#383E42', image: null }],
-    })
     apiMocks.saveWicketData.mockReset()
     apiMocks.saveWicketData.mockResolvedValue({ lockVersion: 1 })
     apiMocks.recalculate.mockReset()
   })
 
-  it('uses the shared siding pages for facade and yard route steps', () => {
+  it('returns historical siding steps to filling selection', () => {
     const wrapper = mount(Type2, {
       global: { stubs: { WicketWizardPage: WizardStub } },
     })
     const steps = wrapper.getComponent(WizardStub).props('stepComponents') as Record<string, unknown>
 
-    expect(steps.page2_facade_siding).toBe(SidingFacade)
-    expect(steps.page2_yard_siding).toBe(SidingYard)
+    expect(steps.page2_facade_siding).toBe(T2FillSide)
+    expect(steps.page2_yard_siding).toBe(T2FillSide)
   })
 
-  it('loads and saves siding appearance through the type-2 API context', async () => {
-    const wrapper = mountSidingFacade()
-    await flushPromises()
-
-    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
-    await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('13')
-    await wrapper.get('[data-testid="appearance-color"]').setValue('18')
-    await flushPromises()
-
-    expect(apiMocks.getSidingTable).toHaveBeenCalledWith('2', {
-      materials: [],
-      form: [],
-      typeOfCoating: [],
-    }, 1)
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('2', 'siding')
-    const payload = apiMocks.saveWicketData.mock.calls[apiMocks.saveWicketData.mock.calls.length - 1]?.[0]
-    expect(payload).toMatchObject({
-      modelId: '2',
-      idFacade: 27,
-      manufacturerFacadeId: 13,
-      colorFacadeId: 18,
-      materialFacade: 'Бревно Type 2',
-      formFacade: 'Гладкая',
-      typeOfCoatingFacade: 'Глянец',
-    })
-  })
-
-  it('offers siding and preserves an independently configured yard when the facade material changes', async () => {
+  it('corrects historical facade siding and preserves the independently configured yard', async () => {
     const calc = useCalculation()
     calc.fillSide.value = 2
-    calc.materialFacadeGlob.value = 'profnastil'
+    calc.materialFacadeGlob.value = 'siding'
     calc.materialYardGlob.value = 'profnastil'
     calc.idFacade.value = 1
     calc.manufacturerFacadeId.value = 3
@@ -160,12 +78,12 @@ describe('Type 2 siding flow', () => {
     })
     await flushPromises()
 
-    const sidingInputs = wrapper.findAll('input[value="siding"]')
+    const sidingInputs = wrapper.findAll('input[value="profnastil"]')
     expect(sidingInputs).toHaveLength(2)
     await sidingInputs[0]!.setValue(true)
     await flushPromises()
 
-    expect(calc.materialFacadeGlob.value).toBe('siding')
+    expect(calc.materialFacadeGlob.value).toBe('profnastil')
     expect(calc.materialYardGlob.value).toBe('profnastil')
     expect({
       id: calc.idFacade.value,
@@ -230,7 +148,7 @@ describe('Type 2 siding flow', () => {
   it('preserves facade product and appearance fields when only the yard material changes', async () => {
     const calc = useCalculation()
     calc.fillSide.value = 2
-    calc.materialFacadeGlob.value = 'siding'
+    calc.materialFacadeGlob.value = 'profnastil'
     calc.idFacade.value = 27
     calc.materialFacade.value = 'Бревно Type 2'
     calc.formFacade.value = 'Гладкая'
@@ -239,7 +157,7 @@ describe('Type 2 siding flow', () => {
     calc.manufacturerFacadeId.value = 13
     calc.colorFacadeId.value = 18
     calc.colorFacade.value = 'RAL 7016'
-    calc.materialYardGlob.value = 'profnastil'
+    calc.materialYardGlob.value = 'siding'
     calc.idYard.value = 37
     calc.materialYard.value = 'С10'
     calc.formYard.value = 'Старое значение'
@@ -255,7 +173,7 @@ describe('Type 2 siding flow', () => {
     await flushPromises()
     apiMocks.saveWicketData.mockClear()
 
-    await wrapper.findAll('input[value="siding"]')[1]!.setValue(true)
+    await wrapper.findAll('input[value="profnastil"]')[1]!.setValue(true)
     await flushPromises()
 
     const payload = apiMocks.saveWicketData.mock.calls[0]?.[0]

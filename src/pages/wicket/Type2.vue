@@ -5,8 +5,6 @@ import WicketWizardPage from './WicketWizardPage.vue'
 import FillSide from '../../components/wicket/type2/T2FillSide.vue'
 import ProfnastilFacade from '../../components/wicket/type2/T2ProfnastilFacade.vue'
 import ProfnastilYard from '../../components/wicket/type2/T2ProfnastilYard.vue'
-import SidingFacade from '../../components/wicket/type1/SidingFacade.vue'
-import SidingYard from '../../components/wicket/type1/SidingYard.vue'
 import StolbVariantOtkritiya from '../../components/wicket/StolbVariantOtkritiya.vue'
 import ShieldType from '../../components/wicket/ShieldType.vue'
 import Painting from '../../components/wicket/Painting.vue'
@@ -21,9 +19,9 @@ import { type2Route } from './type2Route'
 
 const stepComponents: Record<string, Component> = {
   page2: FillSide,
-  page2_facade_siding: SidingFacade,
+  page2_facade_siding: FillSide,
   page2_facade_profnastil: ProfnastilFacade,
-  page2_yard_siding: SidingYard,
+  page2_yard_siding: FillSide,
   page2_yard_profnastil: ProfnastilYard,
   page5: StolbVariantOtkritiya,
   page3: ShieldType,
