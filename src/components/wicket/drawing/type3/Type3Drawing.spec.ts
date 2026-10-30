@@ -59,6 +59,26 @@ describe('Type3Drawing', () => {
     expect(wrapper.find('[data-testid="type3-posts"]').exists()).toBe(true)
   })
 
+  it('uses the selected frame paint for posts on both sides and in schematic mode', async () => {
+    const store = useWicketFormStore()
+    store.widthProyema = '900'
+    store.heightProyema = '2000'
+    store.hasStolby = 1
+    store.postProfile = { sizeA: 50, sizeB: 50 }
+    store.fillSide = 0
+    store.colorShieldHex = '#315c2b'
+    const wrapper = mount(Type3Drawing)
+    expect(wrapper.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#315c2b')
+    await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    expect(wrapper.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#315c2b')
+    store.colorShieldHex = '#123456'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#123456')
+    await wrapper.get('[data-testid="type3-drawing-color-schematic"]').setValue()
+    expect(wrapper.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#d1d5db')
+    wrapper.unmount()
+  })
+
   it('скрывает заполнение по переключателю', async () => {
     const store = useWicketFormStore()
     store.numberOfSticks = 8

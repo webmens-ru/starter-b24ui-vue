@@ -151,7 +151,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         stroke-width="1"
         :stroke-dasharray="jumperPresentation.dashed ? '12 8' : undefined"
       />
-      <g v-if="geometry.posts.visible" data-testid="type3-posts" fill="#59606b">
+      <g v-if="geometry.posts.visible" data-testid="type3-posts" :fill="displayedFrameColor">
         <rect v-bind="geometry.posts.left" />
         <rect v-bind="geometry.posts.right" />
       </g>
