@@ -40,6 +40,8 @@ export interface Type3Geometry {
   gate: Type3Rect
   posts: { visible: boolean; left: Type3Rect; right: Type3Rect }
   frame: Type3Rect[]
+  innerHorizontal: Type3Rect[]
+  lockRail: Type3Rect
   fillArea: Type3Rect
   facadePickets: Type3Rect[]
   yardPickets: Type3Rect[]
@@ -136,9 +138,12 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       rect(gate.x, gate.y + gate.height - rail, gate.width, rail),
       rect(gate.x, gate.y, rail, gate.height),
       rect(gate.x + gate.width - rail, gate.y, rail, gate.height),
-      rect(fillArea.x, fillArea.y, inner, fillArea.height),
-      rect(fillArea.x + fillArea.width - inner, fillArea.y, inner, fillArea.height),
     ],
+    innerHorizontal: [
+      rect(activeFill.x, activeFill.y, activeFill.width, 40),
+      rect(activeFill.x, activeFill.y + activeFill.height - 40, activeFill.width, 40),
+    ],
+    lockRail: rect(activeFill.x + 20, activeFill.y + Math.floor((activeFill.height - 40) / 2), activeFill.width - 40, 40),
     fillArea: activeFill,
     facadePickets,
     yardPickets: source.fillSide === 2 ? facadePickets : [],

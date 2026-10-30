@@ -16,6 +16,21 @@ const base = {
 }
 
 describe('buildType3Geometry', () => {
+  it('draws two detail 5 rails and one detail 6 lock rail with 40 mm faces', () => {
+    const geometry = buildType3Geometry({ ...base, numberOfSticks: 0 })
+    expect(geometry.innerHorizontal).toHaveLength(2)
+    expect(geometry.innerHorizontal.map(part => part.height)).toEqual([40, 40])
+    expect(geometry.lockRail.height).toBe(40)
+    expect(geometry.lockRail.width).toBe(geometry.fillArea.width - 40)
+  })
+
+  it('draws only the four outer frame pipes without detail 4 vertical tubes', () => {
+    const geometry = buildType3Geometry({ ...base, numberOfSticks: 0 })
+    expect(geometry.frame).toHaveLength(4)
+    expect(geometry.frame.filter(part => part.height === geometry.gate.height)).toHaveLength(2)
+    expect(geometry.frame.every(part => part.width !== 20)).toBe(true)
+  })
+
   it('сдвигает створку и столбы ниже верхней перемычки', () => {
     const geometry = buildType3Geometry({
       heightProyema: '2000',

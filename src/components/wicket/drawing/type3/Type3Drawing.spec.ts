@@ -23,9 +23,13 @@ describe('Type3Drawing', () => {
     store.raspolozheniyePolotna = ''
     const wrapper = mount(Type3Drawing)
     expect(wrapper.find('svg').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="type3-detail-5"]')).toHaveLength(2)
+    expect(wrapper.get('[data-testid="type3-detail-6"]').attributes('height')).toBe('40')
     expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
     expect(wrapper.find('image[href="/stale-fill.png"]').exists()).toBe(false)
     await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    expect(wrapper.findAll('[data-testid="type3-detail-5"]')).toHaveLength(2)
+    expect(wrapper.get('[data-testid="type3-detail-6"]').attributes('height')).toBe('40')
     expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
     wrapper.unmount()
   })
