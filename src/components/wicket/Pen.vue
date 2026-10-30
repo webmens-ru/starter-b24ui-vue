@@ -225,9 +225,9 @@ onMounted(async () => {
       <section v-for="(side, index) in sides" :key="side.code" class="flex flex-col gap-3">
         <h2 class="text-lg font-semibold">{{ side.label }}</h2>
         <div class="pen-cards-row">
-          <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" value="none" :checked="side.id == null && (!legacyPending || side.touched) && (!side.needsMapping || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
+          <label class="pen-card"><input :name="`${side.code}-pen`" type="radio" class="sr-only" value="none" :checked="side.id == null && (!legacyPending || side.touched) && (!side.needsMapping || side.touched)" @change="selectPen(index, null)" /><span>Не требуется</span></label>
           <label v-for="pen in penItems" :key="pen.materialItemId" class="pen-card">
-            <input :name="`${side.code}-pen`" type="radio" :value="pen.materialItemId" :checked="side.id === pen.materialItemId" @change="selectPen(index, pen.materialItemId)" />
+            <input :name="`${side.code}-pen`" type="radio" class="sr-only" :value="pen.materialItemId" :checked="side.id === pen.materialItemId" @change="selectPen(index, pen.materialItemId)" />
             <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" image-height="100px" />
             <span>{{ pen.marking }}</span>
           </label>
@@ -244,5 +244,6 @@ onMounted(async () => {
 <style scoped>
 .pen-cards-row,.option-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
 .pen-card { display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; cursor:pointer; border:2px solid #e5e7eb; border-radius:12px; background:white; }
+.pen-card:has(input:focus-visible) { outline:2px solid #3b82f6; outline-offset:2px; }
 .pen-card:has(input:checked) { border-color:#3b82f6; background:#eff6ff; }
 </style>
