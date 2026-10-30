@@ -28,7 +28,7 @@ describe('Type3Drawing', () => {
     for (const yard of [false, true]) {
       if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
       const strip = wrapper.get('[data-testid="type3-strip"]')
-      expect(strip.findAll('rect')).toHaveLength(3)
+      expect(strip.findAll('rect')).toHaveLength(orientation.opensOutward ? 3 : 1)
       const stripBehind = wrapper.html().indexOf('data-testid="type3-strip"') < wrapper.html().indexOf('data-testid="type3-frame"')
       expect(stripBehind).toBe(yard)
       const hinges = wrapper.get('[data-testid="type3-hinges"]')

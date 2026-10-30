@@ -29,6 +29,10 @@ describe('shared wicket base', () => {
     expect(base.strip).toEqual([])
     expect(base.posts.visible).toBe(false)
   })
+  it.each(['left', 'right'] as const)('uses the 20 mm closure pipe without posts when opening inward: %s', hingeSide => {
+    const base = computeWicketBase({ profileSize: 50, openingWidth: 900, vertical, hasPosts: false, postWidth: 0, orientation: { hingeSide, opensOutward: false } })
+    expect(base.strip).toEqual([{ x: hingeSide === 'right' ? base.gate.x - 10 : base.gate.x + base.gate.width - 10, y: base.gate.y, width: 20, height: base.gate.height }])
+  })
   it.each([0, 1])('uses the same base in all types with posts=%s and ignores renamed labels', hasStolby => {
     const source = { widthProyema: 900, heightProyema: 2000, clearanceProyema: 50, hasStolby, postProfile: hasStolby ? { sizeA: 80, sizeB: 80 } : null, jumperPlacement: 'none', jumperProfile: null, shieldType: 'noNet', openingOrientation: { hingeSide: 'right', opensOutward: false }, fillSide: 0 }
     const first = computeType1Geometry(source).base

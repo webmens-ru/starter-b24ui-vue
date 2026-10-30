@@ -36,8 +36,9 @@ export function computeWicketBase(input: {
   const hinges = orientation ? [gate.y + 100, gate.y + gate.height - 250].flatMap(y => [
     rect(hingeX, y, 16, 75), rect(hingeX, y + 75, 16, 75),
   ]) : []
-  const stripX = right ? gate.x - 25 : gate.x + gate.width - 15
-  const strip = orientation ? [14, 12, 14].map((width, index, widths) =>
+  const closureUsesPipe = !hasPosts && orientation?.opensOutward === false
+  const stripX = closureUsesPipe ? (right ? gate.x - 10 : gate.x + gate.width - 10) : (right ? gate.x - 25 : gate.x + gate.width - 15)
+  const strip = orientation ? (closureUsesPipe ? [20] : [14, 12, 14]).map((width, index, widths) =>
     rect(stripX + widths.slice(0, index).reduce((sum, value) => sum + value, 0), gate.y, width, gate.height),
   ) : []
   const railHeight = Math.min(profileSize, gate.height)
