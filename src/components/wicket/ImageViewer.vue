@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 const props = withDefaults(defineProps<{
   images: string[]
@@ -14,6 +14,16 @@ const props = withDefaults(defineProps<{
 
 const currentIndex = ref(0)
 const expanded = ref(false)
+const dialog = ref<HTMLDialogElement | null>(null)
+function openExpanded() {
+  dialog.value?.showModal()
+  expanded.value = true
+}
+function closeExpanded() {
+  dialog.value?.close()
+  expanded.value = false
+}
+onBeforeUnmount(() => dialog.value?.close())
 
 const currentImage = computed(() => {
   if (!props.images.length) return null
@@ -45,7 +55,7 @@ watch(() => props.images, () => {
         class="viewer-img"
         :style="{ minHeight: imageHeight, maxHeight: imageHeight }"
       />
-      <button v-if="enlarge" type="button" class="viewer-enlarge" @click.stop.prevent="expanded = true">
+      <button v-if="enlarge" type="button" class="viewer-enlarge" @click.stop.prevent="openExpanded">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" /></svg>
         Увеличить
       </button>
@@ -79,8 +89,9 @@ watch(() => props.images, () => {
         </div>
       </template>
     </div>
-    <B24Modal v-if="enlarge" v-model:open="expanded" :title="title || 'Просмотр изображения'" :b24ui="{ overlay: 'z-[2000]', content: 'z-[2001] sm:max-w-5xl' }">
-      <template #body>
+    <Teleport to="body" v-if="enlarge">
+      <dialog ref="dialog" class="image-dialog" aria-label="Просмотр изображения" @close="expanded = false" @click.stop="($event.target === dialog) && closeExpanded()">
+        <header class="image-dialog-header"><h2>{{ title || 'Просмотр изображения' }}</h2><button type="button" aria-label="Закрыть просмотр" @click.stop.prevent="closeExpanded">×</button></header>
         <div class="expanded-viewer" @click.stop @change.stop>
           <img :src="currentImage ?? undefined" :alt="title" class="expanded-image" />
           <div v-if="hasMultiple" class="expanded-controls">
@@ -89,12 +100,18 @@ watch(() => props.images, () => {
             <button type="button" @click.stop.prevent="next">Следующее</button>
           </div>
         </div>
-      </template>
-    </B24Modal>
+      </dialog>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
+.image-dialog { position:fixed; inset:0; margin:auto; width:min(1024px,calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 32px); padding:20px; border:0; border-radius:12px; background:white; color:#1f2937; overflow:auto; }
+.image-dialog::backdrop { background:rgba(0,30,60,.4); backdrop-filter:blur(2px); }
+.image-dialog-header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px; }
+.image-dialog-header h2 { font-size:20px; font-weight:600; }
+.image-dialog-header button { flex-shrink:0; width:40px; height:40px; font-size:28px; cursor:pointer; }
+
 .viewer-enlarge { position:absolute; top:6px; right:6px; display:flex; align-items:center; gap:4px; padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px; background:white; color:#1d4ed8; font-size:12px; cursor:pointer; }
 .viewer-enlarge:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
 .expanded-image { display:block; width:100%; max-height:75vh; object-fit:contain; }
