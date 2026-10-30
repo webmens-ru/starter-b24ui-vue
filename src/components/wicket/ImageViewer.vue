@@ -79,7 +79,7 @@ watch(() => props.images, () => {
         </div>
       </template>
     </div>
-    <B24Modal v-if="enlarge" v-model:open="expanded" :title="title || 'Просмотр изображения'" :ui="{ content: 'sm:max-w-5xl' }">
+    <B24Modal v-if="enlarge" v-model:open="expanded" :title="title || 'Просмотр изображения'" :b24ui="{ overlay: 'z-[2000]', content: 'z-[2001] sm:max-w-5xl' }">
       <template #body>
         <div class="expanded-viewer" @click.stop @change.stop>
           <img :src="currentImage ?? undefined" :alt="title" class="expanded-image" />
