@@ -168,6 +168,7 @@ describe('SidingFacade', () => {
       'Материал',
       'Форма',
       'Тип покрытия',
+      'Цена за пог. м',
     ])
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)

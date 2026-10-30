@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from '../shared/materialPrice'
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getProfnastilTable, saveWicketData, recalculate, type ProfnastilRow, type SidingPagination } from '../../../app/api/wicket'
@@ -201,11 +202,12 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
+            <th class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">Цена за м²</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="3" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -217,6 +219,7 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceM2) }}</td>
           </tr>
 
           <tr
@@ -234,10 +237,11 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceM2) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="3" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

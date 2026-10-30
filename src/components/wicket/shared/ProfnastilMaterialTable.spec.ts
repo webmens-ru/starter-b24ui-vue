@@ -3,7 +3,7 @@ import { expect, it } from 'vitest'
 import ProfnastilMaterialTable from './ProfnastilMaterialTable.vue'
 
 it('selects by material ID when display names are identical and preserves the saved row outside filters', async () => {
-  const row = { drawingProfile: null, drawingProfileProblem: null, id: 17, name: 'Одинаково', material: 'Переименованный профиль', typeOfCoating: 'Покрытие', thickness: 0.45 }
+  const row = { drawingProfile: null, drawingProfileProblem: null, id: 17, name: 'Одинаково', material: 'Переименованный профиль', typeOfCoating: 'Покрытие', thickness: 0.45, priceM2: '1250.50' }
   const saved = { ...row, id: 21 }
   const wrapper = mount(ProfnastilMaterialTable, { props: {
     modelId: '2', rows: [row], selectedRow: saved, loading: false,
@@ -11,8 +11,10 @@ it('selects by material ID when display names are identical and preserves the sa
     pagination: { page: 1, pageSize: 100, pageCount: 1, totalCount: 1 },
   }, global: { stubs: ['FilterDropdown'] } })
   expect(wrapper.findAll('tbody tr')).toHaveLength(2)
-  expect(wrapper.findAll('thead th')).toHaveLength(3)
+  expect(wrapper.findAll('thead th')).toHaveLength(4)
   expect(wrapper.find('thead').text()).toContain('Тип покрытия')
+  expect(wrapper.find('thead').text()).toContain('Цена за м²')
+  expect(wrapper.findAll('tbody tr').map(row => row.findAll('td').at(-1)!.text().replace(/\s/g, ' '))).toEqual(['1 250,50 ₽', '1 250,50 ₽'])
   expect(wrapper.find('thead').text()).not.toContain('Толщина')
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   expect(wrapper.emitted('select')?.[0]).toEqual([row])

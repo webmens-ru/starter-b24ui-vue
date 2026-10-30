@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from './materialPrice'
 import { computed } from 'vue'
 import type { ProfnastilRow, SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from '../type1/FilterDropdown.vue'
@@ -57,11 +58,12 @@ function goToPage(page: number): void { emit('page', page) }
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
+            <th class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">Цена за м²</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="3" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -73,6 +75,7 @@ function goToPage(page: number): void { emit('page', page) }
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceM2) }}</td>
           </tr>
 
           <tr
@@ -90,10 +93,11 @@ function goToPage(page: number): void { emit('page', page) }
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceM2) }}</td>
           </tr>
 
           <tr v-if="!loading && rows.length === 0 && !selectedRow">
-            <td colspan="3" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

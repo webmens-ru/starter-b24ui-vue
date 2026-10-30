@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from '../shared/materialPrice'
 import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
@@ -329,11 +330,12 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Форма</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
+            <th class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">Цена за пог. м</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <!-- Сохранённая строка (если не попала в отфильтрованный список) -->
@@ -352,6 +354,7 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.form }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceMp) }}</td>
           </tr>
 
           <tr
@@ -370,10 +373,11 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.form }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceMp) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>
