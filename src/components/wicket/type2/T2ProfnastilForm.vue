@@ -2,15 +2,19 @@
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import {
   getType2ProfnastilFormOptions,
+  getProfnastilTable,
+  type ProfnastilRow,
+  type SidingPagination,
   saveWicketData,
   type ProfnastilFormOptions,
 } from '../../../app/api/wicket'
 import type { ProfnastilCoatingOption } from '../../../app/api/wicket.types'
 import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import { useCalculation } from '../../../composables/useCalculation'
+import ProfnastilMaterialTable from '../shared/ProfnastilMaterialTable.vue'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
-const props = defineProps<{ side: 'facade' | 'yard' }>()
+const props = defineProps<{ side: 'facade' | 'yard'; tableMode?: boolean }>()
 const calc = useCalculation()
 const options = ref<ProfnastilFormOptions>({
   profiles: [],
@@ -18,6 +22,12 @@ const options = ref<ProfnastilFormOptions>({
   manufacturers: [],
   colors: [],
 })
+const tableRows = ref<ProfnastilRow[]>([])
+const tableFilters = ref({ materials: [] as string[], typeOfCoating: [] as string[] })
+const tablePagination = ref<SidingPagination>({ page: 1, pageSize: 100, pageCount: 1, totalCount: 0 })
+const tableLoading = ref(false)
+const tableError = ref('')
+let tableRevision = 0
 const loading = ref(false)
 const loaded = ref(false)
 const loadError = ref('')
@@ -27,7 +37,7 @@ let requestRevision = 0
 let disposed = false
 const contextKey = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, props.side,
   props.side === 'facade' ? calc.materialFacadeGlob.value : calc.materialYardGlob.value]))
-onBeforeUnmount(() => { disposed = true; requestRevision++ })
+onBeforeUnmount(() => { disposed = true; requestRevision++; tableRevision++ })
 
 const isFacade = computed(() => props.side === 'facade')
 const profile = computed({
@@ -128,7 +138,7 @@ const colorDiagnostic = computed(() => {
   }
   return ''
 })
-const diagnostic = computed(() => loadError.value || colorSettings.value.error || selectionDiagnostic.value || colorDiagnostic.value)
+const diagnostic = computed(() => tableError.value || loadError.value || colorSettings.value.error || selectionDiagnostic.value || colorDiagnostic.value)
 const colorValid = computed(() => colorMode.value === 'none'
   ? !hasColorId.value && colorName.value.trim() === ''
   : hasColorId.value ? allowedColor.value : colorMode.value === 'combobox' && colorName.value.trim() !== '')
@@ -163,9 +173,70 @@ async function load(profileValue: number | null, coatingValue: number | null) {
 watch(contextKey, () => {
   requestRevision++
   options.value = { profiles: [], coatings: [], manufacturers: [], colors: [] }
+  tableRows.value = []
   loaded.value = false
   void load(profile.value, coating.value)
+  void loadTable()
 })
+
+async function loadTable(page = 1): Promise<void> {
+  if (!props.tableMode) return
+  const revision = ++tableRevision
+  const context = contextKey.value
+  const current = () => !disposed && revision === tableRevision && context === contextKey.value
+  tableLoading.value = true
+  tableError.value = ''
+  try {
+    const result = await getProfnastilTable(calc.modelId.value, tableFilters.value, page)
+    if (!current()) return
+    tableRows.value = result.table
+    tablePagination.value = result.pagination
+  } catch {
+    if (current()) tableError.value = 'Не удалось загрузить материалы заполнения. Повторите загрузку.'
+  } finally {
+    if (current()) tableLoading.value = false
+  }
+}
+watch(tableFilters, () => { void loadTable() }, { deep: true })
+const tableSelection = computed<ProfnastilRow | null>(() => {
+  if (!selectedMaterialId.value) return null
+  return tableRows.value.find(row => String(row.id) === String(selectedMaterialId.value)) ?? {
+    id: selectedMaterialId.value,
+    drawingProfile: isFacade.value ? calc.fillingProfileFacade.value : calc.fillingProfileYard.value,
+    drawingProfileProblem: isFacade.value ? calc.fillingProfileFacadeProblem.value : calc.fillingProfileYardProblem.value,
+    name: isFacade.value ? calc.materialFacade.value : calc.materialYard.value,
+    material: isFacade.value ? calc.materialFacade.value : calc.materialYard.value,
+    thickness: isFacade.value ? calc.thicknessFacade.value : calc.thicknessYard.value,
+    typeOfCoating: isFacade.value ? calc.typeOfCoatingFacade.value : calc.typeOfCoatingYard.value,
+  }
+})
+function deselectTableRow(): void {
+  selectionEdited.value = true
+  if (isFacade.value) calc.resetFacadeFilling()
+  else calc.resetYardFilling()
+}
+async function selectTableRow(row: ProfnastilRow): Promise<void> {
+  const profileId = Number(row.profileTypeId)
+  const coatingId = Number(row.typeOfCoatingId)
+  if (!Number.isSafeInteger(profileId) || profileId < 1 || !Number.isSafeInteger(coatingId) || coatingId < 1) {
+    tableError.value = 'У материала не заданы связи профиля и покрытия. Проверьте справочник.'
+    return
+  }
+  if (String(row.id) === String(selectedMaterialId.value)) return
+  deselectTableRow()
+  profile.value = profileId
+  coating.value = coatingId
+  if (!await load(profileId, coatingId)) return
+  const material = options.value.coatings.find(item => String(item.profnastilId) === String(row.id))
+  if (!material) {
+    tableError.value = 'Выбранный материал недоступен. Повторите загрузку.'
+    return
+  }
+  tableError.value = ''
+  calc.materialSelectionProblems.value = calc.materialSelectionProblems.value.filter(problem => problem.side !== props.side)
+  applyMaterial(material)
+  if (valid.value) await save()
+}
 
 function setDrawingProfile(material: ProfnastilCoatingOption | null) {
   const descriptor = material === null ? { profile: null, problem: null }
@@ -333,14 +404,22 @@ async function validate(): Promise<boolean> {
 defineExpose({ validate })
 
 onMounted(async () => {
-  await load(profile.value, coating.value)
+  await Promise.all([load(profile.value, coating.value), loadTable()])
 })
 </script>
 
 <template>
   <div class="profnastil-form">
-    <p v-if="diagnostic" role="alert" class="text-red-600">{{ diagnostic }}</p>
-    <label class="form-field">
+    <ProfnastilMaterialTable
+      v-if="tableMode" class="col-span-full" :model-id="calc.modelId.value"
+      :rows="tableRows" :selected-row="tableSelection" :loading="tableLoading || loading"
+      v-model:filters="tableFilters" :pagination="tablePagination"
+      @select="selectTableRow" @deselect="deselectTableRow" @page="loadTable"
+    />
+    <button v-if="tableMode && tableError" type="button" class="col-span-full" @click="loadTable()">Повторить загрузку</button>
+    <p v-if="submitted && tableMode && !selectedMaterialId" role="alert" class="col-span-full text-red-600">Выберите материал заполнения</p>
+    <p v-if="diagnostic" role="alert" class="col-span-full text-red-600">{{ diagnostic }}</p>
+    <label v-if="!tableMode || selectedMaterialId" class="form-field">
       <span class="font-semibold">Производитель</span>
       <B24SelectMenu
         :model-value="selectedManufacturerId"
@@ -353,7 +432,7 @@ onMounted(async () => {
       />
     </label>
 
-    <label class="form-field">
+    <label v-if="!tableMode" class="form-field">
       <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
       <B24SelectMenu
         :model-value="profile || undefined"
@@ -367,7 +446,7 @@ onMounted(async () => {
       <span v-if="submitted && !profile" class="text-sm text-red-600">Выберите тип профиля</span>
     </label>
 
-    <label class="form-field">
+    <label v-if="!tableMode" class="form-field">
         <span class="font-semibold">Тип покрытия <span class="text-red-600">*</span></span>
         <B24SelectMenu
           :model-value="selectedMaterialId || undefined"

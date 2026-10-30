@@ -11,8 +11,7 @@ import {
   type ProfnastilColorOption,
   type SidingPagination,
 } from '../../../app/api/wicket'
-import FilterDropdown from './FilterDropdown.vue'
-import { wicketProfnastilFilterDataUrl } from '../shared/wicketMaterialApiPaths'
+import ProfnastilMaterialTable from '../shared/ProfnastilMaterialTable.vue'
 import { hasRequiredFillingColor } from '../shared/fillingColorValidation'
 import {
   createFillingAppearanceSaveCoordinator,
@@ -36,8 +35,6 @@ function openModal(msg: string, title = 'Внимание') {
   modalMsg.value   = msg
   showModal.value  = true
 }
-
-const profnastilFilterDataUrl = computed(() => wicketProfnastilFilterDataUrl(calc.modelId.value))
 
 const filters = reactive({
   materials: [] as string[],
@@ -276,9 +273,7 @@ function deselectRow() {
   appearanceSave.resetToCurrent()
 }
 
-function isSelected(row: ProfnastilRow) {
-  return selectedRow.value?.id === row.id
-}
+
 
 async function validateStep(): Promise<boolean> {
   if (appearanceSaving.value || appearanceSaveFailed.value) {
@@ -368,85 +363,12 @@ onMounted(async () => {
       />
     </div>
 
-    <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
-      <FilterDropdown
-        label="Материал"
-        :url="profnastilFilterDataUrl"
-        data-key="material"
-        v-model="filters.materials"
-      />
-      <FilterDropdown
-        label="Тип покрытия"
-        :url="profnastilFilterDataUrl"
-        data-key="typeOfCoating"
-        v-model="filters.typeOfCoating"
-      />
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-sm">
-        <thead class="sticky top-0 z-[9] bg-gray-100">
-          <tr>
-            <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="tableLoading">
-            <td colspan="3" class="text-center py-4 text-gray-400">Загрузка...</td>
-          </tr>
-
-          <tr
-            v-if="selectedRow && !rows.find(r => r.id === selectedRow!.id)"
-            class="bg-blue-100"
-          >
-            <td class="border border-gray-300 px-2 py-1 text-center">
-              <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
-            </td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-          </tr>
-
-          <tr
-            v-for="row in rows"
-            :key="row.id"
-            :class="isSelected(row) ? 'bg-blue-100' : 'hover:bg-gray-50'"
-          >
-            <td class="border border-gray-300 px-2 py-1 text-center">
-              <input
-                type="checkbox"
-                :checked="isSelected(row)"
-                class="accent-blue-600"
-                @change="isSelected(row) ? deselectRow() : selectRow(row)"
-              />
-            </td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-          </tr>
-
-          <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="3" class="text-center py-4 text-gray-400">Нет данных</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div
-      v-if="pagination.pageCount > 1"
-      class="flex items-center justify-between gap-3 pt-1"
-    >
-      <span class="text-sm text-gray-500">
-        Записей: {{ pagination.totalCount }},
-        страница {{ pagination.page }} из {{ pagination.pageCount }}
-      </span>
-      <div class="flex items-center gap-1">
-        <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page <= 1" @click="goToPage(1)">«</button>
-        <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page <= 1" @click="goToPage(pagination.page - 1)">‹</button>
-        <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.page + 1)">›</button>
-        <button class="px-2 py-1 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed" :disabled="pagination.page >= pagination.pageCount" @click="goToPage(pagination.pageCount)">»</button>
-      </div>
-    </div>
+    <ProfnastilMaterialTable
+      :model-id="calc.modelId.value" :rows="rows" :selected-row="selectedRow"
+      :loading="tableLoading" :filters="filters" :pagination="pagination"
+      @update:filters="Object.assign(filters, $event)"
+      @select="selectRow" @deselect="deselectRow" @page="goToPage"
+    />
 
     <div class="flex flex-col gap-2">
       <label class="font-semibold">Цвет</label>

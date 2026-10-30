@@ -122,26 +122,22 @@ describe('Type 2 profnastil leave guards', () => {
   it.each([
     ['facade', T2ProfnastilFacade],
     ['yard', T2ProfnastilYard],
-  ] as const)('%s holds the guard through Next recalculation', async (_side, component) => {
+  ] as const)('%s advances after saving even when an earlier price exists and the other side is incomplete', async (_side, component) => {
     formValidate.mockResolvedValue(true)
-    let finishRecalculation!: (prices: { priceDealer: number; priceRetail: number }) => void
-    vi.mocked(recalculate).mockImplementationOnce(() => new Promise(resolve => { finishRecalculation = resolve }))
+    vi.mocked(recalculate).mockImplementationOnce(() => new Promise(() => {}))
     const wrapper = mountPage(component)
     const calc = useCalculation()
     calc.priceRetail.value = 100
+    calc.fillSide.value = 2
+    calc.idFacade.value = 1
+    calc.idYard.value = ''
 
     await nextButton(wrapper).trigger('click')
     await flushPromises()
-    expect(recalculate).toHaveBeenCalledTimes(1)
-    await nextButton(wrapper).trigger('click')
-    expect(await validateBeforeLeave(wrapper)).toBe(false)
     expect(formValidate).toHaveBeenCalledTimes(1)
-    expect(wrapper.emitted('next')).toBeUndefined()
-
-    finishRecalculation({ priceDealer: 10, priceRetail: 20 })
-    await flushPromises()
-    expect(recalculate).toHaveBeenCalledTimes(1)
+    expect(recalculate).not.toHaveBeenCalled()
     expect(wrapper.emitted('next')).toHaveLength(1)
+    wrapper.unmount()
   })
 })
 
@@ -151,13 +147,13 @@ describe('Type 2 profnastil pages', () => {
   })
 
   it('replaces the facade table with the dependent form', () => {
-    expect(facade).toContain('<T2ProfnastilForm ref="formRef" side="facade" />')
+    expect(facade).toContain('<T2ProfnastilForm ref="formRef" side="facade" table-mode />')
     expect(facade).not.toContain('<table')
     expect(facade).not.toContain('Толщина листа')
   })
 
   it('uses an independent form for the yard', () => {
-    expect(yard).toContain('<T2ProfnastilForm ref="formRef" side="yard" />')
+    expect(yard).toContain('<T2ProfnastilForm ref="formRef" side="yard" table-mode />')
     expect(yard).not.toContain('<table')
     expect(yard).not.toContain('Толщина листа')
   })

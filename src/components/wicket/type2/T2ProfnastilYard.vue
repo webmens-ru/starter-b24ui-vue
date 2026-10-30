@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { recalculate } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import { createStepLeaveAttempt } from '../stepLeaveAttempt'
 import T2ProfnastilForm from './T2ProfnastilForm.vue'
@@ -11,19 +10,7 @@ const formRef = ref<InstanceType<typeof T2ProfnastilForm> | null>(null)
 
 const { validateBeforeLeave, next: onContinue } = createStepLeaveAttempt(
   async () => await formRef.value?.validate() ?? true,
-  async () => {
-    if (calc.priceRetail.value) {
-      const result = await recalculate({
-        orderId: Number(calc.number.value),
-        productRowId: calc.getCurrentProductRowContext().productRowId,
-        productType: calc.productType.value,
-        model: calc.model.value,
-        modelId: calc.modelId.value,
-      })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
-    }
-    emit('next')
-  },
+  () => emit('next'),
 )
 
 defineExpose({ validateBeforeLeave })
@@ -38,6 +25,6 @@ onMounted(() => calc.setActivePage('page2_yard_profnastil'))
       <span class="flex-1 text-center text-3xl font-bold">Заполнение (двор)</span>
       <B24Button label="Далее" color="air-secondary" @click="onContinue" />
     </div>
-    <T2ProfnastilForm ref="formRef" side="yard" />
+    <T2ProfnastilForm ref="formRef" side="yard" table-mode />
   </div>
 </template>

@@ -4,8 +4,6 @@ import { describe, expect, it } from 'vitest'
 import { mockGetProfnastilFilterOptions, mockGetProfnastilTable } from '../../app/api/mockWicket'
 
 const components = [
-  ['type1/ProfnastilFacade.vue', 3],
-  ['type1/ProfnastilYard.vue', 3],
   ['type9/T9ProfnastilFacade.vue', 3],
   ['type10/T10ProfnastilFacade.vue', 3],
   ['type11/T11ProfnastilFacade.vue', 3],
