@@ -234,7 +234,7 @@ onMounted(async () => {
         </div>
         <div v-if="side.id != null" class="flex flex-col gap-2">
           <label :for="`${side.code}-color`">Цвет ручки</label>
-          <B24SelectMenu :id="`${side.code}-color`" :model-value="side.color ?? undefined" :items="colorsFor(side.id)" value-key="id" placeholder="Выберите цвет" @update:model-value="selectColor(index, $event)" />
+          <B24SelectMenu :b24ui="{ content: 'z-[1100]' }" :id="`${side.code}-color`" :model-value="side.color ?? undefined" :items="colorsFor(side.id)" value-key="id" placeholder="Выберите цвет" @update:model-value="selectColor(index, $event)" />
         </div>
       </section>
     </template>
