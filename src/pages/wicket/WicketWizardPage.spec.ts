@@ -145,6 +145,60 @@ describe('WicketWizardPage guarded navigation', () => {
     mocks.getLocks.mockResolvedValue({ items: [] })
   })
 
+  it('recalculates on Next and Back even when no price exists yet', async () => {
+    guard.mockReturnValue(true)
+    mocks.recalculate.mockResolvedValue({ priceDealer: '100', priceRetail: '150' })
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    await flushPromises()
+    expect(mocks.recalculate).toHaveBeenCalledTimes(1)
+    expect(mocks.recalculate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ orderId: 42, productRowId: 7, modelId: '1' }),
+      { silent: true },
+    )
+    expect(useCalculation().priceRetail.value).toBe('150')
+    await wrapper.get('[data-testid="back"]').trigger('click')
+    await flushPromises()
+    expect(mocks.recalculate).toHaveBeenCalledTimes(2)
+    wrapper.unmount()
+  })
+
+  it('clears stale prices on calculation failure without opening a modal or blocking navigation', async () => {
+    mocks.recalculate.mockRejectedValue(new Error('incomplete configuration'))
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    const calc = useCalculation()
+    calc.updatePriceBlock('100', '150')
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    await flushPromises()
+    expect(calc.activePage.value).toBe('page2')
+    expect(calc.priceDealer.value).toBe('')
+    expect(calc.priceRetail.value).toBe('')
+    expect(calc.data.value.some(block => block.blockCode === 'price')).toBe(false)
+    for (const modal of wrapper.findAllComponents({ name: 'B24Modal' })) {
+      expect(modal.props('open')).not.toBe(true)
+    }
+    wrapper.unmount()
+  })
+
+  it('ignores a delayed price response from an earlier transition', async () => {
+    let resolveOld!: (prices: { priceDealer: string; priceRetail: string }) => void
+    mocks.recalculate.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
+      .mockResolvedValueOnce({ priceDealer: '200', priceRetail: '300' })
+    guard.mockReturnValue(true)
+    const wrapper = mountNavigationPage()
+    await flushPromises()
+    await wrapper.get('[data-testid="next"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="back"]').trigger('click')
+    await flushPromises()
+    resolveOld({ priceDealer: '100', priceRetail: '150' })
+    await flushPromises()
+    expect(useCalculation().priceRetail.value).toBe('300')
+    wrapper.unmount()
+  })
+
   it('blocks Back and side-menu navigation when the active step guard returns false', async () => {
     guard.mockReturnValue(false)
     const wrapper = mountNavigationPage()

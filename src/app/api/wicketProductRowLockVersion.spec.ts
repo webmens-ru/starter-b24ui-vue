@@ -79,6 +79,21 @@ describe('wicket lock version registry', () => {
     expect(seenVersions).toEqual([4, 5])
   })
 
+  it('keeps a background calculation conflict silent but still reports a later save conflict', async () => {
+    const context = { orderId: 42, productRowId: 119, modelId: '1' }
+    const conflict = { response: { status: 409 } }
+    const listener = vi.fn()
+    const unsubscribe = onWicketProductRowLockConflict(listener)
+    rememberWicketProductRowLockVersion(context, 4)
+    try {
+      await expect(runWicketProductRowLockMutation(context, async () => { throw conflict }, { silent: true }))
+        .rejects.toBe(conflict)
+      expect(listener).not.toHaveBeenCalled()
+      await expect(runWicketProductRowLockMutation(context, async () => { throw conflict })).rejects.toBe(conflict)
+      expect(listener).toHaveBeenCalledWith(context)
+    } finally { unsubscribe() }
+  })
+
   it('does not start a mutation queued behind a deferred 409 and notifies once', async () => {
     const context = { orderId: 42, productRowId: 18, modelId: '1' }
     const conflict = { response: { status: 409 } }

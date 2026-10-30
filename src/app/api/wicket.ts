@@ -725,7 +725,10 @@ export async function deleteCalculation(payload: ProductRowContext): Promise<voi
   })
 }
 
-export async function recalculate(payload: WicketCalculationPayload): Promise<RecalculateResponse> {
+export async function recalculate(
+  payload: WicketCalculationPayload,
+  options: { silent?: boolean } = { silent: true },
+): Promise<RecalculateResponse> {
   assertWicketCalculationPayload(payload)
   if (isMock) return mockRecalculate(payload)
   const context = {
@@ -764,7 +767,7 @@ export async function recalculate(payload: WicketCalculationPayload): Promise<Re
       }
       throw error
     }
-  })
+  }, options)
 }
 
 export type MaterialAttributeDataType = 'string' | 'integer' | 'decimal' | 'boolean' | 'option'

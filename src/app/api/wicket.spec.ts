@@ -357,3 +357,21 @@ it('loads shared cover-strip definitions from the real GET endpoint', async () =
   expect(await getCoverStrips()).toEqual({ items: [item] })
   expect(api.get).toHaveBeenLastCalledWith('/api/dict/cover-strip/get-list')
 })
+
+
+describe('background price calculation', () => {
+  it.each([undefined, { silent: true }])('does not raise a conflict popup for an unavailable price (%j)', async options => {
+    const wicket = await import('./wicket')
+    const registry = await import('./wicketProductRowLockVersion')
+    const context = { orderId: 42, productRowId: 319, modelId: '1' }
+    registry.rememberWicketProductRowLockVersion(context, 3)
+    const listener = vi.fn()
+    const unsubscribe = registry.onWicketProductRowLockConflict(listener)
+    const conflict = { response: { status: 409 } }
+    api.post.mockRejectedValueOnce(conflict)
+    try {
+      await expect(wicket.recalculate(context, options)).rejects.toBe(conflict)
+      expect(listener).not.toHaveBeenCalled()
+    } finally { unsubscribe() }
+  })
+})

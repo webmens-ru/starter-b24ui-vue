@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, provide, type Component } from 'vue'
 import { useRoute } from 'vue-router'
+import { withoutSummaryBlock } from '../../app/summaryCodes'
 import { parsePositiveDecimalId } from '../../app/positiveDecimalId'
 import { navigateToProductRows } from '../../app/productRowReturnNavigation'
 import { coverStripError } from '../../components/wicket/coverStripState'
@@ -9,6 +10,7 @@ import { useWicketLockCatalogStore } from '../../stores/wicket/wicketLockCatalog
 import {
   getWicketAccessoryComposition,
   loadCoherentWicketState,
+  recalculate,
   onWicketProductRowLockConflict,
 } from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
@@ -22,6 +24,7 @@ declare const window: Window & {
 }
 
 import WicketMenu from '../../components/WicketMenu.vue'
+import PricePanel from '../../components/PricePanel.vue'
 import DrawingPanel from '../../components/DrawingPanel.vue'
 import CalculateTable from '../../components/CalculateTable.vue'
 
@@ -315,15 +318,47 @@ async function onMenuSelect(item: WicketMenuItem): Promise<void> {
   if (mounted) menuOpen.value = false
 }
 
+let priceAttempt = 0
+
+async function refreshNavigationPrice(): Promise<void> {
+  const attempt = ++priceAttempt
+  const generation = initGeneration
+  const contextKey = routeContextKey.value
+  const current = () => mounted && generation === initGeneration
+    && contextKey === routeContextKey.value && attempt === priceAttempt
+  calc.priceDealer.value = ''
+  calc.priceRetail.value = ''
+  calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
+  try {
+    const result = await recalculate({ ...calc.getCurrentProductRowContext() }, { silent: true })
+    if (current()) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+  } catch {
+    // An incomplete configuration may not have a price yet. Navigation stays available.
+    if (current()) {
+      calc.priceDealer.value = ''
+      calc.priceRetail.value = ''
+      calc.data.value = withoutSummaryBlock(calc.data.value, 'price')
+    }
+  }
+}
+
 function goNext() {
   if (pendingNavigation && isCurrentNavigationAttempt(pendingNavigation)) return
   const next = getNextPage(activePage.value)
-  if (next) switchTo(next)
+  if (next) {
+    const previousPage = activePage.value
+    switchTo(next)
+    if (activePage.value !== previousPage) void refreshNavigationPrice()
+  }
 }
 
 async function goBack(): Promise<void> {
   const prev = getPrevPage(activePage.value)
-  if (prev) await runGuardedNavigation(() => switchTo(prev))
+  if (prev) {
+    const previousPage = activePage.value
+    const navigated = await runGuardedNavigation(() => switchTo(prev))
+    if (navigated && activePage.value !== previousPage) void refreshNavigationPrice()
+  }
 }
 </script>
 
@@ -513,6 +548,7 @@ async function goBack(): Promise<void> {
         "
       >
         <div class="flex-1">
+          <PricePanel />
           <DrawingPanel />
           <CalculateTable
             :closable="isMobile"

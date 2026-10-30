@@ -119,6 +119,7 @@ function notifyConflict(context: ProductRowContext, key: string): void {
 export async function runWicketProductRowLockMutation<T>(
   context: ProductRowContext,
   mutation: (lockVersion: number) => Promise<T>,
+  options: { silent?: boolean } = {},
 ): Promise<T> {
   const key = getKey(context)
   const previous = mutationTails.get(key) ?? Promise.resolve()
@@ -126,7 +127,7 @@ export async function runWicketProductRowLockMutation<T>(
     if (conflictKeys.has(key)) throw new WicketProductRowLockConflictError()
     return mutation(requireWicketProductRowLockVersion(context))
   }).catch(error => {
-    if (isHttpConflict(error)) notifyConflict(context, key)
+    if (isHttpConflict(error) && !options.silent) notifyConflict(context, key)
     throw error
   })
   const tail = operation.then(() => undefined, () => undefined)

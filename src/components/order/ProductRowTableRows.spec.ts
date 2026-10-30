@@ -8,7 +8,7 @@ import ProductRowTableRows from './ProductRowTableRows.vue'
 function makeProductRow(overrides: Partial<ProductRowSummary> = {}): ProductRowSummary {
   return {
     id: 7, orderId: 42, productType: 'wicket', modelId: '3', parentProductRowId: null,
-    materialItemId: null, rowKind: 'product', relationRole: null, name: 'Калитка', article: null, unit: null,
+    materialItemId: null, rowKind: 'product', relationRole: null, name: 'Калитка «Стандарт» 50/50/штакетник', article: null, unit: null,
     quantity: 2, sortOrder: 10,
     status: { id: 1, code: 'draft', name: 'Черновик', color: '#777777' },
     baseRetailUnitPrice: 1000, baseDealerUnitPrice: 800, finalRetailUnitPrice: 900, finalDealerUnitPrice: 720,
@@ -63,7 +63,7 @@ describe('ProductRowTableRows', () => {
     expect(main.classes()).toContain('product-row-grid')
     expect(main.findAll('[role="cell"]')).toHaveLength(6)
     expect(main.get('[data-label="Товарная позиция"] [data-product-row-eyebrow]').text()).toBe('Позиция №7')
-    expect(main.get('[data-label="Товарная позиция"] [data-product-row-title]').text()).toBe('Калитка')
+    expect(main.get('[data-label="Товарная позиция"] [data-product-row-title]').text()).toBe('Калитка «Стандарт» 50/50/штакетник')
   })
 
   it('keeps dealer prices primary and retail prices secondary', () => {
