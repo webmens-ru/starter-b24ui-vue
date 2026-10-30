@@ -16,12 +16,28 @@ const base = {
 }
 
 describe('buildType3Geometry', () => {
+  it.each(['left', 'right'] as const)('places two split hinges on the %s frame edge', hingeSide => {
+    const geometry = buildType3Geometry({ ...base, openingOrientation: { opensOutward: true, hingeSide } })
+    expect(geometry.hinges).toHaveLength(4)
+    const x = hingeSide === 'left' ? geometry.gate.x - 10 : geometry.gate.x + geometry.gate.width - 6
+    expect(geometry.hinges.map(part => part.x)).toEqual([x, x, x, x])
+    expect(geometry.hinges.map(part => part.y)).toEqual([
+      geometry.gate.y + 100, geometry.gate.y + 175,
+      geometry.gate.y + geometry.gate.height - 250, geometry.gate.y + geometry.gate.height - 175,
+    ])
+    expect(geometry.hinges.every(part => part.width === 16 && part.height === 75)).toBe(true)
+  })
+
+  it('does not guess the hinge side when opening is not selected', () => {
+    expect(buildType3Geometry({ ...base, openingOrientation: null }).hinges).toEqual([])
+  })
+
   it('draws two detail 5 rails and one detail 6 lock rail with 40 mm faces', () => {
     const geometry = buildType3Geometry({ ...base, numberOfSticks: 0 })
     expect(geometry.innerHorizontal).toHaveLength(2)
     expect(geometry.innerHorizontal.map(part => part.height)).toEqual([40, 40])
     expect(geometry.lockRail.height).toBe(40)
-    expect(geometry.lockRail.width).toBe(geometry.fillArea.width - 40)
+    expect(geometry.lockRail.width).toBe(geometry.fillArea.width - 1)
   })
 
   it('draws only the four outer frame pipes without detail 4 vertical tubes', () => {

@@ -22,6 +22,7 @@ const yardPatternId = `type3-yard-${instanceId}`
 const upperNetPatternId = `type3-upper-net-pattern-${instanceId}`
 
 const { geometry, error: drawingError } = useDrawingGeometry(() => buildType3Geometry({
+  openingOrientation: calc.openingOrientation.value,
   widthProyema: calc.widthProyema.value,
   heightProyema: calc.heightProyema.value,
   clearanceProyema: calc.clearanceProyema.value,
@@ -91,7 +92,17 @@ const picketFill = computed(() => !realisticColors.value
   : viewedFill.value.image
   ? `url(#${activePatternId.value})`
   : viewedFill.value.color)
-const viewBox = computed(() => `0 0 ${geometry.value.drawing.width} ${geometry.value.drawing.height}`)
+const viewBox = computed(() => {
+  const { drawing, hinges } = geometry.value
+  const padding = Math.max(0, ...hinges.map(part => Math.max(-part.x, part.x + part.width - drawing.width)))
+  return `${-padding} 0 ${drawing.width + 2 * padding} ${drawing.height}`
+})
+const hingesBehind = computed(() => calc.openingOrientation.value
+  ? !calc.openingOrientation.value.opensOutward !== (viewSide.value === 'yard')
+  : false)
+const viewTransform = computed(() => viewSide.value === 'yard'
+  ? `translate(${geometry.value.drawing.width} 0) scale(-1 1)`
+  : undefined)
 const jumperPresentation = computed(() => resolveJumperPresentation(
   geometry.value.extraRail.placement,
   viewSide.value,
@@ -138,6 +149,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         </pattern>
       </defs>
 
+      <g data-testid="type3-drawing-view" :transform="viewTransform">
       <rect v-bind="geometry.opening" fill="none" stroke="#d9dde5" stroke-dasharray="12 8" />
       <rect
         v-if="geometry.extraRail.visible && jumperPresentation.layer === 'background'"
@@ -167,6 +179,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         v-bind="geometry.upperNetArea"
         :fill="`url(#${upperNetPatternId})`"
       />
+      <g v-if="hingesBehind && geometry.hinges.length" data-testid="type3-hinges" fill="#e8b923" stroke="#20242a" stroke-width="1">
+        <rect v-for="(hinge, index) in geometry.hinges" :key="`hinge-${index}`" v-bind="hinge" />
+      </g>
       <g data-testid="type3-frame" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
         <rect v-for="(part, index) in geometry.frame" :key="`frame-${index}`" v-bind="part" />
         <rect v-for="(part, index) in geometry.innerHorizontal" :key="`detail-5-${index}`" data-testid="type3-detail-5" v-bind="part" />
@@ -194,6 +209,10 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         stroke="#20242a"
         stroke-width="1"
       />
+      <g v-if="!hingesBehind && geometry.hinges.length" data-testid="type3-hinges" fill="#e8b923" stroke="#20242a" stroke-width="1">
+        <rect v-for="(hinge, index) in geometry.hinges" :key="`hinge-${index}`" v-bind="hinge" />
+      </g>
+      </g>
     </svg>
 
     <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-(--ui-color-text-secondary)">

@@ -1,9 +1,11 @@
 import { parseDrawingFillingOrientation } from '../../../../app/fillingOrientations'
 import { frameSubtypeCapabilities, resolveFrameSubtype } from '../../frameSubtype'
+import { parseOpeningOrientation } from '../../openingOrientation'
 import { computeJumperGeometry } from '../jumperGeometry'
 import { parseDrawingPipeProfiles, type DrawingPipeSource } from '../pipeProfiles'
 
 export interface Type3DrawingSource extends DrawingPipeSource {
+  openingOrientation?: unknown
   widthProyema?: unknown
   heightProyema?: unknown
   clearanceProyema?: unknown
@@ -39,6 +41,7 @@ export interface Type3Geometry {
   opening: Type3Rect
   gate: Type3Rect
   posts: { visible: boolean; left: Type3Rect; right: Type3Rect }
+  hinges: Type3Rect[]
   frame: Type3Rect[]
   innerHorizontal: Type3Rect[]
   lockRail: Type3Rect
@@ -86,6 +89,12 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     jumperHeight: extraRailSize,
   })
   const gate = rect(postSize + 4, verticalGeometry.gateY, width - postSize * 2 - 14, verticalGeometry.gateHeight)
+  const orientation = source.openingOrientation == null ? null : parseOpeningOrientation(source.openingOrientation)
+  const hingeX = orientation?.hingeSide === 'right' ? gate.x + gate.width - 6 : gate.x - 10
+  const hinges = orientation ? [gate.y + 100, gate.y + gate.height - 250].flatMap(y => [
+    rect(hingeX, y, 16, 75),
+    rect(hingeX, y + 75, 16, 75),
+  ]) : []
   const rail = 50
   const inner = 20
   const fillArea = rect(gate.x + rail, gate.y + rail, gate.width - rail * 2, gate.height - rail * 2)
@@ -128,6 +137,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     drawing: { width, height },
     opening: rect(0, 0, width, height),
     gate,
+    hinges,
     posts: {
       visible: postsVisible,
       left: rect(0, verticalGeometry.postY, postSize, verticalGeometry.postHeight),
@@ -143,7 +153,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       rect(activeFill.x, activeFill.y, activeFill.width, 40),
       rect(activeFill.x, activeFill.y + activeFill.height - 40, activeFill.width, 40),
     ],
-    lockRail: rect(activeFill.x + 20, activeFill.y + Math.floor((activeFill.height - 40) / 2), activeFill.width - 40, 40),
+    lockRail: rect(activeFill.x, activeFill.y + Math.floor((activeFill.height - 40) / 2), Math.max(0, activeFill.width - 1), 40),
     fillArea: activeFill,
     facadePickets,
     yardPickets: source.fillSide === 2 ? facadePickets : [],

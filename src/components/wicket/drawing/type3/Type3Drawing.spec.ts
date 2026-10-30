@@ -13,6 +13,31 @@ describe('Type3Drawing', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it.each([
+    { opensOutward: true, hingeSide: 'left' as const },
+    { opensOutward: true, hingeSide: 'right' as const },
+    { opensOutward: false, hingeSide: 'left' as const },
+    { opensOutward: false, hingeSide: 'right' as const },
+  ])('shows hinges with the correct layer and mirrored yard view: $opensOutward/$hingeSide', async orientation => {
+    const store = useWicketFormStore()
+    store.widthProyema = '900'
+    store.heightProyema = '2000'
+    store.fillSide = 0
+    store.openingOrientation = orientation
+    const wrapper = mount(Type3Drawing)
+    for (const yard of [false, true]) {
+      if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+      const hinges = wrapper.get('[data-testid="type3-hinges"]')
+      expect(hinges.findAll('rect')).toHaveLength(4)
+      const x = hinges.get('rect').attributes('x')
+      expect(x).toBe(orientation.hingeSide === 'left' ? '-6' : '884')
+      const behind = wrapper.html().indexOf('data-testid="type3-hinges"') < wrapper.html().indexOf('data-testid="type3-frame"')
+      expect(behind).toBe(!orientation.opensOutward !== yard)
+      expect(wrapper.get('[data-testid="type3-drawing-view"]').attributes('transform')).toBe(yard ? 'translate(900 0) scale(-1 1)' : undefined)
+    }
+    wrapper.unmount()
+  })
+
   it('shows only frame on both views for explicit zero with stale pickets and invalid orientation', async () => {
     const store = useWicketFormStore()
     store.widthProyema = '700'
