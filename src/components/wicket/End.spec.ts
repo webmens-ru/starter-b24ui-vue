@@ -52,6 +52,15 @@ describe('End order composition navigation', () => {
     mocks.deleteCalculation.mockResolvedValue(undefined)
   })
 
+  it('blocks direct calculation with pending cover colors even without a route provider', async () => {
+    const c = useCalculation(); c.coverStripDrafts.value = [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], requiresColorConfirmation: true }]
+    const wrapper = mount(End, { global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } } })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click'); await flushPromises()
+    expect(mocks.finalCalculate).not.toHaveBeenCalled()
+    expect(mocks.saveWicketData).not.toHaveBeenCalled(); wrapper.unmount()
+  })
+
   it('shows calculated prices and stays on the calculation step after a successful calculation', async () => {
     const wrapper = mount(End, {
       global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } },

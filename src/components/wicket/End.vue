@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { coverStripError } from './coverStripState'
 import { useCalculation } from '../../composables/useCalculation'
 import { deleteCalculation, finalCalculate, saveWicketData, fetchSavedOrderPrice } from '../../app/api/wicket'
 import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
@@ -127,6 +128,8 @@ const sectionState = computed(() => ({
 }))
 
 const sectionErrors = computed(() => {
+  const coverError = coverStripError(calc.coverStripDrafts.value)
+  if (coverError) return [coverError]
   const validations = wicketRoute?.validations(sectionState.value) ?? new Map()
   const errors: string[] = []
   validations.forEach((v) => { if (!v.valid) errors.push(...v.errors) })

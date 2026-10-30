@@ -53,3 +53,50 @@ it('keeps server-provided unavailable descriptions separately from wire choices'
   expect(calc.getFullSavePayload().coverStrips).toEqual([{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }] }])
   expect(calc.getFullSavePayload()).not.toHaveProperty('coverStripDescriptions')
 })
+
+it('preserves server review metadata on reload and blocks full payload while pending', () => {
+  const calc = useCalculation()
+  calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: { token: 'b'.repeat(64), mode: 'fixed', paintId: 1, colorId: 9, colorName: 'Renamed', note: null }, coverStrips: [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }] })
+  expect(calc.coverStripDrafts.value[0]).toMatchObject({ frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true })
+  expect(type1Route.validations({ modelId: '1', coverStripDrafts: calc.coverStripDrafts.value } as never).get('page_cover_strip')?.valid).toBe(false)
+  expect(() => calc.getFullSavePayload()).toThrow(/цвет/i)
+})
+it('sends tokens but never derived review booleans in canonical payloads', () => {
+  const payload = canonicalizeWicketRootSavePayload({ orderId: 1, productRowId: 2, modelId: '1', coverStrips: [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }] })
+  expect(payload.coverStrips).toEqual([{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64) }])
+})
+it('applies canonical save metadata while preserving newer drafts, old responses, and reload generations', () => {
+  const c = useCalculation(); const frame = { token: 'b'.repeat(64), paintId: 1, colorId: 9, mode: 'fixed' as const, colorName: 'Display', note: null }
+  const piece = { materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }
+  c.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStrips: [piece], coverStripFrameColor: frame })
+  const first = c.beginCoverStripMutation()
+  c.coverStripDrafts.value[0]!.parameters[0]!.colorId = 3
+  first({ lockVersion: 3, coverStripFrameColor: frame, coverStrips: [{ ...piece, requiresColorConfirmation: false, frameColorToken: frame.token }] })
+  expect(c.coverStrips.value[0]?.requiresColorConfirmation).toBe(false)
+  expect(c.coverStripDrafts.value[0]?.parameters[0]?.colorId).toBe(3)
+  const second = c.beginCoverStripMutation()
+  second({ lockVersion: 4 })
+  expect(c.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  c.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStrips: [], coverStripFrameColor: { ...frame, token: 'c'.repeat(64) } })
+  expect(second({ lockVersion: 5, coverStripFrameColor: frame, coverStrips: [piece] })).toBe(false)
+  expect(c.coverStrips.value).toEqual([])
+  expect(c.coverStripFrameColor.value?.token).toBe('c'.repeat(64))
+})
+it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])('blocks pending cover review in type %i shared navigation validations', async modelId => {
+  const module = await import(`../../pages/wicket/type${modelId}Route.ts`)
+  const route = module[`type${modelId}Route`] as typeof type1Route
+  const state = { modelId: String(modelId), fillSide: 0 as const, materialFacadeGlob: null, materialYardGlob: null, isThereLock: 0, providesLock: 'manufacturer', availableSections: [], coverStripDrafts: [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], requiresColorConfirmation: true }] }
+  expect(route.validations(state).get('page_cover_strip')?.valid).toBe(false)
+  expect(route.validations({ ...state, coverStripDrafts: [] }).get('page_cover_strip')?.valid).toBe(true)
+})
+it('preserves newer typed edits but marks their stale tokens pending when another save changes frame context', () => {
+  const c = useCalculation(); const frame = { token: 'b'.repeat(64), paintId: 1, colorId: 9, mode: 'fixed' as const, colorName: 'Saved', note: null }
+  const piece = { materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: false }
+  c.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStrips: [piece] })
+  const complete = c.beginCoverStripMutation()
+  c.coverStripDrafts.value[0]!.parameters[0]!.colorId = 3
+  complete({ lockVersion: 3, coverStripFrameColor: frame, coverStrips: [{ ...piece, requiresColorConfirmation: true }] })
+  expect(c.coverStripDrafts.value[0]?.parameters[0]?.colorId).toBe(3)
+  expect(c.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  expect(() => c.getFullSavePayload()).toThrow(/цвет/i)
+})

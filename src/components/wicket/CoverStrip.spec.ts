@@ -110,3 +110,72 @@ it('distinguishes same-named materials using typed ready dimensions before selec
   await flushPromises()
   expect(vi.mocked(saveWicketData).mock.lastCall?.[0].coverStrips).toEqual([{ materialItemId: 11, parameters: [{ attributeId: 5, colorId: 3 }] }])
 })
+
+const frame = { token: 'b'.repeat(64), paintId: 1, colorId: 9, mode: 'fixed' as const, colorName: 'Новый цвет каркаса', note: null }
+const pendingPieces = () => [1, 2, 3, 4].map(() => ({ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: 'a'.repeat(64), requiresColorConfirmation: true }))
+it('confirms one identical piece while others remain pending and blocks leaving', async () => {
+  const calc = useCalculation(); calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: pendingPieces() }); calc.priceRetail.value = '100'
+  const { recalculate } = await import('../../app/api/wicket')
+  vi.mocked(saveWicketData).mockResolvedValueOnce({ lockVersion: 2, coverStripFrameColor: frame, coverStrips: pendingPieces().map((p, i) => i === 1 ? { ...p, frameColorToken: frame.token, requiresColorConfirmation: false } : p) })
+  const wrapper = await setup()
+  expect(wrapper.text()).toContain(frame.colorName)
+  await wrapper.findAll('button').filter(b => b.text() === 'Оставить прежний цвет')[1]!.trigger('click'); await flushPromises()
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0].coverStrips?.map(p => p.frameColorToken)).toEqual(['a'.repeat(64), frame.token, 'a'.repeat(64), 'a'.repeat(64)])
+  expect(calc.coverStripDrafts.value.map(p => p.requiresColorConfirmation)).toEqual([true, false, true, true])
+  expect(recalculate).not.toHaveBeenCalled()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  wrapper.unmount()
+})
+it.each([
+  [{ ...frame, mode: 'custom', colorName: null, note: 'По образцу клиента' }, 'По образцу клиента'],
+  [{ ...frame, mode: 'unset', colorName: null, note: null }, 'не задан'],
+])('displays typed saved frame context %j', async (descriptor, text) => {
+  useCalculation().loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: descriptor, coverStrips: [] })
+  const wrapper = await setup(); expect(wrapper.text()).toContain(text); wrapper.unmount()
+})
+it('color change acknowledges only edited card and deletion preserves other tokens', async () => {
+  const calc = useCalculation(); calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: pendingPieces() })
+  const wrapper = await setup(); await wrapper.findAll('[data-color]')[2]!.setValue('3'); await flushPromises()
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0].coverStrips?.map(p => p.frameColorToken)).toEqual(['a'.repeat(64), 'a'.repeat(64), frame.token, 'a'.repeat(64)])
+  await wrapper.findAll('button').filter(b => b.text() === 'Удалить')[0]!.trigger('click'); await flushPromises()
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0].coverStrips?.map(p => p.frameColorToken)).toEqual(['a'.repeat(64), frame.token, 'a'.repeat(64)])
+  await click(wrapper, 'Не требуется'); expect(calc.coverStripDrafts.value).toEqual([]); wrapper.unmount()
+})
+it('retains pending canonical state after stale confirmation and blocks leaving', async () => {
+  const calc = useCalculation(); const piece = pendingPieces()[0]!
+  calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: [piece] })
+  const newest = { ...frame, token: 'c'.repeat(64), colorName: 'Ещё один цвет' }
+  vi.mocked(saveWicketData).mockResolvedValue({ lockVersion: 3, coverStripFrameColor: newest, coverStrips: [piece] })
+  const wrapper = await setup(); await click(wrapper, 'Оставить прежний цвет')
+  expect(calc.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  expect(wrapper.text()).toContain('Ещё один цвет')
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  wrapper.unmount()
+})
+it('does not overwrite newer draft color with an earlier canonical save response', async () => {
+  const calc = useCalculation(); calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: [pendingPieces()[0]!] })
+  let release!: (value: import('../../app/api/wicket.types').WicketRootMutationResponse) => void
+  vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+  const wrapper = await setup(); await click(wrapper, 'Оставить прежний цвет')
+  await wrapper.find('[data-color]').setValue('3'); await flushPromises()
+  release({ lockVersion: 2, coverStripFrameColor: frame, coverStrips: [{ ...pendingPieces()[0]!, frameColorToken: frame.token, requiresColorConfirmation: false }] }); await flushPromises()
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0].coverStrips?.[0]?.parameters[0]?.colorId).toBe(3)
+  expect(calc.coverStripDrafts.value[0]?.parameters[0]?.colorId).toBe(3)
+  wrapper.unmount()
+})
+it('rechecks canonical review requirements returned during the leave save', async () => {
+  const calc = useCalculation(); const piece = pendingPieces()[0]!
+  calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: [{ ...piece, frameColorToken: frame.token, requiresColorConfirmation: false }] })
+  vi.mocked(saveWicketData).mockResolvedValueOnce({ lockVersion: 3, coverStripFrameColor: { ...frame, token: 'c'.repeat(64) }, coverStrips: [{ ...piece, frameColorToken: frame.token }] })
+  const wrapper = await setup()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  expect(calc.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true); wrapper.unmount()
+})
+it('reselecting identical material or color IDs never acknowledges pending review', async () => {
+  const calc = useCalculation(); calc.loadFromApi({ orderId: 1, productRowId: 2, modelId: '1', coverStripFrameColor: frame, coverStrips: [pendingPieces()[0]!] })
+  const wrapper = await setup(); await wrapper.find('[data-color]').setValue('2'); await flushPromises()
+  expect(calc.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  await wrapper.find('[data-material]').setValue('10'); await flushPromises()
+  expect(calc.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  expect(calc.coverStripDrafts.value[0]?.frameColorToken).toBe('a'.repeat(64)); wrapper.unmount()
+})

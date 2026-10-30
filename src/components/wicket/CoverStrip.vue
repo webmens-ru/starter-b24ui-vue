@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getCoverStrips, recalculate, saveWicketData } from '../../app/api/wicket'
 import type { CoverStripCatalogItem, CoverStripSelection } from '../../app/api/wicket.types'
 import { useCalculation } from '../../composables/useCalculation'
-import { coverStripError, coverStripParameters, coverStripWire, isCoverStripAvailable, newCoverStripDraft } from './coverStripState'
+import { coverStripError, coverStripStructureError, coverStripParameters, coverStripWire, isCoverStripAvailable, newCoverStripDraft } from './coverStripState'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
 
 const emit = defineEmits<{ next: []; back: [] }>()
@@ -34,7 +34,14 @@ const materialOptions = computed(() => items.value.map(item => ({ id: item.mater
 function markAvailability() {
   for (const row of rows.value) row.unavailable = !isCoverStripAvailable(row, items.value)
 }
+const structuralValidation = computed(() => coverStripStructureError(rows.value))
 const validation = computed(() => coverStripError(rows.value))
+const frameDescription = computed(() => {
+  const frame = calc.coverStripFrameColor.value
+  if (frame?.mode === 'fixed') return frame.colorName || 'Цвет выбран'
+  if (frame?.mode === 'custom') return frame.note ? `Индивидуальный цвет: ${frame.note}` : 'Индивидуальный цвет'
+  return 'Цвет каркаса не задан'
+})
 function materialLabel(item: CoverStripCatalogItem): string {
   const size = [item.attributes.width, item.attributes.secondWidth, item.attributes.height]
     .filter(value => typeof value === 'number' && value > 0).join('×')
@@ -59,31 +66,36 @@ function save(): Promise<boolean> {
     if (!current()) return false
     if (loading.value || loadFailed.value) { error.value = 'Не удалось загрузить справочник нащельников. Повторите попытку.'; return false }
     markAvailability()
-    if (validation.value) { error.value = validation.value; return false }
+    if (structuralValidation.value) { error.value = structuralValidation.value; return false }
     const wire = coverStripWire(rows.value)
     const labels = descriptions()
+    const attemptedRevision = revision
+    const attemptedRows = clone(rows.value as CoverStripSelection[])
+    const applyResponse = calc.beginCoverStripMutation()
     let saved = false
     try {
-      await saveWicketData({ ...calc.getBaseSavePayload(), coverStrips: wire })
+      const response = await saveWicketData({ ...calc.getBaseSavePayload(), coverStrips: wire })
       saved = true
-      if (!current()) return false
-      persisted = clone(wire)
+      if (!current() || !applyResponse(response)) return false
+      const canonical = response?.coverStrips ?? attemptedRows
+      persisted = clone(canonical)
       persistedDescriptions = [...labels]
-      calc.coverStrips.value = clone(wire)
+      calc.coverStrips.value = clone(canonical)
+      if (revision === attemptedRevision) { rows.value = clone(canonical); markAvailability() }
       calc.coverStripDescriptions.value = [...labels]
       syncSummary()
-      if (calc.priceRetail.value) {
+      if (calc.priceRetail.value && !canonical.some(row => row.requiresColorConfirmation)) {
         const result = await recalculate({ ...calc.getCurrentProductRowContext() })
-        if (!current()) return false
+        if (!current() || !applyResponse(undefined)) return false
         calc.updatePriceBlock(result.priceDealer, result.priceRetail)
       }
       error.value = ''
       return true
     } catch {
-      if (!current()) return false
+      if (!current() || !applyResponse(undefined)) return false
       if (!saved) {
         calc.coverStrips.value = clone(persisted)
-        rows.value = clone(persisted)
+        if (revision === attemptedRevision) rows.value = clone(persisted)
         calc.coverStripDescriptions.value = [...persistedDescriptions]
         markAvailability()
         syncSummary()
@@ -100,7 +112,7 @@ function changed() {
   revision++
   error.value = ''
   markAvailability()
-  if (!validation.value) void save()
+  if (!structuralValidation.value) void save()
 }
 function add() {
   if (rows.value.length >= 4) return
@@ -111,13 +123,31 @@ function remove(index: number) { rows.value.splice(index, 1); changed() }
 function none() { rows.value = []; changed() }
 function materialChanged(index: number, value: unknown) {
   const id = Number(value)
+  if (rows.value[index]?.materialItemId === id) return
   const item = itemFor(id)
   rows.value[index] = item ? newCoverStripDraft(item) : { materialItemId: null, parameters: [] }
+  if (item) acceptCurrentFrame(index)
   changed()
 }
 function colorChanged(index: number, attributeId: number, value: unknown) {
   const parameter = rows.value[index]?.parameters.find(p => p.attributeId === attributeId)
-  if (parameter) parameter.colorId = Number(value) || null
+  const colorId = Number(value) || null
+  if (parameter && parameter.colorId !== colorId) {
+    parameter.colorId = colorId
+    acceptCurrentFrame(index)
+  }
+  changed()
+}
+function acceptCurrentFrame(index: number) {
+  const row = rows.value[index]
+  if (row && calc.coverStripFrameColor.value) {
+    row.frameColorToken = calc.coverStripFrameColor.value.token
+    row.requiresColorConfirmation = false
+  }
+}
+function confirmColor(index: number) {
+  if (!rows.value[index] || rows.value[index].unavailable || !calc.coverStripFrameColor.value) return
+  acceptCurrentFrame(index)
   changed()
 }
 async function validateAndSave(): Promise<boolean> {
@@ -125,7 +155,8 @@ async function validateAndSave(): Promise<boolean> {
   if (error.value) return false
   let attempted: number
   do { attempted = revision; if (!await save()) return false } while (attempted !== revision)
-  return true
+  error.value = validation.value
+  return !error.value
 }
 const { validateBeforeLeave, next } = createStepLeaveAttempt(validateAndSave, () => emit('next'))
 defineExpose({ validateBeforeLeave })
@@ -151,6 +182,7 @@ onMounted(async () => {
     <p v-if="loading">Загрузка...</p>
     <p v-else-if="loadFailed" role="alert">Не удалось загрузить справочник нащельников. Повторите открытие шага.</p>
     <template v-else>
+      <p data-frame-color class="text-sm text-gray-700">Текущий цвет каркаса: {{ frameDescription }}</p>
       <div class="flex flex-wrap gap-3 items-center">
         <B24Button label="Не требуется" :color="!rows.length ? 'air-primary' : 'air-secondary'" :aria-pressed="!rows.length" @click="none" />
         <B24Button label="Добавить нащельник" color="air-secondary" :disabled="rows.length >= 4" @click="add" />
@@ -159,6 +191,10 @@ onMounted(async () => {
       <section v-for="(row, index) in rows" :key="index" class="cover-strip-card flex flex-col gap-4">
         <div class="flex justify-between items-center"><h3 class="font-semibold">Нащельник {{ index + 1 }}</h3><B24Button label="Удалить" color="air-secondary" size="sm" @click="remove(index)" /></div>
         <p v-if="row.unavailable" role="alert">{{ calc.coverStripDescriptions.value[index] ?? `Нащельник #${row.materialItemId}` }}. Сохранённый материал или цвет недоступен. Замените выбор.</p>
+        <div v-if="row.requiresColorConfirmation" role="status" class="flex flex-col items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <p>Цвет каркаса изменился. Выберите другой цвет нащельника или подтвердите прежний.</p>
+          <B24Button label="Оставить прежний цвет" color="air-secondary" size="sm" :disabled="row.unavailable || !calc.coverStripFrameColor.value" @click="confirmColor(index)" />
+        </div>
         <div class="flex flex-col gap-2">
           <label :for="`cover-strip-material-${index}`" class="font-semibold">Материал</label>
           <B24SelectMenu :b24ui="selectMenuUi" :content="{ align: 'start' }"

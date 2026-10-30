@@ -1,5 +1,5 @@
 import { parseCoverStripSelections } from '../../components/wicket/coverStripState'
-import type { CoverStripSelection } from './wicket.types'
+import type { CoverStripSelection, CoverStripFrameColor } from './wicket.types'
 import type { CoverStripCatalogItem } from './wicket.types'
 import type { PipeOption } from './pipeProfiles'
 import type {
@@ -651,11 +651,49 @@ export async function mockFetchWicketPage(_modelId: number | string, _url: strin
   return ''
 }
 
-const mockCoverStrips = new Map<string, CoverStripSelection[]>()
-
-export async function mockSaveWicketData(_payload: Record<string, unknown>): Promise<WicketRootMutationResponse> {
-  if (Object.prototype.hasOwnProperty.call(_payload, 'coverStrips')) mockCoverStrips.set(`${_payload.orderId}:${_payload.productRowId}`, parseCoverStripSelections(_payload.coverStrips))
-  return { lockVersion: 1 }
+interface MockCoverState {
+  paintId: number | null
+  paintColorId: number | null
+  colorShieldNote: string
+  descriptor: CoverStripFrameColor
+  pieces: CoverStripSelection[]
+  lockVersion: number
+}
+const mockCoverStates = new Map<string, MockCoverState>()
+async function mockFrameDescriptor(paintId: number | null, colorId: number | null, note: string): Promise<CoverStripFrameColor> {
+  const paint = MOCK_COLOR_SHIELD.find(paint => paint.id === paintId)
+  const mode = paint ? paint.isFixedColor && colorId ? 'fixed' : paint.isFixedColor ? 'unset' : 'custom' : 'unset'
+  const identity = mode === 'fixed' ? ['fixed', colorId] : mode === 'custom' ? ['custom', paintId, note.trim()] : ['unset']
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(identity)))
+  const token = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
+  return { token, paintId, colorId: mode === 'fixed' ? colorId : null, mode,
+    colorName: mode === 'fixed' ? paint?.colors.find(color => color.id === colorId)?.name ?? null : null,
+    note: mode === 'custom' ? note.trim() : null }
+}
+async function getMockCoverState(orderId: unknown, productRowId: unknown): Promise<MockCoverState> {
+  const key = `${orderId}:${productRowId}`
+  let state = mockCoverStates.get(key)
+  if (!state) {
+    state = { paintId: 1, paintColorId: 91, colorShieldNote: '', descriptor: await mockFrameDescriptor(1, 91, ''), pieces: [], lockVersion: 1 }
+    mockCoverStates.set(key, state)
+  }
+  return state
+}
+export async function mockSaveWicketData(payload: Record<string, unknown>): Promise<WicketRootMutationResponse> {
+  const state = await getMockCoverState(payload.orderId, payload.productRowId)
+  const paintId = payload.paintId === undefined ? state.paintId : payload.paintId as number | null
+  const colorId = payload.paintColorId === undefined ? state.paintColorId : payload.paintColorId as number | null
+  const note = payload.colorShieldNote === undefined ? state.colorShieldNote : String(payload.colorShieldNote ?? '')
+  const descriptor = await mockFrameDescriptor(paintId, colorId, note)
+  const oldPieces = state.pieces
+  const pieces = payload.coverStrips === undefined ? oldPieces : parseCoverStripSelections(payload.coverStrips).map(row => {
+    // Explicit tokens always preserve the identity of duplicate pieces.
+    const old = oldPieces.find(old => old.materialItemId === row.materialItemId && JSON.stringify(old.parameters) === JSON.stringify(row.parameters))
+    return { ...row, frameColorToken: row.frameColorToken ?? old?.frameColorToken ?? descriptor.token }
+  })
+  state.pieces = pieces.map(row => ({ ...row, requiresColorConfirmation: row.frameColorToken !== descriptor.token }))
+  Object.assign(state, { paintId, paintColorId: colorId, colorShieldNote: note, descriptor, lockVersion: state.lockVersion + 1 })
+  return { lockVersion: state.lockVersion, coverStripFrameColor: { ...descriptor }, coverStrips: parseCoverStripSelections(state.pieces) }
 }
 
 export async function mockCreateOrder(): Promise<{
@@ -675,10 +713,11 @@ export async function mockLoadWicketData(
   _orderId: number,
   productRowId?: number,
 ): Promise<Record<string, unknown>> {
-  void _orderId
   await delay(200)
+  const coverState = await getMockCoverState(_orderId, productRowId)
   return {
-    coverStrips: parseCoverStripSelections(mockCoverStrips.get(`${_orderId}:${productRowId}`) ?? []),
+    coverStripFrameColor: { ...coverState.descriptor },
+    coverStrips: parseCoverStripSelections(coverState.pieces),
     orderId: 42,
     modelId: '1',
     providesMaterialCode: 'manufacturer',
@@ -724,8 +763,9 @@ export async function mockLoadWicketData(
     fillingOrientationCode: 'vertical',
     shieldType: 'Тип_1',
     paintName: 'Эмаль',
-    paintId: 1,
-    paintColorId: 91,
+    paintId: coverState.paintId,
+    paintColorId: coverState.paintColorId,
+    colorShieldNote: coverState.colorShieldNote,
     paintSelectionUnavailable: false,
     paintSelection: { isFixedColor: true, requiresColorNote: false, isPaintAvailable: true },
     frameSubtypeCode: 'noNet',

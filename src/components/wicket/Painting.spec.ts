@@ -15,6 +15,29 @@ const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<sel
 const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
 describe('separate paint and color', () => {
  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('applies saved server review metadata after paint success and preserves it on failure', async () => {
+  const c = useCalculation(); const oldFrame = { token: 'a'.repeat(64), paintId: 1, colorId: 91, mode: 'fixed' as const, colorName: 'Old', note: null }; const nextFrame = { ...oldFrame, token: 'b'.repeat(64), colorId: 92, colorName: 'Next' }
+  const piece = { materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: oldFrame.token, requiresColorConfirmation: false }
+  c.loadFromApi({ paintId: 1, paintColorId: 91, coverStripFrameColor: oldFrame, coverStrips: [piece] }); c.priceRetail.value = '100'
+  const w = render(); await flushPromises()
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('failed'))
+  await w.get('[data-testid="paint-product"]').setValue('2'); await flushPromises()
+  expect(c.coverStripFrameColor.value).toEqual(oldFrame)
+  vi.mocked(saveWicketData).mockResolvedValueOnce({ lockVersion: 3, coverStripFrameColor: nextFrame, coverStrips: [{ ...piece, requiresColorConfirmation: true }] })
+  await w.get('[data-testid="paint-color"]').setValue('92'); await flushPromises()
+  expect(c.coverStripFrameColor.value).toEqual(nextFrame)
+  expect(c.coverStripDrafts.value[0]?.requiresColorConfirmation).toBe(true)
+  expect(recalculate).not.toHaveBeenCalled(); w.unmount()
+ })
+ it('ignores late painting success after product context changes', async () => {
+  const c = useCalculation(); c.loadFromApi({ paintId: 1, paintColorId: 91 }); const w = render(); await flushPromises()
+  let release!: (value: { lockVersion: number }) => void
+  vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+  await w.get('[data-testid="paint-product"]').setValue('2'); await flushPromises()
+  c.productRowId.value = 8; c.loadFromApi({ paintId: 3, paintColorId: 93, coverStrips: [] })
+  release({ lockVersion: 3 }); await flushPromises()
+  expect(c.paintId.value).toBe(3); expect(c.paintColorId.value).toBe(93); w.unmount()
+ })
  it('groups paint options by type IDs inside the selected category, including untyped paints', async () => {
   const data = catalog()
   data.colorShield = [
