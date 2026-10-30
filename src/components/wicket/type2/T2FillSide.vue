@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { fillingSideCountLabel, hasInvalidFillingSideCountSelection, isFillingSideCount, fillingSideCountOptions } from '../../../app/fillingSideCounts'
-import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
+import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { saveNoFilling } from '../saveNoFilling'
-import { computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../../app/api/wicket'
 
@@ -14,46 +14,44 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
-const unsupportedGroup = computed(() => calc.fillSide.value !== 0
-  && ((calc.materialFacadeGlob.value !== null && calc.materialFacadeGlob.value !== 'profnastil')
-    || (calc.fillSide.value === 2 && calc.materialYardGlob.value !== null && calc.materialYardGlob.value !== 'profnastil')))
-defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value && !unsupportedGroup.value })
+const pageSaveError = ref('')
+defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value })
 
 const fillSideOptions = fillingSideCountOptions()
 
-const materialOptions = fillingMaterialGroupOptions(['profnastil'])
-
-function clearFacadeSelection() {
-  calc.resetFacadeFilling()
+function normalizeFixedFillingGroups(): void {
+  if (calc.fillSide.value !== 1 && calc.fillSide.value !== 2) return
+  if (calc.materialFacadeGlob.value !== 'profnastil') {
+    calc.resetFacadeFilling()
+    calc.materialFacadeGlob.value = 'profnastil'
+  }
+  if (calc.fillSide.value === 2 && calc.materialYardGlob.value !== 'profnastil') {
+    calc.resetYardFilling()
+    calc.materialYardGlob.value = 'profnastil'
+  }
 }
 
-function clearYardSelection() {
-  calc.resetYardFilling()
+async function persist(): Promise<void> {
+  calc.fillingSaveBlocked.value = true
+  try {
+    await save()
+  } catch {
+    pageSaveError.value = 'Не удалось сохранить заполнение. Повторите сохранение.'
+  }
 }
 
-function onFillSideChange() {
+function onFillSideChange(): void {
   if (calc.fillSide.value === 1) {
     calc.materialYardGlob.value = null
-    clearYardSelection()
-  } else if (calc.materialYardGlob.value === null) {
-    calc.materialYardGlob.value = calc.materialFacadeGlob.value
-    clearYardSelection()
+    calc.resetYardFilling()
   }
-  save()
-}
-
-function onMaterialFacadeChange() {
-  clearFacadeSelection()
-  save()
-}
-
-function onMaterialYardChange() {
-  clearYardSelection()
-  save()
+  void persist()
 }
 
 async function save() {
-  if (await saveNoFilling(calc)) return
+  pageSaveError.value = ''
+  normalizeFixedFillingGroups()
+  if (await saveNoFilling(calc)) { calc.fillingSaveBlocked.value = false; return }
   const params = [
     { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { paramCode: 'sideCount', name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
@@ -91,7 +89,10 @@ async function save() {
     inStockYard:            null,
   })
 
-  if (calc.priceRetail.value && isFillingSideCount(calc.fillSide.value)
+  calc.fillingSaveBlocked.value = false
+
+  if (calc.priceRetail.value && calc.idFacade.value
+    && (calc.fillSide.value === 1 || calc.idYard.value) && isFillingSideCount(calc.fillSide.value)
     && !hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)) {
     try {
       const result = await recalculate({
@@ -110,12 +111,9 @@ async function save() {
 
 onMounted(async () => {
   calc.setActivePage('page2')
-  if (calc.fillSide.value === 0) { calc.clearFilling(); await save(); return }
-  if (unsupportedGroup.value || hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
-    || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
+  if (hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
   if (calc.fillSide.value === null) calc.fillSide.value = 1
-  if (calc.materialFacadeGlob.value === null) calc.materialFacadeGlob.value = 'profnastil'
-  await save()
+  await persist()
 })
 </script>
 
@@ -126,12 +124,13 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
       <span class="text-3xl font-bold flex-1 text-center">Заполнение</span>
-      <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value || unsupportedGroup" color="air-secondary" @click="emit('next')" />
+      <B24Button label="Далее" :disabled="calc.fillingSaveBlocked.value" color="air-secondary" @click="emit('next')" />
     </div>
 
     <MaterialProvider :persist="save" default-facade-group="profnastil" />
 
-    <p v-if="unsupportedGroup" role="alert" class="text-red-500">Для калитки типа 2 выберите металлопрофиль с высотой волны не более 8 мм.</p>
+    <p v-if="pageSaveError" role="alert" class="text-red-500">{{ pageSaveError }}</p>
+    <button v-if="pageSaveError" type="button" @click="persist">Повторить сохранение</button>
 
     <!-- Группы карточек -->
     <div v-if="calc.fillSide.value !== 0" class="flex flex-col gap-6 mt-4">
@@ -160,51 +159,6 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Материал заполнения (фасад) -->
-      <div>
-        <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (фасад)</h2>
-        <div class="option-grid">
-          <label
-            v-for="opt in materialOptions"
-            :key="opt.value"
-            class="lock-card"
-          >
-            <input
-              v-model="calc.materialFacadeGlob.value"
-              type="radio"
-              :value="opt.value"
-              class="sr-only"
-              @change="onMaterialFacadeChange"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Материал заполнения (двор) — только при "Две стороны" -->
-      <div v-if="calc.fillSide.value === 2">
-        <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (двор)</h2>
-        <div class="option-grid">
-          <label
-            v-for="opt in materialOptions"
-            :key="opt.value"
-            class="lock-card"
-          >
-            <input
-              v-model="calc.materialYardGlob.value"
-              type="radio"
-              :value="opt.value"
-              class="sr-only"
-              @change="onMaterialYardChange"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
-        </div>
-      </div>
 
     </div>
   </div>

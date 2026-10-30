@@ -31,7 +31,7 @@ describe('material provider in filling', () => {
     await wrapper.get('input[name="fillingSideCount"][value="2"]').setValue()
     await flushPromises()
     expect(calc.fillSide.value).toBe(2)
-    expect(calc.materialYardGlob.value).toBe('')
+    expect(calc.materialYardGlob.value).toBe(modelId === '2' ? 'profnastil' : '')
     expect(recalculate).not.toHaveBeenCalled()
     wrapper.unmount()
   })
@@ -66,7 +66,7 @@ describe('material provider in filling', () => {
     const calc = useCalculation()
     calc.modelId.value = '2'
     calc.fillSide.value = 1
-    calc.materialFacadeGlob.value = 'siding'
+    calc.materialFacadeGlob.value = 'profnastil'
     calc.materialYardGlob.value = 'profnastil'
     calc.idFacade.value = 21
     calc.idYard.value = 39
@@ -136,9 +136,7 @@ describe('material provider in filling', () => {
     const wrapper = mount(component, { global: { stubs: ['B24Button'] } })
     try {
       await flushPromises()
-      expect(wrapper.text()).toContain('Новая подпись profnastil')
-      await wrapper.findAll('input[value="profnastil"]')[0]!.setValue()
-      await flushPromises()
+      expect(wrapper.find('input[value="profnastil"]').exists()).toBe(false)
       expect(calc.materialFacadeGlob.value).toBe('profnastil')
       expect(calc.idFacade.value).toBe('')
       expect(calc.materialYardGlob.value).toBe('profnastil')
@@ -172,7 +170,7 @@ describe('material provider in filling', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     wrapper.unmount()
   })
-  it.each(cases)('type %s does not repair or autosave an invalid stored group on mount', async (modelId, component) => {
+  it.each(cases.filter(([id]) => id !== '2'))('type %s does not repair or autosave an invalid stored group on mount', async (modelId, component) => {
     setActivePinia(createPinia())
     const calc = useCalculation()
     calc.orderId.value = 42

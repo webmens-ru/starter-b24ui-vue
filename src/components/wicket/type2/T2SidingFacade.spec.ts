@@ -78,11 +78,6 @@ describe('Type 2 historical siding correction', () => {
     })
     await flushPromises()
 
-    const sidingInputs = wrapper.findAll('input[value="profnastil"]')
-    expect(sidingInputs).toHaveLength(2)
-    await sidingInputs[0]!.setValue(true)
-    await flushPromises()
-
     expect(calc.materialFacadeGlob.value).toBe('profnastil')
     expect(calc.materialYardGlob.value).toBe('profnastil')
     expect({
@@ -170,10 +165,6 @@ describe('Type 2 historical siding correction', () => {
     const wrapper = mount(T2FillSide, {
       global: { stubs: { B24Button: true, Button: true } },
     })
-    await flushPromises()
-    apiMocks.saveWicketData.mockClear()
-
-    await wrapper.findAll('input[value="profnastil"]')[1]!.setValue(true)
     await flushPromises()
 
     const payload = apiMocks.saveWicketData.mock.calls[0]?.[0]
