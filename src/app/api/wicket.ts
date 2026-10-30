@@ -594,9 +594,10 @@ export async function getColorShield(
       paintTypeId: paint.paintTypeId == null ? null : Number(paint.paintTypeId),
       paintTypeName: paint.paintTypeName ?? null,
       consumptionRate: paint.consumptionRate == null ? null : Number(paint.consumptionRate),
+      priceM2: paint.priceM2 == null ? null : Number(paint.priceM2),
       isFixedColor: Boolean(Number(paint.isFixedColor)), requiresColorNote: Boolean(Number(paint.requiresColorNote)), isCustomerSupplied: Boolean(Number(paint.isCustomerSupplied)),
       colors: (paint.colors ?? []).map(color => ({ ...color, id: Number(color.id), hex: color.hex ?? null, image: color.image ?? null })),
-      primers: (paint.primers ?? []).map(primer => ({ ...primer, id: Number(primer.id) })),
+      primers: (paint.primers ?? []).map(primer => ({ ...primer, id: Number(primer.id), priceM2: primer.priceM2 == null ? null : Number(primer.priceM2) })),
     })),
     paintCategories: (catalog.paintCategories ?? []).map((category: PaintCategoryItem) => ({ ...category, id: Number(category.id), isFixedColor: Boolean(Number(category.isFixedColor)), requiresColorNote: Boolean(Number(category.requiresColorNote)), isCustomerSupplied: Boolean(Number(category.isCustomerSupplied)) })),
   }
@@ -620,6 +621,8 @@ export async function getNetsByWidth(sizeA: number | string): Promise<{
 
 /** Комплект замка, доступный для выбора карточкой. */
 export interface LockSetListItem {
+  /** Стоимость комплекта без установки. Не передаётся без права просмотра цен. */
+  price?: number | null
   id: number
   marking: string
   imageUrls: string[]
@@ -652,7 +655,7 @@ export async function getPensByLock(lockSetId: number): Promise<{
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
 export async function getAdditionalPens(modelId?: number | string, mountingType?: 'welding' | 'threaded'): Promise<{
-  items: Array<{ materialItemId: number; marking: string; canUseFrameColor: boolean; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ materialItemId: number; marking: string; canUseFrameColor: boolean; price?: number | null; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
   const params = { ...(modelId == null || modelId === '' ? {} : { modelId }), ...(mountingType == null ? {} : { mountingType }) }

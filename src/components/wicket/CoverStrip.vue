@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from './shared/materialPrice'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getCoverStrips, recalculate, saveWicketData } from '../../app/api/wicket'
 import type { CoverStripCatalogItem, CoverStripSelection } from '../../app/api/wicket.types'
@@ -30,7 +31,7 @@ let persistedDescriptions = [...calc.coverStripDescriptions.value]
 let revision = 0
 let queue: Promise<boolean> = Promise.resolve(true)
 const itemFor = (id: number | null) => items.value.find(item => item.materialItemId === id)
-const materialOptions = computed(() => items.value.map(item => ({ id: item.materialItemId, label: materialLabel(item) })))
+const materialOptions = computed(() => items.value.map(item => ({ id: item.materialItemId, label: `${materialLabel(item)} — ${formatMaterialPrice(item.price)}/шт.` })))
 function markAvailability() {
   for (const row of rows.value) row.unavailable = !isCoverStripAvailable(row, items.value)
 }

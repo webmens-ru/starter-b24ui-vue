@@ -60,6 +60,21 @@ describe('independent additional pens', () => {
       { materialItemId: 8, marking: 'Other', canUseFrameColor: false, colors: [{ id: 4, name: 'Цвет каркаса' }] },
     ] })
   })
+  it('shows the item price on both sides, including an explicit zero price', async () => {
+    vi.mocked(getAdditionalPens).mockResolvedValueOnce({ items: [
+      { materialItemId: 7, marking: 'Ручка', price: 1250.5, canUseFrameColor: true, colors: [] },
+      { materialItemId: 8, marking: 'Другая', price: 0, canUseFrameColor: true, colors: [] },
+    ] })
+    const wrapper = mountPen()
+    await flushPromises()
+    for (const side of ['street', 'yard']) {
+      expect(wrapper.get(`[data-pen-price="${side}-7"]`).text().replace(/\s/g, ' ')).toBe('Цена: 1 250,50 ₽')
+      expect(wrapper.get(`[data-pen-price="${side}-8"]`).text().replace(/\s/g, ' ')).toBe('Цена: 0,00 ₽')
+    }
+    expect(saveWicketData).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('does not select a first model or save on mount', async () => {
     const wrapper = mountPen()
     await flushPromises()

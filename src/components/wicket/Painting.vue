@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from './shared/materialPrice'
 import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import { withoutSummaryBlock } from '../../app/summaryCodes'
 import PaintingProviders from './PaintingProviders.vue'
@@ -44,11 +45,14 @@ const paintItems = computed(() => {
   }
   return [...groups.entries()].flatMap(([typeId, items]) => [
     { type: 'label' as const, label: typeId == null ? 'Без типа' : items[0]?.paintTypeName ?? 'Тип краски' },
-    ...items.map(item => ({ id: String(item.id), label: item.name })),
+    ...items.map(item => ({ id: String(item.id), label: materialLabel(item.name, item.priceM2) })),
   ])
 })
 const colorItems = computed(() => (selectedPaint.value?.colors ?? []).map(item => ({ id: String(item.id), label: item.name })))
-const primerItems = computed(() => [{ id: 'none', label: 'Без грунтовки' }, ...primers.value.map(item => ({ id: String(item.id), label: item.name }))])
+const primerItems = computed(() => [{ id: 'none', label: 'Без грунтовки' }, ...primers.value.map(item => ({ id: String(item.id), label: materialLabel(item.name, item.priceM2) }))])
+function materialLabel(name: string, priceM2: number | null | undefined): string {
+  return priceM2 == null ? name : `${name} — ${formatMaterialPrice(priceM2)}/м²`
+}
 const primerProviders = participantRoleOptions('provide')
 const unchangedUnavailable = computed(() => calc.paintSelectionUnavailable.value && calc.paintSelection.value?.isPaintAvailable === true && draftPaintId.value === calc.paintId.value && draftColorId.value === calc.paintColorId.value)
 function numberId(value: string | number | null): number | null { return value == null || value === '' ? null : Number(value) }

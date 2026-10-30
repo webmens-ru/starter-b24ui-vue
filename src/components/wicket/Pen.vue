@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from './shared/materialPrice'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { participantRoleLabel } from '../../app/participantRoles'
 import { useCalculation } from '../../composables/useCalculation'
@@ -9,6 +10,7 @@ import { createStepLeaveAttempt } from './stepLeaveAttempt'
 interface PenItem {
   materialItemId: number
   marking: string
+  price?: number | null
   canUseFrameColor: boolean
   colors: { id: number; name: string }[]
   imageUrls?: string[]
@@ -216,6 +218,7 @@ onMounted(async () => {
             <input :name="`${side.code}-pen`" type="radio" class="sr-only" :value="pen.materialItemId" :checked="side.id === pen.materialItemId" @change="selectPen(index, pen.materialItemId)" />
             <ImageViewer v-if="pen.imageUrls?.length" :title="pen.marking" :images="pen.imageUrls" enlarge image-height="100px" />
             <span>{{ pen.marking }}</span>
+            <span v-if="pen.price !== undefined" class="text-sm font-semibold" :data-pen-price="`${side.code}-${pen.materialItemId}`">Цена: {{ formatMaterialPrice(pen.price) }}</span>
           </label>
         </div>
         <p v-if="side.id != null" class="text-sm text-gray-600">Окрашивается в цвет каркаса</p>

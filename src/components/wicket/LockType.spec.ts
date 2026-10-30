@@ -56,6 +56,22 @@ describe('LockType', () => {
     apiMocks.recalculate.mockResolvedValue({ priceDealer: 0, priceRetail: 0 })
   })
 
+  it('shows kit cost separately from installation and hides unavailable financial fields', async () => {
+    apiMocks.getLocks.mockResolvedValue({ items: [{ ...lockSet7, price: 1250.5 }, { ...lockSet8, price: 0 }] })
+    const wrapper = mountLockType()
+    await flushPromises()
+    expect(wrapper.get('[data-lock-price="7"]').text().replace(/\s/g, ' ')).toBe('Стоимость комплекта: 1 250,50 ₽')
+    expect(wrapper.get('[data-lock-price="8"]').text().replace(/\s/g, ' ')).toBe('Стоимость комплекта: 0,00 ₽')
+    wrapper.unmount()
+    setActivePinia(createPinia())
+    useCalculation().modelId.value = '2'
+    apiMocks.getLocks.mockResolvedValue({ items: [lockSet7] })
+    const hidden = mountLockType()
+    await flushPromises()
+    expect(hidden.find('[data-lock-price]').exists()).toBe(false)
+    hidden.unmount()
+  })
+
   it('renders the selected set composition and saves cleared legacy handle fields', async () => {
     const wrapper = mountLockType()
     await flushPromises()

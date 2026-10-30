@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMaterialPrice } from './shared/materialPrice'
 import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
@@ -176,6 +177,7 @@ onMounted(async () => {
               image-height="160px"
             />
             <span class="block text-sm font-semibold text-center mt-2">{{ lock.marking }}</span>
+            <span v-if="lock.price !== undefined" class="block mt-2 text-center text-sm font-semibold" :data-lock-price="lock.id">Стоимость комплекта: {{ formatMaterialPrice(lock.price) }}</span>
             <button type="button" class="lock-description-button" :data-description-id="lock.id" @click.stop.prevent="openDescription(lock)">Описание</button>
           </div>
         </label>

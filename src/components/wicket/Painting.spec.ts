@@ -15,6 +15,18 @@ const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<sel
 const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
 describe('separate paint and color', () => {
  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('shows reference prices alongside paint and primer names while keeping selection IDs', async () => {
+  const response = catalog()
+  response.colorShield[0] = paint(1, [color(91)], { priceM2: 62.5, primers: [{ id: 51, name: 'Грунт', priceM2: 200 }] })
+  vi.mocked(getColorShield).mockResolvedValueOnce(response)
+  const c = useCalculation(); c.loadFromApi({ paintId: 1, paintColorId: 91 })
+  const w = render(); await flushPromises()
+  expect(w.get('[data-testid="paint-product"] option[value="1"]').text().replace(/\s/g, ' ')).toBe('Paint 1 — 62,50 ₽/м²')
+  expect(w.get('[data-testid="paint-primer"] option[value="51"]').text().replace(/\s/g, ' ')).toBe('Грунт — 200,00 ₽/м²')
+  await w.get('[data-testid="paint-primer"]').setValue('51'); await flushPromises()
+  expect(c.primerId.value).toBe(51)
+  w.unmount()
+ })
  it('applies saved server review metadata after paint success and preserves it on failure', async () => {
   const c = useCalculation(); const oldFrame = { token: 'a'.repeat(64), paintId: 1, colorId: 91, mode: 'fixed' as const, colorName: 'Old', note: null }; const nextFrame = { ...oldFrame, token: 'b'.repeat(64), colorId: 92, colorName: 'Next' }
   const piece = { materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], frameColorToken: oldFrame.token, requiresColorConfirmation: false }

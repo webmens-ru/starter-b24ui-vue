@@ -189,7 +189,9 @@ export interface PaintItem {
   paintTypeId: number | null
   paintTypeName: string | null
   consumptionRate: number | null
-  primers: Array<{ id: number; name: string }>
+  /** Reference material cost per m² at normative consumption, excluding work. */
+  priceM2?: number | null
+  primers: Array<{ id: number; name: string; priceM2?: number | null }>
   colors: PaintColorItem[]
 }
 /** Historical catalog response, retained only at the API compatibility boundary. */
