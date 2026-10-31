@@ -36,6 +36,23 @@ describe('type 4 drawing', () => {
       expect(pipes.filter(pipe => pipe.attributes('width') === '15')).toHaveLength(2)
     }
   })
+  it('keeps filling between the rear and front perimeter from both views', async () => {
+    const w = mount(Type4Drawing)
+    for (const yard of [false, true]) {
+      if (yard) await w.get('[data-testid="type4-view-yard"]').setValue()
+      const html = w.html()
+      const rearIndex = html.indexOf('data-testid="type4-back-inner-frame"')
+      expect(rearIndex).toBeGreaterThanOrEqual(0)
+      expect(rearIndex).toBeLessThan(html.indexOf('data-testid="type4-lamella-filling"'))
+      expect(html.indexOf('data-testid="type4-lamella-filling"')).toBeLessThan(html.indexOf('data-testid="type4-inner-frame"'))
+      const front = w.get('[data-testid="type4-inner-frame"]')
+      const rear = w.get('[data-testid="type4-back-inner-frame"]')
+      expect(front.attributes('data-face')).toBe(yard ? 'yard' : 'street')
+      expect(front.attributes('data-depth')).toBe(yard ? '35' : '0')
+      expect(rear.attributes('data-depth')).toBe(yard ? '0' : '35')
+      expect(rear.findAll('rect')).toHaveLength(4)
+    }
+  })
   it('lays out horizontal lamellae', () => {
     useWicketFormStore().raspolozheniyePolotna = 'horizontal'
     const w = mount(Type4Drawing)

@@ -59,13 +59,18 @@ export function buildType4Geometry(source: Type4Source) {
     ...(capabilities.side ? [rect(meshLeft ? inside.x + sideWidth : inside.x + inside.width - sideWidth - 50, inside.y, 50, inside.height)] : []),
   ]
   const innerFrame = [
-    // Detail 5: two horizontal pipes on the visible side.
+    // Detail 5: two horizontal pipes per physical face.
     rect(central.x + 0.5, central.y, central.width - 1, 15),
     rect(central.x + 0.5, central.y + central.height - 15, central.width - 1, 15),
-    // Detail 4: two vertical pipes on the visible side.
+    // Detail 4: two vertical pipes per physical face.
     rect(central.x, central.y + 15.5, 15, central.height - 31),
     rect(central.x + central.width - 15, central.y + 15.5, 15, central.height - 31),
   ]
+  // The two perimeters coincide in elevation; their depth stack is 15 + 20 + 15 mm.
+  const innerFrames = {
+    street: { face: 'street' as const, depth: 0, parts: innerFrame },
+    yard: { face: 'yard' as const, depth: 35, parts: innerFrame },
+  }
   const netAreas = [
     ...(capabilities.top ? [{ area: rect(inside.x, inside.y, inside.width, topHeight), image: String(source.upperGrilleNetImage || ''), side: false }] : []),
     ...(capabilities.lower ? [{ area: rect(inside.x, inside.y + inside.height - lowerHeight, inside.width, lowerHeight), image: String(source.lowerGrilleNetImage || ''), side: false }] : []),
@@ -73,6 +78,6 @@ export function buildType4Geometry(source: Type4Source) {
   ]
   const fillingArea = rect(central.x + 5, central.y + 5, central.width - 10, central.height - 10)
   const direction = parseDrawingFillingOrientation(source.raspolozheniyePolotna)
-  return { width, height, base, orientation, rails, innerFrame, netAreas, central, fillingArea, direction,
+  return { width, height, base, orientation, rails, innerFrames, netAreas, central, fillingArea, direction,
     extraRail: { ...rect(0, vertical.railY, width, extraSize), visible: vertical.visible, placement: vertical.placement } }
 }

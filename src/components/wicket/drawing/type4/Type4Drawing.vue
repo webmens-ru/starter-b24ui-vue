@@ -65,7 +65,8 @@ const fillingProps = computed(() => ({
   reliefImage: '', appearanceMode: schematic.value ? 'solid' as const : 'coating' as const,
   idPrefix: `type4-fill-${id}-${yard.value ? 'yard' : 'street'}`,
 }))
-const behindFill = computed(() => yard.value && calc.fillSide.value === 1)
+const frontFrame = computed(() => yard.value ? g.value.innerFrames.yard : g.value.innerFrames.street)
+const backFrame = computed(() => yard.value ? g.value.innerFrames.street : g.value.innerFrames.yard)
 const jumperPresentation = computed(() => resolveJumperPresentation(g.value.extraRail.placement, yard.value ? 'yard' : 'street'))
 const viewBox = computed(() => {
   const padding = Math.max(0, ...g.value.base.hinges.map(r => Math.max(-r.x, r.x + r.width - g.value.width)))
@@ -89,15 +90,17 @@ const viewBox = computed(() => {
                 <rect v-bind="net.area" :fill="frameColor" /><rect v-bind="net.area" :fill="`url(#type4-net-${id}-${index})`" />
               </template>
             </g>
-            <LamellaFillingDrawing v-if="hasFill && behindFill" v-bind="fillingProps" />
+            <g data-testid="type4-back-inner-frame" :data-face="backFrame.face" :data-depth="backFrame.depth" :fill="frameColor" stroke="#000" stroke-width="1">
+              <rect v-for="(part, index) in backFrame.parts" :key="index" v-bind="part" />
+            </g>
+            <LamellaFillingDrawing v-if="hasFill" v-bind="fillingProps" />
           </template>
           <template #inner>
-            <g data-testid="type4-inner-frame" :fill="frameColor" stroke="#000" stroke-width="1">
-              <rect v-for="(part, index) in g.innerFrame" :key="index" v-bind="part" />
+            <g data-testid="type4-inner-frame" :data-face="frontFrame.face" :data-depth="frontFrame.depth" :fill="frameColor" stroke="#000" stroke-width="1">
+              <rect v-for="(part, index) in frontFrame.parts" :key="index" v-bind="part" />
               <rect v-for="(part, index) in g.rails" :key="`rail-${index}`" data-testid="type4-subtype-rail" v-bind="part" />
             </g>
           </template>
-          <template #foreground><LamellaFillingDrawing v-if="hasFill && !behindFill" v-bind="fillingProps" /></template>
         </WicketBaseDrawing>
         <rect v-if="g.extraRail.visible && jumperPresentation.layer === 'foreground'" data-testid="type4-jumper-foreground" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" :fill="frameColor" stroke="#000" />
       </g>
