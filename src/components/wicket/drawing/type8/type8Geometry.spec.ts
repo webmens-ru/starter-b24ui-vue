@@ -16,6 +16,17 @@ describe('type 8 geometry', () => {
       expect(g.crossbar).toEqual({ x: g.central.x, y: g.central.y + Math.floor((g.central.height - 40) / 2), width: g.central.width - 1, height: 40, depthStart: 0, depthEnd: 40 })
     }
   })
+  it.each([32, 34, 39])('rejects a %imm central opening that cannot contain the 40mm crossbar', centralHeight => {
+    const input = { ...source, widthProyema: 700, heightProyema: 1500, shieldType: 'upperNet', heightTopPart: 1269 - centralHeight }
+    expect(buildRetainedFrameGeometry(input, 60, { top: true, lower: true, side: true }).central.height).toBe(centralHeight)
+    expect(() => buildType8Geometry(input)).toThrow('Высота центрального проёма должна быть не менее 40 мм для поперечины.')
+  })
+  it('fits the crossbar exactly into a 40mm central opening', () => {
+    const g = buildType8Geometry({ ...source, widthProyema: 700, heightProyema: 1500, shieldType: 'upperNet', heightTopPart: 1229 })
+    expect(g.central.height).toBe(40)
+    expect(g.crossbar.y).toBe(g.central.y)
+    expect(g.crossbar.y + g.crossbar.height).toBe(g.central.y + g.central.height)
+  })
   it('keeps numeric geometry when captions change and net zones are explicitly empty', () => {
     const input = { ...source, shieldType: 'upperNet', netWidthProviderTop: '' }
     expect(buildType8Geometry({ ...input, openingOptionName: 'Renamed', stolbName: 'Renamed' })).toEqual(buildType8Geometry(input))
