@@ -102,6 +102,19 @@ describe('WicketModel', () => {
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type7', query: { orderId: '42', productRowId: '7' } })
   })
 
+  it('opens type 8 after a caption rename without a coming-soon restriction', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '8', name: 'Переименованная СП40' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('Переименованная СП40'))!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '8' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type8', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('enables model 6 between 5 and 7 and routes by identity after a caption rename', async () => {
     mocks.getWicketModelNames.mockResolvedValue([
       { modelId: '5', name: 'Предыдущая модель' },

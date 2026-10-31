@@ -34,7 +34,7 @@ describe('shared base for all eleven models', () => {
         expect(html.indexOf('-hinges')).toBeLessThan(html.indexOf('-posts'))
         const yard = wrapper.find('input[value="yard"]')
         if (yard.exists()) await yard.setValue()
-        else if (index === 3 || index === 4 || index === 5 || index === 6) await wrapper.get(`[data-testid="type${index + 1}-view-yard"]`).setValue()
+        else if (index === 3 || index === 4 || index === 5 || index === 6 || index === 7) await wrapper.get(`[data-testid="type${index + 1}-view-yard"]`).setValue()
         else await wrapper.get('[data-testid="base-view-yard"]').setValue()
         expect(base.props('yard')).toBe(true)
         const yardHtml = base.html()

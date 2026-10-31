@@ -22,7 +22,7 @@ let mounted = true
 let requestGeneration = 0
 
 const modelNames = ref<Record<string, string>>({})
-const modelDefinitions = [
+const modelDefinitions: Array<{ id: string; model: string; route: string; images: string[]; soon?: boolean }> = [
   {
     id: '1',
     model: 'Калитка «Стандарт» 60/60/С20/сайдинг',
@@ -70,7 +70,6 @@ const modelDefinitions = [
     model: 'Калитка «Стандарт» 60/60/для накладного заполнения листовым материалом',
     route: '/wicket/type8',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
-    soon: true,
   },
 ]
 

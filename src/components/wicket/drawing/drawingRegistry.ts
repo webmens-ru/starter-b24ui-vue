@@ -8,6 +8,7 @@ import Type4Drawing from './type4/Type4Drawing.vue'
 import Type5Drawing from './type5/Type5Drawing.vue'
 import Type6Drawing from './type6/Type6Drawing.vue'
 import Type7Drawing from './type7/Type7Drawing.vue'
+import Type8Drawing from './type8/Type8Drawing.vue'
 
 function baseDrawing(profileSize: 50 | 60): Component {
   return defineComponent({
@@ -23,7 +24,7 @@ const drawingComponents: Record<string, Component> = {
   '5': Type5Drawing,
   '6': Type6Drawing,
   '7': Type7Drawing,
-  '8': baseDrawing(60),
+  '8': Type8Drawing,
   '9': baseDrawing(50),
   '10': baseDrawing(60),
   '11': baseDrawing(60),
