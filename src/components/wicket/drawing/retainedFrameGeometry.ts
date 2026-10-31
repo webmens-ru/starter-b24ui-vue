@@ -16,7 +16,7 @@ function number(value: unknown, fallback: number): number {
 function rect(x: number, y: number, width: number, height: number): BaseRect {
   return { x, y, width: Math.max(0, width), height: Math.max(0, height) }
 }
-export function buildRetainedFrameGeometry(source: Type2DrawingSource, profileSize: 50 | 60, netSpaceFilled?: { top: boolean; lower: boolean; side: boolean }) {
+export function buildRetainedFrameGeometry(source: Type2DrawingSource, profileSize: 50 | 60, netSpaceFilled?: { top: boolean; lower: boolean; side: boolean }, minimumCentralHeight = 31) {
   const width = number(source.widthProyema, 1000), height = number(source.heightProyema, 2000)
   if (width < 700 || height < 1500) throw new Error('Минимальный размер калитки — 700×1500 мм.')
   const pipes = parseDrawingPipeProfiles(source, profileSize)
@@ -39,7 +39,7 @@ export function buildRetainedFrameGeometry(source: Type2DrawingSource, profileSi
   const lowerDeduction = capabilities.lower ? lowerSpace + profileSize : 0
   const sideDeduction = capabilities.side ? sideSpace + profileSize : 0
   const central = rect(inside.x + (capabilities.side && meshLeft ? sideDeduction : 0), inside.y + topDeduction, inside.width - sideDeduction, inside.height - topDeduction - lowerDeduction)
-  if (central.width <= 10 || central.height <= 31) throw new Error('Размеры секций не оставляют места для заполнения.')
+  if (central.width <= 10 || central.height <= minimumCentralHeight) throw new Error('Размеры секций не оставляют места для заполнения.')
   const rails = [
     ...(capabilities.top ? [rect(inside.x, inside.y + topSpace, inside.width, profileSize)] : []),
     ...(capabilities.lower ? [rect(inside.x, inside.y + inside.height - lowerSpace - profileSize, inside.width, profileSize)] : []),

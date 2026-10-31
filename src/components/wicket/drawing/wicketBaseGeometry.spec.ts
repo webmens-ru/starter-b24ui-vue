@@ -1,3 +1,4 @@
+import { buildType10Geometry } from './type10/type10Geometry'
 import { describe, expect, it } from 'vitest'
 import { computeWicketBase } from './wicketBaseGeometry'
 import { computeType1Geometry } from './type1/type1Geometry'
@@ -39,6 +40,7 @@ describe('shared wicket base', () => {
     const second = computeType2Geometry(source).base
     const third = buildType3Geometry(source).base
     expect(second).toEqual(third)
+    expect(buildType10Geometry(source).base).toEqual(second)
     expect(first.gate).toEqual(second.gate)
     expect(first.hinges).toEqual(second.hinges)
     expect(first.strip).toEqual(second.strip)

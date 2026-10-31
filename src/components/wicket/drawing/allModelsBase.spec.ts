@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useWicketFormStore } from '../../../stores/wicket/wicketFormStore'
 import { resolveDrawingComponent } from './drawingRegistry'
 
-const profiles = [60, 50, 50, 50, 60, 60, 50, 60, 50, 60, 60]
+const profiles = [60, 50, 50, 50, 60, 60, 50, 60, 50, 50, 60]
 describe('shared base for all eleven models', () => {
   beforeEach(() => setActivePinia(createPinia()))
   for (const [index, profile] of profiles.entries()) {
@@ -34,7 +34,7 @@ describe('shared base for all eleven models', () => {
         expect(html.indexOf('-hinges')).toBeLessThan(html.indexOf('-posts'))
         const yard = wrapper.find('input[value="yard"]')
         if (yard.exists()) await yard.setValue()
-        else if (index === 3 || index === 4 || index === 5 || index === 6 || index === 7 || index === 8) await wrapper.get(`[data-testid="type${index + 1}-view-yard"]`).setValue()
+        else if (index === 3 || index === 4 || index === 5 || index === 6 || index === 7 || index === 8 || index === 9) await wrapper.get(`[data-testid="type${index + 1}-view-yard"]`).setValue()
         else await wrapper.get('[data-testid="base-view-yard"]').setValue()
         expect(base.props('yard')).toBe(true)
         const yardHtml = base.html()

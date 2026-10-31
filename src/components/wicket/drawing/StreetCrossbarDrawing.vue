@@ -10,7 +10,7 @@ import { resolveJumperPresentation } from './jumperGeometry'
 import { buildStreetCrossbarGeometry } from './streetCrossbarGeometry'
 import MaterialFillingDrawing from './fillings/MaterialFillingDrawing.vue'
 
-const props = defineProps<{ profileSize: 50 | 60; count: 1 | 3; typePrefix: string }>()
+const props = defineProps<{ profileSize: 50 | 60; count: 1 | 3; typePrefix: string; crossbarHeight?: 20 | 40; singleBarRounding?: 'floor' | 'exact' }>()
 const id = instanceSeed++
 const calc = useCalculation()
 const yard = ref(false), schematic = ref(false), showFill = ref(true)
@@ -29,7 +29,7 @@ const { geometry: g, error } = useDrawingGeometry(() => buildStreetCrossbarGeome
   netWidthProviderLower: calc.netWidthProviderLower.value,
   netWidthProviderSide: calc.netWidthProviderSide.value,
   raspolozheniyePolotna: calc.fillSide.value === 0 ? undefined : calc.raspolozheniyePolotna.value,
-}, props.profileSize, props.count))
+}, props.profileSize, props.count, props.crossbarHeight, props.singleBarRounding))
 const netRatios = ref<Record<string, number>>({})
 watch(() => error.value ? [] : g.value.netAreas.map(net => net.image), (images, _, cleanup) => {
   let active = true
