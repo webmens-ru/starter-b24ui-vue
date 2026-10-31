@@ -141,6 +141,19 @@ describe('WicketModel', () => {
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type10', query: { orderId: '42', productRowId: '7' } })
   })
 
+  it('opens type 11 after a caption rename without a coming-soon restriction', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '11', name: 'Переименованная СП40' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('Переименованная СП40'))!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '11' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type11', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('enables model 6 between 5 and 7 and routes by identity after a caption rename', async () => {
     mocks.getWicketModelNames.mockResolvedValue([
       { modelId: '5', name: 'Предыдущая модель' },
@@ -173,13 +186,13 @@ describe('WicketModel', () => {
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type3', query: { orderId: '42', productRowId: '7' } })
   })
 
-  it('keeps model 11 unavailable while showing models 1 through 10', async () => {
+  it('makes all eleven models available', async () => {
     mocks.getWicketModelNames.mockResolvedValue(Array.from({ length: 11 }, (_, index) => ({ modelId: String(index + 1), name: `Model ${index + 1}` })))
     const wrapper = mountPage()
     await flushPromises()
     const captions = wrapper.findAll('button').map(button => button.text())
-    for (let id = 1; id <= 10; id++) expect(captions).toContain(`Model ${id}`)
-    expect(captions).not.toContain('Model 11')
+    for (let id = 1; id <= 11; id++) expect(captions).toContain(`Model ${id}`)
+    expect(wrapper.findAll('button[title]').every(button => button.attributes('disabled') === undefined)).toBe(true)
   })
 
   it('loads model images from the public web root', () => {

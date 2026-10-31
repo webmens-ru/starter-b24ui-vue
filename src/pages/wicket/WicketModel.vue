@@ -83,6 +83,12 @@ const modelDefinitions: Array<{ id: string; model: string; route: string; images
     route: '/wicket/type10',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
   },
+  {
+    id: '11',
+    model: 'Калитка «Стандарт» 50/50/сетка',
+    route: '/wicket/type11',
+    images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
+  },
 ]
 
 const models = computed(() => modelDefinitions.map(item => ({ ...item, model: modelNames.value[item.id] ?? item.model })))

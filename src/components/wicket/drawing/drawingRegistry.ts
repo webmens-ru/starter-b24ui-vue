@@ -1,5 +1,4 @@
-import { defineComponent, h, type Component } from 'vue'
-import BaseWicketDrawing from './BaseWicketDrawing.vue'
+import type { Component } from 'vue'
 
 import Type2Drawing from './type2/Type2Drawing.vue'
 import Type1Drawing from './type1/Type1Drawing.vue'
@@ -11,12 +10,7 @@ import Type7Drawing from './type7/Type7Drawing.vue'
 import Type8Drawing from './type8/Type8Drawing.vue'
 import Type9Drawing from './type9/Type9Drawing.vue'
 import Type10Drawing from './type10/Type10Drawing.vue'
-
-function baseDrawing(profileSize: 50 | 60): Component {
-  return defineComponent({
-    setup: () => () => h(BaseWicketDrawing, { profileSize }),
-  })
-}
+import Type11Drawing from './type11/Type11Drawing.vue'
 
 const drawingComponents: Record<string, Component> = {
   '1': Type1Drawing,
@@ -29,7 +23,7 @@ const drawingComponents: Record<string, Component> = {
   '8': Type8Drawing,
   '9': Type9Drawing,
   '10': Type10Drawing,
-  '11': baseDrawing(60),
+  '11': Type11Drawing,
 }
 
 export function resolveDrawingComponent(modelId: string): Component | null {
