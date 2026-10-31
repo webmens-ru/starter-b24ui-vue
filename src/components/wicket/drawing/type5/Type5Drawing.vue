@@ -9,7 +9,7 @@ import { useDrawingGeometry } from '../useDrawingGeometry'
 import { resolveJumperPresentation } from '../jumperGeometry'
 import { buildType5Geometry } from './type5Geometry'
 import MaterialFillingDrawing from '../fillings/MaterialFillingDrawing.vue'
-import Type5RetainerDrawing from './Type5RetainerDrawing.vue'
+import RetainerFrameDrawing from '../RetainerFrameDrawing.vue'
 
 const id = instanceSeed++
 const calc = useCalculation()
@@ -85,7 +85,7 @@ const viewBox = computed(() => {
                 <rect v-bind="net.area" :fill="frameColor" /><rect v-bind="net.area" :fill="`url(#type5-net-${id}-${index})`" />
               </template>
             </g>
-            <Type5RetainerDrawing data-testid="type5-back-inner-frame" :frame="backFrame" :color="frameColor" />
+            <RetainerFrameDrawing data-testid="type5-back-inner-frame" :frame="backFrame" :color="frameColor" />
             <MaterialFillingDrawing v-if="hasFill" v-bind="fillingProps" />
           </template>
           <template #inner>
@@ -94,7 +94,7 @@ const viewBox = computed(() => {
             </g>
           </template>
           <template #foreground>
-            <Type5RetainerDrawing data-testid="type5-inner-frame" :frame="frontFrame" :color="frameColor" />
+            <RetainerFrameDrawing data-testid="type5-inner-frame" :frame="frontFrame" :color="frameColor" />
           </template>
         </WicketBaseDrawing>
         <rect v-if="g.extraRail.visible && jumperPresentation.layer === 'foreground'" data-testid="type5-jumper-foreground" :x="g.extraRail.x" :y="g.extraRail.y" :width="g.extraRail.width" :height="g.extraRail.height" :fill="frameColor" stroke="#000" />

@@ -54,11 +54,16 @@ const modelDefinitions = [
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
   },
   {
+    id: '6',
+    model: 'Калитка «Стандарт» 60/60/жалюзи',
+    route: '/wicket/type6',
+    images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
+  },
+  {
     id: '7',
     model: 'Калитка «Стандарт» 50/50/СП50',
     route: '/wicket/type7',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
-    soon: true,
   },
   {
     id: '8',

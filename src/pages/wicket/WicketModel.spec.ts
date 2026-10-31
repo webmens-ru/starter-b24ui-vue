@@ -89,6 +89,41 @@ describe('WicketModel', () => {
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type5', query: { orderId: '42', productRowId: '7' } })
   })
 
+  it('opens type 7 after a caption rename without a coming-soon restriction', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '7', name: 'Переименованная СП40' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('Переименованная СП40'))!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '7' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type7', query: { orderId: '42', productRowId: '7' } })
+  })
+
+  it('enables model 6 between 5 and 7 and routes by identity after a caption rename', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([
+      { modelId: '5', name: 'Предыдущая модель' },
+      { modelId: '6', name: 'Переименованная модель' },
+      { modelId: '7', name: 'Следующая модель' },
+    ])
+    const wrapper = mountPage()
+    await flushPromises()
+    const buttons = wrapper.findAll('button')
+    const index = buttons.findIndex(item => item.text() === 'Переименованная модель')
+    expect(index).toBeGreaterThan(-1)
+    const button = buttons[index]!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    expect(buttons.findIndex(item => item.text() === 'Предыдущая модель')).toBeLessThan(index)
+    expect(buttons.findIndex(item => item.text().includes('Следующая модель'))).toBeGreaterThan(index)
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '6' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type6', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('uses editable labels while routing by the same stable model id', async () => {
     mocks.getWicketModelNames.mockResolvedValue([{ modelId: '3', name: 'Новое название модели' }])
     const wrapper = mountPage()

@@ -1,5 +1,5 @@
 import type { Type2DrawingSource } from '../type2/type2Geometry'
-import type { BaseRect } from '../wicketBaseGeometry'
+import { buildMitredRetainerFrame, type RetainerFrame, type RetainerPart } from '../mitredRetainerGeometry'
 import { buildRetainedFrameGeometry } from '../retainedFrameGeometry'
 
 export interface Type5Source extends Type2DrawingSource {
@@ -8,15 +8,8 @@ export interface Type5Source extends Type2DrawingSource {
   netWidthProviderSide?: unknown
 }
 
-export interface Type5RetainerPart extends BaseRect {
-  position: number
-  points?: string
-}
-export interface Type5RetainerFrame {
-  face: 'street' | 'yard'
-  depth: number
-  parts: Type5RetainerPart[]
-}
+export type Type5RetainerPart = RetainerPart
+export type Type5RetainerFrame = RetainerFrame
 export function buildType5Geometry(source: Type5Source) {
   const shared = buildRetainedFrameGeometry(source, 60, {
     top: source.netWidthProviderTop !== '',
@@ -31,17 +24,6 @@ export function buildType5Geometry(source: Type5Source) {
     { x: c.x, y: c.y + 20.5, width: 20, height: c.height - 41, position: 4 },
     { x: c.x + c.width - 20, y: c.y + 20.5, width: 20, height: c.height - 41, position: 4 },
   ] }
-  const x = c.x - 10, y = c.y - 10, w = c.width + 20, h = c.height + 20
-  const points = (pairs: number[][]) => pairs.map(pair => pair.join(',')).join(' ')
-  const street: Type5RetainerFrame = { face: 'street', depth: -4, parts: [
-    { x: x + 0.5, y, width: w - 1, height: 40, position: 10,
-      points: points([[x + 0.5, y], [x + w - 0.5, y], [x + w - 40.5, y + 40], [x + 40.5, y + 40]]) },
-    { x: x + 0.5, y: y + h - 40, width: w - 1, height: 40, position: 10,
-      points: points([[x + 40.5, y + h - 40], [x + w - 40.5, y + h - 40], [x + w - 0.5, y + h], [x + 0.5, y + h]]) },
-    { x, y: y + 0.5, width: 40, height: h - 1, position: 8,
-      points: points([[x, y + 0.5], [x + 40, y + 40.5], [x + 40, y + h - 40.5], [x, y + h - 0.5]]) },
-    { x: x + w - 40, y: y + 0.5, width: 40, height: h - 1, position: 8,
-      points: points([[x + w, y + 0.5], [x + w, y + h - 0.5], [x + w - 40, y + h - 40.5], [x + w - 40, y + 40.5]]) },
-  ] }
+  const street = buildMitredRetainerFrame(c, 'street', -4)
   return { ...shared, innerFrames: { street, yard } }
 }
