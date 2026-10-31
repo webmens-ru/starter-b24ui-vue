@@ -59,8 +59,10 @@ export function buildType4Geometry(source: Type4Source) {
     ...(capabilities.side ? [rect(meshLeft ? inside.x + sideWidth : inside.x + inside.width - sideWidth - 50, inside.y, 50, inside.height)] : []),
   ]
   const innerFrame = [
+    // Detail 5: two horizontal pipes on the visible side.
     rect(central.x + 0.5, central.y, central.width - 1, 15),
     rect(central.x + 0.5, central.y + central.height - 15, central.width - 1, 15),
+    // Detail 4: two vertical pipes on the visible side.
     rect(central.x, central.y + 15.5, 15, central.height - 31),
     rect(central.x + central.width - 15, central.y + 15.5, 15, central.height - 31),
   ]

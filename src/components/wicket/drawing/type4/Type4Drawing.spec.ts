@@ -23,6 +23,19 @@ describe('type 4 drawing', () => {
     expect(parts[7]!.attributes('width')).toBe('76')
     expect(w.get('[data-testid="type4-inner-frame"]').findAll('rect')).toHaveLength(4)
   })
+  it.each(['noNet', 'lowerNet', 'upperNet', 'upperAndLowerNet', 'sideNet'] as const)('draws horizontal and vertical inner pipes for %s from either side', async shieldType => {
+    const s = useWicketFormStore()
+    s.shieldType = shieldType
+    s.grilleLocation = 'hinge'
+    const w = mount(Type4Drawing)
+    for (const yard of [false, true]) {
+      if (yard) await w.get('[data-testid="type4-view-yard"]').setValue()
+      const pipes = w.get('[data-testid="type4-inner-frame"]').findAll('rect:not([data-testid="type4-subtype-rail"])')
+      expect(pipes).toHaveLength(4)
+      expect(pipes.filter(pipe => pipe.attributes('height') === '15')).toHaveLength(2)
+      expect(pipes.filter(pipe => pipe.attributes('width') === '15')).toHaveLength(2)
+    }
+  })
   it('lays out horizontal lamellae', () => {
     useWicketFormStore().raspolozheniyePolotna = 'horizontal'
     const w = mount(Type4Drawing)
