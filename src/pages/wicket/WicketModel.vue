@@ -52,7 +52,6 @@ const modelDefinitions = [
     model: 'Калитка «Стандарт» 60/60/СП40',
     route: '/wicket/type5',
     images: ['/k3.jpg', '/k2.jpg', '/k3.jpg', '/k2.jpg', '/k3.jpg'],
-    soon: true,
   },
   {
     id: '7',
