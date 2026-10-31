@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { wicketFailureMessage } from '../../app/wicketFailureMessage'
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { coverStripError } from './coverStripState'
 import { useCalculation } from '../../composables/useCalculation'
@@ -159,7 +160,7 @@ async function handleCalculate() {
   } catch (e) {
     if (!isCurrentAction(generation)) return
     console.error('finalCalculate:', e)
-    openErrModal('Произошла ошибка при выполнении расчёта.')
+    openErrModal(wicketFailureMessage(e, 'Произошла ошибка при выполнении расчёта.'))
   } finally {
     if (isCurrentAction(generation)) calculating.value = false
   }

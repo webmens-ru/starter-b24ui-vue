@@ -696,6 +696,17 @@ export async function fetchSavedOrderPrice(context: ProductRowContext): Promise<
   return data.data
 }
 
+/** A failed calculation still persists its diagnostic and advances the row version. */
+function rememberCalculationFailureVersion(error: unknown, context: ProductRowContext, expectedLockVersion: number): void {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('status' in response) || response.status !== 422 || !('data' in response)) return
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('lockVersion' in data) || !isPositiveSafeInteger(data.lockVersion)) return
+  rememberWicketProductRowLockVersion(context, data.lockVersion)
+  notifyWicketProductRowLockVersionAdvanced(context, expectedLockVersion, data.lockVersion)
+}
+
 export async function finalCalculate(payload: WicketCalculationPayload): Promise<{ priceDealer: string; priceRetail: string }> {
   assertWicketCalculationPayload(payload)
   if (isMock) return mockFinalCalculate()
@@ -705,16 +716,21 @@ export async function finalCalculate(payload: WicketCalculationPayload): Promise
     modelId: String(payload.modelId),
   }
   return runWicketProductRowLockMutation(context, async lockVersion => {
-    const { data } = await api.post('/api/order/calculate', {
-      orderId: payload.orderId,
-      productRowId: payload.productRowId,
-      companyId: payload.companyId,
-      modelId: String(payload.modelId),
-      lockVersion,
-    })
-    rememberWicketProductRowLockVersion(context, data.data.lockVersion)
-    notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
-    return data.data
+    try {
+      const { data } = await api.post('/api/order/calculate', {
+        orderId: payload.orderId,
+        productRowId: payload.productRowId,
+        companyId: payload.companyId,
+        modelId: String(payload.modelId),
+        lockVersion,
+      })
+      rememberWicketProductRowLockVersion(context, data.data.lockVersion)
+      notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
+      return data.data
+    } catch (error) {
+      rememberCalculationFailureVersion(error, context, lockVersion)
+      throw error
+    }
   })
 }
 
@@ -752,22 +768,7 @@ export async function recalculate(
       notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
       return data.data
     } catch (error) {
-      if (typeof error === 'object' && error !== null && 'response' in error) {
-        const response = error.response
-        if (
-          typeof response === 'object'
-          && response !== null
-          && 'status' in response
-          && response.status === 422
-          && 'data' in response
-        ) {
-          const data = response.data
-          if (typeof data === 'object' && data !== null && 'lockVersion' in data) {
-            rememberWicketProductRowLockVersion(context, data.lockVersion)
-            notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.lockVersion)
-          }
-        }
-      }
+      rememberCalculationFailureVersion(error, context, lockVersion)
       throw error
     }
   }, options)

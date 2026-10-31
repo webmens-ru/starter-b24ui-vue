@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { wicketFailureMessage } from '../../app/wicketFailureMessage'
 import { formatMaterialPrice } from './shared/materialPrice'
 import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import { withoutSummaryBlock } from '../../app/summaryCodes'
@@ -142,7 +143,10 @@ async function saveSelection(): Promise<boolean> {
     }
     syncSummary()
     error.value = ''
-  } catch { if (current()) error.value = 'Не удалось сохранить окраску'; return false }
+  } catch (cause) {
+    if (current()) error.value = wicketFailureMessage(cause, 'Не удалось сохранить окраску')
+    return false
+  }
   if (calc.priceRetail.value && !calc.coverStrips.value.some(row => row.requiresColorConfirmation)) {
     try {
       const result = await recalculate({

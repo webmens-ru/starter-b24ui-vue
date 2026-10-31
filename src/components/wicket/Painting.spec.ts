@@ -15,6 +15,14 @@ const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<sel
 const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
 describe('separate paint and color', () => {
  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('shows a version conflict instead of misreporting the painting selection', async () => {
+  const c=useCalculation(); c.loadFromApi({paintId:1,paintColorId:91})
+  const w=render(); await flushPromises()
+  vi.mocked(saveWicketData).mockRejectedValueOnce({response:{status:409,data:{message:'Позиция уже была изменена'}}})
+  expect(await w.vm.validateBeforeLeave()).toBe(false)
+  expect(w.text()).toContain('Перезагрузите страницу')
+  w.unmount()
+ })
  it('shows reference prices alongside paint and primer names while keeping selection IDs', async () => {
   const response = catalog()
   response.colorShield[0] = paint(1, [color(91)], { priceM2: 62.5, primers: [{ id: 51, name: 'Грунт', priceM2: 200 }] })

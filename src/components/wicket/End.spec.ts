@@ -52,6 +52,22 @@ describe('End order composition navigation', () => {
     mocks.deleteCalculation.mockResolvedValue(undefined)
   })
 
+  it('shows the specific catalog problem returned by the final calculation', async () => {
+    mocks.finalCalculate.mockRejectedValueOnce({
+      response: {
+        status: 422,
+        data: { error: 'Не удалось рассчитать цену', problems: [{ message: 'Заглушка 60×60 не настроена' }] },
+      },
+    })
+    const wrapper = mount(End, { global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } } })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click')
+    await flushPromises()
+    const errorModal = wrapper.findAllComponents({ name: 'Modal' }).find(modal => modal.props('title') === 'Ошибка')
+    expect(errorModal?.props('description')).toBe('Заглушка 60×60 не настроена')
+    wrapper.unmount()
+  })
+
   it('blocks direct calculation with pending cover colors even without a route provider', async () => {
     const c = useCalculation(); c.coverStripDrafts.value = [{ materialItemId: 10, parameters: [{ attributeId: 5, colorId: 2 }], requiresColorConfirmation: true }]
     const wrapper = mount(End, { global: { stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false } } })
