@@ -115,6 +115,19 @@ describe('WicketModel', () => {
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type8', query: { orderId: '42', productRowId: '7' } })
   })
 
+  it('opens type 9 after a caption rename without a coming-soon restriction', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '9', name: 'Переименованная СП40' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    const button = wrapper.findAll('button').find(item => item.text().includes('Переименованная СП40'))!
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).not.toContain('Скоро')
+    await button.trigger('click')
+    await flushPromises()
+    expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '9' }))
+    expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type9', query: { orderId: '42', productRowId: '7' } })
+  })
+
   it('enables model 6 between 5 and 7 and routes by identity after a caption rename', async () => {
     mocks.getWicketModelNames.mockResolvedValue([
       { modelId: '5', name: 'Предыдущая модель' },
@@ -145,6 +158,16 @@ describe('WicketModel', () => {
     await flushPromises()
     expect(mocks.createProductRow).toHaveBeenCalledWith(expect.objectContaining({ modelId: '3', model: 'Новое название модели' }))
     expect(mocks.push).toHaveBeenCalledWith({ path: '/wicket/type3', query: { orderId: '42', productRowId: '7' } })
+  })
+
+  it('keeps models 10 and 11 unavailable while showing models 1 through 9', async () => {
+    mocks.getWicketModelNames.mockResolvedValue(Array.from({ length: 11 }, (_, index) => ({ modelId: String(index + 1), name: `Model ${index + 1}` })))
+    const wrapper = mountPage()
+    await flushPromises()
+    const captions = wrapper.findAll('button').map(button => button.text())
+    for (let id = 1; id <= 9; id++) expect(captions).toContain(`Model ${id}`)
+    expect(captions).not.toContain('Model 10')
+    expect(captions).not.toContain('Model 11')
   })
 
   it('loads model images from the public web root', () => {
