@@ -23,6 +23,19 @@ describe('useCalculation', () => {
     apiMocks.saveWicketAccessoryComposition.mockReset()
   })
 
+  it('keeps preview separate from saved color and clears it when resetting or loading another selection', () => {
+    calc.colorShieldHex.value = '#315c2b'
+    calc.colorShieldPreviewHex.value = ''
+    expect(calc.colorShieldHex.value).toBe('')
+    expect(useWicketFormStore().colorShieldHex).toBe('#315c2b')
+    expect(calc.getFullSavePayload()).not.toHaveProperty('colorShieldPreviewHex')
+    calc.loadFromApi({ paintId: 3, paintColorId: 93 })
+    expect(calc.colorShieldPreviewHex.value).toBeNull()
+    calc.colorShieldPreviewHex.value = ''
+    calc.reset()
+    expect(calc.colorShieldPreviewHex.value).toBeNull()
+  })
+
   describe('loadFromApi — данные не теряются при загрузке', () => {
     it('preserves explicit universal handle references in the full save payload', () => {
     const calc = useCalculation()

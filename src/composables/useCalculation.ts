@@ -1,5 +1,6 @@
 import { coverStripError, coverStripWire } from '../components/wicket/coverStripState'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { useWicketWizardStore } from '../stores/wicket/wicketWizardStore'
 import { useWicketFormStore } from '../stores/wicket/wicketFormStore'
 import type { ProductRowContext, WicketSavePayload } from '../app/api/wicket.types'
@@ -185,6 +186,11 @@ export function useCalculation() {
   return {
     ...storeToRefs(wizard),
     ...storeToRefs(form),
+    // Чертежи видят текущий предпросмотр; запись цвета относится к подтверждённому выбору.
+    colorShieldHex: computed({
+      get: () => form.colorShieldPreviewHex ?? form.colorShieldHex,
+      set: (value: string) => { form.colorShieldHex = value },
+    }),
     setActivePage: wizard.setActivePage,
     isPageAccessible: wizard.isPageAccessible,
     getBaseSavePayload,

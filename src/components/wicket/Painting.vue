@@ -17,7 +17,10 @@ const contextKey = () => `${calc.orderId.value}:${calc.productRowId.value}:${cal
 const initialContext = contextKey()
 let mounted = true
 const current = () => mounted && contextKey() === initialContext
-onUnmounted(() => { mounted = false })
+onUnmounted(() => {
+  if (current()) calc.colorShieldPreviewHex.value = null
+  mounted = false
+})
 const paints = ref<PaintItem[]>([])
 const categories = ref<PaintCategoryItem[]>([])
 const category = ref<number | null>(null)
@@ -60,7 +63,11 @@ function numberId(value: string | number | null): number | null { return value =
 async function onCategoryChange(id: number): Promise<void> {
   if (saving.value) return
   category.value = id
-  if (selectedPaint.value?.paintCategoryId !== id) { draftPaintId.value = null; draftColorId.value = null }
+  if (selectedPaint.value?.paintCategoryId !== id) {
+    draftPaintId.value = null
+    draftColorId.value = null
+    calc.colorShieldPreviewHex.value = ''
+  }
 }
 async function onPaintChange(value: string | number | null): Promise<void> {
   if (saving.value) return
@@ -141,6 +148,7 @@ async function saveSelection(): Promise<boolean> {
       calc.primerId.value = primerId
       calc.primerName.value = primer?.name ?? ''
     }
+    calc.colorShieldPreviewHex.value = null
     syncSummary()
     error.value = ''
   } catch (cause) {

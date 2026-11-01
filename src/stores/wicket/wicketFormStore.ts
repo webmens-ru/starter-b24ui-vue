@@ -226,6 +226,8 @@ const savedPaintColorId = ref<number | null>(null)
 const paintSelection = ref<{ isFixedColor: boolean; requiresColorNote: boolean; isPaintAvailable: boolean } | null>(null)
 const colorShieldName = ref<string>('')
 const colorShieldHex  = ref<string>('')
+// null: сохранённый цвет; пустая строка: нейтральный предпросмотр нового выбора.
+const colorShieldPreviewHex = ref<string | null>(null)
 const colorShieldNote = ref<string>('')
 const primerId = ref<number | null>(null)
 const primerName = ref<string>('')
@@ -507,6 +509,7 @@ const fieldsFilled = ref<number>(0)
     paintSelection.value = null
     colorShieldName.value = ''
     colorShieldHex.value = ''
+    colorShieldPreviewHex.value = null
     colorShieldNote.value = ''
     primerId.value = null
     primerName.value = ''
@@ -783,6 +786,7 @@ const fieldsFilled = ref<number>(0)
 
   /** Заполняет состояние из ответа API get-data (редактирование расчёта). */
   function loadFromApi(apiData: Record<string, unknown>) {
+    colorShieldPreviewHex.value = null
     configurationGeneration++
     coverMetadataVersion = typeof apiData.lockVersion === 'number' ? apiData.lockVersion : 0
     coverStripFrameColor.value = (apiData.coverStripFrameColor as CoverStripFrameColor | undefined) ?? null
@@ -1280,6 +1284,7 @@ const fieldsFilled = ref<number>(0)
     colorShieldId,
     colorShieldName,
     colorShieldHex,
+    colorShieldPreviewHex,
     colorShieldNote,
     primerId,
     primerName,

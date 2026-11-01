@@ -3,6 +3,8 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCalculation } from '../../composables/useCalculation'
 import Painting from './Painting.vue'
+import Type3Drawing from './drawing/type3/Type3Drawing.vue'
+import { useWicketFormStore } from '../../stores/wicket/wicketFormStore'
 import type { DefineComponent } from 'vue'
 import type { PaintItem } from '../../app/api/wicket.types'
 type PaintSelectStub = DefineComponent<{ items: Array<{ type?: 'label'; label: string; id?: string }> }>
@@ -15,6 +17,61 @@ const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<sel
 const render = () => mount(Painting, { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub, B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' }, Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{label}}</button>' } } } })
 describe('separate paint and color', () => {
  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); vi.mocked(saveWicketData).mockReset().mockResolvedValue({ lockVersion: 2 }); const c=useCalculation(); c.orderId.value=42;c.productRowId.value=7;c.modelId.value='1';vi.mocked(getColorShield).mockResolvedValue(catalog()) })
+ it('clears the drawing preview immediately for an empty category without overwriting saved paint', async () => {
+  const data = catalog()
+  data.paintCategories.push({ id: 31, name: 'Renamed category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false })
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const c = useCalculation()
+  c.loadFromApi({ paintId: 1, paintColorId: 91 })
+  c.colorShieldHex.value = '#315c2b'
+  c.widthProyema.value = '900'
+  c.heightProyema.value = '2000'
+  c.hasStolby.value = 1
+  c.postsPresenceProblem.value = null
+  c.postProfileProblem.value = null
+  c.jumperPlacementProblem.value = null
+  c.postProfile.value = { sizeA: 50, sizeB: 50 }
+  c.fillSide.value = 0
+  c.jumperPlacement.value = 'none'
+  c.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
+  const drawing = mount(Type3Drawing)
+  const w = render()
+  await flushPromises()
+  expect(c.colorShieldHex.value).toBe('#315c2b')
+  expect(drawing.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#315c2b')
+  await w.get('[data-paint-category="31"]').trigger('click')
+  expect(c.colorShieldHex.value).toBe('')
+  expect(drawing.get('[data-testid="type3-posts"]').attributes('fill')).toBe('#66686c')
+  expect(useWicketFormStore().colorShieldHex).toBe('#315c2b')
+  expect(c.paintId.value).toBe(1)
+  expect(c.paintColorId.value).toBe(91)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  w.unmount()
+  expect(c.colorShieldHex.value).toBe('#315c2b')
+  drawing.unmount()
+ })
+
+ it('updates neutral preview after a new category color is acknowledged', async () => {
+  const data = catalog()
+  data.paintCategories.push({ id: 31, name: 'Renamed category', isFixedColor: true, requiresColorNote: false, isCustomerSupplied: false })
+  data.colorShield.push(paint(5, [{ ...color(95), hex: '#abcdef' }], { paintCategoryId: 31 }))
+  vi.mocked(getColorShield).mockResolvedValueOnce(data)
+  const c = useCalculation()
+  c.loadFromApi({ paintId: 1, paintColorId: 91 })
+  c.colorShieldHex.value = '#315c2b'
+  const w = render()
+  await flushPromises()
+  await w.get('[data-paint-category="31"]').trigger('click')
+  expect(c.colorShieldHex.value).toBe('')
+  await w.get('[data-testid="paint-product"]').setValue('5')
+  await flushPromises()
+  expect(c.paintId.value).toBe(5)
+  expect(c.colorShieldHex.value).toBe('#abcdef')
+  expect(c.colorShieldPreviewHex.value).toBeNull()
+  w.unmount()
+  expect(c.colorShieldHex.value).toBe('#abcdef')
+ })
+
  it('shows a version conflict instead of misreporting the painting selection', async () => {
   const c=useCalculation(); c.loadFromApi({paintId:1,paintColorId:91})
   const w=render(); await flushPromises()
