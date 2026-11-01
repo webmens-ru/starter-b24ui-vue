@@ -61,11 +61,12 @@ const primerProviders = participantRoleOptions('provide')
 const unchangedUnavailable = computed(() => calc.paintSelectionUnavailable.value && calc.paintSelection.value?.isPaintAvailable === true && draftPaintId.value === calc.paintId.value && draftColorId.value === calc.paintColorId.value)
 function numberId(value: string | number | null): number | null { return value == null || value === '' ? null : Number(value) }
 async function onCategoryChange(id: number): Promise<void> {
-  if (saving.value) return
+  if (saving.value || category.value === id) return
   category.value = id
   if (selectedPaint.value?.paintCategoryId !== id) {
     draftPaintId.value = null
     draftColorId.value = null
+    draftNote.value = ''
     calc.colorShieldPreviewHex.value = ''
   }
 }
