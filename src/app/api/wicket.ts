@@ -610,6 +610,13 @@ export async function getNetWidths(): Promise<{ netWidths: { id: string; name: s
   return data.data
 }
 
+/** Все активные сетки для выбора карточкой независимо от ширины. */
+export async function getNets(): ReturnType<typeof getNetsByWidth> {
+  if (isMock) return mockGetNetsByWidth('')
+  const { data } = await api.get('/api/dict/net/get-list')
+  return data.data
+}
+
 /** Сетки по ширине (sizeA) — для выбора карточкой. */
 export async function getNetsByWidth(sizeA: number | string): Promise<{
   items: Array<{ id: number; model: string; imageUrl: string | null; sizeA: number; sizeB: number; thickness: number; price: number }>

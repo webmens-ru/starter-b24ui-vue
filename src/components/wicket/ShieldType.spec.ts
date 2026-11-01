@@ -9,6 +9,12 @@ vi.mock('../../app/api/wicket', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../app/api/wicket')>()),
   getColorShield: vi.fn().mockResolvedValue({ colorShield: [] }),
   getNetWidths: vi.fn().mockResolvedValue({ netWidths: [{ id: '150', name: '150' }] }),
+  getNets: vi.fn().mockResolvedValue({
+    items: [
+      { id: 31, model: 'Сетка 150', imageUrl: '/net.png', sizeA: 150, sizeB: 150, thickness: 1, price: 100 },
+      { id: 45, model: 'Произвольная подпись 999', imageUrl: '/other.png', sizeA: 300, sizeB: 150, thickness: 1, price: 200 },
+    ],
+  }),
   getNetsByWidth: vi.fn().mockResolvedValue({
     items: [{ id: 31, model: 'Сетка 150', imageUrl: '/net.png', sizeA: 150, sizeB: 150, thickness: 1, price: 100 }],
   }),
@@ -16,7 +22,7 @@ vi.mock('../../app/api/wicket', async (importOriginal) => ({
   recalculate: vi.fn().mockResolvedValue({ priceDealer: 0, priceRetail: 0 }),
 }))
 
-const { saveWicketData, recalculate } = await import('../../app/api/wicket')
+const { saveWicketData, recalculate, getNets } = await import('../../app/api/wicket')
 
 const router = createRouter({
   history: createMemoryHistory(),
@@ -59,6 +65,78 @@ describe('ShieldType top-only subtype', () => {
     calc.openingOrientation.value = { opensOutward: true, hingeSide: 'left' }
     vi.mocked(saveWicketData).mockClear()
     vi.mocked(recalculate).mockClear()
+  })
+
+  it.each([
+    ['upperNet', 'heightTopPart', 'assortmentHeightUpperNetId'],
+    ['lowerNet', 'heightLowerPart', 'assortmentHeightLowerNetId'],
+    ['sideNet', 'widthSidePart', 'assortmentSideGrilleNetId'],
+  ] as const)('selects any available mesh for %s and derives size from data', async (subtype, sizeField, idField) => {
+    const calc = useCalculation()
+    calc.shieldType.value = subtype
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(wrapper.findAll('.grille-net-card')).toHaveLength(2)
+    expect(wrapper.text()).toContain('Ширина: 150 мм')
+    expect(wrapper.text()).toContain('Ширина: 300 мм')
+    expect(wrapper.find('b24-select-menu-stub').exists()).toBe(false)
+    await wrapper.findAll('.grille-net-card')[1]!.trigger('click')
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(calc[sizeField].value).toBe('300')
+    expect(calc[idField].value).toBe(45)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ [sizeField]: '300', [idField]: 45 }))
+    wrapper.unmount()
+  })
+
+  it('keeps catalog available after switching provider and frame subtype', async () => {
+    const calc = useCalculation()
+    calc.shieldType.value = 'upperNet'
+    const wrapper = mountShieldType()
+    await flushPromises()
+    await wrapper.get('input[name="provider-top"][value="customer"]').setValue(true)
+    expect(wrapper.find('#heightTopPartCustom').exists()).toBe(true)
+    await wrapper.get('input[name="provider-top"][value="executor"]').setValue(true)
+    expect(wrapper.findAll('.grille-net-card')).toHaveLength(2)
+    await wrapper.get('input[value="sideNet"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.findAll('.grille-net-card')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it.each([
+    ['upperNet', 'heightTopPart', 'assortmentHeightUpperNetId'],
+    ['lowerNet', 'heightLowerPart', 'assortmentHeightLowerNetId'],
+    ['sideNet', 'widthSidePart', 'assortmentSideGrilleNetId'],
+  ] as const)('restores %s by ID while preserving historical size', async (subtype, sizeField, idField) => {
+    const calc = useCalculation()
+    calc.shieldType.value = subtype
+    calc[sizeField].value = '275'
+    calc[idField].value = 45
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(wrapper.get('.grille-net-card.card-selected').text()).toContain('Произвольная подпись 999')
+    expect(calc[sizeField].value).toBe('275')
+    expect(calc[idField].value).toBe(45)
+    wrapper.unmount()
+  })
+
+  it('shows catalog load error and retries without losing saved selection', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(getNets).mockRejectedValueOnce(new Error('offline'))
+    const calc = useCalculation()
+    calc.shieldType.value = 'upperNet'
+    calc.heightTopPart.value = '150'
+    calc.assortmentHeightUpperNetId.value = 31
+    const wrapper = mountShieldType()
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось загрузить список сеток')
+    expect(calc.assortmentHeightUpperNetId.value).toBe(31)
+    await wrapper.get('[role="alert"] button').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.grille-net-card.card-selected').text()).toContain('Сетка 150')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    wrapper.unmount()
+    warning.mockRestore()
   })
 
   it('does not save unresolved active side; explicit repair keeps subtype, size, net and provider', async () => {
@@ -289,7 +367,8 @@ describe('ShieldType top-only subtype', () => {
 
     expect((wrapper.get('input[value="upperNet"]').element as HTMLInputElement).checked).toBe(true)
     expect(wrapper.text()).toContain('Высота сетки верхней части')
-    expect(wrapper.find('#heightTopPart').exists()).toBe(true)
+    expect(wrapper.find('#heightTopPart').exists()).toBe(false)
+    expect(wrapper.find('.grille-net-card.card-selected')?.text()).toContain('Сетка 150')
     expect(calc.heightTopPart.value).toBe('150')
     expect(wrapper.get('img[alt="Сетка сверху"]').attributes('src')).toMatch(/\/img\/wicket\/type1\/w_[gv]_1\.5\.png$/)
     expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({

@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 
 declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
-import { getNetWidths, getNetsByWidth, saveWicketData, recalculate } from '../../app/api/wicket'
+import { getNets, saveWicketData, recalculate } from '../../app/api/wicket'
 import { restoreShieldNetProvider } from './shieldNetProvider'
 import { frameSubtypeCapabilities } from './frameSubtype'
 import { frameSubtypeLabel, frameSubtypeOptions, isFrameSubtypeCode, type FrameSubtypeSelection } from '../../app/frameSubtypes'
@@ -69,22 +69,19 @@ const showInputTop    = computed(() => !isExecutorTop.value)
 const showInputLower  = computed(() => !isExecutorLower.value)
 const showInputSide   = computed(() => !isExecutorSide.value)
 
-// Переключатель «кто предоставляет ширину сетки» — используем refs из calc
-const netWidthOptions = ref<{ id: string; name: string }[]>([])
-
 // ─── Размеры ─────────────────────────────────────────────────────────────────
-const heightTopPart   = ref<string>('')  // select
-const heightLowerPart = ref<string>('')  // select
-const widthSidePart   = ref<string>('')  // select
+const heightTopPart   = ref<string>('')
+const heightLowerPart = ref<string>('')
+const widthSidePart   = ref<string>('')
 const grilleLocation   = ref<GrilleSideSelection>('hinge')
 
-const grilleNetItems         = ref<GrilleNetItem[]>([])
+const netItems = ref<GrilleNetItem[]>([])
+const netsLoading = ref(false)
+const netsLoadFailed = ref(false)
 const assortmentSideGrilleNetId = ref<number | null>(null)
 const errGrilleNet            = ref(false)
-const heightLowerNetItems     = ref<GrilleNetItem[]>([])
 const assortmentHeightLowerNetId = ref<number | null>(null)
 const errHeightLowerNet       = ref(false)
-const heightUpperNetItems     = ref<GrilleNetItem[]>([])
 const assortmentHeightUpperNetId = ref<number | null>(null)
 const errHeightUpperNet       = ref(false)
 
@@ -121,92 +118,33 @@ const shieldOptions = computed(() => {
   }))
 })
 
-// ─── Загрузка ширины сетки ───────────────────────────────────────────────────
-async function loadNetWidths() {
+// ─── Общий каталог сеток ─────────────────────────────────────────────────────
+async function loadNets(): Promise<void> {
+  netsLoading.value = true
+  netsLoadFailed.value = false
   try {
-    const res = await getNetWidths()
-    netWidthOptions.value = res.netWidths
+    const res = await getNets()
+    netItems.value = res.items
   } catch (e) {
-    console.warn('getNetWidths:', e)
-    openModal('Не удалось загрузить список ширины сетки.')
+    console.warn('getNets:', e)
+    netsLoadFailed.value = true
+  } finally {
+    netsLoading.value = false
   }
-}
-
-// ─── Загрузка сеток по ширине (для карточек выбора) ───────────────────────────
-async function loadGrilleNetsByWidth(width: string) {
-  if (!width || Number(width) <= 0) {
-    grilleNetItems.value = []
-    assortmentSideGrilleNetId.value = null
-    return
-  }
-  try {
-    const res = await getNetsByWidth(width)
-    grilleNetItems.value = res.items
-    assortmentSideGrilleNetId.value = null
-  } catch (e) {
-    console.warn('getNetsByWidth:', e)
-    grilleNetItems.value = []
-    assortmentSideGrilleNetId.value = null
-  }
-}
-
-function onWidthSidePartChange(val: string | number) {
-  widthSidePart.value = String(val ?? '')
-  loadGrilleNetsByWidth(widthSidePart.value).then(() => debouncedSave())
 }
 
 function onGrilleNetSelect(net: GrilleNetItem) {
+  errWidthSide.value = false
+  widthSidePart.value = String(net.sizeA)
   assortmentSideGrilleNetId.value = net.id
   calc.sideGrilleNetImage.value = net.imageUrl ?? ''
   errGrilleNet.value = false
   debouncedSave()
 }
 
-async function loadHeightLowerNetsBySize(size: string) {
-  if (!size || Number(size) <= 0) {
-    heightLowerNetItems.value = []
-    assortmentHeightLowerNetId.value = null
-    return
-  }
-  try {
-    const res = await getNetsByWidth(size)
-    heightLowerNetItems.value = res.items
-    assortmentHeightLowerNetId.value = null
-  } catch (e) {
-    console.warn('getNetsByWidth (height_lower):', e)
-    heightLowerNetItems.value = []
-    assortmentHeightLowerNetId.value = null
-  }
-}
-
-async function loadHeightUpperNetsBySize(size: string) {
-  if (!size || Number(size) <= 0) {
-    heightUpperNetItems.value = []
-    assortmentHeightUpperNetId.value = null
-    return
-  }
-  try {
-    const res = await getNetsByWidth(size)
-    heightUpperNetItems.value = res.items
-    assortmentHeightUpperNetId.value = null
-  } catch (e) {
-    console.warn('getNetsByWidth (height_upper):', e)
-    heightUpperNetItems.value = []
-    assortmentHeightUpperNetId.value = null
-  }
-}
-
-function onHeightTopPartChange(val: string | number) {
-  heightTopPart.value = String(val ?? '')
-  loadHeightUpperNetsBySize(heightTopPart.value).then(() => debouncedSave())
-}
-
-function onHeightLowerPartChange(val: string | number) {
-  heightLowerPart.value = String(val ?? '')
-  loadHeightLowerNetsBySize(heightLowerPart.value).then(() => debouncedSave())
-}
-
 function onHeightLowerNetSelect(net: GrilleNetItem) {
+  errHeightLower.value = false
+  heightLowerPart.value = String(net.sizeA)
   assortmentHeightLowerNetId.value = net.id
   calc.lowerGrilleNetImage.value = net.imageUrl ?? ''
   errHeightLowerNet.value = false
@@ -214,6 +152,8 @@ function onHeightLowerNetSelect(net: GrilleNetItem) {
 }
 
 function onHeightUpperNetSelect(net: GrilleNetItem) {
+  errHeightTop.value = false
+  heightTopPart.value = String(net.sizeA)
   assortmentHeightUpperNetId.value = net.id
   calc.upperGrilleNetImage.value = net.imageUrl ?? ''
   errHeightUpperNet.value = false
@@ -231,14 +171,11 @@ function debouncedSave() {
 function onProviderTopChange() {
   if (providerTop.value === '') {
     heightTopPart.value = ''
-    heightUpperNetItems.value = []
     assortmentHeightUpperNetId.value = null
   } else if (providerTop.value === 'customer') {
     assortmentHeightUpperNetId.value = null
-    heightUpperNetItems.value = []
   } else if (providerTop.value === 'executor') {
     heightTopPart.value = ''
-    heightUpperNetItems.value = []
     assortmentHeightUpperNetId.value = null
   }
   errHeightTop.value = false
@@ -249,14 +186,11 @@ function onProviderTopChange() {
 function onProviderLowerChange() {
   if (providerLower.value === '') {
     heightLowerPart.value = ''
-    heightLowerNetItems.value = []
     assortmentHeightLowerNetId.value = null
   } else if (providerLower.value === 'customer') {
     assortmentHeightLowerNetId.value = null
-    heightLowerNetItems.value = []
   } else if (providerLower.value === 'executor') {
     heightLowerPart.value = ''
-    heightLowerNetItems.value = []
     assortmentHeightLowerNetId.value = null
   }
   errHeightLower.value = false
@@ -267,14 +201,11 @@ function onProviderLowerChange() {
 function onProviderSideChange() {
   if (providerSide.value === '') {
     widthSidePart.value = ''
-    grilleNetItems.value = []
     assortmentSideGrilleNetId.value = null
   } else if (providerSide.value === 'customer') {
     assortmentSideGrilleNetId.value = null
-    grilleNetItems.value = []
   } else if (providerSide.value === 'executor') {
     widthSidePart.value = ''
-    grilleNetItems.value = []
     assortmentSideGrilleNetId.value = null
   }
   errWidthSide.value = false
@@ -286,17 +217,15 @@ function onProviderSideChange() {
 async function onShieldTypeChange() {
   if (!showHeightTop.value) {
     heightTopPart.value = ''
-    heightUpperNetItems.value = []
     assortmentHeightUpperNetId.value = null
   }
   if (!showHeightLower.value) {
     heightLowerPart.value = ''
-    heightLowerNetItems.value = []
     assortmentHeightLowerNetId.value = null
   }
   if (!showSidePart.value) {
     widthSidePart.value  = ''
-    grilleNetItems.value   = []
+
     assortmentSideGrilleNetId.value = null
     grilleLocation.value  = 'hinge'
   }
@@ -319,7 +248,7 @@ function syncCalcFields() {
     calc.assortmentHeightLowerNetId.value = assortmentHeightLowerNetId.value
     calc.assortmentSideGrilleNetId.value = null
     calc.sideGrilleNetImage.value = ''
-    calc.lowerGrilleNetImage.value = heightLowerNetItems.value.find(
+    calc.lowerGrilleNetImage.value = netItems.value.find(
       net => net.id === assortmentHeightLowerNetId.value,
     )?.imageUrl ?? ''
   } else {
@@ -327,7 +256,7 @@ function syncCalcFields() {
     calc.assortmentHeightLowerNetId.value = null
     if (showSidePart.value) {
       calc.assortmentSideGrilleNetId.value = assortmentSideGrilleNetId.value
-      calc.sideGrilleNetImage.value = grilleNetItems.value.find(
+      calc.sideGrilleNetImage.value = netItems.value.find(
         net => net.id === assortmentSideGrilleNetId.value,
       )?.imageUrl ?? ''
     } else {
@@ -337,7 +266,7 @@ function syncCalcFields() {
   }
   calc.assortmentHeightUpperNetId.value = showHeightTop.value ? assortmentHeightUpperNetId.value : null
   calc.upperGrilleNetImage.value = showHeightTop.value
-    ? heightUpperNetItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
+    ? netItems.value.find(net => net.id === assortmentHeightUpperNetId.value)?.imageUrl ?? ''
     : ''
   calc.grilleLocation.value = showSidePart.value ? grilleLocation.value : null
   calc.netWidthProviderTop.value = showHeightTop.value ? providerTop.value : ''
@@ -354,7 +283,7 @@ function buildBlock() {
   if (showHeightTop.value && provTop !== '' && topVal && topVal !== '0' && Number(topVal) > 0) {
     params.push({ paramCode: 'upperHeight', name: 'Высота верхней части', value: topVal })
     if (provTop === 'executor') {
-      const selUpperNet = heightUpperNetItems.value.find(n => n.id === assortmentHeightUpperNetId.value)
+      const selUpperNet = netItems.value.find(n => n.id === assortmentHeightUpperNetId.value)
       if (selUpperNet) params.push({ paramCode: 'upperNet', name: 'Сетка верхней части', value: selUpperNet.model })
     }
   }
@@ -363,7 +292,7 @@ function buildBlock() {
   if (showHeightLower.value && provLower !== '' && lowerVal && lowerVal !== '0' && Number(lowerVal) > 0) {
     params.push({ paramCode: 'lowerHeight', name: 'Высота нижней части', value: lowerVal })
     if (provLower === 'executor') {
-      const selLowerNet = heightLowerNetItems.value.find(n => n.id === assortmentHeightLowerNetId.value)
+      const selLowerNet = netItems.value.find(n => n.id === assortmentHeightLowerNetId.value)
       if (selLowerNet) params.push({ paramCode: 'lowerNet', name: 'Сетка нижней части', value: selLowerNet.model })
     }
   }
@@ -372,7 +301,7 @@ function buildBlock() {
   if (showSidePart.value && provSide !== '' && sideVal && sideVal !== '0' && Number(sideVal) > 0) {
     params.push({ paramCode: 'sideWidth', name: 'Ширина боковой части', value: sideVal })
     if (provSide === 'executor') {
-      const selNet = grilleNetItems.value.find(n => n.id === assortmentSideGrilleNetId.value)
+      const selNet = netItems.value.find(n => n.id === assortmentSideGrilleNetId.value)
       if (selNet) params.push({ paramCode: 'sideNet', name: 'Сетка боковой решётки', value: selNet.model })
     }
   }
@@ -551,11 +480,8 @@ onMounted(async () => {
     widthSidePart.value = String(savedSide)
   }
   grilleLocation.value = calc.grilleLocation.value
-  await loadNetWidths()
-  if ((unresolvedSubtype || showSidePart.value) && widthSidePart.value) await loadGrilleNetsByWidth(widthSidePart.value)
-  if ((unresolvedSubtype || showHeightLower.value) && heightLowerPart.value) await loadHeightLowerNetsBySize(heightLowerPart.value)
-  if ((unresolvedSubtype || showHeightTop.value) && heightTopPart.value) await loadHeightUpperNetsBySize(heightTopPart.value)
-  // Восстанавливаем выбор сеток после загрузки (loadXXX сбрасывает selection)
+  await loadNets()
+  // Восстанавливаем сохранённый выбор по ID, сохраняя исторические размеры.
   if (unresolvedSubtype) {
     assortmentHeightLowerNetId.value = calc.assortmentHeightLowerNetId.value === null ? null : Number(calc.assortmentHeightLowerNetId.value)
     assortmentSideGrilleNetId.value = calc.assortmentSideGrilleNetId.value === null ? null : Number(calc.assortmentSideGrilleNetId.value)
@@ -621,6 +547,15 @@ onMounted(async () => {
         </label>
       </div>
 
+      <p v-if="netsLoading" role="status" class="text-sm text-gray-600">Загрузка сеток…</p>
+      <div v-else-if="netsLoadFailed" role="alert" class="text-sm text-red-600">
+        Не удалось загрузить список сеток.
+        <button type="button" class="underline" @click="loadNets">Повторить</button>
+      </div>
+      <p v-else-if="!netItems.length && (showHeightTop || showHeightLower || showSidePart)" role="status" class="text-sm text-gray-600">
+        Нет доступных активных сеток.
+      </p>
+
       <!-- Высота верхней части (Тип_3, Тип_5) -->
       <div v-if="showHeightTop" class="flex flex-col gap-3">
         <span class="font-semibold text-sm">Высота сетки верхней части:</span>
@@ -644,23 +579,6 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showHeightTop">
-          <div v-if="isExecutorTop" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="heightTopPart">
-              Высота сетки (мм):
-            </label>
-            <div class="select-full-width">
-              <B24SelectMenu
-                id="heightTopPart"
-                v-model="heightTopPart"
-                value-key="id"
-                :items="netWidthOptions.map(o => ({ id: o.id, label: o.name }))"
-                placeholder="Выберите ширину из справочника..."
-                class="w-full"
-                :class="errHeightTop ? 'border-red-500' : ''"
-                @update:model-value="onHeightTopPartChange"
-              />
-            </div>
-          </div>
           <div v-if="showInputTop" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="heightTopPartCustom">
               Высота верхней части (мм):
@@ -670,7 +588,7 @@ onMounted(async () => {
               v-model="heightTopPart"
               type="number"
               min="1"
-              class="w-full px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300 bg-white"
               :class="errHeightTop ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
@@ -678,14 +596,14 @@ onMounted(async () => {
           </div>
           <!-- Карточки выбора сетки верхней части (только для executor) -->
           <div
-            v-if="isExecutorTop && heightTopPart && Number(heightTopPart) > 0"
+            v-if="isExecutorTop"
             class="w-full p-3 rounded-lg"
-            :class="errHeightUpperNet ? 'ring-2 ring-red-500 bg-red-50' : ''"
+            :class="(errHeightUpperNet || errHeightTop) ? 'ring-2 ring-red-500 bg-red-50' : ''"
           >
             <p class="font-semibold text-sm mb-2">Выберите сетку верхней части:</p>
             <div class="net-cards-row">
               <div
-                v-for="net in heightUpperNetItems"
+                v-for="net in netItems"
                 :key="net.id"
                 role="button"
                 tabindex="0"
@@ -701,6 +619,7 @@ onMounted(async () => {
                     class="w-full h-[100px] object-contain mb-2 bg-gray-100 rounded"
                   />
                   <span class="block text-sm font-semibold text-center">{{ net.model }}</span>
+                  <span class="block text-sm text-gray-600 text-center">Ширина: {{ net.sizeA }} мм</span>
                 </div>
               </div>
             </div>
@@ -731,23 +650,6 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showHeightLower">
-          <div v-if="isExecutorLower" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="heightLowerPart">
-              Высота сетки (мм):
-            </label>
-            <div class="select-full-width">
-              <B24SelectMenu
-                id="heightLowerPart"
-                v-model="heightLowerPart"
-                value-key="id"
-                :items="netWidthOptions.map(o => ({ id: o.id, label: o.name }))"
-                placeholder="Выберите ширину из справочника..."
-                class="w-full"
-                :class="errHeightLower ? 'border-red-500' : ''"
-                @update:model-value="onHeightLowerPartChange"
-              />
-            </div>
-          </div>
           <div v-if="showInputLower" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="heightLowerPartCustom">
               Высота нижней части (мм):
@@ -757,21 +659,21 @@ onMounted(async () => {
               v-model="heightLowerPart"
               type="number"
               min="1"
-              class="w-full px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300 bg-white"
               :class="errHeightLower ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
             />
           </div>
           <div
-            v-if="isExecutorLower && heightLowerPart && Number(heightLowerPart) > 0"
+            v-if="isExecutorLower"
             class="w-full p-3 rounded-lg"
-            :class="errHeightLowerNet ? 'ring-2 ring-red-500 bg-red-50' : ''"
+            :class="(errHeightLowerNet || errHeightLower) ? 'ring-2 ring-red-500 bg-red-50' : ''"
           >
             <p class="font-semibold text-sm mb-2">Выберите сетку:</p>
             <div class="net-cards-row">
               <div
-                v-for="net in heightLowerNetItems"
+                v-for="net in netItems"
                 :key="net.id"
                 role="button"
                 tabindex="0"
@@ -787,6 +689,7 @@ onMounted(async () => {
                     class="w-full h-[100px] object-contain mb-2 bg-gray-100 rounded"
                   />
                   <span class="block text-sm font-semibold text-center">{{ net.model }}</span>
+                  <span class="block text-sm text-gray-600 text-center">Ширина: {{ net.sizeA }} мм</span>
                 </div>
               </div>
             </div>
@@ -817,23 +720,6 @@ onMounted(async () => {
           </label>
         </div>
         <template v-if="showSidePart">
-          <div v-if="isExecutorSide" class="flex flex-col gap-2">
-            <label class="font-semibold text-sm whitespace-nowrap" for="widthSidePart">
-              Ширина сетки (мм):
-            </label>
-            <div class="select-full-width">
-              <B24SelectMenu
-                id="widthSidePart"
-                v-model="widthSidePart"
-                value-key="id"
-                :items="netWidthOptions.map(o => ({ id: o.id, label: o.name }))"
-                placeholder="Выберите ширину из справочника..."
-                class="w-full"
-                :class="errWidthSide ? 'border-red-500' : ''"
-                @update:model-value="onWidthSidePartChange"
-              />
-            </div>
-          </div>
           <div v-if="showInputSide" class="flex flex-col gap-2">
             <label class="font-semibold text-sm whitespace-nowrap" for="widthSidePartCustom">
               Ширина боковой решётки (мм):
@@ -843,21 +729,21 @@ onMounted(async () => {
               v-model="widthSidePart"
               type="number"
               min="1"
-              class="w-full px-3 py-2 border rounded border-gray-300"
+              class="w-full px-3 py-2 border rounded border-gray-300 bg-white"
               :class="errWidthSide ? 'border-red-500' : ''"
               placeholder="Введите произвольное значение"
               @input="debouncedSave"
             />
           </div>
           <div
-            v-if="isExecutorSide && widthSidePart && Number(widthSidePart) > 0"
+            v-if="isExecutorSide"
             class="w-full mt-2 p-3 rounded-lg"
-            :class="errGrilleNet ? 'ring-2 ring-red-500 bg-red-50' : ''"
+            :class="(errGrilleNet || errWidthSide) ? 'ring-2 ring-red-500 bg-red-50' : ''"
           >
             <p class="font-semibold text-sm mb-2">Выберите сетку:</p>
             <div class="net-cards-row">
               <div
-                v-for="net in grilleNetItems"
+                v-for="net in netItems"
                 :key="net.id"
                 role="button"
                 tabindex="0"
@@ -873,6 +759,7 @@ onMounted(async () => {
                     class="w-full h-[100px] object-contain mb-2 bg-gray-100 rounded"
                   />
                   <span class="block text-sm font-semibold text-center">{{ net.model }}</span>
+                  <span class="block text-sm text-gray-600 text-center">Ширина: {{ net.sizeA }} мм</span>
                 </div>
               </div>
             </div>

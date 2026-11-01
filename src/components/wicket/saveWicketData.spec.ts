@@ -43,7 +43,7 @@ vi.mock('../../app/api/wicket', () => ({
   getPolozhenieJumper: vi.fn().mockResolvedValue({ availablePolozheniyeJumper: [] }),
   getAssortmentJumper: vi.fn().mockResolvedValue({ assortmentJumper: [] }),
   getColorShield: vi.fn().mockResolvedValue({ colorShield: [] }),
-  getNetWidths: vi.fn().mockResolvedValue({ netWidths: [] }),
+  getNets: vi.fn().mockResolvedValue({ items: [] }),
   getNetsByWidth: vi.fn().mockResolvedValue({ items: [] }),
   getFilterOptions: vi.fn().mockResolvedValue({}),
   getSidingTable: vi.fn().mockResolvedValue({ table: [], pagination: {} }),
@@ -76,7 +76,7 @@ vi.mock('../../app/api/wicket', () => ({
   deleteCalculation: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { saveWicketData, saveWicketAccessoryComposition, recalculate, getColorShield, getNetWidths } = await import('../../app/api/wicket')
+const { saveWicketData, saveWicketAccessoryComposition, recalculate, getColorShield, getNets } = await import('../../app/api/wicket')
 
 describe('saveWicketData — данные передаются на бэк', () => {
   let calc: ReturnType<typeof useCalculation>
@@ -543,9 +543,9 @@ describe('saveWicketData — данные передаются на бэк', () 
       ],
     })
 
-    let finishNetWidths!: (value: { netWidths: [] }) => void
-    vi.mocked(getNetWidths).mockImplementationOnce(() => new Promise(resolve => {
-      finishNetWidths = resolve
+    let finishNets!: (value: { items: [] }) => void
+    vi.mocked(getNets).mockImplementationOnce(() => new Promise(resolve => {
+      finishNets = resolve
     }))
 
     const wrapper = mount(ShieldType, {
@@ -567,7 +567,7 @@ describe('saveWicketData — данные передаются на бэк', () 
 
     expect(wrapper.text()).not.toContain('Цвет рамы')
 
-    finishNetWidths({ netWidths: [] })
+    finishNets({ items: [] })
     await new Promise(r => setTimeout(r, 0))
     vi.mocked(saveWicketData).mockClear()
 
