@@ -632,6 +632,38 @@ describe('ProductRowsPage', () => {
     )
   })
 
+  it('offers a separate client specification document for a wicket', async () => {
+    const wrapper = mountPage({ placementParams: {
+      productRowTechnicalSpecificationUrlTemplate: '/wicket-specification?order_id=42&productRowId={productRowId}&model_id={modelId}',
+    } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+    const action = wrapper.get('[aria-label="Техническое задание PDF товарной позиции 7"]')
+    expect(action.attributes('href')).toBe('/wicket-specification?order_id=42&productRowId=7&model_id=7')
+    expect(action.attributes('target')).toBe('_blank')
+  })
+
+  it.each(['material', 'service'])('does not offer a wicket specification for %s', async (productType) => {
+    mocks.listProductRows.mockResolvedValue(makeOrderResponse([makeProductRow(7, { productType, modelId: null })]))
+    const wrapper = mountPage({ placementParams: {
+      productRowTechnicalSpecificationUrlTemplate: '/wicket-specification?order_id=42&productRowId={productRowId}&model_id={modelId}',
+    } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.find('[aria-label="Техническое задание PDF товарной позиции 7"]').exists()).toBe(false)
+  })
+
+  it.each([
+    'https://foreign.test/wicket-specification?order_id=42&productRowId={productRowId}&model_id={modelId}',
+    '/wicket-specification?order_id=41&productRowId={productRowId}&model_id={modelId}',
+    '/wicket-specification?order_id=42&productRowId={productRowId}',
+  ])('rejects invalid client specification URLs: %s', async (template) => {
+    const wrapper = mountPage({ placementParams: { productRowTechnicalSpecificationUrlTemplate: template } })
+    await flushPromises()
+    await openProductRowActions(wrapper, 7)
+    expect(wrapper.find('[aria-label="Техническое задание PDF товарной позиции 7"]').exists()).toBe(false)
+  })
+
   it('renders a PDF action with both template markers replaced for wicket rows', async () => {
     mocks.listProductRows.mockResolvedValue(makeOrderResponse([
       makeProductRow(7, { modelId: '3' }),

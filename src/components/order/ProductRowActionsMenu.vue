@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   reorderDisabled?: boolean
   costDetailsUrl?: string
+  technicalSpecificationUrl?: string
   pdfUrl?: string
   htmlUrl?: string
   canMoveUp: boolean
@@ -314,6 +315,19 @@ onBeforeUnmount(() => {
           @click="closeWithoutRestoringFocus"
         >
           Сформировать PDF
+        </a>
+        <a
+          v-if="technicalSpecificationUrl"
+          :href="technicalSpecificationUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          role="menuitem"
+          tabindex="-1"
+          class="product-row-actions-menu__document-link block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50"
+          :aria-label="`Техническое задание PDF товарной позиции ${productRow.id}`"
+          @click="closeWithoutRestoringFocus"
+        >
+          Техническое задание PDF
         </a>
         <a
           v-if="htmlUrl"

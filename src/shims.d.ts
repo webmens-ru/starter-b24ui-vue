@@ -4,6 +4,7 @@ declare global {
     productRowCreateUrl?: string;
     productRowCostDetailsUrlTemplate?: string;
     productRowPdfUrlTemplate?: string;
+    productRowTechnicalSpecificationUrlTemplate?: string;
     productRowUpdateUrlTemplate?: string;
     returnUrl?: string;
     [index: string]: unknown;

@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   reorderDisabled?: boolean
   costDetailsUrl?: string
+  technicalSpecificationUrl?: string
   pdfUrl?: string
   htmlUrl?: string
   canMoveUp: boolean
@@ -221,6 +222,7 @@ function emitDeadline(): void {
             :reorder-disabled="reorderDisabled"
             :cost-details-url="costDetailsUrl"
             :pdf-url="pdfUrl"
+            :technical-specification-url="technicalSpecificationUrl"
             :html-url="htmlUrl"
             :can-move-up="canMoveUp"
             :can-move-down="canMoveDown"

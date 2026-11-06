@@ -157,12 +157,19 @@ function costDetailsUrl(productRowId: number): string | undefined {
 }
 
 function productRowPdfUrl(productRow: ProductRowSummary): string | undefined {
+  return productRowDocumentUrl(productRow, window._PARAMS_?.placementOptions?.params?.productRowPdfUrlTemplate, true)
+}
+
+function productRowTechnicalSpecificationUrl(productRow: ProductRowSummary): string | undefined {
+  return productRowDocumentUrl(productRow, window._PARAMS_?.placementOptions?.params?.productRowTechnicalSpecificationUrlTemplate)
+}
+
+function productRowDocumentUrl(productRow: ProductRowSummary, template: unknown, allowMaterial = false): string | undefined {
   if (!Number.isSafeInteger(productRow.id) || productRow.id <= 0) return undefined
-  const materialSnapshot = (productRow.productType === 'material' || productRow.productType === 'service') && productRow.modelId === null
+  const materialSnapshot = allowMaterial && (productRow.productType === 'material' || productRow.productType === 'service') && productRow.modelId === null
   if (!materialSnapshot && (productRow.productType !== 'wicket' || typeof productRow.modelId !== 'string' || !/^[1-9]\d*$/.test(productRow.modelId))) return undefined
   const modelId = materialSnapshot ? '' : productRow.modelId!
 
-  const template = window._PARAMS_?.placementOptions?.params?.productRowPdfUrlTemplate
   if (
     typeof template !== 'string'
     || (template.match(/\{productRowId\}/g) ?? []).length !== 1
@@ -788,6 +795,7 @@ watch(orderIdParam, () => {
                   :cost-details-url="costDetailsUrl(row.productRow.id)"
                   :pdf-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowPdfUrl(row.productRow)"
                   :html-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowHtmlUrl(row.productRow)"
+                  :technical-specification-url="staleView || busyProductRowIds.has(row.productRow.id) ? undefined : productRowTechnicalSpecificationUrl(row.productRow)"
                   :can-move-up="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) > 0"
                   :can-move-down="row.depth === 0 && canReorder && groupedProductRows.roots.findIndex(root => root.id === row.productRow.id) < groupedProductRows.roots.length - 1"
                   @edit="editProductRow"
