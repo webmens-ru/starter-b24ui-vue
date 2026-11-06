@@ -63,3 +63,19 @@ it.each(['facade', 'yard'] as const)('clears only the repaired %s diagnostic whe
   expect(saveWicketData).toHaveBeenCalled()
   wrapper.unmount()
 })
+
+it.each(['facade', 'yard'] as const)('places %s appearance fields between filters and the material table', async side => {
+  const calc = useCalculation()
+  if (side === 'facade') calc.idFacade.value = 17
+  else calc.idYard.value = 17
+  const wrapper = mount(T2ProfnastilForm, { props: { side, tableMode: true }, global: { stubs: { B24SelectMenu: Select, SelectMenu: Select, FilterDropdown: true } } })
+  await flushPromises()
+  const manufacturer = wrapper.findAll('label').find(label => label.text().includes('Производитель'))!
+  const color = wrapper.findAll('label').find(label => label.text().startsWith('Цвет'))!
+  const table = wrapper.get('table').element
+  expect(manufacturer.element.compareDocumentPosition(table) & 4).toBe(4)
+  expect(color.element.compareDocumentPosition(table) & 4).toBe(4)
+  const filter = wrapper.get('filter-dropdown-stub').element
+  expect(filter.compareDocumentPosition(manufacturer.element) & 4).toBe(4)
+  wrapper.unmount()
+})

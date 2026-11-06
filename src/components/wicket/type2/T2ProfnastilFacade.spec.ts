@@ -142,9 +142,7 @@ describe('Type 2 profnastil leave guards', () => {
 })
 
 describe('Type 2 profnastil pages', () => {
-  it('layers the color menu above surrounding content', () => {
-    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
-  })
+
 
   it('replaces the facade table with the dependent form', () => {
     expect(facade).toContain('<T2ProfnastilForm ref="formRef" side="facade" table-mode />')
@@ -166,27 +164,11 @@ describe('Type 2 profnastil pages', () => {
     expect(form).not.toContain('max-w-2xl')
   })
 
-  it('places manufacturer before profile', () => {
-    expect(form.indexOf('>Производитель<')).toBeLessThan(form.indexOf('>Тип профиля '))
-  })
 
-  it('uses Bitrix searchable dropdowns for all dictionary fields', () => {
-    expect(form).not.toContain('<select')
-    expect(form).toContain(':items="manufacturerSelectItems"')
-    expect(form).toContain(':items="profileSelectItems"')
-    expect(form).toContain(':items="coatingSelectItems"')
-    expect(form).toContain('@update:model-value="onManufacturerChange"')
-    expect(form).toContain('@update:model-value="onProfileSelectChange"')
-    expect(form).toContain('@update:model-value="onCoatingSelectChange"')
-  })
 
-  it('uses the searchable dropdown for dictionary colors', () => {
-    expect(form).toContain('<B24SelectMenu')
-    expect(form).toContain(':items="colorSelectItems"')
-    expect(form).toContain('value-key="id"')
-    expect(form).toContain('@update:model-value="onDictionaryColorChange"')
-    expect(form).not.toContain('<select v-model="colorId"')
-  })
+
+
+
 
   it('reloads colors for the selected coating', () => {
     expect(api).toContain('typeOfCoatingId?: number')

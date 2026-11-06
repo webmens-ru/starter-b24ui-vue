@@ -12,6 +12,7 @@ import type { ProfnastilCoatingOption } from '../../../app/api/wicket.types'
 import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
 import { useCalculation } from '../../../composables/useCalculation'
 import ProfnastilMaterialTable from '../shared/ProfnastilMaterialTable.vue'
+import T2ProfnastilFields from './T2ProfnastilFields.vue'
 import { getPrintechSelectItems, getProfnastilColorMode } from './type2ProfnastilForm'
 
 const props = defineProps<{ side: 'facade' | 'yard'; tableMode?: boolean }>()
@@ -79,6 +80,32 @@ const selectedMaterialId = computed<number | undefined>(() => {
   const value = Number(isFacade.value ? calc.idFacade.value : calc.idYard.value)
   return Number.isSafeInteger(value) && value > 0 ? value : undefined
 })
+const fieldBindings = computed(() => ({
+  manufacturerVisible: !props.tableMode || !!selectedMaterialId.value,
+  showMaterialSelectors: !props.tableMode,
+  selectedManufacturerId: selectedManufacturerId.value,
+  manufacturerSelectItems: manufacturerSelectItems.value,
+  profile: profile.value,
+  profileSelectItems: profileSelectItems.value,
+  selectedMaterialId: selectedMaterialId.value,
+  coating: coating.value,
+  coatingSelectItems: coatingSelectItems.value,
+  colorMode: colorMode.value,
+  dictionaryColorId: dictionaryColorId.value,
+  colorSelectItems: colorSelectItems.value,
+  comboboxValue: comboboxValue.value,
+  printechSelectItems: printechSelectItems.value,
+  loading: loading.value,
+  loadError: loadError.value,
+  submitted: submitted.value,
+  colorValid: colorValid.value,
+  onManufacturerChange,
+  onProfileChange: onProfileSelectChange,
+  onCoatingChange: onCoatingSelectChange,
+  onDictionaryColorChange,
+  onPrintechColorChange,
+  onCustomColorCreate,
+}))
 const selectedMaterial = computed(() => options.value.coatings.find(item => String(item.profnastilId) === String(selectedMaterialId.value)))
 const selectionDiagnostic = computed(() => calc.materialSelectionProblems.value
   .filter(problem => problem.side === props.side).map(problem => problem.message).join(' ')
@@ -415,82 +442,15 @@ onMounted(async () => {
       :rows="tableRows" :selected-row="tableSelection" :loading="tableLoading || loading"
       v-model:filters="tableFilters" :pagination="tablePagination"
       @select="selectTableRow" @deselect="deselectTableRow" @page="loadTable"
-    />
+    >
+      <template #appearance>
+        <T2ProfnastilFields v-bind="fieldBindings" />
+      </template>
+    </ProfnastilMaterialTable>
     <button v-if="tableMode && tableError" type="button" class="col-span-full" @click="loadTable()">Повторить загрузку</button>
     <p v-if="submitted && tableMode && !selectedMaterialId" role="alert" class="col-span-full text-red-600">Выберите материал заполнения</p>
     <p v-if="diagnostic" role="alert" class="col-span-full text-red-600">{{ diagnostic }}</p>
-    <label v-if="!tableMode || selectedMaterialId" class="form-field">
-      <span class="font-semibold">Производитель</span>
-      <B24SelectMenu
-        :model-value="selectedManufacturerId"
-        value-key="id"
-        :items="manufacturerSelectItems"
-        placeholder="Не выбран"
-        class="w-full"
-        :disabled="loading"
-        @update:model-value="onManufacturerChange"
-      />
-    </label>
-
-    <label v-if="!tableMode" class="form-field">
-      <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
-      <B24SelectMenu
-        :model-value="profile || undefined"
-        value-key="id"
-        :items="profileSelectItems"
-        placeholder="Выберите тип профиля"
-        class="w-full"
-        :disabled="loading"
-        @update:model-value="onProfileSelectChange"
-      />
-      <span v-if="submitted && !profile" class="text-sm text-red-600">Выберите тип профиля</span>
-    </label>
-
-    <label v-if="!tableMode" class="form-field">
-        <span class="font-semibold">Тип покрытия <span class="text-red-600">*</span></span>
-        <B24SelectMenu
-          :model-value="selectedMaterialId || undefined"
-          value-key="id"
-          :items="coatingSelectItems"
-          placeholder="Выберите тип покрытия"
-          class="w-full"
-          :disabled="loading || !profile"
-          @update:model-value="onCoatingSelectChange"
-        />
-        <span v-if="submitted && !coating" class="text-sm text-red-600">Выберите тип покрытия</span>
-    </label>
-
-    <label v-if="colorMode === 'list'" class="form-field">
-      <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
-      <B24SelectMenu
-        :model-value="dictionaryColorId"
-        value-key="id"
-        :items="colorSelectItems"
-        placeholder="Выберите цвет"
-        class="w-full"
-        :b24ui="{ content: 'z-50' }"
-        :disabled="loading || !!loadError"
-        @update:model-value="onDictionaryColorChange"
-      />
-      <span v-if="submitted && !colorValid" class="text-sm text-red-600">Выберите цвет</span>
-    </label>
-
-    <label v-else-if="colorMode === 'combobox'" class="form-field">
-      <span class="font-semibold">Цвет / текстура <span class="text-red-600">*</span></span>
-      <B24InputMenu
-        :model-value="comboboxValue"
-        value-key="id"
-        :items="printechSelectItems"
-        create-item="always"
-        placeholder="Выберите или введите название"
-        class="w-full"
-        :disabled="loading || !!loadError"
-        :content="{ side: 'bottom', align: 'start', sideOffset: 4, avoidCollisions: false }"
-        @update:model-value="onPrintechColorChange"
-        @create="onCustomColorCreate"
-      />
-      <span v-if="submitted && !colorValid" class="text-sm text-red-600">Укажите цвет или текстуру</span>
-    </label>
+    <T2ProfnastilFields v-if="!tableMode" class="col-span-full" v-bind="fieldBindings" />
   </div>
 </template>
 
