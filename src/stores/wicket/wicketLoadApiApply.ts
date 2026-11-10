@@ -123,6 +123,8 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   providesLock: 'manufacturer',
   lockInstaller: 'manufacturer',
   typeLock: 'Тип_1',
+  layingFacadeCode: null,
+  layingYardCode: null,
   lockSetId: null,
   lockPenColor: '',
   lockPenColorId: null,
