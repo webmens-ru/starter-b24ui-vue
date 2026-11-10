@@ -2,7 +2,7 @@
 import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
-import { reconcileFenceLaying, legacyYardSnapshot, applyYardSnapshot } from './fenceLayingState'
+import { reconcileFenceLaying, legacyYardSnapshot, applyYardSnapshot, type FenceYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -16,6 +16,7 @@ let disposed = false
 const owner = calc.getCurrentProductRowContext()
 const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
 onBeforeUnmount(() => { disposed = true })
+let pendingYardSnapshot: FenceYardSnapshot | undefined
 const saving = ref(false)
 const saveError = ref('')
 const needsSave = ref(false)
@@ -105,7 +106,8 @@ function restoreFromCalc(): FenceRow | null {
 }
 
 async function save(row: FenceRow) {
-  const yardSnapshot = await legacyYardSnapshot(calc)
+  const yardSnapshot = pendingYardSnapshot ?? await legacyYardSnapshot(calc)
+  pendingYardSnapshot = yardSnapshot
   if (!isCurrent()) throw new Error('Расчёт изменился')
   await reconcileFenceLaying(calc, 'facade', row.widthFence)
   if (!isCurrent()) throw new Error('Расчёт изменился')
@@ -143,7 +145,10 @@ async function save(row: FenceRow) {
       typeOfCoatingFacade:   row.typeOfCoating,
       colorFacade:             row.color,
     })
-    if (isCurrent()) applyYardSnapshot(calc, yardSnapshot)
+    if (isCurrent()) {
+      applyYardSnapshot(calc, yardSnapshot)
+      pendingYardSnapshot = undefined
+    }
   } catch (e) {
     throw e
   }
@@ -198,7 +203,7 @@ async function deselectRow() {
   if (saving.value) return
   saving.value = true
   try {
-    const snapshot = await legacyYardSnapshot(calc)
+    const snapshot = pendingYardSnapshot ?? await legacyYardSnapshot(calc)
     if (!isCurrent()) return
     applyYardSnapshot(calc, snapshot)
   } catch {

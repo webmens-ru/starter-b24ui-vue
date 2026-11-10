@@ -63,3 +63,24 @@ it('keeps valid laying when changing only the material color', async () => {
   expect(calc.layingFacadeCode.value).toBe('gap')
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 28, layingFacadeCode: 'gap' }))
 })
+it('retains the legacy yard snapshot across a failed material save and retry', async () => {
+  const calc = useCalculation()
+  calc.idYard.value = 200
+  calc.thicknessYard.value = '120'
+  calc.gapName.value = 28
+  calc.layingFacadeCode.value = 'gap'
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 102, company: 'Поставщик', material: 'Другая ширина', widthFence: '120', typeOfCoating: 'Покрытие', color: 'Цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  vi.mocked(getFenceGapOptions)
+    .mockResolvedValueOnce([{ id: 7, gapMm: 28, label: 'Исторический', quantity: 6 }])
+    .mockResolvedValueOnce([{ id: 9, gapMm: 50, label: 'Другой', quantity: 7 }])
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
+  const wrapper = mountPage()
+  await flushPromises()
+  await wrapper.findAll('tbody input')[1]!.setValue(true)
+  await flushPromises()
+  expect(calc.gapName.value).toBeNull()
+  expect(wrapper.text()).toContain('Не удалось сохранить материал')
+  expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapYardMm: 28, layingYardCode: 'gap', numberOfSticksYard: 6 }))
+  expect(calc.gapYardMm.value).toBe(28)
+})
