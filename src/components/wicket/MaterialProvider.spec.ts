@@ -30,7 +30,7 @@ describe('re-enabling filling', () => {
       await wrapper.get('input[name="providesMaterial"][value="none"]').setValue()
       await flushPromises()
       expect(calc.raspolozheniyePolotna.value).toBe(null)
-      expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillingOrientationCode: null }))
+      expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ fillingSideCount: 0 }))
       await wrapper.get('input[name="providesMaterial"][value="manufacturer"]').setValue()
       await flushPromises()
       expect(calc.fillSide.value).toBe(1)

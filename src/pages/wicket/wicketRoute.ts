@@ -28,6 +28,7 @@ export interface WicketRouteSection {
 }
 
 export interface WicketRouteDefinition {
+  canNavigate?: (from: string, to: string, state: WicketSharedNavState) => boolean
   sections: WicketRouteSection[]
   menu: (state: WicketSharedNavState) => WicketMenuItem[]
   validations: (state: WicketSharedNavState) => Map<string, SectionValidation>

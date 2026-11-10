@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getFenceGapOptions, getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
-import type { FenceGapOption } from '../../../app/api/wicket.types'
+import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
+import { reconcileFenceLaying, legacyYardSnapshot, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -12,6 +12,19 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+let disposed = false
+const owner = calc.getCurrentProductRowContext()
+const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
+onBeforeUnmount(() => { disposed = true })
+const saving = ref(false)
+const saveError = ref('')
+const needsSave = ref(false)
+async function validateBeforeLeave(): Promise<boolean> {
+  if (saving.value) return false
+  if (needsSave.value) return persistSelection(selectedRow.value)
+  return !needsSave.value
+}
+defineExpose({ validateBeforeLeave })
 
 const showModal  = ref(false)
 const modalTitle = ref('Внимание')
@@ -38,10 +51,6 @@ const selectedRow  = ref<FenceRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
-const gapOptions   = ref<FenceGapOption[]>([])
-const gapLoading   = ref(false)
-const selectedGapId = computed(() => calc.gapId.value)
-
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
   try {
@@ -73,57 +82,14 @@ watch(() => calc.idFacade.value, async (val) => {
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
-    await loadGapOptions()
   }
 }, { immediate: true })
 
-async function loadGapOptions() {
-  if (!calc.idFacade.value) {
-    gapOptions.value = []
-    return
-  }
-  gapLoading.value = true
-  try {
-    gapOptions.value = await getFenceGapOptions({
-      ...calc.getFullSavePayload(),
-      widthFenceFacade: calc.thicknessFacade.value,
-    })
-    const restored = gapOptions.value.find(option => option.gapMm === Number(calc.gapName.value))
-    if (restored) {
-      calc.gapId.value = restored.id
-      calc.numberOfSticks.value = restored.quantity
-    }
-    if (calc.gapName.value != null && !restored) clearGap()
-  } catch (e) {
-    console.warn('getFenceGapOptions недоступен:', e)
-    gapOptions.value = []
-  } finally {
-    gapLoading.value = false
-  }
-}
-
 function clearGap() {
+  calc.layingFacadeCode.value = null
   calc.gapId.value = null
   calc.gapName.value = null
   calc.numberOfSticks.value = null
-}
-
-async function selectGap(event: Event) {
-  const option = gapOptions.value.find(item => item.id === Number((event.target as HTMLSelectElement).value))
-  if (!option) {
-    clearGap()
-    return
-  }
-  calc.gapId.value = option.id
-  calc.gapName.value = option.gapMm
-  calc.numberOfSticks.value = option.quantity
-  await saveWicketData({
-    ...calc.getBaseSavePayload(),
-    gapId: option.id,
-    gapName: option.gapMm,
-    numberOfSticks: option.quantity,
-  })
-  await doRecalculate()
 }
 
 function restoreFromCalc(): FenceRow | null {
@@ -139,6 +105,11 @@ function restoreFromCalc(): FenceRow | null {
 }
 
 async function save(row: FenceRow) {
+  const yardSnapshot = await legacyYardSnapshot(calc)
+  if (!isCurrent()) throw new Error('Расчёт изменился')
+  await reconcileFenceLaying(calc, 'facade', row.widthFence)
+  if (!isCurrent()) throw new Error('Расчёт изменился')
+
   calc.idFacade.value                = row.id
   calc.materialSupplierFacade.value = row.company
   calc.materialFacade.value          = row.material
@@ -159,7 +130,12 @@ async function save(row: FenceRow) {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
+      ...yardSnapshot,
       idFacade:                row.id,
+      layingFacadeCode: calc.layingFacadeCode.value,
+      gapId: calc.gapId.value,
+      gapName: calc.gapName.value,
+      numberOfSticks: calc.numberOfSticks.value,
       materialFacadeGlob:     calc.materialFacadeGlob.value,
       materialSupplierFacade: row.company,
       materialFacade:          row.material,
@@ -167,8 +143,9 @@ async function save(row: FenceRow) {
       typeOfCoatingFacade:   row.typeOfCoating,
       colorFacade:             row.color,
     })
+    if (isCurrent()) applyYardSnapshot(calc, yardSnapshot)
   } catch (e) {
-    console.warn('saveWicketData недоступен:', e)
+    throw e
   }
 }
 
@@ -182,37 +159,71 @@ async function doRecalculate() {
       model:              calc.model.value,
       modelId:           calc.modelId.value,
     })
-    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+    if (isCurrent()) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
   } catch (e) {
     console.error('Ошибка пересчёта:', e)
   }
 }
 
-async function selectRow(row: FenceRow) {
-  selectedRow.value = row
-  clearGap()
-  await save(row)
-  await loadGapOptions()
-  await doRecalculate()
+async function persistSelection(row: FenceRow | null): Promise<boolean> {
+  if (saving.value) return false
+  saving.value = true
+  saveError.value = ''
+  try {
+    if (row) await save(row)
+    else await saveWicketData({
+      ...calc.getBaseSavePayload(), idFacade: null, widthFenceFacade: null,
+      layingYardCode: calc.layingYardCode.value, gapYardMm: calc.gapYardMm.value, numberOfSticksYard: calc.numberOfSticksYard.value,
+      materialSupplierFacade: null, materialFacade: null, typeOfCoatingFacade: null, colorFacade: null,
+      layingFacadeCode: null, gapId: null, gapName: null, numberOfSticks: null,
+    })
+    needsSave.value = false
+    return true
+  } catch {
+    saveError.value = 'Не удалось сохранить материал. Нажмите «Далее», чтобы повторить.'
+    return false
+  } finally {
+    saving.value = false
+  }
 }
 
-function deselectRow() {
+async function selectRow(row: FenceRow) {
+  if (saving.value) return
+  needsSave.value = true
+  selectedRow.value = row
+  if (await persistSelection(row)) await doRecalculate()
+}
+
+async function deselectRow() {
+  if (saving.value) return
+  saving.value = true
+  try {
+    const snapshot = await legacyYardSnapshot(calc)
+    if (!isCurrent()) return
+    applyYardSnapshot(calc, snapshot)
+  } catch {
+    saveError.value = 'Не удалось сохранить параметры двора. Повторите выбор.'
+    return
+  } finally {
+    saving.value = false
+  }
+  needsSave.value = true
   selectedRow.value = null
   calc.idFacade.value = ''
   clearGap()
-  gapOptions.value = []
+  void persistSelection(null)
 }
 
 function isSelected(row: FenceRow) {
   return selectedRow.value?.id === row.id
 }
 
-function onContinue() {
-  if (!selectedRow.value || calc.gapName.value == null) {
+async function onContinue() {
+  if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
     return
   }
-  emit('next')
+  if (await validateBeforeLeave()) emit('next')
 }
 
 onMounted(async () => {
@@ -236,9 +247,11 @@ onMounted(async () => {
 
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-3xl font-bold flex-1 text-center">Заполнение (фасад)</span>
-      <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
+      <span class="text-3xl font-bold flex-1 text-center">Фасад — материал и цвет</span>
+      <B24Button label="Далее" :disabled="saving" color="air-secondary" @click="onContinue" />
     </div>
+
+    <p v-if="saveError" role="alert" class="text-red-700">{{ saveError }}</p>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <T3FilterDropdown
@@ -272,22 +285,6 @@ onMounted(async () => {
         v-model="filters.colors"
       />
     </div>
-
-    <label v-if="selectedRow" class="flex flex-col gap-2 rounded border border-gray-200 bg-white p-3">
-      <span class="font-semibold">Зазор между штакетинами</span>
-      <select
-        class="rounded border border-gray-300 bg-white px-3 py-2"
-        :disabled="gapLoading"
-        :value="selectedGapId ?? ''"
-        data-testid="type3-gap-select"
-        @change="selectGap"
-      >
-        <option value="">Выберите зазор</option>
-        <option v-for="option in gapOptions" :key="option.id" :value="option.id">
-          {{ option.label }} — {{ option.quantity }} шт.
-        </option>
-      </select>
-    </label>
 
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">

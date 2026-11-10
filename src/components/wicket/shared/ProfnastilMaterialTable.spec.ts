@@ -14,7 +14,7 @@ it('selects by material ID when display names are identical and preserves the sa
   expect(wrapper.findAll('thead th')).toHaveLength(4)
   expect(wrapper.find('thead').text()).toContain('Тип покрытия')
   expect(wrapper.find('thead').text()).toContain('Цена за м²')
-  expect(wrapper.findAll('tbody tr').map(row => row.findAll('td').at(-1)!.text().replace(/\s/g, ' '))).toEqual(['1 250,50 ₽', '1 250,50 ₽'])
+  expect(wrapper.findAll('tbody tr').map(row => row.findAll('td')[3]!.text().replace(/\s/g, ' '))).toEqual(['1 250,50 ₽', '1 250,50 ₽'])
   expect(wrapper.find('thead').text()).not.toContain('Толщина')
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   expect(wrapper.emitted('select')?.[0]).toEqual([row])

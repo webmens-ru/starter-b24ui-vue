@@ -19,6 +19,11 @@ export interface Type3DrawingSource extends DrawingPipeSource {
   heightTopPart?: unknown
   heightLowerPart?: unknown
   widthSidePart?: unknown
+  layingFacadeCode?: unknown
+  layingYardCode?: unknown
+  numberOfSticksYard?: unknown
+  gapYardMm?: unknown
+  thicknessYard?: unknown
   numberOfSticks?: unknown
   gapName?: unknown
   thicknessFacade?: unknown
@@ -125,12 +130,21 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const horizontal = fillingOrientation === 'horizontal'
   const picketWidth = numberValue(source.thicknessFacade, 100, 10, 500)
   const span = horizontal ? activeFill.height : activeFill.width
-  const visiblePicketWidth = Math.min(picketWidth, count > 0 ? span / count : picketWidth)
-  const remaining = Math.max(0, span - count * visiblePicketWidth)
-  const gap = count > 1 ? remaining / (count - 1) : 0
-  const facadePickets = Array.from({ length: count }, (_, index) => horizontal
-    ? rect(activeFill.x, activeFill.y + index * (visiblePicketWidth + gap), activeFill.width, visiblePicketWidth)
-    : rect(activeFill.x + index * (visiblePicketWidth + gap), activeFill.y, visiblePicketWidth, activeFill.height))
+  function pickets(picketCount: number, widthMm: number, gapMm: number, explicit: boolean): Type3Rect[] {
+    const visibleWidth = Math.min(widthMm, picketCount > 0 ? span / picketCount : widthMm)
+    const remaining = Math.max(0, span - picketCount * visibleWidth)
+    const actualGap = explicit ? Math.min(gapMm, picketCount > 1 ? remaining / (picketCount - 1) : 0)
+      : picketCount > 1 ? remaining / (picketCount - 1) : 0
+    const offset = explicit ? Math.max(0, (span - picketCount * visibleWidth - Math.max(0, picketCount - 1) * actualGap) / 2) : 0
+    return Array.from({ length: picketCount }, (_, index) => horizontal
+      ? rect(activeFill.x, activeFill.y + offset + index * (visibleWidth + actualGap), activeFill.width, visibleWidth)
+      : rect(activeFill.x + offset + index * (visibleWidth + actualGap), activeFill.y, visibleWidth, activeFill.height))
+  }
+  const facadePickets = pickets(count, picketWidth, numberValue(source.gapName, 0), source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap')
+  const yardPickets = source.layingYardCode === 'butt' || source.layingYardCode === 'gap'
+    ? pickets(Math.round(numberValue(source.numberOfSticksYard, 0, 0, 200)), numberValue(source.thicknessYard, 100, 10, 500), numberValue(source.gapYardMm, 0), true)
+    : facadePickets
+
 
   return {
     base,
@@ -153,7 +167,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     lockRail: rect(activeFill.x, activeFill.y + Math.floor((activeFill.height - 40) / 2), Math.max(0, activeFill.width - 1), 40),
     fillArea: activeFill,
     facadePickets,
-    yardPickets: source.fillSide === 2 ? facadePickets : [],
+    yardPickets: source.fillSide === 2 ? yardPickets : [],
     rails: { lower, upper, vertical },
     upperNetArea,
     upperNetImage: upperVisible ? text(source.upperGrilleNetImage) : '',

@@ -11,6 +11,10 @@ export interface WicketSharedNavState {
   isThereLock: number | null
   providesLock: string
   availableSections: string[]
+  layingFacadeCode?: 'butt' | 'gap' | null
+  layingYardCode?: 'butt' | 'gap' | null
+  gapName?: number | null
+  gapYardMm?: number | null
   idFacade?: string | number | null
   idYard?: string | number | null
   lockSetId?: number | null

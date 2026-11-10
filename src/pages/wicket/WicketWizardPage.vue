@@ -228,6 +228,10 @@ const sectionState = computed(() => ({
   isThereLock: calc.isThereLock.value,
   providesLock: calc.providesLock.value,
   availableSections: calc.availableSections.value,
+  layingFacadeCode: calc.layingFacadeCode.value,
+  layingYardCode: calc.layingYardCode.value,
+  gapName: calc.gapName.value,
+  gapYardMm: calc.gapYardMm.value,
   idFacade: calc.idFacade.value,
   idYard: calc.idYard.value,
   lockSetId: calc.lockSetId.value,
@@ -262,7 +266,11 @@ function getNavState(): WicketSharedNavState {
     isThereLock: calc.isThereLock.value,
     providesLock: calc.providesLock.value,
     availableSections: calc.availableSections.value,
-    idFacade: calc.idFacade.value,
+    layingFacadeCode: calc.layingFacadeCode.value,
+  layingYardCode: calc.layingYardCode.value,
+  gapName: calc.gapName.value,
+  gapYardMm: calc.gapYardMm.value,
+  idFacade: calc.idFacade.value,
     idYard: calc.idYard.value,
     lockSetId: calc.lockSetId.value,
     widthProyema: calc.widthProyema.value,
@@ -310,7 +318,7 @@ async function runGuardedNavigation(navigate: () => void): Promise<boolean> {
 }
 
 async function onMenuSelect(item: WicketMenuItem): Promise<void> {
-  if (!isPageAccessible(item.page)) {
+  if (!isPageAccessible(item.page) || props.route.canNavigate?.(activePage.value, item.page, sectionState.value) === false) {
     showWarningModal.value = true
     return
   }

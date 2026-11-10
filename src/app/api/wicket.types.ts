@@ -51,7 +51,13 @@ export interface OpeningOptionsResponse {
   problems: Array<{ id: number; message: string }>
 }
 
-export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, Omit<FillingOrientationProperties, 'fillingOrientationCode'>, FrameSubtypeProperties, GrilleSideProperties {
+  /** The form's invalid-selection sentinel is rejected by canonicalizeWicketRootSavePayload before sending. */
+  fillingOrientationCode?: FillingOrientation | '' | null
+  layingFacadeCode?: 'butt' | 'gap' | null
+  layingYardCode?: 'butt' | 'gap' | null
+  gapYardMm?: number | null
+  numberOfSticksYard?: number | null
   coverStrips?: CoverStripSelection[]
 
   paintId?: number | null

@@ -73,7 +73,7 @@ describe('Type 2 historical siding correction', () => {
     calc.coatingYardImage.value = '/old-yard-coating.webp'
     calc.reliefYardImage.value = '/old-yard-relief.webp'
 
-    const wrapper = mount(T2FillSide, {
+    mount(T2FillSide, {
       global: { stubs: { B24Button: true, Button: true } },
     })
     await flushPromises()
@@ -162,7 +162,7 @@ describe('Type 2 historical siding correction', () => {
     calc.colorYardId.value = 19
     calc.colorYard.value = 'RAL 8017'
 
-    const wrapper = mount(T2FillSide, {
+    mount(T2FillSide, {
       global: { stubs: { B24Button: true, Button: true } },
     })
     await flushPromises()

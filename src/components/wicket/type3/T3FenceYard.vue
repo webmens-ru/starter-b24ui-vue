@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
+import { reconcileFenceLaying } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -11,6 +12,19 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+let disposed = false
+const owner = calc.getCurrentProductRowContext()
+const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
+onBeforeUnmount(() => { disposed = true })
+const saving = ref(false)
+const saveError = ref('')
+const needsSave = ref(false)
+async function validateBeforeLeave(): Promise<boolean> {
+  if (saving.value) return false
+  if (needsSave.value) return persistSelection(selectedRow.value)
+  return !needsSave.value
+}
+defineExpose({ validateBeforeLeave })
 
 const showModal  = ref(false)
 const modalTitle = ref('Внимание')
@@ -85,6 +99,9 @@ function restoreFromCalc(): FenceRow | null {
 }
 
 async function save(row: FenceRow) {
+  await reconcileFenceLaying(calc, 'yard', row.widthFence)
+  if (!isCurrent()) throw new Error('Расчёт изменился')
+
   calc.idYard.value                = row.id
   calc.materialSupplierYard.value = row.company
   calc.materialYard.value          = row.material
@@ -105,6 +122,9 @@ async function save(row: FenceRow) {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
       idYard:                row.id,
+      layingYardCode: calc.layingYardCode.value,
+      gapYardMm: calc.gapYardMm.value,
+      numberOfSticksYard: calc.numberOfSticksYard.value,
       materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
       materialSupplierYard: row.company,
       materialYard:           row.material,
@@ -113,7 +133,7 @@ async function save(row: FenceRow) {
       colorYard:             row.color,
     })
   } catch (e) {
-    console.warn('saveWicketData недоступен:', e)
+    throw e
   }
 }
 
@@ -127,33 +147,62 @@ async function doRecalculate() {
       model:              calc.model.value,
       modelId:           calc.modelId.value,
     })
-    calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+    if (isCurrent()) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
   } catch (e) {
     console.error('Ошибка пересчёта:', e)
   }
 }
 
+async function persistSelection(row: FenceRow | null): Promise<boolean> {
+  if (saving.value) return false
+  saving.value = true
+  saveError.value = ''
+  try {
+    if (row) await save(row)
+    else await saveWicketData({
+      ...calc.getBaseSavePayload(), idYard: null, widthFenceYard: null,
+      materialSupplierYard: null, materialYard: null, typeOfCoatingYard: null, colorYard: null,
+      layingYardCode: null, gapYardMm: null, numberOfSticksYard: null,
+    })
+    needsSave.value = false
+    return true
+  } catch {
+    saveError.value = 'Не удалось сохранить материал. Нажмите «Далее», чтобы повторить.'
+    return false
+  } finally {
+    saving.value = false
+  }
+}
+
 async function selectRow(row: FenceRow) {
+  if (saving.value) return
+  needsSave.value = true
   selectedRow.value = row
-  await save(row)
-  await doRecalculate()
+  if (calc.layingYardCode.value === null && calc.gapName.value === null) calc.layingYardCode.value = 'gap'
+  if (await persistSelection(row)) await doRecalculate()
 }
 
 function deselectRow() {
+  if (saving.value) return
+  needsSave.value = true
   selectedRow.value = null
   calc.idYard.value = ''
+  calc.layingYardCode.value = null
+  calc.gapYardMm.value = null
+  calc.numberOfSticksYard.value = null
+  void persistSelection(null)
 }
 
 function isSelected(row: FenceRow) {
   return selectedRow.value?.id === row.id
 }
 
-function onContinue() {
+async function onContinue() {
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
     return
   }
-  emit('next')
+  if (await validateBeforeLeave()) emit('next')
 }
 
 onMounted(async () => {
@@ -177,9 +226,11 @@ onMounted(async () => {
 
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-3xl font-bold flex-1 text-center">Заполнение (двор)</span>
-      <B24Button label="Далее"  color="air-secondary" @click="onContinue" />
+      <span class="text-3xl font-bold flex-1 text-center">Двор — материал и цвет</span>
+      <B24Button label="Далее" :disabled="saving" color="air-secondary" @click="onContinue" />
     </div>
+
+    <p v-if="saveError" role="alert" class="text-red-700">{{ saveError }}</p>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
       <T3FilterDropdown

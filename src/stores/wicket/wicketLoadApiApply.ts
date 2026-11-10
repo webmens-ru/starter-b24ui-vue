@@ -48,6 +48,8 @@ export const WICKET_API_NUMERIC_KEYS = new Set([
   'assortmentSideGrilleNetId',
   'assortmentHeightUpperNetId',
   'assortmentHeightLowerNetId',
+  'gapYardMm',
+  'numberOfSticksYard',
   'gapId',
   'gapName',
   'numberOfSticks',

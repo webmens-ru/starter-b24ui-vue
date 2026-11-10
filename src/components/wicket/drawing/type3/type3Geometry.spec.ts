@@ -204,3 +204,13 @@ describe('buildType3Geometry', () => {
     expect(geometry.upperNetImage).toBe('')
   })
 })
+
+it('draws touching butt pickets while preserving independent yard spacing', () => {
+  const geometry = buildType3Geometry({ ...base, fillSide: 2, layingFacadeCode: 'butt', gapName: 0,
+    numberOfSticks: 8, thicknessFacade: 100, layingYardCode: 'gap', gapYardMm: 28,
+    numberOfSticksYard: 6, thicknessYard: 120 })
+  expect(geometry.facadePickets[1]!.x - geometry.facadePickets[0]!.x).toBe(100)
+  expect(geometry.yardPickets).toHaveLength(6)
+  expect(geometry.yardPickets[1]!.x - geometry.yardPickets[0]!.x).toBe(148)
+  expect(geometry.yardPickets[0]!.width).toBe(120)
+})

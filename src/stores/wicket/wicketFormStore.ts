@@ -270,6 +270,10 @@ const reliefYardAcrossMode = ref<'stretch' | 'repeat'>('repeat')
 const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
+const layingFacadeCode = ref<'butt' | 'gap' | null>(null)
+const layingYardCode = ref<'butt' | 'gap' | null>(null)
+const gapYardMm = ref<number | null>(null)
+const numberOfSticksYard = ref<number | null>(null)
 const gapId                    = ref<number | null>(null)
 const gapName                  = ref<number | null>(null)
 const numberOfSticks           = ref<number | null>(null)
@@ -370,12 +374,16 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
+    layingFacadeCode.value = null
     gapId.value = null
     gapName.value = null
     numberOfSticks.value = null
   }
 
   function resetYardFilling(): void {
+    layingYardCode.value = null
+    gapYardMm.value = null
+    numberOfSticksYard.value = null
     fillingProfileYard.value = null
     fillingProfileYardProblem.value = null
     profileTypeYardId.value = null
@@ -406,7 +414,7 @@ const fieldsFilled = ref<number>(0)
     materialYardGlob.value = null
     raspolozheniyePolotna.value = null
     materialSelectionProblems.value = []
-    data.value = data.value.filter(block => !['fillingFacade', 'fillingYard', 'fillingOrientation'].includes(block.blockCode ?? ''))
+    data.value = data.value.filter(block => !['fillingFacade', 'fillingYard', 'fillingOrientation', 'fenceLayingFacade', 'fenceLayingYard'].includes(block.blockCode ?? ''))
   }
 
   /** Сброс полей формы (сессия заказа/шагов — в `wicket-wizard`). */
@@ -917,6 +925,7 @@ const fieldsFilled = ref<number>(0)
       reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
+      layingFacadeCode, layingYardCode, gapYardMm, numberOfSticksYard,
       gapId,
       gapName,
       numberOfSticks,
@@ -1323,6 +1332,7 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
+    layingFacadeCode, layingYardCode, gapYardMm, numberOfSticksYard,
     gapId,
     gapName,
     numberOfSticks,

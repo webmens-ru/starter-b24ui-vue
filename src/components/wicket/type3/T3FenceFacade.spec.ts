@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { getFenceGapOptions, saveWicketData } from '../../../app/api/wicket'
+import { getFenceGapOptions, getFenceTable, saveWicketData } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import T3FenceFacade from './T3FenceFacade.vue'
 
@@ -39,33 +39,27 @@ function mountPage() {
   })
 }
 
-it('restores physical gap despite arbitrary labels and changed option IDs', async () => {
-  const calc = useCalculation()
-  calc.gapId.value = 1
-  calc.gapName.value = 28
-  calc.numberOfSticks.value = 99
+it('shows only material selection and leaves laying to its own step', async () => {
   const wrapper = mountPage()
   await flushPromises()
-
-  expect(calc.gapName.value).toBe(28)
-  expect(calc.gapId.value).toBe(17)
-  expect(calc.numberOfSticks.value).toBe(8)
-  expect(wrapper.get('[data-testid="type3-gap-select"]').element).toHaveProperty('value', '17')
-  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(wrapper.find('[data-testid="type3-gap-select"]').exists()).toBe(false)
+  expect(getFenceGapOptions).not.toHaveBeenCalled()
+  expect(useCalculation().idFacade.value).toBe(100)
   wrapper.unmount()
 })
 
-it('persists gapMm rather than interpreting the display label', async () => {
+it('keeps valid laying when changing only the material color', async () => {
+  const calc = useCalculation()
+  calc.idYard.value = ''
+  calc.gapName.value = 28
+  calc.layingFacadeCode.value = 'gap'
+  calc.numberOfSticks.value = 8
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 101, company: 'Поставщик', material: 'Новое имя', widthFence: '100', typeOfCoating: 'Покрытие', color: 'Новый цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   const wrapper = mountPage()
   await flushPromises()
-  const select = wrapper.get('[data-testid="type3-gap-select"]')
-  expect(select.text()).toContain('Зазор без числа — 7 шт.')
-  await select.setValue('9')
+  await wrapper.findAll('tbody input')[1]!.setValue(true)
   await flushPromises()
-
-  expect(useCalculation().gapName.value).toBe(50)
-  expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({
-    gapId: 9, gapName: 50, numberOfSticks: 7,
-  }))
-  wrapper.unmount()
+  expect(calc.gapName.value).toBe(28)
+  expect(calc.layingFacadeCode.value).toBe('gap')
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 28, layingFacadeCode: 'gap' }))
 })

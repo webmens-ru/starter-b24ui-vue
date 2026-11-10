@@ -355,7 +355,7 @@ describe('saveWicketData — данные передаются на бэк', () 
     await wrapper.find('input[name="providesLock"][value="customer"]').setValue()
     await new Promise(r => setTimeout(r, 100))
     expect(calc.lockSetId.value).toBeNull()
-    expect(vi.mocked(saveWicketData).mock.calls.at(-1)?.[0]).toMatchObject({
+    expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).toMatchObject({
       lockSetId: null, providesLock: 'customer', lockInstaller: 'manufacturer',
     })
     expect(saveWicketAccessoryComposition).not.toHaveBeenCalled()

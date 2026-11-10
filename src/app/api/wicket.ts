@@ -464,7 +464,7 @@ export async function getFenceTable(
 }
 
 export async function getFenceGapOptions(
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown> & { side?: 'facade' | 'yard' },
 ): Promise<import('./wicket.types').FenceGapOption[]> {
   const { data } = await api.post('/api/wicket/type3/get-gap', payload)
   const result = data.data ?? data

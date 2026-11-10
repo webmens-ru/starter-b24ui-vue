@@ -6,7 +6,7 @@ export function parseFenceGapOptions(value: unknown): FenceGapOption[] {
   const ids = new Set<number>()
   return value.map(row => {
     if (row === null || typeof row !== 'object' || Array.isArray(row)
-      || !isPositiveSafeInteger(row.id) || !isPositiveSafeInteger(row.gapMm)
+      || !isPositiveSafeInteger(row.id) || !(row.gapMm === 0 || isPositiveSafeInteger(row.gapMm))
       || !isPositiveSafeInteger(row.quantity) || typeof row.label !== 'string'
       || !row.label.trim() || ids.has(row.id)) {
       throw new Error('Некорректный вариант зазора')
