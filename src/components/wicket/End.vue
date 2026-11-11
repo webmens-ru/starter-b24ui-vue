@@ -113,6 +113,17 @@ async function persistWizardProgress(): Promise<void> {
 
 // ─── Расчёт цены ─────────────────────────────────────────────────────────────
 const sectionState = computed(() => ({
+  fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
+  layingFacadeCode: calc.layingFacadeCode.value,
+  layingYardCode: calc.layingYardCode.value,
+  gapName: calc.gapName.value,
+  gapYardMm: calc.gapYardMm.value,
+  yardTrimCode: calc.yardTrimCode.value,
+  thicknessFacade: calc.thicknessFacade.value,
+  thicknessYard: calc.thicknessYard.value,
+  raspolozheniyePolotna: calc.raspolozheniyePolotna.value,
+  shieldType: calc.shieldType.value,
+  grilleLocation: calc.grilleLocation.value,
   coverStripDrafts: calc.coverStripDrafts.value,
   modelId: String(calc.modelId.value ?? ''),
   materialFacadeGlob: calc.materialFacadeGlob.value,

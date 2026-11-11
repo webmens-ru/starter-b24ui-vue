@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCalculation } from '../../composables/useCalculation'
 import End from './End.vue'
+import { WICKET_ROUTE_KEY } from '../../pages/wicket/wicketRoute'
+import { type3Route } from '../../pages/wicket/type3Route'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -50,6 +52,28 @@ describe('End order composition navigation', () => {
     mocks.fetchSavedOrderPrice.mockResolvedValue({ hasSavedPrice: false, isActual: false })
     mocks.finalCalculate.mockResolvedValue({ priceRetail: '1000.00', priceDealer: '800.00' })
     mocks.deleteCalculation.mockResolvedValue(undefined)
+  })
+
+  it.each([false, true])('validates saved picket laying on final screen (dirty=%s)', async dirty => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'; calc.fillSide.value = 2
+    calc.materialFacadeGlob.value = calc.materialYardGlob.value = 'fence'
+    calc.idFacade.value = 1; calc.idYard.value = 2
+    calc.layingFacadeCode.value = calc.layingYardCode.value = 'gap'
+    calc.gapName.value = calc.gapYardMm.value = 46
+    calc.thicknessFacade.value = calc.thicknessYard.value = '100'
+    calc.yardTrimCode.value = 'edge'
+    calc.fillingNeedsRecalculation.value = dirty
+    const filling = type3Route.sections.find(section => section.menu.page === 'page2')!
+    const wrapper = mount(End, { global: {
+      provide: { [WICKET_ROUTE_KEY as symbol]: { ...type3Route, validations: (state: Parameters<typeof filling.validate>[0]) => new Map([['page2', filling.validate(state)]]) } },
+      stubs: { B24Button: ButtonStub, B24Modal: ModalStub, Transition: false },
+    } })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text().includes('Рассчитать'))!.trigger('click')
+    await flushPromises()
+    expect(mocks.finalCalculate).toHaveBeenCalledTimes(dirty ? 0 : 1)
+    wrapper.unmount()
   })
 
   it('shows the specific catalog problem returned by the final calculation', async () => {
