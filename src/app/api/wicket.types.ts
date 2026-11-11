@@ -430,7 +430,6 @@ export interface FenceFilters {
   materials:     string[]
   widthFence:    string[]
   typeOfCoating: string[]
-  colors:        string[]
 }
 
 export interface FenceRow {
@@ -446,12 +445,9 @@ export interface FenceRow {
   minTrimWidth?: number | null
   maxTrimWidth?: number | null
   typeOfCoating: string
-  color: string
   /** camelCase, как в API и в БД dir_filling_fence (цена за единицу) */
   price?: string | number
   weight?: string | number
-  deliveryTime?: string
-  inStock?: string
 }
 
 export interface FenceTableResponse {

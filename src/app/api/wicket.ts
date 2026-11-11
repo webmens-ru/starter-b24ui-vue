@@ -448,9 +448,9 @@ export async function getFenceTable(
   filters: import('./wicket.types').FenceFilters,
   page = 1,
 ): Promise<Required<import('./wicket.types').FenceTableResponse>> {
-  const { typeOfCoating, ...otherFilters } = filters
+  const { typeOfCoating, companies, materials, widthFence } = filters
   const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, {
-    ...otherFilters, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+    companies, materials, widthFence, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
   })
   const result: import('./wicket.types').FenceTableResponse = data.data ?? data
   const table = result.table ?? []

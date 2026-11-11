@@ -48,13 +48,13 @@ it('shows only material selection and leaves laying to its own step', async () =
   wrapper.unmount()
 })
 
-it('keeps valid laying when changing only the material color', async () => {
+it('keeps valid laying when changing the material with the same width', async () => {
   const calc = useCalculation()
   calc.idYard.value = ''
   calc.gapName.value = 28
   calc.layingFacadeCode.value = 'gap'
   calc.numberOfSticks.value = 8
-  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 101, company: 'Поставщик', material: 'Новое имя', widthFence: '100', typeOfCoating: 'Покрытие', color: 'Новый цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 101, company: 'Поставщик', material: 'Новое имя', widthFence: '100', typeOfCoating: 'Покрытие' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   const wrapper = mountPage()
   await flushPromises()
   await wrapper.findAll('tbody input')[1]!.setValue(true)
@@ -69,7 +69,7 @@ it('retries a facade width change without retaining a stale yard gap', async () 
   calc.thicknessYard.value = '120'
   calc.gapName.value = 28
   calc.layingFacadeCode.value = 'gap'
-  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 102, company: 'Поставщик', material: 'Другая ширина', widthFence: '120', typeOfCoating: 'Покрытие', color: 'Цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 102, company: 'Поставщик', material: 'Другая ширина', widthFence: '120', typeOfCoating: 'Покрытие' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 9, gapMm: 50, label: 'Другой', quantity: 7 }])
   vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
   const wrapper = mountPage()
@@ -86,7 +86,7 @@ it('retries a facade width change without retaining a stale yard gap', async () 
 it('uses profile metadata independently of captions and clears a previous overlay for legacy material', async () => {
   const calc = useCalculation()
   calc.idFacade.value = ''; calc.idYard.value = ''
-  const row = { id: 303, company: 'Переименовано', material: 'Произвольное название', widthFence: '100', typeOfCoating: 'Другое имя', color: 'Название без признаков', profileId: 12, profileWidth: 100, profileImage: '/profile.png', minTrimWidth: 35, maxTrimWidth: 65 }
+  const row = { id: 303, company: 'Переименовано', material: 'Произвольное название', widthFence: '100', typeOfCoating: 'Другое имя', profileId: 12, profileWidth: 100, profileImage: '/profile.png', minTrimWidth: 35, maxTrimWidth: 65 }
   vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [row, { ...row, id: 304, profileId: null, profileImage: null }], pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
   const wrapper = mountPage()
   await flushPromises()
@@ -97,5 +97,20 @@ it('uses profile metadata independently of captions and clears a previous overla
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   await flushPromises()
   expect(calc.reliefFacadeImage.value).toBe('')
+  wrapper.unmount()
+})
+
+it('selects a colorless catalog row and clears the previous color snapshot', async () => {
+  const calc = useCalculation()
+  calc.idYard.value = ''
+  calc.colorFacade.value = 'Сохранённый цвет'
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 901, company: 'Поставщик', material: 'Без цвета', widthFence: 100, typeOfCoating: '' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  const wrapper = mountPage()
+  await flushPromises()
+  await wrapper.findAll('tbody input')[1]!.setValue(true)
+  await flushPromises()
+  expect(calc.colorFacade.value).toBe('')
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 901, colorFacade: null }))
+  expect(wrapper.findAll('th').some(cell => cell.text() === 'Цвет')).toBe(false)
   wrapper.unmount()
 })

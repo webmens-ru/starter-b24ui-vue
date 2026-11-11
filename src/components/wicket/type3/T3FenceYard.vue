@@ -47,7 +47,6 @@ const filters = reactive({
   materials:     [] as string[],
   widthFence:    [] as string[],
   typeOfCoating: [] as string[],
-  colors:        [] as string[],
 })
 
 const rows         = ref<FenceRow[]>([])
@@ -99,7 +98,6 @@ function restoreFromCalc(): FenceRow | null {
     widthFence:    calc.thicknessYard.value,
     profileImage:  calc.reliefYardImage.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
-    color:         calc.colorYard.value,
   }
 }
 
@@ -113,7 +111,9 @@ async function save(row: FenceRow) {
   calc.formYard.value              = ''
   calc.thicknessYard.value         = String(row.widthFence)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.colorYard.value             = row.color
+  calc.colorYard.value             = ''
+  calc.colorYardHex.value          = ''
+  calc.colorYardImage.value        = ''
   calc.reliefYardImage.value       = row.profileImage ?? ''
 
   const yardSnapshot = await inheritedYardLaying(calc, inheritedMode.value, inheritedGap.value)
@@ -124,7 +124,6 @@ async function save(row: FenceRow) {
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'fenceWidth', name: 'Ширина штакетника',       value: String(row.widthFence) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
-    { paramCode: 'color', name: 'Цвет',                    value: row.color },
   ], 'Заполнение (двор)')
 
   try {
@@ -137,7 +136,7 @@ async function save(row: FenceRow) {
       materialYard:           row.material,
       widthFenceYard:         String(row.widthFence),
       typeOfCoatingYard:   row.typeOfCoating,
-      colorYard:             row.color,
+      colorYard:             null,
     })
     if (isCurrent()) applyYardSnapshot(calc, yardSnapshot)
   } catch (e) {
@@ -231,7 +230,7 @@ onMounted(async () => {
 
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад"  color="air-secondary" @click="emit('back')" />
-      <span class="text-3xl font-bold flex-1 text-center">Двор — материал и цвет</span>
+      <span class="text-3xl font-bold flex-1 text-center">Двор — материал</span>
       <B24Button label="Далее" :disabled="saving" color="air-secondary" @click="onContinue" />
     </div>
 
@@ -268,12 +267,6 @@ onMounted(async () => {
         data-key="typeOfCoating"
         v-model="filters.typeOfCoating"
       />
-      <T3FilterDropdown
-        label="Цвет"
-        :url="fenceFilterDataUrl"
-        data-key="color"
-        v-model="filters.colors"
-      />
     </div>
 
     <div class="overflow-x-auto">
@@ -285,13 +278,12 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Ширина штакетника</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Цвет</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Цена</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="7" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -305,7 +297,6 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.widthFence }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
           </tr>
 
@@ -326,12 +317,11 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.widthFence }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="7" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

@@ -13,7 +13,7 @@ beforeEach(() => {
   const calc = useCalculation(); calc.reset()
   calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'
   calc.thicknessFacade.value = '100'; calc.gapName.value = 28; calc.layingFacadeCode.value = 'gap'
-  vi.mocked(getFenceTable).mockReset().mockResolvedValue({ table: [{ id: 2, company: 'Любое имя', material: 'Переименовано', widthFence: '100', typeOfCoating: 'Покрытие', color: 'Цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  vi.mocked(getFenceTable).mockReset().mockResolvedValue({ table: [{ id: 2, company: 'Любое имя', material: 'Переименовано', widthFence: '100', typeOfCoating: 'Покрытие' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   vi.mocked(getFenceGapOptions).mockReset().mockResolvedValue([{ id: 3, gapMm: 28, label: 'Имя не используется', quantity: 7 }, { id: 4, gapMm: 0, label: 'Без числа', quantity: 6 }])
   vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never)
 })
@@ -28,7 +28,7 @@ it('filters the complete server-side catalog to the facade width and saves inher
 })
 it('allows another width in butt mode and calculates its own count', async () => {
   const calc = useCalculation(); calc.gapName.value = 0; calc.layingFacadeCode.value = 'butt'
-  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 2, company: 'Поставщик', material: 'Материал', widthFence: '120', typeOfCoating: 'Покрытие', color: 'Цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 2, company: 'Поставщик', material: 'Материал', widthFence: '120', typeOfCoating: 'Покрытие' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   const wrapper = page(); await flushPromises()
   expect(getFenceTable).toHaveBeenLastCalledWith('3', expect.objectContaining({ widthFence: [] }), 1)
   await wrapper.get('tbody input').setValue(true); await flushPromises()
@@ -60,7 +60,7 @@ it('deselects material while retaining inherited layout and clearing count', asy
 it('uses profile metadata independently of captions and clears a previous overlay for legacy material', async () => {
   const calc = useCalculation()
   calc.idFacade.value = ''; calc.idYard.value = ''
-  const row = { id: 303, company: 'Переименовано', material: 'Произвольное название', widthFence: '100', typeOfCoating: 'Другое имя', color: 'Название без признаков', profileId: 12, profileWidth: 100, profileImage: '/profile.png', minTrimWidth: 35, maxTrimWidth: 65 }
+  const row = { id: 303, company: 'Переименовано', material: 'Произвольное название', widthFence: '100', typeOfCoating: 'Другое имя', profileId: 12, profileWidth: 100, profileImage: '/profile.png', minTrimWidth: 35, maxTrimWidth: 65 }
   vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [row, { ...row, id: 304, profileId: null, profileImage: null }], pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
   const wrapper = page()
   await flushPromises()
