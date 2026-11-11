@@ -40,6 +40,7 @@ const { geometry, error: drawingError } = useDrawingGeometry(() => buildType3Geo
   gapName: calc.gapName.value,
   layingFacadeCode: calc.layingFacadeCode.value,
   layingYardCode: calc.layingYardCode.value,
+  yardTrimCode: calc.yardTrimCode.value,
   numberOfSticksYard: calc.numberOfSticksYard.value,
   gapYardMm: calc.gapYardMm.value,
   thicknessYard: calc.thicknessYard.value,

@@ -125,6 +125,7 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   typeLock: 'Тип_1',
   layingFacadeCode: null,
   layingYardCode: null,
+  yardTrimCode: null,
   lockSetId: null,
   lockPenColor: '',
   lockPenColorId: null,
@@ -164,6 +165,7 @@ export function applyWicketApiFieldMappings(
     const target = refMap[key]
     if (target) target.value = apiData[key] === 'stretch' || apiData[key] === 'repeat' ? apiData[key] : WICKET_API_FIELD_DEFAULTS[key]
   }
+  if (refMap.yardTrimCode) refMap.yardTrimCode.value = apiData.yardTrimCode === 'none' || apiData.yardTrimCode === 'edge' ? apiData.yardTrimCode : null
   function set(key: string, val: unknown) {
     if (val === undefined) return
     let v: unknown
@@ -223,6 +225,7 @@ export function applyWicketApiFieldMappings(
     refMap.paintSelection.value = selection ? { isFixedColor: Boolean(Number(selection.isFixedColor)), requiresColorNote: Boolean(Number(selection.requiresColorNote)), isPaintAvailable: Boolean(Number(selection.isPaintAvailable)) } : null
   }
   for (const [key, value] of Object.entries(apiData)) {
+    if (key === 'yardTrimCode') continue
     if (['paintId', 'paintColorId', 'colorShieldId', 'paintSelection', 'paintSelectionUnavailable'].includes(key)) continue
     if (key === 'isTherePen' || key === 'isTherePenName') continue
     if (key === 'grilleLocation' || key === 'grilleSideCode' || key === 'grilleSideProblem') continue

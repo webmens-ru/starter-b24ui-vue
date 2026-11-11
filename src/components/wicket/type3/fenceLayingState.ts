@@ -3,6 +3,7 @@ import { getFenceGapOptions } from '../../../app/api/wicket'
 
 type Calculation = ReturnType<typeof useCalculation>
 export interface FenceYardSnapshot {
+  yardTrimCode?: 'none' | 'edge' | null
   layingYardCode: 'butt' | 'gap' | null
   gapYardMm: number | null
   numberOfSticksYard: number | null
@@ -20,16 +21,17 @@ export async function inheritedYardLaying(
   facadeWidth: string | number = calc.thicknessFacade.value,
   yardWidth: string | number = calc.thicknessYard.value,
 ): Promise<FenceYardSnapshot> {
-  const result: FenceYardSnapshot = { layingYardCode: mode, gapYardMm: gap, numberOfSticksYard: null }
+  const yardTrimCode = mode === 'gap' && gap !== null && gap > 0 && gap === calc.gapName.value && Number(facadeWidth) === Number(calc.thicknessFacade.value) && Number(yardWidth) === Number(calc.thicknessYard.value) ? calc.yardTrimCode.value : null
+  const result: FenceYardSnapshot = { yardTrimCode, layingYardCode: mode, gapYardMm: gap, numberOfSticksYard: null }
   if (!calc.idYard.value) return result
   if (mode === 'gap' && Number(facadeWidth) !== Number(yardWidth)) {
-    return { ...result, idYard: null, widthFenceYard: null, materialSupplierYard: null,
+    return { ...result, yardTrimCode: null, idYard: null, widthFenceYard: null, materialSupplierYard: null,
       materialYard: null, typeOfCoatingYard: null, colorYard: null }
   }
   if (gap === null) return result
   const owner = calc.getCurrentProductRowContext()
   const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true,
-    layingFacadeCode: mode, gapName: gap, layingYardCode: mode, gapYardMm: gap,
+    yardTrimCode, layingFacadeCode: mode, gapName: gap, layingYardCode: mode, gapYardMm: gap,
     widthFenceFacade: facadeWidth, widthFenceYard: yardWidth })
   if (calc.orderId.value !== owner.orderId || calc.productRowId.value !== owner.productRowId || String(calc.modelId.value) !== String(owner.modelId)) throw new Error('Расчёт изменился')
   const selected = options.find(option => option.gapMm === gap)
@@ -38,9 +40,12 @@ export async function inheritedYardLaying(
 }
 
 export function applyYardSnapshot(calc: Calculation, snapshot: FenceYardSnapshot): void {
+  if (snapshot.yardTrimCode !== undefined) calc.yardTrimCode.value = snapshot.yardTrimCode
+  if (snapshot.idYard === null || snapshot.gapYardMm === null || snapshot.gapYardMm === 0) calc.yardTrimCode.value = null
   calc.layingYardCode.value = snapshot.layingYardCode
   calc.gapYardMm.value = snapshot.gapYardMm
   calc.numberOfSticksYard.value = snapshot.numberOfSticksYard
+  if (calc.yardTrimCode.value === null) calc.data.value = calc.data.value.filter(block => block.blockCode !== 'yardFenceTrim')
   if (snapshot.idYard === null) {
     calc.idYard.value = ''
     calc.thicknessYard.value = ''
@@ -63,6 +68,7 @@ export function applyYardSnapshot(calc: Calculation, snapshot: FenceYardSnapshot
 export async function reconcileFacadeLaying(calc: Calculation, width: string | number): Promise<void> {
   const gap = calc.gapName.value
   if (gap === null || Number(calc.thicknessFacade.value) === Number(width)) return
+  calc.yardTrimCode.value = null
   const owner = calc.getCurrentProductRowContext()
   const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'facade', includeButt: true,
     widthFenceFacade: width, widthFenceYard: calc.thicknessYard.value })

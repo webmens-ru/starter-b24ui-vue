@@ -369,3 +369,27 @@ it.each([0, 1] as const)('does not draw a phantom opposite layer for fillSide=%s
   expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(0)
   wrapper.unmount()
 })
+
+it('shows the two trimmed edge pieces in the rear layer and in the yard view', async () => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1114'; store.heightProyema = '2000'; store.clearanceProyema = '50'; store.fillSide = 2
+  store.raspolozheniyePolotna = 'vertical'
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28
+  store.thicknessFacade = store.thicknessYard = '100'; store.numberOfSticks = 8; store.numberOfSticksYard = 9
+  store.yardTrimCode = 'edge'
+  const wrapper = mount(Type3Drawing)
+  const rear = wrapper.findAll('[data-testid="type3-opposite-picket"]')
+  expect(rear).toHaveLength(9)
+  expect(Number(rear[0]!.attributes('width'))).toBe(38)
+  expect(Number(rear[8]!.attributes('width'))).toBe(38)
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(8)
+  await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(9)
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(8)
+  store.yardTrimCode = 'none'
+  await wrapper.vm.$nextTick()
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(7)
+  wrapper.unmount()
+})

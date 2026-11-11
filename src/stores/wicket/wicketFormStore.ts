@@ -273,6 +273,7 @@ const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
 const layingFacadeCode = ref<'butt' | 'gap' | null>(null)
 const layingYardCode = ref<'butt' | 'gap' | null>(null)
+const yardTrimCode = ref<'none' | 'edge' | null>(null)
 const gapYardMm = ref<number | null>(null)
 const numberOfSticksYard = ref<number | null>(null)
 const gapId                    = ref<number | null>(null)
@@ -382,6 +383,8 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    yardTrimCode.value = null
+    data.value = data.value.filter(block => block.blockCode !== 'yardFenceTrim')
     layingYardCode.value = null
     gapYardMm.value = null
     numberOfSticksYard.value = null
@@ -926,7 +929,7 @@ const fieldsFilled = ref<number>(0)
       reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
-      layingFacadeCode, layingYardCode, gapYardMm, numberOfSticksYard,
+      layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
       gapId,
       gapName,
       numberOfSticks,
@@ -1100,6 +1103,10 @@ const fieldsFilled = ref<number>(0)
               { paramCode: 'color', name: 'Цвет', value: colorYard.value },
             ],
       })
+    }
+
+    if (String(useWicketWizardStore().modelId) === '3' && fillSide.value === 2 && Number(gapName.value) > 0 && yardTrimCode.value !== null) {
+      blocks.push({ blockCode: 'yardFenceTrim', blockName: 'Подрезка планок (двор)', params: [{ paramCode: 'yardTrimCode', name: 'Подрезка планок', value: yardTrimCode.value === 'edge' ? 'С подрезкой' : 'Без подрезки' }] })
     }
 
     // Столбы / вариант открытия / перемычка
@@ -1333,7 +1340,7 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
-    layingFacadeCode, layingYardCode, gapYardMm, numberOfSticksYard,
+    layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
     gapId,
     gapName,
     numberOfSticks,

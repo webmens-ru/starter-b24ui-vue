@@ -21,6 +21,7 @@ export interface Type3DrawingSource extends DrawingPipeSource {
   widthSidePart?: unknown
   layingFacadeCode?: unknown
   layingYardCode?: unknown
+  yardTrimCode?: unknown
   numberOfSticksYard?: unknown
   gapYardMm?: unknown
   thicknessYard?: unknown
@@ -56,6 +57,8 @@ export interface Type3Geometry {
   fillArea: Type3Rect
   facadePickets: Type3Rect[]
   yardPickets: Type3Rect[]
+  yardEdgeTrimWidth: number | null
+  yardTrimAvailable: boolean
   rails: { lower: VisibleRect; upper: VisibleRect; vertical: VisibleRect }
   upperNetArea: VisibleRect
   upperNetImage: string
@@ -152,13 +155,30 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     && (source.layingYardCode == null || source.layingYardCode === 'gap')
   // Midpoints of adjacent facade starts put each yard center exactly in a facade gap.
   // Derive the count from the facade so stale saved yard counts cannot add edge pickets.
-  const yardPickets = sharedPositiveGap
+  let yardPickets = sharedPositiveGap
     ? facadePickets.slice(0, -1).map((picket, index) => horizontal
       ? { ...picket, y: (picket.y + facadePickets[index + 1]!.y) / 2 }
       : { ...picket, x: (picket.x + facadePickets[index + 1]!.x) / 2 })
     : source.layingYardCode === 'butt' || source.layingYardCode === 'gap'
       ? pickets(Math.round(numberValue(source.numberOfSticksYard, 0, 0, 200)), yardWidth, yardGap, true)
       : facadePickets
+  const axis = horizontal ? 'y' : 'x'
+  const firstYard = yardPickets[0]
+  const yardEdgeTrimWidth = source.fillSide === 2 && sharedPositiveGap && firstYard
+    ? firstYard[axis] - activeFill[axis] - yardGap
+    : null
+  const yardTrimAvailable = yardEdgeTrimWidth !== null && yardEdgeTrimWidth > 0 && yardEdgeTrimWidth <= yardWidth
+  if (source.yardTrimCode === 'edge' && yardTrimAvailable) {
+    const edge = yardEdgeTrimWidth!
+    const first = horizontal
+      ? rect(activeFill.x, activeFill.y, activeFill.width, edge)
+      : rect(activeFill.x, activeFill.y, edge, activeFill.height)
+    const last = horizontal
+      ? rect(activeFill.x, activeFill.y + activeFill.height - edge, activeFill.width, edge)
+      : rect(activeFill.x + activeFill.width - edge, activeFill.y, edge, activeFill.height)
+    yardPickets = [first, ...yardPickets, last]
+  }
+
 
 
   return {
@@ -183,6 +203,8 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     fillArea: activeFill,
     facadePickets,
     yardPickets: source.fillSide === 2 ? yardPickets : [],
+    yardEdgeTrimWidth,
+    yardTrimAvailable,
     rails: { lower, upper, vertical },
     upperNetArea,
     upperNetImage: upperVisible ? text(source.upperGrilleNetImage) : '',

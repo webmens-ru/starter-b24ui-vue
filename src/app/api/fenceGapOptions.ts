@@ -12,6 +12,6 @@ export function parseFenceGapOptions(value: unknown): FenceGapOption[] {
       throw new Error('Некорректный вариант зазора')
     }
     ids.add(row.id)
-    return { id: row.id, gapMm: row.gapMm, label: row.label, quantity: row.quantity }
+    return { ...(typeof row.yardEdgeTrimAvailable === 'boolean' ? { yardEdgeTrimAvailable: row.yardEdgeTrimAvailable, yardEdgeTrimWidthMm: typeof row.yardEdgeTrimWidthMm === 'number' ? row.yardEdgeTrimWidthMm : null } : {}), id: row.id, gapMm: row.gapMm, label: row.label, quantity: row.quantity }
   })
 }

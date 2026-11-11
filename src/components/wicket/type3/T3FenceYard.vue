@@ -168,7 +168,7 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
     else await saveWicketData({
       ...calc.getBaseSavePayload(), applySharedFenceLaying: true, idYard: null, widthFenceYard: null,
       materialSupplierYard: null, materialYard: null, typeOfCoatingYard: null, colorYard: null,
-      layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null,
+      yardTrimCode: null, layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null,
     })
     needsSave.value = false
     return true

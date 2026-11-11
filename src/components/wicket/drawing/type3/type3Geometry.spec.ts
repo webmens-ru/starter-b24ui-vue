@@ -252,3 +252,41 @@ it('restores an old shared positive gap by its physical value before shifting th
   expect(geometry.yardPickets).toHaveLength(4)
   expect(geometry.yardPickets[0]!.x - geometry.facadePickets[0]!.x).toBe(64)
 })
+
+it.each(['vertical', 'horizontal'] as const)('adds two trimmed %s edge pieces without moving the shifted interior', direction => {
+  const source = { ...base, widthProyema: 1114, heightProyema: 2000, clearanceProyema: 50,
+    hasStolby: 0, postProfile: null, raspolozheniyePolotna: direction, fillSide: 2,
+    layingFacadeCode: 'gap', layingYardCode: 'gap', gapName: direction === 'vertical' ? 28 : 25,
+    gapYardMm: direction === 'vertical' ? 28 : 25, numberOfSticks: direction === 'vertical' ? 8 : 15,
+    thicknessFacade: 100, thicknessYard: 100 }
+  const plain = buildType3Geometry({ ...source, yardTrimCode: 'none' })
+  const trimmed = buildType3Geometry({ ...source, yardTrimCode: 'edge' })
+  const axis = direction === 'vertical' ? 'x' : 'y'
+  const size = direction === 'vertical' ? 'width' : 'height'
+  expect(trimmed.yardTrimAvailable).toBe(true)
+  expect(trimmed.yardPickets).toHaveLength(source.numberOfSticks + 1)
+  expect(trimmed.yardPickets.slice(1, -1)).toEqual(plain.yardPickets)
+  const first = trimmed.yardPickets[0]!
+  const last = trimmed.yardPickets[trimmed.yardPickets.length - 1]!
+  expect(first[axis]).toBe(trimmed.fillArea[axis])
+  expect(last[axis] + last[size]).toBeCloseTo(trimmed.fillArea[axis] + trimmed.fillArea[size])
+  expect(first[size]).toBeCloseTo(last[size])
+  expect(first[size]).toBeCloseTo(trimmed.yardEdgeTrimWidth!)
+  expect(trimmed.yardPickets[1]![axis] - first[axis] - first[size]).toBeCloseTo(source.gapName)
+  expect(last[axis] - plain.yardPickets[plain.yardPickets.length - 1]![axis] - 100).toBeCloseTo(source.gapName)
+})
+
+it('does not fabricate an edge when the facade gap is wider than the picket', () => {
+  const geometry = buildType3Geometry({ ...base, widthProyema: 1114, heightProyema: 2000,
+    hasStolby: 0, postProfile: null, clearanceProyema: 50, fillSide: 2,
+    layingFacadeCode: 'gap', layingYardCode: 'gap', gapName: 85, gapYardMm: 85,
+    numberOfSticks: 8, thicknessFacade: 50, thicknessYard: 50, yardTrimCode: 'edge' })
+  expect(geometry.yardTrimAvailable).toBe(false)
+  expect(geometry.yardPickets).toHaveLength(7)
+})
+
+it('keeps butt geometry unchanged even with stale edge trim selection', () => {
+  const source = { ...base, fillSide: 2, layingFacadeCode: 'butt', layingYardCode: 'butt',
+    gapName: 0, gapYardMm: 0, numberOfSticksYard: 8, thicknessYard: 100 }
+  expect(buildType3Geometry({ ...source, yardTrimCode: 'edge' }).yardPickets).toEqual(buildType3Geometry(source).yardPickets)
+})

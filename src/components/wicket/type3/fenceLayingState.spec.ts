@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.mocked(getFenceGapOptions).mockReset().mockResolvedValue([{ id: 1, gapMm: 0, label: 'Переименовано', quantity: 6 }, { id: 2, gapMm: 28, label: 'Другая подпись', quantity: 7 }])
 })
 it('inherits butt while retaining a yard material of different width', async () => {
-  expect(await inheritedYardLaying(useCalculation(), 'butt', 0)).toEqual({ layingYardCode: 'butt', gapYardMm: 0, numberOfSticksYard: 6 })
+  expect(await inheritedYardLaying(useCalculation(), 'butt', 0)).toEqual({ yardTrimCode: null, layingYardCode: 'butt', gapYardMm: 0, numberOfSticksYard: 6 })
 })
 it('clears an incompatible yard material when facade uses a positive gap', async () => {
   expect(await inheritedYardLaying(useCalculation(), 'gap', 28)).toMatchObject({ idYard: null, widthFenceYard: null, layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: null })
@@ -20,9 +20,15 @@ it('clears an incompatible yard material when facade uses a positive gap', async
 })
 it('uses the server shifted yard count while retaining the exact facade gap', async () => {
   const calc = useCalculation(); calc.thicknessYard.value = '100.0'
-  expect(await inheritedYardLaying(calc, 'gap', 28)).toEqual({ layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 7 })
+  expect(await inheritedYardLaying(calc, 'gap', 28)).toEqual({ yardTrimCode: null, layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 7 })
 })
 it('does not silently substitute a different yard gap', async () => {
   const calc = useCalculation(); calc.thicknessYard.value = '100'
   await expect(inheritedYardLaying(calc, 'gap', 17)).rejects.toThrow()
+})
+it('clears trim in the server preview when facade geometry changes and retains it for equal dimensions', async () => {
+  const calc = useCalculation(); calc.thicknessYard.value = '100'; calc.gapName.value = 28; calc.yardTrimCode.value = 'edge'
+  expect(await inheritedYardLaying(calc, 'gap', 28)).toMatchObject({ yardTrimCode: 'edge' })
+  await inheritedYardLaying(calc, 'gap', 17).catch(() => {})
+  expect(getFenceGapOptions).toHaveBeenLastCalledWith(expect.objectContaining({ yardTrimCode: null }))
 })

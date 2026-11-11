@@ -56,6 +56,7 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   /** The form's invalid-selection sentinel is rejected by canonicalizeWicketRootSavePayload before sending. */
   fillingOrientationCode?: FillingOrientation | '' | null
   layingFacadeCode?: 'butt' | 'gap' | null
+  yardTrimCode?: 'none' | 'edge' | null
   layingYardCode?: 'butt' | 'gap' | null
   gapYardMm?: number | null
   numberOfSticksYard?: number | null
@@ -451,6 +452,8 @@ export interface FenceTableResponse {
 }
 
 export interface FenceGapOption {
+  yardEdgeTrimAvailable?: boolean
+  yardEdgeTrimWidthMm?: number | null
   id: number
   gapMm: number
   label: string

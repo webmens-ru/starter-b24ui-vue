@@ -7,25 +7,29 @@ import {
   standardTailSections,
 } from './wicketRouteSections'
 
+const needsTrim = (state: WicketSharedNavState): boolean => state.fillSide === 2 && Number(state.gapName) > 0
+
 const baseRoute = defineWicketRoute([
   openingSection(),
   postsSection(),
   canvasSection(),
   fillingSection(
-    ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence'],
+    ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_trim'],
     (from, state) => {
       if (from === 'page2') return 'page2_facade_fence'
       if (from === 'page2_facade_fence') return 'page2_facade_fence_laying'
       if (from === 'page2_facade_fence_laying' && state.fillSide === 2) return 'page2_yard_fence'
+      if (from === 'page2_yard_fence' && needsTrim(state)) return 'page2_yard_fence_trim'
       return undefined
     },
     from => {
       if (from === 'page2_facade_fence') return 'page2'
       if (from === 'page2_facade_fence_laying') return 'page2_facade_fence'
+      if (from === 'page2_yard_fence_trim') return 'page2_yard_fence'
       if (from === 'page2_yard_fence') return 'page2_facade_fence_laying'
       return undefined
     },
-    state => state.fillSide === 2 ? 'page2_yard_fence' : 'page2_facade_fence_laying',
+    state => needsTrim(state) ? 'page2_yard_fence_trim' : state.fillSide === 2 ? 'page2_yard_fence' : 'page2_facade_fence_laying',
   ),
   ...standardTailSections(),
 ])
@@ -42,6 +46,7 @@ filling.validate = state => {
   if (state.fillSide === 2 && (!validGap(state.layingYardCode, yardGap) || yardGap !== state.gapName
     || (state.layingYardCode != null && state.layingFacadeCode != null && state.layingYardCode !== state.layingFacadeCode)
     || (state.gapName! > 0 && Number(state.thicknessFacade) !== Number(state.thicknessYard)))) return { valid: false, errors: ['Материал и укладка двора должны соответствовать фасаду'] }
+  if (needsTrim(state) && state.yardTrimCode !== 'none' && state.yardTrimCode !== 'edge') return { valid: false, errors: ['Не выбрана подрезка планок двора'] }
   return materials
 }
 export const type3Route: WicketRouteDefinition = {

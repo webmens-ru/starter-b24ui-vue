@@ -156,7 +156,7 @@ it('marks missing laying incomplete and blocks sidebar jumps past filling', () =
 })
 
 it('rejects independently saved yard gap or physical width in gap mode', () => {
-  const shared = state({ idFacade: 100, idYard: 101, fillSide: 2, layingFacadeCode: 'gap', gapName: 28, layingYardCode: 'gap', gapYardMm: 28, thicknessFacade: '100', thicknessYard: '100.0' })
+  const shared = state({ yardTrimCode: 'none', idFacade: 100, idYard: 101, fillSide: 2, layingFacadeCode: 'gap', gapName: 28, layingYardCode: 'gap', gapYardMm: 28, thicknessFacade: '100', thicknessYard: '100.0' })
   expect(type3Route.validations(shared).get('page2')?.valid).toBe(true)
   expect(type3Route.validations({ ...shared, gapYardMm: 17 }).get('page2')?.valid).toBe(false)
   expect(type3Route.validations({ ...shared, thicknessYard: '120' }).get('page2')?.valid).toBe(false)
