@@ -1,6 +1,7 @@
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute, type WicketRouteDefinition } from './wicketRoute'
 import {
+  shieldSection,
   canvasSection,
   fillingSection,
   openingSection, postsSection,
@@ -12,6 +13,7 @@ const needsTrim = (state: WicketSharedNavState): boolean => state.fillSide === 2
 const baseRoute = defineWicketRoute([
   openingSection(),
   postsSection(),
+  shieldSection(),
   canvasSection(),
   fillingSection(
     ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_trim'],

@@ -547,7 +547,8 @@ describe('useCalculation', () => {
       expect(calc.isPageAccessible('page2')).toBe(true)
       expect(calc.isPageAccessible('page5')).toBe(true)
       expect(calc.isPageAccessible('page6')).toBe(true)
-      expect(calc.isPageAccessible('page3')).toBe(false)
+      expect(calc.isPageAccessible('page3')).toBe(true)
+      expect(calc.isPageAccessible('page_painting')).toBe(false)
       expect(calc.isPageAccessible('page12')).toBe(false)
     })
 

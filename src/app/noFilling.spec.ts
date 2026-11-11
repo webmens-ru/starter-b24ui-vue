@@ -17,15 +17,15 @@ describe('explicit no filling', () => {
   it.each(routes)('skips material and orientation in both directions', module => {
     const route = Object.values(module).find(value => value && typeof value === 'object' && 'sections' in value)
     const state = { fillSide: 0, modelId: '1', materialFacadeGlob: null, materialYardGlob: null, availableSections: [], isThereLock: 0 }
-    expect(route.next('page2', state)).toBe('page3')
-    expect(route.prev('page3', state)).toBe('page2')
+    expect(route.next('page2', state)).toBe('page_painting')
+    expect(route.prev('page_painting', state)).toBe('page2')
     expect(route.menu(state).some((item: any) => item.page === 'page6')).toBe(false)
     expect(route.validations(state).get('page2')?.valid).toBe(true)
   })
   it('does not reopen a hidden saved orientation step', () => {
     setActivePinia(createPinia())
     useWicketFormStore().loadFromApi({ modelId: '1', fillingSideCount: 0, activePage: 'page6', visitedPages: ['page7', 'page5', 'page2', 'page6'] })
-    expect(useWicketWizardStore().activePage).toBe('page3')
+    expect(useWicketWizardStore().activePage).toBe('page2')
     expect(useWicketWizardStore().visitedPages).not.toContain('page6')
   })
   it('loads zero as complete and removes stale filling choices without changing paint', () => {

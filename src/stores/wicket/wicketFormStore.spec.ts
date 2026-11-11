@@ -290,9 +290,9 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.visitedPages).toEqual([
       'page7',
       'page5',
+      'page3',
       'page6',
       'page2',
-      'page3',
       'page_painting',
       'page9',
       'page10',
@@ -501,4 +501,14 @@ it('restores the retired yard laying step to yard material selection', () => {
   expect(wizard.activePage).toBe('page2_yard_fence')
   expect(wizard.visitedPages).toContain('page2_yard_fence')
   expect(wizard.visitedPages).not.toContain('page2_yard_fence_laying')
+})
+
+it('reconstructs legacy type2 progress with shield before orientation and filling', () => {
+  setActivePinia(createPinia())
+  useWicketFormStore().loadFromApi({ modelId: '2', widthProyema: 1000, heightProyema: 2000,
+    openingOptionId: 1, frameSubtypeCode: 'noNet', fillingOrientationCode: 'vertical',
+    fillingSideCount: 1, idFacade: 10 })
+  const pages = useWicketWizardStore().visitedPages
+  expect(pages.slice(0, 5)).toEqual(['page7', 'page5', 'page3', 'page6', 'page2'])
+  expect(pages).toContain('page2_facade_profnastil')
 })

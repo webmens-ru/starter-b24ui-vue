@@ -23,8 +23,8 @@ describe('type4Navigation', () => {
     })
 
     describe('page2_facade_lamel → yard или page3 (сторона заполнения)', () => {
-      it('Одна сторона → page3 (пропуск yard)', () => {
-        expect(getNextPage('page2_facade_lamel', state({ fillSide: 1 }))).toBe('page3')
+      it('Одна сторона → page_painting (пропуск yard)', () => {
+        expect(getNextPage('page2_facade_lamel', state({ fillSide: 1 }))).toBe('page_painting')
       })
       it('Две стороны → page2_yard_lamel', () => {
         expect(getNextPage('page2_facade_lamel', state({
@@ -34,9 +34,9 @@ describe('type4Navigation', () => {
       })
     })
 
-    describe('page2_yard_lamel → page3', () => {
-      it('yard_lamel → page3', () => {
-        expect(getNextPage('page2_yard_lamel', state())).toBe('page3')
+    describe('page2_yard_lamel → page_painting', () => {
+      it('yard_lamel → page_painting', () => {
+        expect(getNextPage('page2_yard_lamel', state())).toBe('page_painting')
       })
     })
 
@@ -56,8 +56,8 @@ describe('type4Navigation', () => {
       it('удалённый page1 отсутствует в маршруте', () => {
         expect(getNextPage('page1', state())).toBeNull()
       })
-      it('page5 → page6', () => {
-        expect(getNextPage('page5', state())).toBe('page6')
+      it('page5 → page3', () => {
+        expect(getNextPage('page5', state())).toBe('page3')
       })
       it('page_lock_type → page10', () => {
         expect(getNextPage('page_lock_type', state())).toBe('page10')
@@ -81,12 +81,12 @@ describe('type4Navigation', () => {
       })
     })
 
-    describe('page3 → facade или yard (по fillSide)', () => {
+    describe('page_painting → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_lamel', () => {
-        expect(getPrevPage('page3', state({ fillSide: 1 }))).toBe('page2_facade_lamel')
+        expect(getPrevPage('page_painting', state({ fillSide: 1 }))).toBe('page2_facade_lamel')
       })
       it('Две стороны → page2_yard_lamel', () => {
-        expect(getPrevPage('page3', state({
+        expect(getPrevPage('page_painting', state({
           fillSide: 2,
           materialYardGlob: 'lamella',
         }))).toBe('page2_yard_lamel')

@@ -19,8 +19,8 @@ describe('type8Navigation', () => {
     it('page2 → page2_facade_sheet', () => {
       expect(getNextPage('page2', state())).toBe('page2_facade_sheet')
     })
-    it('page2_facade_sheet → page3 (всегда одна сторона)', () => {
-      expect(getNextPage('page2_facade_sheet', state())).toBe('page3')
+    it('page2_facade_sheet → page_painting (всегда одна сторона)', () => {
+      expect(getNextPage('page2_facade_sheet', state())).toBe('page_painting')
     })
     it('Замок есть + изготовитель → page_lock_type', () => {
       expect(getNextPage('page9', state({ isThereLock: 1, providesLock: 'manufacturer' }))).toBe('page_lock_type')
@@ -34,8 +34,8 @@ describe('type8Navigation', () => {
     it('удалённый page1 отсутствует в маршруте', () => {
       expect(getNextPage('page1', state())).toBeNull()
     })
-    it('page5 → page6', () => {
-      expect(getNextPage('page5', state())).toBe('page6')
+    it('page5 → page3', () => {
+      expect(getNextPage('page5', state())).toBe('page3')
     })
     it('page_lock_type → page10', () => {
       expect(getNextPage('page_lock_type', state())).toBe('page10')
@@ -49,8 +49,8 @@ describe('type8Navigation', () => {
     it('page2_facade_sheet → page2', () => {
       expect(getPrevPage('page2_facade_sheet', state())).toBe('page2')
     })
-    it('page3 → page2_facade_sheet', () => {
-      expect(getPrevPage('page3', state())).toBe('page2_facade_sheet')
+    it('page_painting → page2_facade_sheet', () => {
+      expect(getPrevPage('page_painting', state())).toBe('page2_facade_sheet')
     })
     it('page_lock_type → page9', () => {
       expect(getPrevPage('page_lock_type', state())).toBe('page9')

@@ -1,10 +1,11 @@
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute } from './wicketRoute'
-import { canvasSection, fixedFillingSection, openingSection, postsSection, standardTailSections } from './wicketRouteSections'
+import { shieldSection, canvasSection, fixedFillingSection, openingSection, postsSection, standardTailSections } from './wicketRouteSections'
 
 export const type6Route = defineWicketRoute([
   openingSection(),
   postsSection(),
+  shieldSection(),
   canvasSection(),
   fixedFillingSection('page2_facade_zhalyuzi'),
   ...standardTailSections(),

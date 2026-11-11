@@ -709,10 +709,10 @@ const fieldsFilled = ref<number>(0)
       ? [
           'page7',
           'page5',
+          'page3',
+          'page6',
           'page2',
           'page2_facade_profnastil',
-          'page6',
-          'page3',
           'page_painting',
           'page9',
           'page_lock_type',
@@ -720,7 +720,7 @@ const fieldsFilled = ref<number>(0)
           'page_cover_strip',
           'page12',
         ]
-      : ['page7', 'page5', 'page6', 'page2', 'page3', 'page_painting', 'page9', 'page10', 'page_cover_strip', 'page12']
+      : ['page7', 'page5', 'page3', 'page6', 'page2', 'page_painting', 'page9', 'page10', 'page_cover_strip', 'page12']
     const visited: string[] = []
     let active = 'page7'
 
@@ -1029,7 +1029,8 @@ const fieldsFilled = ref<number>(0)
       active = computedProgress.activePage
     }
 
-    if (fillSide.value === 0 && (active === 'page6' || active.startsWith('page2_'))) active = 'page3'
+    if (fillSide.value === 0 && active === 'page6') active = 'page2'
+    if (fillSide.value === 0 && active.startsWith('page2_')) active = 'page_painting'
     const shouldStartFromFirstPage = modelIdForLoad === '2' && !replacementPage
     w.activePage.value = shouldStartFromFirstPage ? 'page7' : active
     w.visitedPages.value =

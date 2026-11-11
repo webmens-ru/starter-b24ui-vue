@@ -21,7 +21,7 @@ describe('wicketStepProgress', () => {
   })
 
   it('visitedPagesUpTo не открывает шаги дальше active', () => {
-    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page7', 'page5', 'page6', 'page2'])
+    expect(visitedPagesUpTo('page2', ['page1'])).toEqual(['page7', 'page5', 'page3', 'page6', 'page2'])
     const calculatedPages = visitedPagesUpTo('page12', ['page1', 'page10'])
     expect(calculatedPages).toContain('page12')
     expect(calculatedPages).not.toContain('page11')

@@ -15,11 +15,11 @@ it('persists, restores and resets the explicit trim choice', () => {
 it('requires the trim step only for two sides with a positive gap', () => {
   const state = { materialFacadeGlob: 'fence', materialYardGlob: 'fence', isThereLock: 0, providesLock: 'manufacturer', availableSections: [], modelId: '3', fillSide: 2, gapName: 28, idFacade: 10, idYard: 20, layingFacadeCode: 'gap' as const, gapYardMm: 28, thicknessFacade: '100', thicknessYard: '100' }
   expect(getNextPage('page2_yard_fence', state)).toBe('page2_yard_fence_trim')
-  expect(getPrevPage('page3', state)).toBe('page2_yard_fence_trim')
+  expect(getPrevPage('page_painting', state)).toBe('page2_yard_fence_trim')
   expect(getPrevPage('page2_yard_fence_trim', state)).toBe('page2_yard_fence')
   expect(type3Route.validations(state).get('page2')?.valid).toBe(false)
   expect(type3Route.validations({ ...state, yardTrimCode: 'none' }).get('page2')?.valid).toBe(true)
-  expect(getNextPage('page2_yard_fence', { ...state, gapName: 0 })).toBe('page3')
+  expect(getNextPage('page2_yard_fence', { ...state, gapName: 0 })).toBe('page_painting')
 })
 it('restores trim in the summary with stable codes', () => {
   const calc = useCalculation()
