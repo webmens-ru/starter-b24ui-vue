@@ -300,3 +300,24 @@ describe('Type3Drawing', () => {
     expect(wrapper.get('[data-testid="type3-upper-net-image"]').attributes('width')).toBe('900')
   })
 })
+
+it.each(['vertical', 'horizontal'] as const)('renders the offset %s yard with fewer pickets when switching views', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction
+  store.layingFacadeCode = store.layingYardCode = 'gap'
+  store.gapName = store.gapYardMm = 28
+  store.thicknessFacade = store.thicknessYard = '100'
+  store.numberOfSticks = direction === 'vertical' ? 6 : 12
+  store.numberOfSticksYard = store.numberOfSticks // stale count from an earlier save
+  const wrapper = mount(Type3Drawing)
+  const axis = direction === 'vertical' ? 'x' : 'y'
+  const facade = wrapper.findAll('[data-testid="type3-picket"]').map(picket => Number(picket.attributes(axis)))
+  await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+  const yard = wrapper.findAll('[data-testid="type3-picket"]').map(picket => Number(picket.attributes(axis)))
+  expect(yard).toHaveLength(facade.length - 1)
+  yard.forEach((start, index) => expect(start).toBeCloseTo((facade[index]! + facade[index + 1]!) / 2))
+  wrapper.unmount()
+})

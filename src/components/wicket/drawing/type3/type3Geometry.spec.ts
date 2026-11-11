@@ -214,3 +214,41 @@ it('draws touching butt pickets while preserving independent yard spacing', () =
   expect(geometry.yardPickets[1]!.x - geometry.yardPickets[0]!.x).toBe(148)
   expect(geometry.yardPickets[0]!.width).toBe(120)
 })
+
+it.each(['vertical', 'horizontal'] as const)('centers %s yard pickets on facade gaps with one fewer and equal edge offsets', direction => {
+  const geometry = buildType3Geometry({ ...base, widthProyema: 1000, heightProyema: 2000,
+    raspolozheniyePolotna: direction, fillSide: 2, layingFacadeCode: 'gap', layingYardCode: 'gap',
+    gapName: 28, gapYardMm: 28, numberOfSticks: direction === 'vertical' ? 5 : 12,
+    numberOfSticksYard: 99, thicknessFacade: 100, thicknessYard: 100 })
+  const facade = geometry.facadePickets
+  const yard = geometry.yardPickets
+  const axis = direction === 'vertical' ? 'x' : 'y'
+  const size = direction === 'vertical' ? 'width' : 'height'
+  expect(yard).toHaveLength(facade.length - 1)
+  yard.forEach((picket, index) => {
+    const gapCenter = (facade[index]![axis] + facade[index]![size] + facade[index + 1]![axis]) / 2
+    expect(picket[axis] + picket[size] / 2).toBeCloseTo(gapCenter)
+    expect(picket[size]).toBe(100)
+  })
+  const before = yard[0]![axis] - geometry.fillArea[axis]
+  const after = geometry.fillArea[axis] + geometry.fillArea[size] - yard[yard.length - 1]![axis] - yard[yard.length - 1]![size]
+  expect(before).toBeCloseTo(after)
+  expect(before).toBeCloseTo(facade[0]![axis] - geometry.fillArea[axis] + 64)
+})
+
+it('supports one yard picket for a two-picket facade on a supported wicket', () => {
+  const geometry = buildType3Geometry({ ...base, widthProyema: 700, heightProyema: 1500, hasStolby: 0, postProfile: null, clearanceProyema: 50,
+    fillSide: 2, layingFacadeCode: 'gap', layingYardCode: 'gap', gapName: 50, gapYardMm: 50,
+    numberOfSticks: 2, numberOfSticksYard: 2, thicknessFacade: 250, thicknessYard: 250 })
+  expect(geometry.yardPickets).toHaveLength(1)
+  expect(geometry.yardPickets[0]!.x + 125).toBeCloseTo(geometry.fillArea.x + geometry.fillArea.width / 2)
+})
+
+it('restores an old shared positive gap by its physical value before shifting the yard', () => {
+  const geometry = buildType3Geometry({ ...base, widthProyema: 1000, heightProyema: 2000,
+    fillSide: 2, layingFacadeCode: null, layingYardCode: null, gapName: 28,
+    numberOfSticks: 5, thicknessFacade: 100, thicknessYard: 100 })
+  expect(geometry.facadePickets[1]!.x - geometry.facadePickets[0]!.x).toBe(128)
+  expect(geometry.yardPickets).toHaveLength(4)
+  expect(geometry.yardPickets[0]!.x - geometry.facadePickets[0]!.x).toBe(64)
+})

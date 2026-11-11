@@ -140,10 +140,25 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       ? rect(activeFill.x, activeFill.y + offset + index * (visibleWidth + actualGap), activeFill.width, visibleWidth)
       : rect(activeFill.x + offset + index * (visibleWidth + actualGap), activeFill.y, visibleWidth, activeFill.height))
   }
-  const facadePickets = pickets(count, picketWidth, numberValue(source.gapName, 0), source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap')
-  const yardPickets = source.layingYardCode === 'butt' || source.layingYardCode === 'gap'
-    ? pickets(Math.round(numberValue(source.numberOfSticksYard, 0, 0, 200)), numberValue(source.thicknessYard, 100, 10, 500), numberValue(source.gapYardMm, 0), true)
-    : facadePickets
+  const facadeGap = numberValue(source.gapName, 0)
+  const explicitFacadeGap = source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap'
+    || (source.layingFacadeCode == null && facadeGap > 0)
+  const facadePickets = pickets(count, picketWidth, facadeGap, explicitFacadeGap)
+  const yardWidth = numberValue(source.thicknessYard, picketWidth, 10, 500)
+  const yardGap = source.layingYardCode == null ? facadeGap : numberValue(source.gapYardMm, 0)
+  const sharedPositiveGap = facadeGap > 0
+    && (source.layingFacadeCode == null || source.layingFacadeCode === 'gap')
+    && yardGap === facadeGap && yardWidth === picketWidth
+    && (source.layingYardCode == null || source.layingYardCode === 'gap')
+  // Midpoints of adjacent facade starts put each yard center exactly in a facade gap.
+  // Derive the count from the facade so stale saved yard counts cannot add edge pickets.
+  const yardPickets = sharedPositiveGap
+    ? facadePickets.slice(0, -1).map((picket, index) => horizontal
+      ? { ...picket, y: (picket.y + facadePickets[index + 1]!.y) / 2 }
+      : { ...picket, x: (picket.x + facadePickets[index + 1]!.x) / 2 })
+    : source.layingYardCode === 'butt' || source.layingYardCode === 'gap'
+      ? pickets(Math.round(numberValue(source.numberOfSticksYard, 0, 0, 200)), yardWidth, yardGap, true)
+      : facadePickets
 
 
   return {

@@ -14,7 +14,7 @@ beforeEach(() => {
   calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'
   calc.thicknessFacade.value = '100'; calc.gapName.value = 28; calc.layingFacadeCode.value = 'gap'
   vi.mocked(getFenceTable).mockReset().mockResolvedValue({ table: [{ id: 2, company: 'Любое имя', material: 'Переименовано', widthFence: '100', typeOfCoating: 'Покрытие', color: 'Цвет' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
-  vi.mocked(getFenceGapOptions).mockReset().mockResolvedValue([{ id: 3, gapMm: 28, label: 'Имя не используется', quantity: 8 }, { id: 4, gapMm: 0, label: 'Без числа', quantity: 6 }])
+  vi.mocked(getFenceGapOptions).mockReset().mockResolvedValue([{ id: 3, gapMm: 28, label: 'Имя не используется', quantity: 7 }, { id: 4, gapMm: 0, label: 'Без числа', quantity: 6 }])
   vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never)
 })
 function page() { return mount(T3FenceYard, { global: { stubs: { B24Button: true, B24Modal: true, T3FilterDropdown: { props: ['label'], template: '<span>{{ label }}</span>' } } } }) }
@@ -23,7 +23,7 @@ it('filters the complete server-side catalog to the facade width and saves inher
   expect(getFenceTable).toHaveBeenLastCalledWith('3', expect.objectContaining({ widthFence: ['100'] }), 1)
   expect(wrapper.findAll('span').some(span => span.text() === 'Ширина штакетника')).toBe(false)
   await wrapper.get('tbody input').setValue(true); await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idYard: 2, widthFenceYard: '100', layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 8 }))
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idYard: 2, widthFenceYard: '100', layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 7 }))
   expect(useCalculation().gapYardMm.value).toBe(28)
 })
 it('allows another width in butt mode and calculates its own count', async () => {

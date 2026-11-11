@@ -22,8 +22,8 @@ beforeEach(() => {
   calc.thicknessFacade.value = '100'
   calc.thicknessYard.value = '120'
   vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never)
-  vi.mocked(getFenceGapOptions).mockResolvedValue([
-    { id: 17, gapMm: 28, label: 'Любая подпись', quantity: 8 },
+  vi.mocked(getFenceGapOptions).mockImplementation(async payload => [
+    { id: 17, gapMm: 28, label: 'Любая подпись', quantity: payload.side === 'yard' ? 7 : 8 },
     { id: 91, gapMm: 0, label: 'Другая подпись', quantity: 10 },
   ])
 })
@@ -51,7 +51,7 @@ it('saves butt as zero without using the option caption', async () => {
   expect(useCalculation().gapName.value).toBe(0)
   expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ layingFacadeCode: 'butt', gapName: 0, numberOfSticks: 10 }))
 })
-it('copies facade gap and count to the equal-width yard', async () => {
+it('copies facade gap and saves the shifted server count for the equal-width yard', async () => {
   const calc = useCalculation()
   calc.thicknessYard.value = '100'
   const wrapper = page()
@@ -61,7 +61,7 @@ it('copies facade gap and count to the equal-width yard', async () => {
   await flushPromises()
   expect(calc.gapName.value).toBe(28)
   expect(calc.gapYardMm.value).toBe(28)
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 28, layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 8 }))
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 28, layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 7 }))
 })
 it('clears a different-width yard when choosing a facade gap', async () => {
   const calc = useCalculation()
