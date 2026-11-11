@@ -379,3 +379,38 @@ describe('ShieldType top-only subtype', () => {
     wrapper.unmount()
   })
 })
+
+it('blocks failed shield geometry saves and clears stale type3 laying on every retry', async () => {
+  setActivePinia(createPinia())
+  const calc = useCalculation(); calc.reset(); calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'
+  calc.shieldType.value = 'noNet'; calc.layingFacadeCode.value = 'gap'; calc.layingYardCode.value = 'gap'; calc.gapName.value = 17; calc.gapId.value = 2; calc.numberOfSticks.value = 6; calc.gapYardMm.value = 17; calc.numberOfSticksYard.value = 7; calc.yardTrimCode.value = 'edge'; calc.priceRetail.value = '100'
+  vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never); vi.mocked(recalculate).mockClear()
+  const wrapper = mountShieldType(); await flushPromises()
+  vi.mocked(saveWicketData).mockRejectedValue(new Error('network')); vi.mocked(recalculate).mockClear()
+  await wrapper.get('input[type="radio"][value="sideNet"]').setValue(); await flushPromises()
+  await wrapper.get('input[name="provider-side"][value="customer"]').setValue()
+  await wrapper.get('#widthSidePartCustom').setValue('300')
+  expect(await validateBeforeLeave(wrapper)).toBe(false)
+  expect(wrapper.text()).toContain('Не удалось сохранить щит')
+  expect(recalculate).not.toHaveBeenCalled()
+  expect(calc.yardTrimCode.value).toBe('edge')
+  const cleared = { gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ widthSidePart: 300, ...cleared }))
+  vi.mocked(saveWicketData).mockResolvedValue(undefined as never)
+  expect(await validateBeforeLeave(wrapper)).toBe(true)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining(cleared))
+  expect(calc.gapName.value).toBeNull(); expect(calc.yardTrimCode.value).toBeNull()
+  wrapper.unmount()
+})
+
+it('retains type3 laying when shield geometry is unchanged', async () => {
+  setActivePinia(createPinia())
+  const calc = useCalculation(); calc.reset(); calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'
+  calc.shieldType.value = 'noNet'; calc.gapName.value = 17; calc.yardTrimCode.value = 'edge'
+  vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never)
+  const wrapper = mountShieldType(); await flushPromises()
+  expect(await validateBeforeLeave(wrapper)).toBe(true)
+  expect(vi.mocked(saveWicketData).mock.calls[vi.mocked(saveWicketData).mock.calls.length - 1]?.[0]).not.toHaveProperty('yardTrimCode')
+  expect(calc.yardTrimCode.value).toBe('edge'); expect(calc.gapName.value).toBe(17)
+  wrapper.unmount()
+})

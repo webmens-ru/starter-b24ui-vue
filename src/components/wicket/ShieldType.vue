@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
@@ -29,6 +29,21 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const saving = ref(false)
+const saveError = ref('')
+const owner = calc.getCurrentProductRowContext()
+let disposed = false
+const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
+function geometrySnapshot(): string {
+  const capabilities = frameSubtypeCapabilities(calc.shieldType.value)
+  return JSON.stringify([calc.shieldType.value,
+    capabilities.top ? Number(calc.heightTopPart.value) : 0,
+    capabilities.lower ? Number(calc.heightLowerPart.value) : 0,
+    capabilities.side ? Number(calc.widthSidePart.value) : 0,
+    capabilities.side ? calc.grilleLocation.value : null])
+}
+let savedGeometry = geometrySnapshot()
+onBeforeUnmount(() => { disposed = true; if (debounceTimer) clearTimeout(debounceTimer) })
 
 // ─── Модальное окно ───────────────────────────────────────────────────────────
 const showModal  = ref(false)
@@ -311,12 +326,16 @@ function buildBlock() {
   calc.updateOrCreateBlock('frameSubtype', params, 'Тип щита')
 }
 
-async function save() {
-  if (!isFrameSubtypeCode(shieldType.value)) return
-  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) return
+async function save(): Promise<boolean> {
+  if (saving.value || !isCurrent()) return false
+  if (!isFrameSubtypeCode(shieldType.value)) return false
+  if (showSidePart.value && !isGrilleSide(grilleLocation.value)) return false
   syncCalcFields()
   buildBlock()
 
+  const requestGeometry = geometrySnapshot()
+  const clearLaying = String(calc.modelId.value) === '3' && requestGeometry !== savedGeometry
+  const clearedLaying = { gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
   const provTop = providerTop.value
   const provLower = providerLower.value
   const provSide = providerSide.value
@@ -325,9 +344,12 @@ async function save() {
   const lowerVal = showHeightLower.value ? (calc.heightLowerPart.value || '0') : '0'
   const sideVal = showSidePart.value ? (calc.widthSidePart.value || '0') : '0'
 
+  saving.value = true
+  saveError.value = ''
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
+      ...(clearLaying ? clearedLaying : {}),
       shieldType:        calc.shieldType.value,
       heightTopPart:    topVal,
       heightLowerPart:  lowerVal,
@@ -347,7 +369,23 @@ async function save() {
       grilleSideCode: showSidePart.value && isGrilleSide(grilleLocation.value) ? grilleLocation.value : null,
     })
   } catch (e) {
-    console.warn('saveWicketData:', e)
+    if (isCurrent()) saveError.value = 'Не удалось сохранить щит. Нажмите «Далее», чтобы повторить.'
+    return false
+  } finally {
+    saving.value = false
+  }
+  if (!isCurrent()) return false
+  savedGeometry = requestGeometry
+  if (clearLaying) {
+    calc.gapId.value = null
+    calc.gapName.value = null
+    calc.numberOfSticks.value = null
+    calc.layingFacadeCode.value = null
+    calc.layingYardCode.value = null
+    calc.gapYardMm.value = null
+    calc.numberOfSticksYard.value = null
+    calc.yardTrimCode.value = null
+    calc.data.value = calc.data.value.filter(block => !['fenceLayingFacade', 'fenceLayingYard', 'yardFenceTrim'].includes(block.blockCode ?? ''))
   }
 
   if (calc.priceRetail.value) {
@@ -359,11 +397,12 @@ async function save() {
         model:              calc.model.value,
         modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+      if (isCurrent()) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
   }
+  return true
 }
 
 // ─── Валидация ───────────────────────────────────────────────────────────────
@@ -444,8 +483,7 @@ async function validateAndSave(): Promise<boolean> {
     clearTimeout(debounceTimer)
     debounceTimer = null
   }
-  await save()
-  return true
+  return save()
 }
 
 const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
@@ -516,9 +554,10 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Щит</span>
-      <B24Button label="Далее" color="air-secondary" @click="handleNext" />
+      <B24Button label="Далее" color="air-secondary" :disabled="saving" @click="handleNext" />
     </div>
 
+    <p v-if="saveError" role="alert" class="text-red-700">{{ saveError }}</p>
     <div class="flex flex-col gap-5 px-1">
 
       <!-- Типы щита -->
