@@ -229,7 +229,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
       </g>
       </template><template #foreground>
-      <g data-testid="type3-pickets" :fill="picketFill" stroke="#30343a" stroke-width="0.7">
+      <g data-testid="type3-pickets" :fill="picketFill" stroke="none">
         <rect
           v-for="(picket, index) in viewedPickets"
           :key="`picket-${index}`"
@@ -239,6 +239,10 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <template v-if="realisticColors && viewedProfileImage">
           <image v-for="(picket, index) in viewedPickets" :key="`profile-${index}`" v-bind="profileImageRect(picket)" :href="viewedProfileImage" preserveAspectRatio="none" />
         </template>
+        <g fill="none" stroke="#30343a" stroke-width="0.7">
+          <rect v-for="(picket, index) in viewedPickets" :key="`outline-${index}`"
+            data-testid="type3-picket-outline" v-bind="picket" vector-effect="non-scaling-stroke" />
+        </g>
       </g>
       </template></WicketBaseDrawing>
       <rect

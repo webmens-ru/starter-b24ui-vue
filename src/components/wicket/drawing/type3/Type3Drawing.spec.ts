@@ -434,7 +434,7 @@ it.each(['vertical', 'horizontal'] as const)('overlays each %s picket with its p
     if (side === 'yard') await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
     for (const opposite of [false, true]) {
       const group = wrapper.get(`[data-testid="type3-${opposite ? 'opposite-pickets' : 'pickets'}"]`)
-      const pickets = group.findAll('rect')
+      const pickets = group.findAll(opposite ? '[data-testid="type3-opposite-picket"]' : '[data-testid="type3-picket"]')
       const images = group.findAll('image')
       expect(images).toHaveLength(pickets.length)
       expect(images.length).toBeGreaterThan(0)
@@ -451,7 +451,7 @@ it.each(['vertical', 'horizontal'] as const)('overlays each %s picket with its p
           for (const attr of ['x', 'y', 'width', 'height']) expect(image.attributes(attr)).toBe(picket.attributes(attr))
         }
       })
-      expect(group.html().indexOf('<image')).toBeGreaterThan(group.html().lastIndexOf('<rect'))
+      expect(group.html().indexOf('<image')).toBeGreaterThan(group.html().lastIndexOf(opposite ? 'data-testid="type3-opposite-picket"' : 'data-testid="type3-picket"'))
       expect(group.attributes('fill')).toMatch(/^url\(#type3-/)
     }
   }
@@ -464,5 +464,31 @@ it.each(['vertical', 'horizontal'] as const)('overlays each %s picket with its p
   store.fillingNeedsRecalculation = true
   await wrapper.vm.$nextTick()
   expect(wrapper.findAll('image[href$="-profile.png"]')).toHaveLength(0)
+  wrapper.unmount()
+})
+
+it.each(['vertical', 'horizontal'] as const)('draws continuous %s near-picket outlines above every fill and profile overlay', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.widthProyema = '900'; store.heightProyema = '2000'; store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.shieldType = 'upperNet'; store.heightTopPart = '300'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction; store.thicknessFacade = '130'; store.thicknessYard = '118'
+  store.layingFacadeCode = store.layingYardCode = 'butt'; store.gapName = store.gapYardMm = 0
+  store.numberOfSticks = store.numberOfSticksYard = 7
+  store.colorFacadeHex = store.colorYardHex = '#8b7355'
+  store.reliefFacadeImage = '/front-relief.png'; store.reliefYardImage = '/yard-relief.png'
+  const wrapper = mount(Type3Drawing)
+  for (const yard of [false, true]) {
+    if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    const near = wrapper.get('[data-testid="type3-pickets"]')
+    const outlines = near.findAll('[data-testid="type3-picket-outline"]')
+    expect(outlines).toHaveLength(near.findAll('[data-testid="type3-picket"]').length)
+    expect(outlines.length).toBeGreaterThan(0)
+    for (const outline of outlines) expect(outline.attributes('vector-effect')).toBe('non-scaling-stroke')
+    const html = near.html()
+    expect(html.lastIndexOf('data-testid="type3-picket-outline"')).toBeGreaterThan(html.lastIndexOf('<image'))
+  }
+  await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
+  expect(wrapper.findAll('[data-testid="type3-picket-outline"]')).toHaveLength(0)
   wrapper.unmount()
 })
