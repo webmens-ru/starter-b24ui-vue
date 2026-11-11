@@ -243,7 +243,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       rect(activeFill.x, activeFill.y, activeFill.width, 40),
       rect(activeFill.x, activeFill.y + activeFill.height - 40, activeFill.width, 40),
     ],
-    lockRail: rect(activeFill.x, activeFill.y + Math.floor((activeFill.height - 40) / 2), Math.max(0, activeFill.width - 1), 40),
+    lockRail: rect(activeFill.x + (horizontal ? 20 : 0), activeFill.y + Math.floor((activeFill.height - 40) / 2), Math.max(0, activeFill.width - (horizontal ? 41 : 1)), 40),
     fillArea: activeFill,
     facadePickets,
     yardPickets: source.fillSide === 2 ? yardPickets : [],

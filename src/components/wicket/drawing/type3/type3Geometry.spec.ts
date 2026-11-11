@@ -374,5 +374,7 @@ it.each(['noNet', 'upperNet'])('uses two vertical detail 4 pipes and central det
     { x: geometry.fillArea.x + geometry.fillArea.width - 20, y: geometry.fillArea.y, width: 20, height: geometry.fillArea.height },
   ])
   expect(geometry.lockRail.height).toBe(40)
+  expect(geometry.lockRail.x).toBe(geometry.fillArea.x + 20)
+  expect(geometry.lockRail.width).toBe(geometry.fillArea.width - 41)
   expect(geometry.lockRail.y + 20).toBeCloseTo(geometry.fillArea.y + geometry.fillArea.height / 2, 0)
 })
