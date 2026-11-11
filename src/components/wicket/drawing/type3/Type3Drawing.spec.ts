@@ -540,3 +540,25 @@ it('renders only detail 4 and central detail 6 reinforcement for horizontal fill
   }
   wrapper.unmount()
 })
+
+it.each(['vertical', 'horizontal'] as const)('clips %s trimmed relief without squeezing the full profile', direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction
+  store.thicknessFacade = store.thicknessYard = '100'
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28
+  store.numberOfSticks = direction === 'vertical' ? 7 : 14
+  store.numberOfSticksYard = store.numberOfSticks - 1; store.yardTrimCode = 'edge'
+  store.reliefFacadeImage = store.reliefYardImage = '/profile.svg'
+  const wrapper = mount(Type3Drawing)
+  const group = wrapper.get('[data-testid="type3-opposite-pickets"]')
+  const pieces = group.findAll('[data-testid="type3-opposite-picket"]')
+  const images = group.findAll('image')
+  expect(Number(pieces[0]!.attributes(direction === 'horizontal' ? 'height' : 'width'))).toBeLessThan(100)
+  for (const image of images) {
+    expect(Number(image.attributes('width'))).toBe(100)
+    expect(image.attributes('clip-path')).toMatch(/^url\(#/)
+  }
+})

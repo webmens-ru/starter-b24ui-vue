@@ -116,10 +116,28 @@ const facadeProfileImage = computed(() => calc.reliefFacadeImage.value)
 const yardProfileImage = computed(() => calc.reliefYardImage.value)
 const viewedProfileImage = computed(() => viewSide.value === 'yard' ? yardProfileImage.value : facadeProfileImage.value)
 const oppositeProfileImage = computed(() => viewSide.value === 'street' ? yardProfileImage.value : facadeProfileImage.value)
-function profileImageRect(picket: { x: number; y: number; width: number; height: number }) {
-  return calc.raspolozheniyePolotna.value === 'horizontal'
-    ? { x: 0, y: 0, width: picket.height, height: picket.width, transform: `translate(${picket.x + picket.width} ${picket.y}) rotate(90)` }
-    : picket
+function profileClipId(opposite: boolean, index: number): string {
+  return `type3-profile-clip-${instanceId}-${opposite ? 'far' : 'near'}-${index}`
+}
+function profilePlacement(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const horizontal = calc.raspolozheniyePolotna.value === 'horizontal'
+  const yard = (viewSide.value === 'yard') !== opposite
+  const fullWidth = Number(yard ? calc.thicknessYard.value : calc.thicknessFacade.value)
+  const size = horizontal ? picket.height : picket.width
+  const width = Math.max(size, Number.isFinite(fullWidth) ? fullWidth : size)
+  const area = geometry.value.fillArea
+  const leading = horizontal ? picket.y < area.y + area.height / 2 : picket.x < area.x + area.width / 2
+  return { horizontal, width, offset: leading ? width - size : 0 }
+}
+function profileImageRect(picket: { x: number; y: number; width: number; height: number }, opposite = false) {
+  const { horizontal, width, offset } = profilePlacement(picket, opposite)
+  return horizontal
+    ? { x: 0, y: 0, width, height: picket.width, transform: `translate(${picket.x + picket.width} ${picket.y - offset}) rotate(90)` }
+    : { ...picket, x: picket.x - offset, width }
+}
+function profileClipRect(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const { horizontal, offset } = profilePlacement(picket, opposite)
+  return horizontal ? { x: offset, y: 0, width: picket.height, height: picket.width } : picket
 }
 
 const displayedFrameColor = computed(() => realisticColors.value
@@ -211,7 +229,8 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       <g v-if="oppositePickets.length" data-testid="type3-opposite-pickets" :fill="oppositePicketFill" stroke="#30343a" stroke-width="0.7">
         <rect v-for="(picket, index) in oppositePickets" :key="`opposite-picket-${index}`" data-testid="type3-opposite-picket" v-bind="picket" />
         <template v-if="realisticColors && oppositeProfileImage">
-          <image v-for="(picket, index) in oppositePickets" :key="`opposite-profile-${index}`" v-bind="profileImageRect(picket)" :href="oppositeProfileImage" preserveAspectRatio="none" />
+          <defs><clipPath v-for="(picket, index) in oppositePickets" :id="profileClipId(true, index)" :key="index" clipPathUnits="userSpaceOnUse"><rect v-bind="profileClipRect(picket, true)" /></clipPath></defs>
+          <image v-for="(picket, index) in oppositePickets" :key="`opposite-profile-${index}`" v-bind="profileImageRect(picket, true)" :clip-path="`url(#${profileClipId(true, index)})`" :href="oppositeProfileImage" preserveAspectRatio="none" />
         </template>
       </g>
       <rect
@@ -244,7 +263,8 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
           v-bind="picket"
         />
         <template v-if="realisticColors && viewedProfileImage">
-          <image v-for="(picket, index) in viewedPickets" :key="`profile-${index}`" v-bind="profileImageRect(picket)" :href="viewedProfileImage" preserveAspectRatio="none" />
+          <defs><clipPath v-for="(picket, index) in viewedPickets" :id="profileClipId(false, index)" :key="index" clipPathUnits="userSpaceOnUse"><rect v-bind="profileClipRect(picket, false)" /></clipPath></defs>
+          <image v-for="(picket, index) in viewedPickets" :key="`profile-${index}`" v-bind="profileImageRect(picket)" :clip-path="`url(#${profileClipId(false, index)})`" :href="viewedProfileImage" preserveAspectRatio="none" />
         </template>
         <g fill="none" stroke="#30343a" stroke-width="0.7">
           <rect v-for="(picket, index) in viewedPickets" :key="`outline-${index}`"
