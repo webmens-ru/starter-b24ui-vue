@@ -36,7 +36,7 @@ describe('type3Navigation', () => {
 
     describe('page2_yard_fence → page3', () => {
       it('yard_fence → page3', () => {
-        expect(getNextPage('page2_yard_fence', state())).toBe('page2_yard_fence_laying')
+        expect(getNextPage('page2_yard_fence', state())).toBe('page3')
       })
     })
 
@@ -89,7 +89,7 @@ describe('type3Navigation', () => {
         expect(getPrevPage('page3', state({
           fillSide: 2,
           materialYardGlob: 'fence',
-        }))).toBe('page2_yard_fence_laying')
+        }))).toBe('page2_yard_fence')
       })
     })
 
@@ -136,7 +136,7 @@ describe('type3Navigation', () => {
 
 it('completes facade before starting yard and reverses all four screens', () => {
   const twoSides = state({ fillSide: 2 });
-  const pages = ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_laying', 'page3'];
+  const pages = ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page3'];
   for (let i = 0; i < pages.length - 1; i++) {
     expect(getNextPage(pages[i]!, twoSides)).toBe(pages[i + 1]);
     expect(getPrevPage(pages[i + 1]!, twoSides)).toBe(pages[i]);
@@ -150,7 +150,14 @@ it('marks missing laying incomplete and blocks sidebar jumps past filling', () =
   expect(type3Route.validations(incomplete).get('page2')?.valid).toBe(false)
   expect(type3Route.canNavigate?.('page2_facade_fence', 'page_painting', incomplete)).toBe(false)
   expect(type3Route.canNavigate?.('page2_facade_fence_laying', 'page7', incomplete)).toBe(true)
-  const complete = { ...incomplete, layingFacadeCode: 'butt' as const, gapName: 0, layingYardCode: 'gap' as const, gapYardMm: 28 }
+  const complete = { ...incomplete, layingFacadeCode: 'butt' as const, gapName: 0, layingYardCode: 'butt' as const, gapYardMm: 0 }
   expect(type3Route.validations(complete).get('page2')?.valid).toBe(true)
-  expect(type3Route.canNavigate?.('page2_yard_fence_laying', 'page_painting', complete)).toBe(true)
+  expect(type3Route.canNavigate?.('page2_yard_fence', 'page_painting', complete)).toBe(true)
+})
+
+it('rejects independently saved yard gap or physical width in gap mode', () => {
+  const shared = state({ idFacade: 100, idYard: 101, fillSide: 2, layingFacadeCode: 'gap', gapName: 28, layingYardCode: 'gap', gapYardMm: 28, thicknessFacade: '100', thicknessYard: '100.0' })
+  expect(type3Route.validations(shared).get('page2')?.valid).toBe(true)
+  expect(type3Route.validations({ ...shared, gapYardMm: 17 }).get('page2')?.valid).toBe(false)
+  expect(type3Route.validations({ ...shared, thicknessYard: '120' }).get('page2')?.valid).toBe(false)
 })

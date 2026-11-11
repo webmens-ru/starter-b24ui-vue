@@ -12,22 +12,20 @@ const baseRoute = defineWicketRoute([
   postsSection(),
   canvasSection(),
   fillingSection(
-    ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_laying'],
+    ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence'],
     (from, state) => {
       if (from === 'page2') return 'page2_facade_fence'
       if (from === 'page2_facade_fence') return 'page2_facade_fence_laying'
       if (from === 'page2_facade_fence_laying' && state.fillSide === 2) return 'page2_yard_fence'
-      if (from === 'page2_yard_fence') return 'page2_yard_fence_laying'
       return undefined
     },
     from => {
       if (from === 'page2_facade_fence') return 'page2'
       if (from === 'page2_facade_fence_laying') return 'page2_facade_fence'
       if (from === 'page2_yard_fence') return 'page2_facade_fence_laying'
-      if (from === 'page2_yard_fence_laying') return 'page2_yard_fence'
       return undefined
     },
-    state => state.fillSide === 2 ? 'page2_yard_fence_laying' : 'page2_facade_fence_laying',
+    state => state.fillSide === 2 ? 'page2_yard_fence' : 'page2_facade_fence_laying',
   ),
   ...standardTailSections(),
 ])
@@ -41,7 +39,9 @@ filling.validate = state => {
     gap != null && Number.isInteger(gap) && (mode === 'butt' ? gap === 0 : (mode === 'gap' || mode == null) && gap >= 10 && gap <= 99)
   if (!validGap(state.layingFacadeCode, state.gapName)) return { valid: false, errors: ['Не выбран способ укладки фасада и зазор'] }
   const yardGap = state.layingYardCode == null ? state.gapName : state.gapYardMm
-  if (state.fillSide === 2 && !validGap(state.layingYardCode, yardGap)) return { valid: false, errors: ['Не выбран способ укладки двора и зазор'] }
+  if (state.fillSide === 2 && (!validGap(state.layingYardCode, yardGap) || yardGap !== state.gapName
+    || (state.layingYardCode != null && state.layingFacadeCode != null && state.layingYardCode !== state.layingFacadeCode)
+    || (state.gapName! > 0 && Number(state.thicknessFacade) !== Number(state.thicknessYard)))) return { valid: false, errors: ['Материал и укладка двора должны соответствовать фасаду'] }
   return materials
 }
 export const type3Route: WicketRouteDefinition = {

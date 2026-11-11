@@ -6,5 +6,5 @@ const step = ref<InstanceType<typeof T3FenceLaying> | null>(null)
 defineExpose({ validateBeforeLeave: () => step.value?.validateBeforeLeave() ?? false })
 </script>
 <template>
-  <T3FenceLaying ref="step" side="facade" @next="emit('next')" @back="emit('back')" />
+  <T3FenceLaying ref="step" @next="emit('next')" @back="emit('back')" />
 </template>

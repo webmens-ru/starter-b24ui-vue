@@ -2,7 +2,7 @@
 import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
-import { reconcileFenceLaying, legacyYardSnapshot, applyYardSnapshot, type FenceYardSnapshot } from './fenceLayingState'
+import { reconcileFacadeLaying, inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -16,7 +16,7 @@ let disposed = false
 const owner = calc.getCurrentProductRowContext()
 const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
 onBeforeUnmount(() => { disposed = true })
-let pendingYardSnapshot: FenceYardSnapshot | undefined
+const yardCleared = ref(false)
 const saving = ref(false)
 const saveError = ref('')
 const needsSave = ref(false)
@@ -106,10 +106,11 @@ function restoreFromCalc(): FenceRow | null {
 }
 
 async function save(row: FenceRow) {
-  const yardSnapshot = pendingYardSnapshot ?? await legacyYardSnapshot(calc)
-  pendingYardSnapshot = yardSnapshot
   if (!isCurrent()) throw new Error('Расчёт изменился')
-  await reconcileFenceLaying(calc, 'facade', row.widthFence)
+  await reconcileFacadeLaying(calc, row.widthFence)
+  if (!isCurrent()) throw new Error('Расчёт изменился')
+
+  const yardSnapshot = await inheritedYardLaying(calc, calc.layingFacadeCode.value ?? (calc.gapName.value === null ? null : calc.gapName.value === 0 ? 'butt' : 'gap'), calc.gapName.value, row.widthFence)
   if (!isCurrent()) throw new Error('Расчёт изменился')
 
   calc.idFacade.value                = row.id
@@ -131,7 +132,7 @@ async function save(row: FenceRow) {
 
   try {
     await saveWicketData({
-      ...calc.getBaseSavePayload(),
+      ...calc.getBaseSavePayload(), applySharedFenceLaying: true,
       ...yardSnapshot,
       idFacade:                row.id,
       layingFacadeCode: calc.layingFacadeCode.value,
@@ -147,7 +148,7 @@ async function save(row: FenceRow) {
     })
     if (isCurrent()) {
       applyYardSnapshot(calc, yardSnapshot)
-      pendingYardSnapshot = undefined
+      yardCleared.value = yardSnapshot.idYard === null
     }
   } catch (e) {
     throw e
@@ -177,8 +178,8 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
   try {
     if (row) await save(row)
     else await saveWicketData({
-      ...calc.getBaseSavePayload(), idFacade: null, widthFenceFacade: null,
-      layingYardCode: calc.layingYardCode.value, gapYardMm: calc.gapYardMm.value, numberOfSticksYard: calc.numberOfSticksYard.value,
+      ...calc.getBaseSavePayload(), applySharedFenceLaying: true, idFacade: null, widthFenceFacade: null,
+      layingYardCode: null, gapYardMm: null, numberOfSticksYard: null,
       materialSupplierFacade: null, materialFacade: null, typeOfCoatingFacade: null, colorFacade: null,
       layingFacadeCode: null, gapId: null, gapName: null, numberOfSticks: null,
     })
@@ -201,21 +202,11 @@ async function selectRow(row: FenceRow) {
 
 async function deselectRow() {
   if (saving.value) return
-  saving.value = true
-  try {
-    const snapshot = pendingYardSnapshot ?? await legacyYardSnapshot(calc)
-    if (!isCurrent()) return
-    applyYardSnapshot(calc, snapshot)
-  } catch {
-    saveError.value = 'Не удалось сохранить параметры двора. Повторите выбор.'
-    return
-  } finally {
-    saving.value = false
-  }
   needsSave.value = true
   selectedRow.value = null
   calc.idFacade.value = ''
   clearGap()
+  applyYardSnapshot(calc, { layingYardCode: null, gapYardMm: null, numberOfSticksYard: null })
   void persistSelection(null)
 }
 
@@ -256,6 +247,7 @@ onMounted(async () => {
       <B24Button label="Далее" :disabled="saving" color="air-secondary" @click="onContinue" />
     </div>
 
+    <p v-if="yardCleared" role="status" class="text-center text-sm">Выберите материал двора заново: его ширина должна совпадать с фасадом.</p>
     <p v-if="saveError" role="alert" class="text-red-700">{{ saveError }}</p>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">

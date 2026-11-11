@@ -27,8 +27,8 @@ beforeEach(() => {
     { id: 91, gapMm: 0, label: 'Другая подпись', quantity: 10 },
   ])
 })
-function page(side: 'facade' | 'yard' = 'facade') {
-  return mount(T3FenceLaying, { props: { side }, global: { stubs: {
+function page() {
+  return mount(T3FenceLaying, { global: { stubs: {
     B24Button: { props: ['label', 'disabled'], template: '<button :disabled="disabled">{{ label }}</button>' },
   } } })
 }
@@ -51,17 +51,27 @@ it('saves butt as zero without using the option caption', async () => {
   expect(useCalculation().gapName.value).toBe(0)
   expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ layingFacadeCode: 'butt', gapName: 0, numberOfSticks: 10 }))
 })
-it('saves yard gap independently of facade', async () => {
+it('copies facade gap and count to the equal-width yard', async () => {
   const calc = useCalculation()
-  calc.gapName.value = 50
-  const wrapper = page('yard')
+  calc.thicknessYard.value = '100'
+  const wrapper = page()
   await flushPromises()
   await wrapper.get('[data-testid="laying-gap"]').setValue()
   await wrapper.get('[data-testid="type3-gap-select"]').setValue('17')
   await flushPromises()
-  expect(calc.gapName.value).toBe(50)
+  expect(calc.gapName.value).toBe(28)
   expect(calc.gapYardMm.value).toBe(28)
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 8 }))
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 28, layingYardCode: 'gap', gapYardMm: 28, numberOfSticksYard: 8 }))
+})
+it('clears a different-width yard when choosing a facade gap', async () => {
+  const calc = useCalculation()
+  const wrapper = page()
+  await flushPromises()
+  await wrapper.get('[data-testid="laying-gap"]').setValue()
+  await wrapper.get('[data-testid="type3-gap-select"]').setValue('17')
+  await flushPromises()
+  expect(calc.idYard.value).toBe('')
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idYard: null, gapName: 28, layingYardCode: 'gap', gapYardMm: 28 }))
 })
 it('blocks next after failed save and allows retry', async () => {
   const wrapper = page()
@@ -114,7 +124,7 @@ it('does not apply a late save to another opened calculation', async () => {
   expect(calc.layingFacadeCode.value).toBeNull()
 })
 
-it('freezes the legacy yard physical gap before changing facade to butt', async () => {
+it('changes both sides to butt and retains different-width yard material', async () => {
   const calc = useCalculation()
   calc.gapName.value = 28
   calc.numberOfSticks.value = 8
@@ -123,7 +133,8 @@ it('freezes the legacy yard physical gap before changing facade to butt', async 
   await wrapper.get('[data-testid="laying-butt"]').setValue()
   await flushPromises()
   expect(calc.gapName.value).toBe(0)
-  expect(calc.gapYardMm.value).toBe(28)
-  expect(calc.layingYardCode.value).toBe('gap')
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 0, gapYardMm: 28, layingYardCode: 'gap' }))
+  expect(calc.gapYardMm.value).toBe(0)
+  expect(calc.layingYardCode.value).toBe('butt')
+  expect(calc.idYard.value).toBe(101)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 0, gapYardMm: 0, layingYardCode: 'butt' }))
 })

@@ -15,6 +15,8 @@ export interface WicketSharedNavState {
   layingYardCode?: 'butt' | 'gap' | null
   gapName?: number | null
   gapYardMm?: number | null
+  thicknessFacade?: string | number
+  thicknessYard?: string | number
   idFacade?: string | number | null
   idYard?: string | number | null
   lockSetId?: number | null

@@ -2,17 +2,16 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceGapOptions, saveWicketData, recalculate } from '../../../app/api/wicket'
-import { legacyYardSnapshot, applyYardSnapshot } from './fenceLayingState'
+import { inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import type { FenceGapOption } from '../../../app/api/wicket.types'
 
-const props = defineProps<{ side: 'facade' | 'yard' }>()
 const emit = defineEmits<{ next: []; back: [] }>()
 const calc = useCalculation()
-const isYard = computed(() => props.side === 'yard')
 const mode = ref<'butt' | 'gap' | null>(null)
 const selectedId = ref<number | null>(null)
 const options = ref<FenceGapOption[]>([])
 const loading = ref(false)
+const yardCleared = ref(false)
 const saving = ref(false)
 const error = ref('')
 let backRequested = false
@@ -30,26 +29,20 @@ async function load(): Promise<void> {
   try {
     const loadedOptions = await getFenceGapOptions({
       ...calc.getFullSavePayload(),
-      side: props.side,
+      side: 'facade',
       includeButt: true,
       widthFenceFacade: calc.thicknessFacade.value,
       widthFenceYard: calc.thicknessYard.value,
     })
     if (!isCurrent()) return
     options.value = loadedOptions
-    const savedGap = isYard.value
-      ? calc.layingYardCode.value === null ? calc.gapName.value : calc.gapYardMm.value
-      : calc.gapName.value
-    mode.value = (isYard.value ? calc.layingYardCode.value : calc.layingFacadeCode.value)
-      ?? (savedGap == null ? null : savedGap === 0 ? 'butt' : 'gap')
+    const savedGap = calc.gapName.value
+    mode.value = calc.layingFacadeCode.value ?? (savedGap == null ? null : savedGap === 0 ? 'butt' : 'gap')
     const restored = savedGap == null ? undefined : options.value.find(option => option.gapMm === savedGap)
     selectedId.value = restored?.id ?? null
     if (restored) {
-      if (isYard.value) calc.numberOfSticksYard.value = restored.quantity
-      else {
-        calc.gapId.value = restored.id
-        calc.numberOfSticks.value = restored.quantity
-      }
+      calc.gapId.value = restored.id
+      calc.numberOfSticks.value = restored.quantity
     }
   } catch {
     options.value = []
@@ -64,30 +57,23 @@ async function persist(): Promise<boolean> {
   saving.value = true
   error.value = ''
   const option = selected.value
-  const payload = isYard.value
-    ? { layingYardCode: mode.value, gapYardMm: option.gapMm, numberOfSticksYard: option.quantity }
-    : { layingFacadeCode: mode.value, gapId: option.gapMm === 0 ? null : option.id, gapName: option.gapMm, numberOfSticks: option.quantity }
+  const payload = { layingFacadeCode: mode.value, gapId: option.gapMm === 0 ? null : option.id, gapName: option.gapMm, numberOfSticks: option.quantity }
   try {
-    const yardSnapshot = isYard.value ? undefined : await legacyYardSnapshot(calc)
+    const yardSnapshot = await inheritedYardLaying(calc, mode.value, option.gapMm)
     if (!isCurrent()) return false
-    await saveWicketData({ ...calc.getBaseSavePayload(), ...yardSnapshot, ...payload })
+    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, ...yardSnapshot, ...payload })
     if (!isCurrent()) return false
     applyYardSnapshot(calc, yardSnapshot)
-    if (isYard.value) {
-      calc.layingYardCode.value = mode.value
-      calc.gapYardMm.value = option.gapMm
-      calc.numberOfSticksYard.value = option.quantity
-    } else {
-      calc.layingFacadeCode.value = mode.value
-      calc.gapId.value = option.gapMm === 0 ? null : option.id
-      calc.gapName.value = option.gapMm
-      calc.numberOfSticks.value = option.quantity
-    }
-    calc.updateOrCreateBlock(isYard.value ? 'fenceLayingYard' : 'fenceLayingFacade', [
+    yardCleared.value = yardSnapshot.idYard === null
+    calc.layingFacadeCode.value = mode.value
+    calc.gapId.value = option.gapMm === 0 ? null : option.id
+    calc.gapName.value = option.gapMm
+    calc.numberOfSticks.value = option.quantity
+    calc.updateOrCreateBlock('fenceLayingFacade', [
       { paramCode: 'layingMode', name: 'Способ укладки', value: mode.value === 'butt' ? 'Встык' : 'С зазором' },
       { paramCode: 'gapMm', name: 'Зазор, мм', value: String(option.gapMm) },
       { paramCode: 'picketCount', name: 'Количество штакетин', value: String(option.quantity) },
-    ], isYard.value ? 'Укладка (двор)' : 'Укладка (фасад)')
+    ], 'Укладка (фасад)')
   } catch {
     error.value = 'Не удалось сохранить способ укладки. Нажмите «Далее», чтобы повторить.'
     return false
@@ -130,7 +116,7 @@ async function next(): Promise<void> {
 }
 defineExpose({ validateBeforeLeave })
 onMounted(() => {
-  calc.setActivePage(isYard.value ? 'page2_yard_fence_laying' : 'page2_facade_fence_laying')
+  calc.setActivePage('page2_facade_fence_laying')
   void load()
 })
 </script>
@@ -139,9 +125,10 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <div class="sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" :disabled="saving" @click="back" />
-      <span class="text-3xl font-bold flex-1 text-center">{{ isYard ? 'Двор' : 'Фасад' }} — способ укладки</span>
+      <span class="text-3xl font-bold flex-1 text-center">Фасад — способ укладки</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading || saving || !valid" @click="next" />
     </div>
+    <p v-if="yardCleared" role="status" class="text-center text-sm">Выберите материал двора заново: его ширина должна совпадать с фасадом.</p>
     <p v-if="loading">Загрузка вариантов укладки…</p>
     <div v-if="error" role="alert" class="rounded border border-red-300 bg-red-50 p-3 text-red-700">
       {{ error }}

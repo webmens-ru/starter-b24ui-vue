@@ -2,7 +2,7 @@
 import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
-import { reconcileFenceLaying } from './fenceLayingState'
+import { inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -22,7 +22,7 @@ const needsSave = ref(false)
 async function validateBeforeLeave(): Promise<boolean> {
   if (saving.value) return false
   if (needsSave.value) return persistSelection(selectedRow.value)
-  return !needsSave.value
+  return selectedRow.value ? persistSelection(selectedRow.value) : false
 }
 defineExpose({ validateBeforeLeave })
 
@@ -35,6 +35,10 @@ function openModal(msg: string, title = 'Внимание') {
   modalMsg.value   = msg
   showModal.value  = true
 }
+
+const inheritedGap = computed(() => calc.gapName.value)
+const widthLocked = computed(() => inheritedGap.value !== null && inheritedGap.value > 0)
+const inheritedMode = computed(() => calc.layingFacadeCode.value ?? (inheritedGap.value === 0 ? 'butt' : inheritedGap.value === null ? null : 'gap'))
 
 const fenceFilterDataUrl = computed(() => wicketFenceFilterDataUrl(calc.modelId.value))
 
@@ -55,7 +59,7 @@ const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount:
 async function loadTable(page = currentPage.value) {
   tableLoading.value = true
   try {
-    const result = await getFenceTable(calc.modelId.value, filters, page)
+    const result = await getFenceTable(calc.modelId.value, { ...filters, widthFence: widthLocked.value ? [String(calc.thicknessFacade.value)] : filters.widthFence }, page)
     rows.value        = result.table
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
@@ -87,7 +91,7 @@ watch(() => calc.idYard.value, (val) => {
 }, { immediate: true })
 
 function restoreFromCalc(): FenceRow | null {
-  if (!calc.idYard.value) return null
+  if (!calc.idYard.value || (widthLocked.value && Number(calc.thicknessYard.value) !== Number(calc.thicknessFacade.value))) return null
   return {
     id:            calc.idYard.value,
     company:       calc.materialSupplierYard.value,
@@ -99,7 +103,7 @@ function restoreFromCalc(): FenceRow | null {
 }
 
 async function save(row: FenceRow) {
-  await reconcileFenceLaying(calc, 'yard', row.widthFence)
+  if (widthLocked.value && Number(row.widthFence) !== Number(calc.thicknessFacade.value)) throw new Error('Ширина штакетника двора должна совпадать с фасадом')
   if (!isCurrent()) throw new Error('Расчёт изменился')
 
   calc.idYard.value                = row.id
@@ -109,6 +113,9 @@ async function save(row: FenceRow) {
   calc.thicknessYard.value         = String(row.widthFence)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.colorYard.value             = row.color
+
+  const yardSnapshot = await inheritedYardLaying(calc, inheritedMode.value, inheritedGap.value)
+  if (!isCurrent()) throw new Error('Расчёт изменился')
 
   calc.updateOrCreateBlock('fillingYard', [
     { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
@@ -120,11 +127,9 @@ async function save(row: FenceRow) {
 
   try {
     await saveWicketData({
-      ...calc.getBaseSavePayload(),
+      ...calc.getBaseSavePayload(), applySharedFenceLaying: true,
       idYard:                row.id,
-      layingYardCode: calc.layingYardCode.value,
-      gapYardMm: calc.gapYardMm.value,
-      numberOfSticksYard: calc.numberOfSticksYard.value,
+      ...yardSnapshot,
       materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
       materialSupplierYard: row.company,
       materialYard:           row.material,
@@ -132,6 +137,7 @@ async function save(row: FenceRow) {
       typeOfCoatingYard:   row.typeOfCoating,
       colorYard:             row.color,
     })
+    if (isCurrent()) applyYardSnapshot(calc, yardSnapshot)
   } catch (e) {
     throw e
   }
@@ -160,9 +166,9 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
   try {
     if (row) await save(row)
     else await saveWicketData({
-      ...calc.getBaseSavePayload(), idYard: null, widthFenceYard: null,
+      ...calc.getBaseSavePayload(), applySharedFenceLaying: true, idYard: null, widthFenceYard: null,
       materialSupplierYard: null, materialYard: null, typeOfCoatingYard: null, colorYard: null,
-      layingYardCode: null, gapYardMm: null, numberOfSticksYard: null,
+      layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null,
     })
     needsSave.value = false
     return true
@@ -178,7 +184,6 @@ async function selectRow(row: FenceRow) {
   if (saving.value) return
   needsSave.value = true
   selectedRow.value = row
-  if (calc.layingYardCode.value === null && calc.gapName.value === null) calc.layingYardCode.value = 'gap'
   if (await persistSelection(row)) await doRecalculate()
 }
 
@@ -186,10 +191,7 @@ function deselectRow() {
   if (saving.value) return
   needsSave.value = true
   selectedRow.value = null
-  calc.idYard.value = ''
-  calc.layingYardCode.value = null
-  calc.gapYardMm.value = null
-  calc.numberOfSticksYard.value = null
+  applyYardSnapshot(calc, { idYard: null, widthFenceYard: null, layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null })
   void persistSelection(null)
 }
 
@@ -198,7 +200,7 @@ function isSelected(row: FenceRow) {
 }
 
 async function onContinue() {
-  if (!selectedRow.value) {
+  if (!selectedRow.value || (widthLocked.value && Number(selectedRow.value.widthFence) !== Number(calc.thicknessFacade.value))) {
     openModal('Вы не заполнили этот блок!')
     return
   }
@@ -230,6 +232,11 @@ onMounted(async () => {
       <B24Button label="Далее" :disabled="saving" color="air-secondary" @click="onContinue" />
     </div>
 
+    <p class="text-center text-sm" data-testid="inherited-laying">
+      Укладка как на фасаде: {{ inheritedMode === 'butt' ? 'встык' : `с зазором ${inheritedGap} мм` }}.
+      <template v-if="widthLocked">Ширина штакетника: {{ calc.thicknessFacade.value }} мм.</template>
+      <template v-else>Ширину штакетника можно выбрать другую.</template>
+    </p>
     <p v-if="saveError" role="alert" class="text-red-700">{{ saveError }}</p>
 
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
@@ -246,6 +253,7 @@ onMounted(async () => {
         v-model="filters.materials"
       />
       <T3FilterDropdown
+        v-if="!widthLocked"
         label="Ширина штакетника"
         :url="fenceFilterDataUrl"
         data-key="widthFence"

@@ -519,6 +519,8 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
     notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
     const response: WicketRootMutationResponse = {
       lockVersion: data.data.lockVersion,
+      ...(data.data.yardMaterialCleared === undefined ? {} : { yardMaterialCleared: data.data.yardMaterialCleared }),
+      ...(data.data.warning === undefined ? {} : { warning: data.data.warning }),
       ...(data.data.coverStripFrameColor === undefined ? {} : { coverStripFrameColor: data.data.coverStripFrameColor }),
       ...(data.data.coverStrips === undefined ? {} : { coverStrips: data.data.coverStrips }),
     }

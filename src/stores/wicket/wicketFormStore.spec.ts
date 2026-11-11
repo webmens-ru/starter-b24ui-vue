@@ -290,8 +290,8 @@ describe('wicketFormStore accessory composition', () => {
     expect(wizard.visitedPages).toEqual([
       'page7',
       'page5',
-      'page2',
       'page6',
+      'page2',
       'page3',
       'page_painting',
       'page9',
@@ -491,4 +491,14 @@ describe('canonical painting selection', () => {
     expect(params).toContainEqual({ paramCode: 'streetPenModel', name: 'Ручка с улицы', value: isTherePen ? 'Renamed' : 'Не требуется' })
     expect(params).toContainEqual({ paramCode: 'yardPenModel', name: 'Ручка со двора', value: 'Не требуется' })
   })
+})
+
+it('restores the retired yard laying step to yard material selection', () => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  const wizard = useWicketWizardStore()
+  store.loadFromApi({ modelId: '3', fillSide: 2, reachedStep: 'page2_yard_fence_laying', visitedPages: ['page7', 'page2_yard_fence_laying'] })
+  expect(wizard.activePage).toBe('page2_yard_fence')
+  expect(wizard.visitedPages).toContain('page2_yard_fence')
+  expect(wizard.visitedPages).not.toContain('page2_yard_fence_laying')
 })

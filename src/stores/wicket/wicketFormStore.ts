@@ -39,6 +39,7 @@ const RETIRED_STANDALONE_PAGE_IDS = new Set([
 const RETIRED_WICKET_PAGES: Record<string, string> = {
   page1: 'page7',
   page11: 'page12',
+  page2_yard_fence_laying: 'page2_yard_fence',
 }
 
 /** Поля формы и сводка калитки (отдельно от сессии мастера `wicket-wizard`). */
