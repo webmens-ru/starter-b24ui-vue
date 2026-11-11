@@ -137,9 +137,9 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 pb-2 flex items-center justify-between gap-2">
+    <div class="sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" :disabled="saving" @click="back" />
-      <span class="text-2xl font-bold text-center">{{ isYard ? 'Двор' : 'Фасад' }} — способ укладки</span>
+      <span class="text-3xl font-bold flex-1 text-center">{{ isYard ? 'Двор' : 'Фасад' }} — способ укладки</span>
       <B24Button label="Далее" color="air-secondary" :disabled="loading || saving || !valid" @click="next" />
     </div>
     <p v-if="loading">Загрузка вариантов укладки…</p>
@@ -147,27 +147,82 @@ onMounted(() => {
       {{ error }}
       <button v-if="!options.length" class="underline ml-2" @click="load">Повторить загрузку</button>
     </div>
-    <fieldset :disabled="loading || saving" class="flex flex-col gap-4">
-      <legend class="font-semibold mb-3">Способ укладки</legend>
-      <div class="flex flex-wrap gap-4">
-        <label class="rounded border border-gray-300 bg-white p-4 flex items-center gap-2">
-          <input type="radio" name="fenceLaying" data-testid="laying-butt" :checked="mode === 'butt'" :disabled="!options.some(option => option.gapMm === 0)" @change="changeMode('butt')" />
-          Встык
+    <fieldset :disabled="loading || saving" class="min-w-0 space-y-4">
+      <legend class="w-full text-center text-xl font-semibold mb-3">Способ укладки</legend>
+      <div class="option-grid">
+        <label class="lock-card">
+          <input type="radio" class="sr-only" name="fenceLaying" data-testid="laying-butt" :checked="mode === 'butt'" :disabled="!options.some(option => option.gapMm === 0)" @change="changeMode('butt')" />
+          <div class="card-content"><span class="block text-sm font-semibold text-center">Встык</span></div>
         </label>
-        <label class="rounded border border-gray-300 bg-white p-4 flex items-center gap-2">
-          <input type="radio" name="fenceLaying" data-testid="laying-gap" :checked="mode === 'gap'" :disabled="!positiveOptions.length" @change="changeMode('gap')" />
-          С зазором
+        <label class="lock-card">
+          <input type="radio" class="sr-only" name="fenceLaying" data-testid="laying-gap" :checked="mode === 'gap'" :disabled="!positiveOptions.length" @change="changeMode('gap')" />
+          <div class="card-content"><span class="block text-sm font-semibold text-center">С зазором</span></div>
         </label>
       </div>
-      <label v-if="mode === 'gap'" class="flex flex-col gap-2">
+      <label v-if="mode === 'gap'" class="laying-details flex flex-col gap-2">
         <span class="font-semibold">Зазор между штакетинами</span>
         <select class="rounded border border-gray-300 bg-white px-3 py-2" data-testid="type3-gap-select" :value="selectedId ?? ''" @change="changeGap">
           <option value="">Выберите зазор</option>
           <option v-for="option in positiveOptions" :key="option.id" :value="option.id">{{ option.label }} — {{ option.quantity }} шт.</option>
         </select>
       </label>
-      <p v-if="valid">Количество штакетин: <strong>{{ selected?.quantity }} шт.</strong></p>
+      <p v-if="valid" class="text-center">Количество штакетин: <strong>{{ selected?.quantity }} шт.</strong></p>
       <p v-if="!loading && !error && !options.length">Для текущих размеров нет допустимых вариантов укладки.</p>
     </fieldset>
   </div>
 </template>
+
+<style scoped>
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px;
+}
+
+@media (min-width: 640px) {
+  .option-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 350px;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+}
+
+.lock-card {
+  cursor: pointer;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.lock-card:hover {
+  border-color: #93c5fd;
+}
+
+.lock-card:has(input[type="radio"]:checked) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #eff6ff;
+}
+
+.card-content {
+  padding: 12px;
+}
+
+.lock-card:has(input:focus-visible) {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+.lock-card:has(input:disabled),
+fieldset:disabled .lock-card {
+  cursor: default;
+  opacity: 0.6;
+}
+.laying-details {
+  max-width: 600px;
+  margin-inline: auto;
+}
+</style>
