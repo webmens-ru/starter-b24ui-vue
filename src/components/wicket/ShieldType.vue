@@ -347,7 +347,7 @@ async function save(): Promise<boolean> {
   const requestGeometry = geometrySnapshot()
   if (requestGeometry !== savedGeometry) calc.markFillingForRecalculation()
   const clearLaying = String(calc.modelId.value) === '3' && requestGeometry !== savedGeometry
-  const clearedLaying = { gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
+  const clearedLaying = { gapId: null, gapName: null, numberOfSticks: null, facadeButtTrimCode: null, facadeButtTrimSide: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
   const provTop = providerTop.value
   const provLower = providerLower.value
   const provSide = providerSide.value
@@ -392,6 +392,9 @@ async function save(): Promise<boolean> {
     calc.gapId.value = null
     calc.gapName.value = null
     calc.numberOfSticks.value = null
+    calc.facadeButtTrimCode.value = null
+    calc.facadeButtTrimSide.value = null
+    calc.facadeButtTrim.value = null
     calc.layingFacadeCode.value = null
     calc.layingYardCode.value = null
     calc.gapYardMm.value = null

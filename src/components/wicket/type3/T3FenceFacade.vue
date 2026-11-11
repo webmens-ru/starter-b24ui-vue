@@ -86,6 +86,9 @@ watch(() => calc.idFacade.value, async (val) => {
 }, { immediate: true })
 
 function clearGap() {
+  calc.facadeButtTrimCode.value = null
+  calc.facadeButtTrimSide.value = null
+  calc.facadeButtTrim.value = null
   calc.layingFacadeCode.value = null
   calc.gapId.value = null
   calc.gapName.value = null
@@ -106,6 +109,7 @@ function restoreFromCalc(): FenceRow | null {
 
 async function save(row: FenceRow) {
   if (!isCurrent()) throw new Error('Расчёт изменился')
+  if (String(calc.idFacade.value) !== String(row.id) && calc.facadeButtTrimCode.value !== null) clearGap()
   await reconcileFacadeLaying(calc, row.widthFence)
   if (!isCurrent()) throw new Error('Расчёт изменился')
 
@@ -136,6 +140,8 @@ async function save(row: FenceRow) {
       ...calc.getBaseSavePayload(), applySharedFenceLaying: true,
       ...yardSnapshot,
       idFacade:                row.id,
+      facadeButtTrimCode: calc.facadeButtTrimCode.value,
+      facadeButtTrimSide: calc.facadeButtTrimSide.value,
       layingFacadeCode: calc.layingFacadeCode.value,
       gapId: calc.gapId.value,
       gapName: calc.gapName.value,
@@ -182,7 +188,7 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
       ...calc.getBaseSavePayload(), applySharedFenceLaying: true, idFacade: null, widthFenceFacade: null,
       layingYardCode: null, gapYardMm: null, numberOfSticksYard: null,
       materialSupplierFacade: null, materialFacade: null, typeOfCoatingFacade: null, colorFacade: null,
-      layingFacadeCode: null, gapId: null, gapName: null, numberOfSticks: null,
+      facadeButtTrimCode: null, facadeButtTrimSide: null, layingFacadeCode: null, gapId: null, gapName: null, numberOfSticks: null,
     })
     needsSave.value = false
     return true

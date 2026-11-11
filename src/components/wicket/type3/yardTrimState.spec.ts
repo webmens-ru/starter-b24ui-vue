@@ -32,3 +32,22 @@ it('rejects an invalid display caption during restoration', () => {
   expect(calc.yardTrimCode.value).toBeNull()
   expect(calc.getFullSavePayload().yardTrimCode).toBeNull()
 })
+
+it('guards route navigation against missing, wrong-orientation and unavailable facade cuts', () => {
+  const state = { materialFacadeGlob: 'fence', materialYardGlob: null, isThereLock: 0, providesLock: 'manufacturer', availableSections: [], modelId: '3', fillSide: 1, gapName: 0, idFacade: 10, layingFacadeCode: 'butt' as const, raspolozheniyePolotna: 'vertical', facadeButtTrimCode: 'single' as const }
+  expect(type3Route.canNavigate?.('page2', 'page12', state)).toBe(false)
+  expect(type3Route.validations({ ...state, facadeButtTrimSide: 'top' }).get('page2')?.valid).toBe(false)
+  expect(type3Route.validations({ ...state, facadeButtTrimSide: 'lock' }).get('page2')?.valid).toBe(true)
+  expect(type3Route.validations({ ...state, facadeButtTrimCode: null, facadeButtTrim: { mode: 'unavailable' } }).get('page2')?.valid).toBe(false)
+})
+
+it('restores facade trim, omits virtual metadata from saves and clears trim with material reset', () => {
+  const calc = useCalculation()
+  calc.loadFromApi({ modelId: '3', orderId: 42, productRowId: 7, facadeButtTrimCode: 'single', facadeButtTrimSide: 'lock', facadeButtTrim: { mode: 'single', widthMm: 44, quantity: 1, requiresSide: true } })
+  expect(calc.getFullSavePayload()).toMatchObject({ facadeButtTrimCode: 'single', facadeButtTrimSide: 'lock' })
+  expect(calc.getFullSavePayload()).not.toHaveProperty('facadeButtTrim')
+  expect(calc.facadeButtTrim.value?.widthMm).toBe(44)
+  calc.resetFacadeFilling()
+  expect(calc.facadeButtTrim.value).toBeNull()
+  expect(calc.facadeButtTrimCode.value).toBeNull()
+})

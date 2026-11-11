@@ -1,3 +1,4 @@
+import { parseFacadeButtTrim } from '../../app/api/fenceGapOptions'
 import { parseOpeningSelection } from '../../components/wicket/openingOrientation'
 import { parseJumperSelection, parsePostsSelection } from '../../app/api/jumperProperties'
 import { parsePipeProfileDescriptor } from '../../app/api/pipeProfiles'
@@ -123,6 +124,9 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   providesLock: 'manufacturer',
   lockInstaller: 'manufacturer',
   typeLock: 'Тип_1',
+  facadeButtTrimCode: null,
+  facadeButtTrimSide: null,
+  facadeButtTrim: null,
   layingFacadeCode: null,
   layingYardCode: null,
   yardTrimCode: null,
@@ -165,6 +169,9 @@ export function applyWicketApiFieldMappings(
     const target = refMap[key]
     if (target) target.value = apiData[key] === 'stretch' || apiData[key] === 'repeat' ? apiData[key] : WICKET_API_FIELD_DEFAULTS[key]
   }
+  if (refMap.facadeButtTrimCode) refMap.facadeButtTrimCode.value = ['none', 'both', 'single'].includes(String(apiData.facadeButtTrimCode)) ? apiData.facadeButtTrimCode : null
+  if (refMap.facadeButtTrimSide) refMap.facadeButtTrimSide.value = ['hinge', 'lock', 'top', 'bottom'].includes(String(apiData.facadeButtTrimSide)) ? apiData.facadeButtTrimSide : null
+  if (refMap.facadeButtTrim) refMap.facadeButtTrim.value = refMap.facadeButtTrimCode?.value == null ? null : parseFacadeButtTrim(apiData.facadeButtTrim)
   if (refMap.yardTrimCode) refMap.yardTrimCode.value = apiData.yardTrimCode === 'none' || apiData.yardTrimCode === 'edge' ? apiData.yardTrimCode : null
   function set(key: string, val: unknown) {
     if (val === undefined) return
@@ -225,7 +232,7 @@ export function applyWicketApiFieldMappings(
     refMap.paintSelection.value = selection ? { isFixedColor: Boolean(Number(selection.isFixedColor)), requiresColorNote: Boolean(Number(selection.requiresColorNote)), isPaintAvailable: Boolean(Number(selection.isPaintAvailable)) } : null
   }
   for (const [key, value] of Object.entries(apiData)) {
-    if (key === 'yardTrimCode') continue
+    if (['yardTrimCode', 'facadeButtTrimCode', 'facadeButtTrimSide', 'facadeButtTrim'].includes(key)) continue
     if (['paintId', 'paintColorId', 'colorShieldId', 'paintSelection', 'paintSelectionUnavailable'].includes(key)) continue
     if (key === 'isTherePen' || key === 'isTherePenName') continue
     if (key === 'grilleLocation' || key === 'grilleSideCode' || key === 'grilleSideProblem') continue

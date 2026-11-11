@@ -39,6 +39,9 @@ const { geometry, error: drawingError } = useDrawingGeometry(() => buildType3Geo
   numberOfSticks: calc.fillSide.value === 0 ? 0 : calc.numberOfSticks.value,
   gapName: calc.gapName.value,
   layingFacadeCode: calc.layingFacadeCode.value,
+  facadeButtTrimCode: calc.facadeButtTrimCode?.value,
+  facadeButtTrimSide: calc.facadeButtTrimSide?.value,
+  facadeButtTrim: calc.facadeButtTrim?.value,
   layingYardCode: calc.layingYardCode.value,
   yardTrimCode: calc.yardTrimCode.value,
   numberOfSticksYard: calc.numberOfSticksYard.value,
@@ -82,15 +85,17 @@ watch(
 const viewedFill = computed(() => viewSide.value === 'yard' && geometry.value.yard.visible
   ? geometry.value.yard
   : geometry.value.facade)
+const invalidFacadeButt = computed(() => calc.layingFacadeCode.value === 'butt'
+  && calc.facadeButtTrimCode?.value != null && geometry.value.facadePickets.length === 0)
 const viewedPickets = computed(() => {
-  if (calc.fillingNeedsRecalculation?.value || calc.fillSide.value === 0 || !showFill.value) return []
+  if (invalidFacadeButt.value || calc.fillingNeedsRecalculation?.value || calc.fillSide.value === 0 || !showFill.value) return []
   if (viewSide.value === 'yard') {
     return geometry.value.yard.visible ? geometry.value.yardPickets : []
   }
   return geometry.value.facadePickets
 })
 const oppositePickets = computed(() => {
-  if (calc.fillingNeedsRecalculation?.value || calc.fillSide.value !== 2 || !showFill.value) return []
+  if (invalidFacadeButt.value || calc.fillingNeedsRecalculation?.value || calc.fillSide.value !== 2 || !showFill.value) return []
   return viewSide.value === 'street' ? geometry.value.yardPickets : geometry.value.facadePickets
 })
 const oppositeFill = computed(() => viewSide.value === 'street' ? geometry.value.yard : geometry.value.facade)

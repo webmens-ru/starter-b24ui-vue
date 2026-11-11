@@ -44,6 +44,7 @@ filling.validate = state => {
   const validGap = (mode: unknown, gap: number | null | undefined) =>
     gap != null && Number.isInteger(gap) && (mode === 'butt' ? gap === 0 : (mode === 'gap' || mode == null) && gap >= 10 && gap <= 99)
   if (!validGap(state.layingFacadeCode, state.gapName)) return { valid: false, errors: ['Не выбран способ укладки фасада и зазор'] }
+  if (state.facadeButtTrim?.mode === 'unavailable' || (state.facadeButtTrimCode === 'single' && !(state.raspolozheniyePolotna === 'horizontal' ? ['top', 'bottom'] : ['hinge', 'lock']).includes(state.facadeButtTrimSide ?? ''))) return { valid: false, errors: ['Не выбрана сторона подрезки фасада'] }
   const yardGap = state.layingYardCode == null ? state.gapName : state.gapYardMm
   if (state.fillSide === 2 && (!validGap(state.layingYardCode, yardGap) || yardGap !== state.gapName
     || (state.layingYardCode != null && state.layingFacadeCode != null && state.layingYardCode !== state.layingFacadeCode)

@@ -290,3 +290,45 @@ it('keeps butt geometry unchanged even with stale edge trim selection', () => {
     gapName: 0, gapYardMm: 0, numberOfSticksYard: 8, thicknessYard: 100 }
   expect(buildType3Geometry({ ...source, yardTrimCode: 'edge' }).yardPickets).toEqual(buildType3Geometry(source).yardPickets)
 })
+
+describe('facade butt edge cuts', () => {
+  it.each(['vertical', 'horizontal'])('fills the complete %s span with two equal edge strips', direction => {
+    const source = { ...base, raspolozheniyePolotna: direction, layingFacadeCode: 'butt', gapName: 0 }
+    const old = buildType3Geometry(source)
+    const span = direction === 'horizontal' ? old.fillArea.height : old.fillArea.width
+    const fullCount = Math.floor(span / 100) - 1
+    const edge = (span - fullCount * 100) / 2
+    const geometry = buildType3Geometry({ ...source, facadeButtTrimCode: 'both', facadeButtTrim: { mode: 'both', widthMm: edge, quantity: fullCount + 2, requiresSide: false } })
+    const widths = geometry.facadePickets.map(p => direction === 'horizontal' ? p.height : p.width)
+    expect(widths).toEqual([edge, ...Array(fullCount).fill(100), edge])
+    expect(widths.reduce((sum, width) => sum + width, 0)).toBeCloseTo(span)
+  })
+  it.each(['left', 'right'] as const)('maps one trimmed strip to logical lock/hinge for %s hinges', hingeSide => {
+    const source = { ...base, thicknessFacade: 103, layingFacadeCode: 'butt', gapName: 0, openingOrientation: { hingeSide, opensOutward: true } }
+    const span = buildType3Geometry(source).fillArea.width
+    const fullCount = Math.floor(span / 103)
+    const edge = span - fullCount * 103
+    for (const side of ['hinge', 'lock']) {
+      const geometry = buildType3Geometry({ ...source, facadeButtTrimCode: 'single', facadeButtTrimSide: side,
+        facadeButtTrim: { mode: 'single', widthMm: edge, quantity: fullCount + 1, requiresSide: true } })
+      const widths = geometry.facadePickets.map(p => p.width)
+      const leading = side === 'hinge' ? hingeSide === 'left' : hingeSide === 'right'
+      expect(widths[leading ? 0 : widths.length - 1]).toBe(edge)
+      expect(widths.reduce((sum, width) => sum + width, 0)).toBeCloseTo(span)
+    }
+  })
+  it.each(['top', 'bottom'])('maps the horizontal single cut to %s', side => {
+    const source = { ...base, thicknessFacade: 103, raspolozheniyePolotna: 'horizontal', layingFacadeCode: 'butt', gapName: 0 }
+    const span = buildType3Geometry(source).fillArea.height
+    const fullCount = Math.floor(span / 103), edge = span - fullCount * 103
+    const geometry = buildType3Geometry({ ...source, facadeButtTrimCode: 'single', facadeButtTrimSide: side,
+      facadeButtTrim: { mode: 'single', widthMm: edge, quantity: fullCount + 1, requiresSide: true } })
+    expect(geometry.facadePickets[side === 'top' ? 0 : geometry.facadePickets.length - 1]!.height).toBe(edge)
+  })
+  it('hides unresolved single cuts and preserves the frame', () => {
+    const geometry = buildType3Geometry({ ...base, layingFacadeCode: 'butt', gapName: 0, facadeButtTrimCode: 'single',
+      facadeButtTrim: { mode: 'single', widthMm: 45, quantity: 10, requiresSide: true } })
+    expect(geometry.facadePickets).toHaveLength(0)
+    expect(geometry.frame.length).toBeGreaterThan(0)
+  })
+})

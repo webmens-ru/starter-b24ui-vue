@@ -13,6 +13,9 @@ export interface WicketSharedNavState {
   providesLock: string
   availableSections: string[]
   layingFacadeCode?: 'butt' | 'gap' | null
+  facadeButtTrimCode?: 'none' | 'both' | 'single' | null
+  facadeButtTrimSide?: 'hinge' | 'lock' | 'top' | 'bottom' | null
+  facadeButtTrim?: { mode: string } | null
   yardTrimCode?: 'none' | 'edge' | null
   layingYardCode?: 'butt' | 'gap' | null
   gapName?: number | null

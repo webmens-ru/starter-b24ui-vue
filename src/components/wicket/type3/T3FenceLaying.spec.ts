@@ -138,3 +138,60 @@ it('changes both sides to butt and retains different-width yard material', async
   expect(calc.idYard.value).toBe(101)
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: 0, gapYardMm: 0, layingYardCode: 'butt' }))
 })
+
+it('requires an explicit logical side for single butt trim and saves it', async () => {
+  const calc = useCalculation()
+  calc.raspolozheniyePolotna.value = 'vertical'
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 91, gapMm: 0, label: 'Переименовано', quantity: 10,
+    buttTrim: { mode: 'single', widthMm: 45, quantity: 1, requiresSide: true } }])
+  const wrapper = page()
+  await flushPromises()
+  await wrapper.get('[data-testid="laying-butt"]').setValue()
+  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave: () => Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  await wrapper.get('[data-testid="butt-side-lock"]').setValue()
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ facadeButtTrimCode: 'single', facadeButtTrimSide: 'lock' }))
+  expect(calc.facadeButtTrim.value).toMatchObject({ mode: 'single', widthMm: 45 })
+})
+
+it('shows unavailable butt layout and refuses to advance', async () => {
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 91, gapMm: 0, label: 'Встык', quantity: 10,
+    buttTrim: { mode: 'unavailable', widthMm: null, quantity: 0, requiresSide: false } }])
+  const wrapper = page()
+  await flushPromises()
+  await wrapper.get('[data-testid="laying-butt"]').setValue()
+  expect(wrapper.get('[role="alert"]').text()).toContain('недоступна')
+  expect(saveWicketData).not.toHaveBeenCalled()
+})
+
+it('uses top and bottom sides for horizontal filling', async () => {
+  useCalculation().raspolozheniyePolotna.value = 'horizontal'
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 91, gapMm: 0, label: 'Любой текст', quantity: 10,
+    buttTrim: { mode: 'single', widthMm: 45, quantity: 1, requiresSide: true } }])
+  const wrapper = page()
+  await flushPromises()
+  await wrapper.get('[data-testid="laying-butt"]').setValue()
+  expect(wrapper.find('[data-testid="butt-side-lock"]').exists()).toBe(false)
+  await wrapper.get('[data-testid="butt-side-top"]').setValue()
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ facadeButtTrimSide: 'top' }))
+})
+
+it('keeps historical butt quantity and null code until the step is selected again', async () => {
+  const calc = useCalculation()
+  calc.gapName.value = 0
+  calc.layingFacadeCode.value = 'butt'
+  calc.numberOfSticks.value = 9
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 91, gapMm: 0, label: 'Любой текст', quantity: 10,
+    buttTrim: { mode: 'both', widthMm: 45, quantity: 2, requiresSide: false } }])
+  const wrapper = page()
+  await flushPromises()
+  expect(calc.numberOfSticks.value).toBe(9)
+  expect(calc.facadeButtTrimCode.value).toBeNull()
+  expect(saveWicketData).not.toHaveBeenCalled()
+  await wrapper.get('[data-testid="laying-butt"]').trigger('change')
+  await flushPromises()
+  expect(calc.facadeButtTrimCode.value).toBe('both')
+  expect(calc.numberOfSticks.value).toBe(10)
+})

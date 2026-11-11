@@ -1,3 +1,4 @@
+import type { FacadeButtTrim, FacadeButtTrimCode, FacadeButtTrimSide } from '../../app/api/wicket.types'
 import { coverStripError, parseCoverStripSelections, type CoverStripDraft } from '../../components/wicket/coverStripState'
 import { onWicketConfigurationMutation } from '../../app/api/wicketConfigurationMutation'
 import type { ProductRowContext, WicketRootMutationResponse, CoverStripSelection, CoverStripFrameColor } from '../../app/api/wicket.types'
@@ -285,6 +286,9 @@ const reliefYardAcrossMode = ref<'stretch' | 'repeat'>('repeat')
 const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
+const facadeButtTrimCode = ref<FacadeButtTrimCode | null>(null)
+const facadeButtTrimSide = ref<FacadeButtTrimSide | null>(null)
+const facadeButtTrim = ref<FacadeButtTrim | null>(null)
 const layingFacadeCode = ref<'butt' | 'gap' | null>(null)
 const layingYardCode = ref<'butt' | 'gap' | null>(null)
 const yardTrimCode = ref<'none' | 'edge' | null>(null)
@@ -390,6 +394,9 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
+    facadeButtTrimCode.value = null
+    facadeButtTrimSide.value = null
+    facadeButtTrim.value = null
     layingFacadeCode.value = null
     gapId.value = null
     gapName.value = null
@@ -948,7 +955,7 @@ const fieldsFilled = ref<number>(0)
       reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
-      layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
+      facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
       gapId,
       gapName,
       numberOfSticks,
@@ -1361,7 +1368,7 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
-    layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
+    facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
     gapId,
     gapName,
     numberOfSticks,

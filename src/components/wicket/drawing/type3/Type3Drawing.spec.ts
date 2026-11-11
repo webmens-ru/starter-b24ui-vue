@@ -50,6 +50,24 @@ describe('Type3Drawing', () => {
     wrapper.unmount()
   })
 
+  it('hides both filling layers when the single butt cut has no selected side', async () => {
+    const store = useWicketFormStore()
+    store.widthProyema = '900'; store.heightProyema = '2000'; store.shieldType = 'noNet'
+    store.fillSide = 2; store.idFacade = 1; store.idYard = 2
+    store.raspolozheniyePolotna = 'vertical'; store.thicknessFacade = store.thicknessYard = '100'
+    store.layingFacadeCode = store.layingYardCode = 'butt'; store.gapName = store.gapYardMm = 0
+    store.numberOfSticks = store.numberOfSticksYard = 6
+    store.facadeButtTrimCode = 'single'; store.facadeButtTrimSide = null
+    store.facadeButtTrim = { mode: 'single', widthMm: 45, quantity: 7, requiresSide: true }
+    const wrapper = mount(Type3Drawing)
+    for (const yard of [false, true]) {
+      if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+      expect(wrapper.findAll('[data-testid="type3-picket"], [data-testid="type3-opposite-picket"]')).toHaveLength(0)
+      expect(wrapper.find('[data-testid="type3-outer-frame"]').exists()).toBe(true)
+    }
+    wrapper.unmount()
+  })
+
   it('shows only frame on both views for explicit zero with stale pickets and invalid orientation', async () => {
     const store = useWicketFormStore()
     store.widthProyema = '700'

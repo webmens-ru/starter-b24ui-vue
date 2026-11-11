@@ -29,3 +29,14 @@ it('accepts an empty option list', () => {
 it('accepts physical zero gap for butt laying independently of its caption', () => {
   expect(parseFenceGapOptions([{ id: 91, gapMm: 0, quantity: 10, label: 'Переименовано' }])[0]?.gapMm).toBe(0)
 })
+
+it('preserves structured butt trim metadata independently of captions', () => {
+  const buttTrim = { mode: 'both', widthMm: 42, quantity: 2, requiresSide: false }
+  expect(parseFenceGapOptions([{ id: 91, gapMm: 0, quantity: 10, label: 'Любая подпись', buttTrim }])[0]).toHaveProperty('buttTrim', buttTrim)
+})
+
+it('accepts zero physical quantity only for an unavailable butt layout', () => {
+  const buttTrim = { mode: 'unavailable', widthMm: null, quantity: 0, requiresSide: false }
+  expect(parseFenceGapOptions([{ id: 91, gapMm: 0, quantity: 0, label: 'Недоступно', buttTrim }])[0]?.quantity).toBe(0)
+  expect(() => parseFenceGapOptions([{ id: 91, gapMm: 28, quantity: 0, label: 'Недоступно', buttTrim }])).toThrow()
+})

@@ -3,11 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceGapOptions, saveWicketData, recalculate } from '../../../app/api/wicket'
 import { inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
-import type { FenceGapOption } from '../../../app/api/wicket.types'
+import type { FacadeButtTrimSide, FenceGapOption } from '../../../app/api/wicket.types'
 
 const emit = defineEmits<{ next: []; back: [] }>()
 const calc = useCalculation()
 const mode = ref<'butt' | 'gap' | null>(null)
+const trimSide = ref<FacadeButtTrimSide | null>(calc.facadeButtTrimSide.value)
 const selectedId = ref<number | null>(null)
 const options = ref<FenceGapOption[]>([])
 const loading = ref(false)
@@ -21,7 +22,9 @@ const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && cal
 onBeforeUnmount(() => { disposed = true })
 const selected = computed(() => options.value.find(option => option.id === selectedId.value))
 const positiveOptions = computed(() => options.value.filter(option => option.gapMm > 0))
-const valid = computed(() => !!selected.value && (mode.value === 'butt' ? selected.value.gapMm === 0 : mode.value === 'gap' && selected.value.gapMm > 0))
+const buttTrim = computed(() => mode.value === 'butt' ? selected.value?.buttTrim : undefined)
+const sideOptions = computed(() => calc.raspolozheniyePolotna.value === 'horizontal' ? [{ code: 'top' as const, label: 'Сверху' }, { code: 'bottom' as const, label: 'Снизу' }] : [{ code: 'hinge' as const, label: 'Со стороны петель' }, { code: 'lock' as const, label: 'Со стороны замка' }])
+const valid = computed(() => buttTrim.value?.mode !== 'unavailable' && (!buttTrim.value?.requiresSide || sideOptions.value.some(side => side.code === trimSide.value)) && !!selected.value && (mode.value === 'butt' ? selected.value.gapMm === 0 : mode.value === 'gap' && selected.value.gapMm > 0))
 
 async function load(): Promise<void> {
   loading.value = true
@@ -40,7 +43,7 @@ async function load(): Promise<void> {
     mode.value = calc.layingFacadeCode.value ?? (savedGap == null ? null : savedGap === 0 ? 'butt' : 'gap')
     const restored = savedGap == null ? undefined : options.value.find(option => option.gapMm === savedGap)
     selectedId.value = restored?.id ?? null
-    if (restored) {
+    if (restored && !(restored.gapMm === 0 && calc.facadeButtTrimCode.value === null)) {
       calc.gapId.value = restored.id
       calc.numberOfSticks.value = restored.quantity
     }
@@ -57,7 +60,8 @@ async function persist(): Promise<boolean> {
   saving.value = true
   error.value = ''
   const option = selected.value
-  const payload = { layingFacadeCode: mode.value, gapId: option.gapMm === 0 ? null : option.id, gapName: option.gapMm, numberOfSticks: option.quantity }
+  const trimCode = buttTrim.value?.mode === 'unavailable' ? null : buttTrim.value?.mode ?? null
+  const payload = { facadeButtTrimCode: trimCode, facadeButtTrimSide: trimCode === 'single' ? trimSide.value : null, layingFacadeCode: mode.value, gapId: option.gapMm === 0 ? null : option.id, gapName: option.gapMm, numberOfSticks: option.quantity }
   try {
     const yardSnapshot = await inheritedYardLaying(calc, mode.value, option.gapMm)
     if (!isCurrent()) return false
@@ -65,6 +69,9 @@ async function persist(): Promise<boolean> {
     if (!isCurrent()) return false
     applyYardSnapshot(calc, yardSnapshot)
     yardCleared.value = yardSnapshot.idYard === null
+    calc.facadeButtTrimCode.value = payload.facadeButtTrimCode
+    calc.facadeButtTrimSide.value = payload.facadeButtTrimSide
+    calc.facadeButtTrim.value = buttTrim.value ?? null
     calc.layingFacadeCode.value = mode.value
     calc.gapId.value = option.gapMm === 0 ? null : option.id
     calc.gapName.value = option.gapMm
@@ -93,7 +100,16 @@ async function persist(): Promise<boolean> {
 
 async function changeMode(value: 'butt' | 'gap'): Promise<void> {
   mode.value = value
+  trimSide.value = null
   selectedId.value = value === 'butt' ? options.value.find(option => option.gapMm === 0)?.id ?? null : null
+  calc.facadeButtTrim.value = buttTrim.value ?? null
+  calc.facadeButtTrimCode.value = buttTrim.value?.mode === 'unavailable' ? null : buttTrim.value?.mode ?? null
+  calc.facadeButtTrimSide.value = null
+  if (valid.value) await persist()
+}
+async function changeTrimSide(side: FacadeButtTrimSide): Promise<void> {
+  trimSide.value = side
+  calc.facadeButtTrimSide.value = side
   if (valid.value) await persist()
 }
 async function changeGap(event: Event): Promise<void> {
@@ -153,6 +169,12 @@ onMounted(() => {
           <option v-for="option in positiveOptions" :key="option.id" :value="option.id">{{ option.label }} — {{ option.quantity }} шт.</option>
         </select>
       </label>
+      <p v-if="buttTrim?.mode === 'both'" class="text-center">Подрезка с двух сторон: по {{ buttTrim.widthMm }} мм</p>
+      <p v-if="buttTrim?.mode === 'single'" class="text-center">Подрезка с одной стороны: {{ buttTrim.widthMm }} мм. Выберите сторону.</p>
+      <div v-if="buttTrim?.requiresSide" class="flex justify-center gap-4">
+        <label v-for="side in sideOptions" :key="side.code"><input type="radio" name="buttTrimSide" :data-testid="`butt-side-${side.code}`" :checked="trimSide === side.code" @change="changeTrimSide(side.code)" /> {{ side.label }}</label>
+      </div>
+      <p v-if="buttTrim?.mode === 'unavailable'" role="alert" class="text-red-700">Для текущих размеров укладка встык недоступна. Измените материал или размеры.</p>
       <p v-if="valid" class="text-center">Количество штакетин: <strong>{{ selected?.quantity }} шт.</strong></p>
       <p v-if="!loading && !error && !options.length">Для текущих размеров нет допустимых вариантов укладки.</p>
     </fieldset>

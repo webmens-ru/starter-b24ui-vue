@@ -19,6 +19,9 @@ export interface Type3DrawingSource extends DrawingPipeSource {
   heightTopPart?: unknown
   heightLowerPart?: unknown
   widthSidePart?: unknown
+  facadeButtTrimCode?: unknown
+  facadeButtTrimSide?: unknown
+  facadeButtTrim?: unknown
   layingFacadeCode?: unknown
   layingYardCode?: unknown
   yardTrimCode?: unknown
@@ -146,7 +149,40 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const facadeGap = numberValue(source.gapName, 0)
   const explicitFacadeGap = source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap'
     || (source.layingFacadeCode == null && facadeGap > 0)
-  const facadePickets = pickets(count, picketWidth, facadeGap, explicitFacadeGap)
+  function buttPickets(): Type3Rect[] {
+    const metadata = source.facadeButtTrim
+    if (!metadata || typeof metadata !== 'object') return []
+    const trim = metadata as Record<string, unknown>
+    const quantity = Number(trim.quantity), edge = Number(trim.widthMm)
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 200 || trim.mode !== source.facadeButtTrimCode) return []
+    const widths = Array<number>(quantity).fill(picketWidth)
+    if (trim.mode === 'both') {
+      if (quantity < 2 || !Number.isFinite(edge) || edge <= 0 || edge >= picketWidth) return []
+      widths[0] = widths[quantity - 1] = edge
+    } else if (trim.mode === 'single') {
+      if (!Number.isFinite(edge) || edge <= 0 || edge >= picketWidth) return []
+      const side = source.facadeButtTrimSide
+      let leading: boolean
+      if (horizontal) {
+        if (side !== 'top' && side !== 'bottom') return []
+        leading = side === 'top'
+      } else {
+        if ((side !== 'hinge' && side !== 'lock') || !orientation) return []
+        leading = side === 'hinge' ? orientation.hingeSide === 'left' : orientation.hingeSide === 'right'
+      }
+      widths[leading ? 0 : quantity - 1] = edge
+    } else if (trim.mode !== 'none') return []
+    if (Math.abs(widths.reduce((sum, value) => sum + value, 0) - span) > 0.01) return []
+    let offset = 0
+    return widths.map(width => {
+      const piece = horizontal ? rect(activeFill.x, activeFill.y + offset, activeFill.width, width)
+        : rect(activeFill.x + offset, activeFill.y, width, activeFill.height)
+      offset += width
+      return piece
+    })
+  }
+  const facadePickets = source.layingFacadeCode === 'butt' && source.facadeButtTrimCode != null
+    ? buttPickets() : pickets(count, picketWidth, facadeGap, explicitFacadeGap)
   const yardWidth = numberValue(source.thicknessYard, picketWidth, 10, 500)
   const yardGap = source.layingYardCode == null ? facadeGap : numberValue(source.gapYardMm, 0)
   const sharedPositiveGap = facadeGap > 0

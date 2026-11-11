@@ -69,6 +69,16 @@ export async function reconcileFacadeLaying(calc: Calculation, width: string | n
   const gap = calc.gapName.value
   if (gap === null || Number(calc.thicknessFacade.value) === Number(width)) return
   calc.yardTrimCode.value = null
+  calc.facadeButtTrimCode.value = null
+  calc.facadeButtTrimSide.value = null
+  calc.facadeButtTrim.value = null
+  if (calc.layingFacadeCode.value === 'butt') {
+    calc.layingFacadeCode.value = null
+    calc.gapName.value = null
+    calc.gapId.value = null
+    calc.numberOfSticks.value = null
+    return
+  }
   const owner = calc.getCurrentProductRowContext()
   const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'facade', includeButt: true,
     widthFenceFacade: width, widthFenceYard: calc.thicknessYard.value })

@@ -57,6 +57,9 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   /** The form's invalid-selection sentinel is rejected by canonicalizeWicketRootSavePayload before sending. */
   fillingOrientationCode?: FillingOrientation | '' | null
   layingFacadeCode?: 'butt' | 'gap' | null
+  facadeButtTrimCode?: FacadeButtTrimCode | null
+  facadeButtTrimSide?: FacadeButtTrimSide | null
+  facadeButtTrim?: FacadeButtTrim | null
   yardTrimCode?: 'none' | 'edge' | null
   layingYardCode?: 'butt' | 'gap' | null
   gapYardMm?: number | null
@@ -455,7 +458,16 @@ export interface FenceTableResponse {
   pagination?: SidingPagination
 }
 
+export type FacadeButtTrimCode = 'none' | 'both' | 'single'
+export type FacadeButtTrimSide = 'hinge' | 'lock' | 'top' | 'bottom'
+export interface FacadeButtTrim {
+  mode: FacadeButtTrimCode | 'unavailable'
+  widthMm: number | null
+  quantity: number
+  requiresSide: boolean
+}
 export interface FenceGapOption {
+  buttTrim?: FacadeButtTrim
   yardEdgeTrimAvailable?: boolean
   yardEdgeTrimWidthMm?: number | null
   id: number
