@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 declare const window: Window & { _HOSTNAME_: string }
 import { useCalculation } from '../../composables/useCalculation'
@@ -104,6 +104,17 @@ const errHeightUpperNet       = ref(false)
 const errHeightTop   = ref(false)
 const errHeightLower = ref(false)
 const errWidthSide   = ref(false)
+let geometryReady = false
+
+watch([shieldType, heightTopPart, heightLowerPart, widthSidePart, grilleLocation], () => {
+  if (!geometryReady || !isCurrent() || !isFrameSubtypeCode(shieldType.value)) return
+  const caps = frameSubtypeCapabilities(shieldType.value)
+  if ((caps.top && Number(heightTopPart.value) <= 0) || (caps.lower && Number(heightLowerPart.value) <= 0) || (caps.side && (Number(widthSidePart.value) <= 0 || !isGrilleSide(grilleLocation.value)))) return
+  const draft = JSON.stringify([shieldType.value, caps.top ? Number(heightTopPart.value) : 0,
+    caps.lower ? Number(heightLowerPart.value) : 0, caps.side ? Number(widthSidePart.value) : 0,
+    caps.side ? grilleLocation.value : null])
+  if (draft !== savedGeometry) calc.markFillingForRecalculation()
+}, { flush: 'sync' })
 
 // ─── Изображения щитов ───────────────────────────────────────────────────────
 // g - горизонтально, v - вертикально; right→g, left→v
@@ -334,6 +345,7 @@ async function save(): Promise<boolean> {
   buildBlock()
 
   const requestGeometry = geometrySnapshot()
+  if (requestGeometry !== savedGeometry) calc.markFillingForRecalculation()
   const clearLaying = String(calc.modelId.value) === '3' && requestGeometry !== savedGeometry
   const clearedLaying = { gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
   const provTop = providerTop.value
@@ -518,6 +530,7 @@ onMounted(async () => {
     widthSidePart.value = String(savedSide)
   }
   grilleLocation.value = calc.grilleLocation.value
+  geometryReady = true
   await loadNets()
   // Восстанавливаем сохранённый выбор по ID, сохраняя исторические размеры.
   if (unresolvedSubtype) {

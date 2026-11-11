@@ -52,6 +52,7 @@ export interface OpeningOptionsResponse {
 }
 
 export interface WicketSavePayload extends ProductRowContext, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, Omit<FillingOrientationProperties, 'fillingOrientationCode'>, FrameSubtypeProperties, GrilleSideProperties {
+  confirmFillingRecalculation?: boolean
   applySharedFenceLaying?: boolean
   /** The form's invalid-selection sentinel is rejected by canonicalizeWicketRootSavePayload before sending. */
   fillingOrientationCode?: FillingOrientation | '' | null
@@ -96,6 +97,7 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
 }
 
 export interface WicketRootMutationResponse {
+  fillingNeedsRecalculation?: boolean
   yardMaterialCleared?: boolean
   warning?: string | null
   coverStripFrameColor?: CoverStripFrameColor

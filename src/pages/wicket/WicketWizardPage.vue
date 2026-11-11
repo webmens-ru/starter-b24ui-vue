@@ -11,6 +11,7 @@ import {
   getWicketAccessoryComposition,
   loadCoherentWicketState,
   recalculate,
+  saveWicketData,
   onWicketProductRowLockConflict,
 } from '../../app/api/wicket'
 import type { ProductRowContext } from '../../app/api/productRows'
@@ -155,7 +156,8 @@ async function initCalculation(): Promise<void> {
     calc.modelId.value = context.modelId
     const restoredPage = calc.activePage.value === 'page12' && coverStripError(calc.coverStripDrafts.value)
       ? 'page_cover_strip' : calc.activePage.value
-    switchTo(restoredPage)
+    switchTo(String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value
+      && props.route.canNavigate?.('page2', restoredPage, getNavState()) === false ? 'page2' : restoredPage)
   } catch (e: unknown) {
     if (!isCurrentInitialization(generation)) return
     loadError.value = 'Ошибка загрузки расчёта'
@@ -217,6 +219,7 @@ watch(isMobile, (mobile) => {
 })
 
 const sectionState = computed(() => ({
+  fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
   coverStripDrafts: calc.coverStripDrafts.value,
   modelId: String(calc.modelId.value ?? ''),
   materialFacadeGlob: calc.materialFacadeGlob.value,
@@ -258,6 +261,7 @@ const incompletePages = computed(() =>
 
 function getNavState(): WicketSharedNavState {
   return {
+    fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
     coverStripDrafts: calc.coverStripDrafts.value,
     modelId: String(calc.modelId.value ?? ''),
     materialFacadeGlob: calc.materialFacadeGlob.value,
@@ -356,11 +360,37 @@ async function refreshNavigationPrice(): Promise<void> {
   }
 }
 
-function goNext() {
+let fillingConfirmationPending = false
+async function goNext() {
+  if (fillingConfirmationPending) return
   if (pendingNavigation && isCurrentNavigationAttempt(pendingNavigation)) return
   const next = getNextPage(activePage.value)
   if (next) {
     const previousPage = activePage.value
+    const filling = props.route.sections.find(section => section.pages.includes('page2'))
+    if (String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value && filling?.pages.includes(previousPage) && !filling.pages.includes(next)) {
+      if (!filling.validate({ ...sectionState.value, fillingNeedsRecalculation: false }).valid) {
+        showWarningModal.value = true
+        return
+      }
+      const generation = initGeneration
+      const contextKey = routeContextKey.value
+      fillingConfirmationPending = true
+      try {
+        const response = await saveWicketData({ ...calc.getBaseSavePayload(), confirmFillingRecalculation: true,
+          ...(String(calc.modelId.value) === '3' ? { applySharedFenceLaying: true } : {}) })
+        if (!mounted || generation !== initGeneration || contextKey !== routeContextKey.value || activePage.value !== previousPage) return
+        if (response?.fillingNeedsRecalculation !== false || calc.fillingNeedsRecalculation.value) throw new Error('Confirmation missing')
+      } catch {
+        if (mounted && generation === initGeneration && contextKey === routeContextKey.value) {
+          loadError.value = 'Не удалось подтвердить пересчёт заполнения. Повторите переход.'
+          showLoadErrorModal.value = true
+        }
+        return
+      } finally {
+        fillingConfirmationPending = false
+      }
+    }
     switchTo(next)
     if (activePage.value !== previousPage) void refreshNavigationPrice()
   }
@@ -486,6 +516,7 @@ async function goBack(): Promise<void> {
             :visited-pages="visitedPages"
             :is-page-accessible="isPageAccessible"
             :incomplete-pages="incompletePages"
+            :filling-needs-recalculation="String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value"
             :collapsed="isMobile || menuCollapsed"
             @select="onMenuSelect"
           />
@@ -517,6 +548,7 @@ async function goBack(): Promise<void> {
               :visited-pages="visitedPages"
               :is-page-accessible="isPageAccessible"
               :incomplete-pages="incompletePages"
+              :filling-needs-recalculation="String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value"
               :collapsed="false"
               @select="onMenuSelect"
             />

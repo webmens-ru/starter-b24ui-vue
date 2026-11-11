@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute, type WicketRouteSection } from './wicketRoute'
-import { shieldSection, canvasSection, standardTailSections } from './wicketRouteSections'
+import { shieldSection, canvasSection, fillingSection, standardTailSections } from './wicketRouteSections'
 
 const state: WicketSharedNavState = {
   modelId: '3',
@@ -26,6 +26,14 @@ function section(page: string, pages = [page]): WicketRouteSection {
 }
 
 describe('defineWicketRoute', () => {
+  it.each(['1', '2', '4', '5', '6', '7', '8', '9', '10', '11'])('does not block model %s for a stale dirty flag', modelId => {
+    const filling = fillingSection(['page2'], () => undefined, () => undefined, () => 'page2')
+    const route = defineWicketRoute([filling, section('page_painting')])
+    const stale = { ...state, modelId, fillingNeedsRecalculation: true, idFacade: 91 }
+    expect(filling.validate(stale).valid).toBe(true)
+    expect(route.canNavigate?.('page2', 'page_painting', stale)).toBe(true)
+  })
+
   it.each(Object.entries(routes))('%s starts at opening and contains no manufacturing section', (_, module) => {
     const route = Object.values(module).find(value => typeof value === 'object' && value !== null && 'sections' in value) as ReturnType<typeof defineWicketRoute>
     expect(route.menu(state)[0]?.page).toBe('page7')

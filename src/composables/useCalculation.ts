@@ -195,6 +195,7 @@ export function useCalculation() {
     setActivePage: wizard.setActivePage,
     isPageAccessible: wizard.isPageAccessible,
     getBaseSavePayload,
+    markFillingForRecalculation: form.markFillingForRecalculation,
     beginCoverStripMutation: () => form.beginCoverStripMutation(getCurrentProductRowContext()),
     getCurrentProductRowContext,
     getFullSavePayload,

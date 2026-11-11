@@ -52,6 +52,12 @@ export function defineWicketRoute(sections: WicketRouteSection[]): WicketRouteDe
 
   return {
     sections,
+    canNavigate: (_from, to, state) => {
+      if (state.modelId !== '3' || !state.fillingNeedsRecalculation) return true
+      const filling = sections.findIndex(section => section.pages.includes('page2'))
+      const destination = sections.findIndex(section => section.pages.includes(to))
+      return destination <= filling
+    },
     menu: state => visibleSections(state).map(section => section.menu),
     validations: state => new Map(
       visibleSections(state).map(section => [section.menu.page, section.validate(state)]),

@@ -54,6 +54,7 @@ export function fillingSection(
   result.prev = prev
   result.last = state => state.fillSide === 0 ? 'page2' : isFillingSideCount(state.fillSide) ? last(state) : 'page2'
   result.validate = state => {
+    if (state.modelId === '3' && state.fillingNeedsRecalculation) return { valid: false, errors: ['Требуется пересчёт'] }
     if (!isFillingSideCount(state.fillSide)) return { valid: false, errors: ['Не выбрано количество сторон заполнения'] }
     if (state.fillSide === 0) return ok()
     const hasFacade = state.idFacade != null && String(state.idFacade).trim() !== ''

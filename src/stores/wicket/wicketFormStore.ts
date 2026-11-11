@@ -50,11 +50,20 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
   const coverStrips = ref<CoverStripSelection[]>([])
   const coverStripDrafts = ref<CoverStripDraft[]>([])
   const coverStripDescriptions = ref<string[]>([])
+  const fillingNeedsRecalculation = ref(false)
+  let fillingDraftGeneration = 0
+  let fillingMetadataVersion = 0
+  function markFillingForRecalculation(): void {
+    if (String(useWicketWizardStore().modelId) !== '3' || fillSide.value === 0 || (!idFacade.value && !idYard.value)) return
+    fillingDraftGeneration += 1
+    fillingNeedsRecalculation.value = true
+  }
   let configurationGeneration = 0
   let coverMetadataVersion = 0
   const coverSnapshot = () => JSON.stringify(coverStripDrafts.value.map(({ unavailable: _unavailable, ...row }) => row))
   function beginCoverStripMutation(context: ProductRowContext): (response: WicketRootMutationResponse | undefined) => boolean {
     const generation = configurationGeneration
+    const fillingGeneration = fillingDraftGeneration
     const snapshot = coverSnapshot()
     const wizard = useWicketWizardStore()
     const current = () => generation === configurationGeneration && wizard.orderId === context.orderId
@@ -63,6 +72,11 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
     return response => {
       if (!current()) return false
       if (!response) return true
+      if (String(context.modelId) === '3' && response.fillingNeedsRecalculation !== undefined && response.lockVersion >= fillingMetadataVersion
+        && fillingGeneration === fillingDraftGeneration) {
+        fillingNeedsRecalculation.value = response.fillingNeedsRecalculation
+        fillingMetadataVersion = response.lockVersion
+      }
       if (response.lockVersion < coverMetadataVersion) return false
       // Missing fields in older responses never erase existing review requirements.
       const pieces = response.coverStrips === undefined ? undefined : parseCoverStripSelections(response.coverStrips)
@@ -427,6 +441,9 @@ const fieldsFilled = ref<number>(0)
     coverMetadataVersion = 0
     materialSelectionProblems.value = []
     fillingSaveBlocked.value = false
+    fillingNeedsRecalculation.value = false
+    fillingDraftGeneration += 1
+    fillingMetadataVersion = 0
     coverStripFrameColor.value = null
     coverStrips.value = []
     coverStripDrafts.value = []
@@ -801,6 +818,8 @@ const fieldsFilled = ref<number>(0)
     colorShieldPreviewHex.value = null
     configurationGeneration++
     coverMetadataVersion = typeof apiData.lockVersion === 'number' ? apiData.lockVersion : 0
+    fillingNeedsRecalculation.value = String(apiData.modelId ?? useWicketWizardStore().modelId) === '3' && apiData.fillingNeedsRecalculation === true
+    fillingMetadataVersion = Number(apiData.lockVersion ?? 0)
     coverStripFrameColor.value = (apiData.coverStripFrameColor as CoverStripFrameColor | undefined) ?? null
     coverStrips.value = parseCoverStripSelections(apiData.coverStrips ?? [])
     coverStripDrafts.value = coverStrips.value.map(row => ({ ...row, parameters: row.parameters.map(p => ({ ...p })) }))
@@ -1223,6 +1242,7 @@ const fieldsFilled = ref<number>(0)
   }
 
   return {
+    fillingNeedsRecalculation, markFillingForRecalculation,
     beginCoverStripMutation, coverStripFrameColor, coverStrips, coverStripDrafts, coverStripDescriptions,
     data,
     providesMaterial,

@@ -59,4 +59,32 @@ describe('explicit filling orientation choice', () => {
       options.mockRestore()
     }
   })
+  it('keeps a failed type3 orientation change dirty and retries atomic geometry clearing', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'
+    calc.fillSide.value = 2
+    calc.idFacade.value = 91
+    calc.idYard.value = 92
+    calc.raspolozheniyePolotna.value = 'vertical'
+    calc.gapName.value = 20
+    const wrapper = mount(RaspolozheniyePolotna, { global: { stubs: ['B24Button'] } })
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('offline'))
+    await wrapper.get('input[value="horizontal"]').setValue()
+    await flushPromises()
+    expect(calc.fillingNeedsRecalculation.value).toBe(true)
+    expect(calc.gapName.value).toBe(20)
+    expect(wrapper.text()).toContain('Не удалось сохранить')
+    const allowed = await (wrapper.vm as unknown as { validateBeforeLeave: () => Promise<boolean> }).validateBeforeLeave()
+    expect(allowed).toBe(true)
+    expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({
+      fillingOrientationCode: 'horizontal', gapName: null, layingFacadeCode: null,
+      layingYardCode: null, gapYardMm: null, yardTrimCode: null,
+    }))
+    expect(calc.gapName.value).toBeNull()
+    expect(calc.idFacade.value).toBe(91)
+    expect(calc.idYard.value).toBe(92)
+    wrapper.unmount()
+  })
+
 })

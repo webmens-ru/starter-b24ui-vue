@@ -69,6 +69,7 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYard
   void _fillingProfileYardProblem
 
+  delete canonicalPayload.fillingNeedsRecalculation
   delete canonicalPayload.coverStripFrameColor
   delete canonicalPayload.coverStripDrafts
   delete canonicalPayload.coverStripDescriptions

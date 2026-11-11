@@ -11,6 +11,7 @@ const props = defineProps<{
   isPageAccessible: (page: string) => boolean
   /** Страницы с неполным заполнением — подсвечиваются красной обводкой */
   incompletePages?: string[]
+  fillingNeedsRecalculation?: boolean
   collapsed?: boolean
 }>()
 
@@ -55,7 +56,7 @@ const inactiveB24ui = {
     <B24Button
       v-for="item in menuItems"
       :key="item.page"
-      :label="item.label"
+      :label="item.page === 'page2' && fillingNeedsRecalculation ? `${item.label} — Требуется пересчёт` : item.label"
       :color="colorMap[stateMap.get(item.page)!]"
       :disabled="!isPageAccessible(item.page)"
       :b24ui="stateMap.get(item.page) !== 'active' ? inactiveB24ui : {}"
@@ -77,7 +78,7 @@ const inactiveB24ui = {
         incompleteSet.has(item.page) && 'ring-2 ring-red-500 ring-inset'
       ]"
       :disabled="!isPageAccessible(item.page)"
-      :title="item.label"
+      :title="item.page === 'page2' && fillingNeedsRecalculation ? `${item.label} — Требуется пересчёт` : item.label"
       @click="emit('select', item)"
     >
       {{ index + 1 }}

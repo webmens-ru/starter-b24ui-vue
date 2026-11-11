@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
 import { fillingOrientationLabel, fillingOrientationOptions, isFillingOrientation, type FillingOrientationSelection } from '../../app/fillingOrientations'
@@ -10,6 +10,14 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const saving = ref(false)
+const saveError = ref('')
+const owner = calc.getCurrentProductRowContext()
+let disposed = false
+const isCurrent = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
+onBeforeUnmount(() => { disposed = true })
+let savedOrientation = calc.raspolozheniyePolotna.value
+
 
 const IMG_BASE = 'https://test-lk.doorhan-krd.ru/img/wicket/type1'
 const options = fillingOrientationOptions().map(option => ({ ...option,
@@ -18,8 +26,15 @@ const options = fillingOrientationOptions().map(option => ({ ...option,
 
 const selected = ref<FillingOrientationSelection>(calc.raspolozheniyePolotna.value)
 
-async function save() {
-  if (!isFillingOrientation(selected.value)) return
+async function save(): Promise<boolean> {
+  if (saving.value || !isCurrent() || !isFillingOrientation(selected.value)) return false
+  const requested = selected.value
+  const changed = requested !== savedOrientation
+  if (changed) calc.markFillingForRecalculation()
+  const clearLaying = changed && String(calc.modelId.value) === '3'
+  const clearedLaying = { gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
+  saving.value = true
+  saveError.value = ''
   calc.raspolozheniyePolotna.value = selected.value
 
   calc.updateOrCreateBlock('fillingOrientation', [
@@ -29,10 +44,27 @@ async function save() {
   try {
     await saveWicketData({
       ...calc.getBaseSavePayload(),
-      fillingOrientationCode: selected.value,
+      fillingOrientationCode: requested,
+      ...(clearLaying ? clearedLaying : {}),
     })
   } catch (e) {
-    console.warn('saveWicketData:', e)
+    if (isCurrent()) saveError.value = 'Не удалось сохранить расположение полотна. Нажмите «Далее», чтобы повторить.'
+    return false
+  } finally {
+    saving.value = false
+  }
+  if (!isCurrent()) return false
+  savedOrientation = requested
+  if (clearLaying) {
+    calc.gapId.value = null
+    calc.gapName.value = null
+    calc.numberOfSticks.value = null
+    calc.layingFacadeCode.value = null
+    calc.layingYardCode.value = null
+    calc.gapYardMm.value = null
+    calc.numberOfSticksYard.value = null
+    calc.yardTrimCode.value = null
+    calc.data.value = calc.data.value.filter(block => !['fenceLayingFacade', 'fenceLayingYard', 'yardFenceTrim'].includes(block.blockCode ?? ''))
   }
 
   if (calc.priceRetail.value) {
@@ -44,12 +76,18 @@ async function save() {
         model:              calc.model.value,
         modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+      if (isCurrent()) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
   }
+  return true
 }
+
+async function handleNext(): Promise<void> {
+  if (await save()) emit('next')
+}
+defineExpose({ validateBeforeLeave: save })
 
 onMounted(async () => {
   calc.setActivePage('page6')
@@ -66,9 +104,10 @@ onMounted(async () => {
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" @click="emit('back')" />
       <span class="text-2xl font-bold flex-1 text-center">Расположение полотна</span>
-      <B24Button label="Далее" color="air-secondary" :disabled="!isFillingOrientation(selected)" @click="emit('next')" />
+      <B24Button label="Далее" color="air-secondary" :disabled="saving || !isFillingOrientation(selected)" @click="handleNext" />
     </div>
 
+    <p v-if="saveError" role="alert">{{ saveError }}</p>
     <p v-if="!isFillingOrientation(selected)" role="alert">Выберите расположение полотна.</p>
     <!-- Варианты -->
     <div class="polotno-grid">
@@ -79,6 +118,7 @@ onMounted(async () => {
       >
         <input
           v-model="selected"
+          :disabled="saving"
           type="radio"
           name="fillingOrientationCode"
           :value="opt.value"
