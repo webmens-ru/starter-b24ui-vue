@@ -58,6 +58,7 @@ export interface Type3Geometry {
   hinges: Type3Rect[]
   strip: Type3Rect[]
   frame: Type3Rect[]
+  innerVertical: Type3Rect[]
   innerHorizontal: Type3Rect[]
   lockRail: Type3Rect
   fillArea: Type3Rect
@@ -234,7 +235,11 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       rect(gate.x, gate.y, rail, gate.height),
       rect(gate.x + gate.width - rail, gate.y, rail, gate.height),
     ],
-    innerHorizontal: [
+    innerVertical: horizontal ? [
+      rect(activeFill.x, activeFill.y, 20, activeFill.height),
+      rect(activeFill.x + activeFill.width - 20, activeFill.y, 20, activeFill.height),
+    ] : [],
+    innerHorizontal: horizontal ? [] : [
       rect(activeFill.x, activeFill.y, activeFill.width, 40),
       rect(activeFill.x, activeFill.y + activeFill.height - 40, activeFill.width, 40),
     ],

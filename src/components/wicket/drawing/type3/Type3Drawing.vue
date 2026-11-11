@@ -228,6 +228,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       />
       </template><template #inner>
       <g data-testid="type3-frame" :fill="displayedFrameColor" stroke="#20242a" stroke-width="1">
+        <rect v-for="(part, index) in geometry.innerVertical" :key="`detail-4-${index}`" data-testid="type3-detail-4" v-bind="part" />
         <rect v-for="(part, index) in geometry.innerHorizontal" :key="`detail-5-${index}`" data-testid="type3-detail-5" v-bind="part" />
         <rect data-testid="type3-detail-6" v-bind="geometry.lockRail" />
         <rect v-if="geometry.rails.lower.visible" data-testid="type3-lower-rail" v-bind="geometry.rails.lower" />

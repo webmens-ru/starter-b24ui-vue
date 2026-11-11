@@ -523,3 +523,20 @@ it.each(['vertical', 'horizontal'] as const)('renders the saved %s facade while 
   expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(store.numberOfSticksYard)
   wrapper.unmount()
 })
+
+it('renders only detail 4 and central detail 6 reinforcement for horizontal filling in both views', async () => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.widthProyema = '1000'; store.heightProyema = '2000'
+  store.hasStolby = 0; store.jumperPlacement = 'none'; store.shieldType = 'noNet'
+  store.raspolozheniyePolotna = 'horizontal'
+  const wrapper = mount(Type3Drawing)
+  for (const yard of [false, true]) {
+    if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    expect(wrapper.findAll('[data-testid="type3-detail-4"]')).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="type3-detail-5"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="type3-detail-6"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="type3-detail-6"]').attributes('height')).toBe('40')
+  }
+  wrapper.unmount()
+})

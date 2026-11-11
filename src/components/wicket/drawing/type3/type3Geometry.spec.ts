@@ -365,3 +365,14 @@ describe('yard butt edge cuts independent of facade', () => {
     expect(geometry.facadePickets.length).toBeGreaterThan(0)
   })
 })
+
+it.each(['noNet', 'upperNet'])('uses two vertical detail 4 pipes and central detail 6 for horizontal %s filling', shieldType => {
+  const geometry = buildType3Geometry({ ...base, shieldType, heightTopPart: 300, raspolozheniyePolotna: 'horizontal' })
+  expect(geometry.innerHorizontal).toHaveLength(0)
+  expect(geometry.innerVertical).toEqual([
+    { x: geometry.fillArea.x, y: geometry.fillArea.y, width: 20, height: geometry.fillArea.height },
+    { x: geometry.fillArea.x + geometry.fillArea.width - 20, y: geometry.fillArea.y, width: 20, height: geometry.fillArea.height },
+  ])
+  expect(geometry.lockRail.height).toBe(40)
+  expect(geometry.lockRail.y + 20).toBeCloseTo(geometry.fillArea.y + geometry.fillArea.height / 2, 0)
+})
