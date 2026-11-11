@@ -22,8 +22,8 @@ describe('type3Navigation', () => {
       })
     })
 
-    describe('page2_facade_fence → yard или page6 (сторона заполнения)', () => {
-      it('Одна сторона → page6 (пропуск yard)', () => {
+    describe('page2_facade_fence → yard или page3 (сторона заполнения)', () => {
+      it('Одна сторона → page3 (пропуск yard)', () => {
         expect(getNextPage('page2_facade_fence', state({ fillSide: 1 }))).toBe('page2_facade_fence_laying')
       })
       it('Две стороны → page2_yard_fence', () => {
@@ -34,8 +34,8 @@ describe('type3Navigation', () => {
       })
     })
 
-    describe('page2_yard_fence → page6', () => {
-      it('yard_fence → page6', () => {
+    describe('page2_yard_fence → page3', () => {
+      it('yard_fence → page3', () => {
         expect(getNextPage('page2_yard_fence', state())).toBe('page2_yard_fence_laying')
       })
     })
@@ -56,8 +56,8 @@ describe('type3Navigation', () => {
       it('удалённый page1 отсутствует в маршруте', () => {
         expect(getNextPage('page1', state())).toBeNull()
       })
-      it('page5 → page2', () => {
-        expect(getNextPage('page5', state())).toBe('page2')
+      it('page5 → page6', () => {
+        expect(getNextPage('page5', state())).toBe('page6')
       })
       it('page_lock_type → page10', () => {
         expect(getNextPage('page_lock_type', state())).toBe('page10')
@@ -81,12 +81,12 @@ describe('type3Navigation', () => {
       })
     })
 
-    describe('page6 → facade или yard (по fillSide)', () => {
+    describe('page3 → facade или yard (по fillSide)', () => {
       it('Одна сторона → page2_facade_fence', () => {
-        expect(getPrevPage('page6', state({ fillSide: 1 }))).toBe('page2_facade_fence_laying')
+        expect(getPrevPage('page3', state({ fillSide: 1 }))).toBe('page2_facade_fence_laying')
       })
       it('Две стороны → page2_yard_fence', () => {
-        expect(getPrevPage('page6', state({
+        expect(getPrevPage('page3', state({
           fillSide: 2,
           materialYardGlob: 'fence',
         }))).toBe('page2_yard_fence_laying')
@@ -109,8 +109,8 @@ describe('type3Navigation', () => {
     })
 
     describe('линейная последовательность', () => {
-      it('page2 → page5', () => {
-        expect(getPrevPage('page2', state())).toBe('page5')
+      it('page2 → page6', () => {
+        expect(getPrevPage('page2', state())).toBe('page6')
       })
       it('первый шаг page7 → null', () => {
         expect(getPrevPage('page7', state())).toBeNull()
@@ -136,12 +136,12 @@ describe('type3Navigation', () => {
 
 it('completes facade before starting yard and reverses all four screens', () => {
   const twoSides = state({ fillSide: 2 });
-  const pages = ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_laying', 'page6'];
+  const pages = ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_laying', 'page3'];
   for (let i = 0; i < pages.length - 1; i++) {
     expect(getNextPage(pages[i]!, twoSides)).toBe(pages[i + 1]);
     expect(getPrevPage(pages[i + 1]!, twoSides)).toBe(pages[i]);
   }
-  expect(getNextPage('page2_facade_fence_laying', state())).toBe('page6');
+  expect(getNextPage('page2_facade_fence_laying', state())).toBe('page3');
   expect(getNextPage('page2', state({ fillSide: 0 }))).toBe('page3');
 });
 

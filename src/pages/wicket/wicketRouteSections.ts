@@ -45,7 +45,12 @@ export function fillingSection(
   last: NonNullable<WicketRouteSection['last']>,
 ): WicketRouteSection {
   const result = section('page2', 'Заполнение', 'fill-side', pages)
-  result.next = (from, state) => state.fillSide === 0 ? undefined : isFillingSideCount(state.fillSide) ? next(from, state) : 'page2'
+  result.next = (from, state) => {
+    if (state.fillSide === 0) return undefined
+    if (!isFillingSideCount(state.fillSide)) return 'page2'
+    if (state.raspolozheniyePolotna !== undefined && !isFillingOrientation(state.raspolozheniyePolotna)) return 'page6'
+    return next(from, state)
+  }
   result.prev = prev
   result.last = state => state.fillSide === 0 ? 'page2' : isFillingSideCount(state.fillSide) ? last(state) : 'page2'
   result.validate = state => {
@@ -151,7 +156,6 @@ export function calculateSection(): WicketRouteSection {
 
 export function standardTailSections(): WicketRouteSection[] {
   return [
-    canvasSection(),
     shieldSection(),
     paintingSection(),
     lockSection(),

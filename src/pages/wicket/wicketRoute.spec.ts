@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute, type WicketRouteSection } from './wicketRoute'
-import { standardTailSections } from './wicketRouteSections'
+import { canvasSection, standardTailSections } from './wicketRouteSections'
 
 const state: WicketSharedNavState = {
   modelId: '3',
@@ -29,16 +29,21 @@ describe('defineWicketRoute', () => {
   it.each(Object.entries(routes))('%s starts at opening and contains no manufacturing section', (_, module) => {
     const route = Object.values(module).find(value => typeof value === 'object' && value !== null && 'sections' in value) as ReturnType<typeof defineWicketRoute>
     expect(route.menu(state)[0]?.page).toBe('page7')
-    expect(route.menu(state).map(item => item.page).slice(0, 4)).toEqual(['page7', 'page5', 'page2', 'page6'])
+    expect(route.menu(state).map(item => item.page).slice(0, 4)).toEqual(['page7', 'page5', 'page6', 'page2'])
     expect(route.next('page7', state)).toBe('page5')
-    expect(route.next('page5', state)).toBe('page2')
+    expect(route.next('page5', state)).toBe('page6')
+    expect(route.next('page6', state)).toBe('page2')
+    expect(route.next('page2', { ...state, raspolozheniyePolotna: null })).toBe('page6')
+    expect(route.prev('page6', state)).toBe('page5')
+    expect(route.menu({ ...state, fillSide: 0 }).map(item => item.page).slice(0, 4)).toEqual(['page7', 'page5', 'page2', 'page3'])
+    expect(route.next('page5', { ...state, fillSide: 0 })).toBe('page2')
     expect(route.prev('page5', state)).toBe('page7')
-    expect(route.prev('page2', state)).toBe('page5')
+    expect(route.prev('page2', state)).toBe('page6')
     expect(route.menu(state).some(item => item.page === 'page1' || item.label === 'Вариант изготовления')).toBe(false)
     expect(route.prev('page7', state)).toBeNull()
   })
   it('orders canvas, shield and painting as separate consecutive sections', () => {
-    const route = defineWicketRoute(standardTailSections())
+    const route = defineWicketRoute([canvasSection(), ...standardTailSections()])
     expect(route.menu(state).map(item => item.label)).toEqual([
       'Расположение полотна', 'Тип щита',
       'Окраска', 'Комплект замка', 'Дополнительная ручка', 'Нащельник', 'Рассчитать',

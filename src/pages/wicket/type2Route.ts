@@ -1,6 +1,7 @@
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute } from './wicketRoute'
 import {
+  canvasSection,
   fillingSection,
   openingSection, postsSection,
   standardTailSections,
@@ -42,6 +43,7 @@ const fill = fillingSection(
 export const type2Route = defineWicketRoute([
   openingSection(),
   postsSection(),
+  canvasSection(),
   fill,
   ...standardTailSections(),
 ])

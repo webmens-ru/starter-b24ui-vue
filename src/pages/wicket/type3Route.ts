@@ -1,6 +1,7 @@
 import type { WicketSharedNavState } from './wicketNavTypes'
 import { defineWicketRoute, type WicketRouteDefinition } from './wicketRoute'
 import {
+  canvasSection,
   fillingSection,
   openingSection, postsSection,
   standardTailSections,
@@ -9,6 +10,7 @@ import {
 const baseRoute = defineWicketRoute([
   openingSection(),
   postsSection(),
+  canvasSection(),
   fillingSection(
     ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_laying'],
     (from, state) => {
