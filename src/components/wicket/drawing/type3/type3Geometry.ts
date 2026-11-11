@@ -150,6 +150,11 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
       ? rect(activeFill.x, activeFill.y + offset + index * (visibleWidth + actualGap), activeFill.width, visibleWidth)
       : rect(activeFill.x + offset + index * (visibleWidth + actualGap), activeFill.y, visibleWidth, activeFill.height))
   }
+  function withEndClearance(picket: Type3Rect): Type3Rect {
+    return horizontal
+      ? rect(picket.x + 5, picket.y, picket.width - 10, picket.height)
+      : rect(picket.x, picket.y + 5, picket.width, picket.height - 10)
+  }
   const facadeGap = numberValue(source.gapName, 0)
   const explicitFacadeGap = source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap'
     || (source.layingFacadeCode == null && facadeGap > 0)
@@ -245,8 +250,8 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     ],
     lockRail: rect(activeFill.x + (horizontal ? 20 : 0), activeFill.y + Math.floor((activeFill.height - 40) / 2), Math.max(0, activeFill.width - (horizontal ? 41 : 1)), 40),
     fillArea: activeFill,
-    facadePickets,
-    yardPickets: source.fillSide === 2 ? yardPickets : [],
+    facadePickets: facadePickets.map(withEndClearance),
+    yardPickets: source.fillSide === 2 ? yardPickets.map(withEndClearance) : [],
     yardEdgeTrimWidth,
     yardTrimAvailable,
     rails: { lower, upper, vertical },

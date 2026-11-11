@@ -170,7 +170,7 @@ describe('buildType3Geometry', () => {
 
     expect(geometry.rails.lower.visible).toBe(false)
     expect(geometry.fillArea.y + geometry.fillArea.height).toBe(900)
-    expect(geometry.facadePickets[0]).toMatchObject({ y: 400, height: 500 })
+    expect(geometry.facadePickets[0]).toMatchObject({ y: 405, height: 490 })
   })
 
   it.each(['vertical', 'horizontal'])('keeps Type 5 %s pickets inside the gate when the upper height exceeds available space', (direction) => {
@@ -377,4 +377,21 @@ it.each(['noNet', 'upperNet'])('uses two vertical detail 4 pipes and central det
   expect(geometry.lockRail.x).toBe(geometry.fillArea.x + 20)
   expect(geometry.lockRail.width).toBe(geometry.fillArea.width - 41)
   expect(geometry.lockRail.y + 20).toBeCloseTo(geometry.fillArea.y + geometry.fillArea.height / 2, 0)
+})
+
+it.each(['vertical', 'horizontal'] as const)('leaves 5 mm at both ends of each %s picket on both sides', direction => {
+  const g = buildType3Geometry({ ...base, raspolozheniyePolotna: direction, fillSide: 2,
+    layingFacadeCode: 'gap', layingYardCode: 'gap', gapYardMm: 28, thicknessYard: 100 })
+  for (const pieces of [g.facadePickets, g.yardPickets]) {
+    expect(pieces.length).toBeGreaterThan(0)
+    for (const p of pieces) {
+      if (direction === 'horizontal') {
+        expect(p.x).toBe(g.fillArea.x + 5)
+        expect(p.width).toBe(g.fillArea.width - 10)
+      } else {
+        expect(p.y).toBe(g.fillArea.y + 5)
+        expect(p.height).toBe(g.fillArea.height - 10)
+      }
+    }
+  }
 })
