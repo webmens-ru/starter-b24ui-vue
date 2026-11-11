@@ -58,8 +58,11 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   fillingOrientationCode?: FillingOrientation | '' | null
   layingFacadeCode?: 'butt' | 'gap' | null
   facadeButtTrimCode?: FacadeButtTrimCode | null
+  yardButtTrimCode?: FacadeButtTrimCode | null
   facadeButtTrimSide?: FacadeButtTrimSide | null
+  yardButtTrimSide?: FacadeButtTrimSide | null
   facadeButtTrim?: FacadeButtTrim | null
+  yardButtTrim?: FacadeButtTrim | null
   yardTrimCode?: 'none' | 'edge' | null
   layingYardCode?: 'butt' | 'gap' | null
   gapYardMm?: number | null

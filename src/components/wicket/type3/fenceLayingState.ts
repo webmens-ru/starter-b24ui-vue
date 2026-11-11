@@ -3,6 +3,8 @@ import { getFenceGapOptions } from '../../../app/api/wicket'
 
 type Calculation = ReturnType<typeof useCalculation>
 export interface FenceYardSnapshot {
+  yardButtTrimCode?: 'none' | 'both' | 'single' | null
+  yardButtTrimSide?: 'hinge' | 'lock' | 'top' | 'bottom' | null
   yardTrimCode?: 'none' | 'edge' | null
   layingYardCode: 'butt' | 'gap' | null
   gapYardMm: number | null
@@ -22,7 +24,8 @@ export async function inheritedYardLaying(
   yardWidth: string | number = calc.thicknessYard.value,
 ): Promise<FenceYardSnapshot> {
   const yardTrimCode = mode === 'gap' && gap !== null && gap > 0 && gap === calc.gapName.value && Number(facadeWidth) === Number(calc.thicknessFacade.value) && Number(yardWidth) === Number(calc.thicknessYard.value) ? calc.yardTrimCode.value : null
-  const result: FenceYardSnapshot = { yardTrimCode, layingYardCode: mode, gapYardMm: gap, numberOfSticksYard: null }
+  const preserveButt = mode === 'butt' && gap === 0 && calc.layingYardCode.value === 'butt' && calc.gapYardMm.value === 0 && Number(facadeWidth) === Number(calc.thicknessFacade.value) && Number(yardWidth) === Number(calc.thicknessYard.value)
+  const result: FenceYardSnapshot = { yardButtTrimCode: preserveButt ? calc.yardButtTrimCode.value : null, yardButtTrimSide: preserveButt ? calc.yardButtTrimSide.value : null, yardTrimCode, layingYardCode: mode, gapYardMm: gap, numberOfSticksYard: null }
   if (!calc.idYard.value) return result
   if (mode === 'gap' && Number(facadeWidth) !== Number(yardWidth)) {
     return { ...result, yardTrimCode: null, idYard: null, widthFenceYard: null, materialSupplierYard: null,
@@ -40,6 +43,7 @@ export async function inheritedYardLaying(
 }
 
 export function applyYardSnapshot(calc: Calculation, snapshot: FenceYardSnapshot): void {
+  if (snapshot.yardButtTrimCode !== undefined) { calc.yardButtTrimCode.value = snapshot.yardButtTrimCode; calc.yardButtTrimSide.value = snapshot.yardButtTrimSide ?? null; if (snapshot.yardButtTrimCode === null) calc.yardButtTrim.value = null }
   if (snapshot.yardTrimCode !== undefined) calc.yardTrimCode.value = snapshot.yardTrimCode
   if (snapshot.idYard === null || snapshot.gapYardMm === null || snapshot.gapYardMm === 0) calc.yardTrimCode.value = null
   calc.layingYardCode.value = snapshot.layingYardCode
@@ -69,6 +73,9 @@ export async function reconcileFacadeLaying(calc: Calculation, width: string | n
   const gap = calc.gapName.value
   if (gap === null || Number(calc.thicknessFacade.value) === Number(width)) return
   calc.yardTrimCode.value = null
+  calc.yardButtTrimCode.value = null
+  calc.yardButtTrimSide.value = null
+  calc.yardButtTrim.value = null
   calc.facadeButtTrimCode.value = null
   calc.facadeButtTrimSide.value = null
   calc.facadeButtTrim.value = null

@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceGapOptions, saveWicketData, recalculate } from '../../../app/api/wicket'
 import { applyYardSnapshot } from './fenceLayingState'
 const emit = defineEmits<{ next: []; back: [] }>()
 const calc = useCalculation()
+import type { FacadeButtTrim, FacadeButtTrimSide } from '../../../app/api/wicket.types'
+const butt = computed(() => calc.layingFacadeCode.value === 'butt')
+const trim = ref<FacadeButtTrim | null>(null)
+const trimSide = ref<FacadeButtTrimSide | null>(calc.yardButtTrimSide.value)
+const sides = computed(() => calc.raspolozheniyePolotna.value === 'horizontal' ? [{ code: 'top' as const, label: 'Сверху' }, { code: 'bottom' as const, label: 'Снизу' }] : [{ code: 'hinge' as const, label: 'Со стороны петель' }, { code: 'lock' as const, label: 'Со стороны замка' }])
+const buttValid = computed(() => !!trim.value && trim.value.mode !== 'unavailable' && (!trim.value.requiresSide || sides.value.some(side => side.code === trimSide.value)))
 const choice = ref<'none' | 'edge' | null>(calc.yardTrimCode.value)
 const available = ref(false)
 const loading = ref(true)
@@ -20,24 +26,38 @@ async function load(): Promise<void> {
   error.value = ''
   try {
     const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true, yardTrimCode: 'none', widthFenceFacade: calc.thicknessFacade.value, widthFenceYard: calc.thicknessYard.value })
-    if (isCurrent()) available.value = options.find(option => option.gapMm === calc.gapName.value)?.yardEdgeTrimAvailable === true
+    if (isCurrent()) {
+      const selected = options.find(option => option.gapMm === calc.gapName.value)
+      available.value = selected?.yardEdgeTrimAvailable === true
+      trim.value = selected?.buttTrim ?? null
+      if (butt.value) { calc.yardButtTrim.value = trim.value; if (!buttValid.value) error.value = trim.value?.mode === 'unavailable' || !trim.value ? 'Подрезка недоступна для текущих размеров.' : '' }
+    }
   } catch { error.value = 'Не удалось проверить подрезку. Повторите загрузку.' }
   finally { loading.value = false }
 }
 async function persist(): Promise<boolean> {
-  if (loading.value || saving.value || choice.value === null || (choice.value === 'edge' && !available.value)) return false
+  if (loading.value || saving.value || (butt.value ? !buttValid.value : choice.value === null || (choice.value === 'edge' && !available.value))) return false
   saving.value = true
   error.value = ''
   const code = choice.value
   try {
-    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, yardTrimCode: code })
+    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, yardTrimCode: butt.value ? null : code, ...(butt.value ? { yardButtTrimCode: trim.value!.mode === 'unavailable' ? null : trim.value!.mode, yardButtTrimSide: trim.value!.requiresSide ? trimSide.value : null } : {}) })
     if (!isCurrent()) return false
     const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true, yardTrimCode: code, widthFenceFacade: calc.thicknessFacade.value, widthFenceYard: calc.thicknessYard.value })
     if (!isCurrent()) return false
     const selected = options.find(option => option.gapMm === calc.gapName.value)
     if (!selected) throw new Error('Нет укладки')
+    if (butt.value) {
+      calc.yardButtTrimCode.value = trim.value!.mode === 'unavailable' ? null : trim.value!.mode
+      calc.yardButtTrimSide.value = trim.value!.requiresSide ? trimSide.value : null
+      calc.yardButtTrim.value = trim.value
+      calc.numberOfSticksYard.value = selected.quantity
+      calc.yardTrimCode.value = null
+      calc.updateOrCreateBlock('yardFenceTrim', [{ paramCode: 'yardButtTrimCode', name: 'Подрезка планок', value: trim.value!.mode === 'none' ? 'Без подрезки' : trim.value!.mode === 'both' ? 'Две крайние планки' : 'Одна крайняя планка' }], 'Подрезка планок (двор)')
+    } else {
     applyYardSnapshot(calc, { layingYardCode: calc.layingYardCode.value, gapYardMm: calc.gapName.value, numberOfSticksYard: selected.quantity, yardTrimCode: code })
     calc.updateOrCreateBlock('yardFenceTrim', [{ paramCode: 'yardTrimCode', name: 'Подрезка планок', value: code === 'edge' ? 'С подрезкой' : 'Без подрезки' }], 'Подрезка планок (двор)')
+    }
     if (calc.priceRetail.value) {
       try {
         const result = await recalculate({ ...calc.getCurrentProductRowContext(), productType: calc.productType.value, model: calc.model.value, modelId: calc.modelId.value })
@@ -66,11 +86,19 @@ onMounted(() => { calc.setActivePage('page2_yard_fence_trim'); void load() })
     <div class="sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" :disabled="saving" @click="back" />
       <span class="text-3xl font-bold flex-1 text-center">Двор — подрезка планок</span>
-      <B24Button label="Далее" color="air-secondary" :disabled="loading || saving || choice === null || (choice === 'edge' && !available)" @click="next" />
+      <B24Button label="Далее" color="air-secondary" :disabled="loading || saving || (butt ? !buttValid : choice === null || (choice === 'edge' && !available))" @click="next" />
     </div>
     <p v-if="loading">Проверка размеров…</p>
     <div v-if="error" role="alert" class="rounded border border-red-300 bg-red-50 p-3 text-red-700">{{ error }} <button v-if="!saving" class="underline" @click="load">Повторить загрузку</button></div>
-    <fieldset :disabled="loading || saving" class="min-w-0 space-y-4">
+    <div v-if="butt && !loading" class="space-y-4 text-center">
+      <p v-if="trim?.mode === 'none'">Планки укладываются без подрезки.</p>
+      <p v-else-if="trim?.mode === 'both'">Две крайние планки одинаковой ширины: {{ trim.widthMm }} мм.</p>
+      <p v-else-if="trim?.mode === 'single'">Одна крайняя планка шириной {{ trim.widthMm }} мм. Выберите сторону подрезки.</p>
+      <div v-if="trim?.requiresSide" class="flex justify-center gap-4">
+        <label v-for="side in sides" :key="side.code"><input v-model="trimSide" type="radio" name="yardButtSide" :value="side.code" :disabled="saving" /> {{ side.label }}</label>
+      </div>
+    </div>
+    <fieldset v-if="!butt" :disabled="loading || saving" class="min-w-0 space-y-4">
       <legend class="w-full text-center text-xl font-semibold mb-3">Подрезка крайних планок</legend>
       <div class="option-grid">
         <label class="lock-card"><input type="radio" class="sr-only" name="yardTrim" data-testid="trim-none" :checked="choice === 'none'" @change="select('none')" /><div class="card-content"><span class="block text-sm font-semibold text-center">Без подрезки</span></div></label>

@@ -115,8 +115,11 @@ async function persistWizardProgress(): Promise<void> {
 const sectionState = computed(() => ({
   fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
   facadeButtTrimCode: calc.facadeButtTrimCode.value,
+  yardButtTrimCode: calc.yardButtTrimCode.value,
   facadeButtTrimSide: calc.facadeButtTrimSide.value,
+  yardButtTrimSide: calc.yardButtTrimSide.value,
   facadeButtTrim: calc.facadeButtTrim.value,
+  yardButtTrim: calc.yardButtTrim.value,
   layingFacadeCode: calc.layingFacadeCode.value,
   layingYardCode: calc.layingYardCode.value,
   gapName: calc.gapName.value,

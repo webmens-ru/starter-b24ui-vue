@@ -105,6 +105,11 @@ async function save(row: FenceRow) {
   if (widthLocked.value && Number(row.widthFence) !== Number(calc.thicknessFacade.value)) throw new Error('Ширина штакетника двора должна совпадать с фасадом')
   if (!isCurrent()) throw new Error('Расчёт изменился')
 
+  if (String(calc.idYard.value) !== String(row.id) || Number(calc.thicknessYard.value) !== Number(row.widthFence)) {
+    calc.yardButtTrimCode.value = null
+    calc.yardButtTrimSide.value = null
+    calc.yardButtTrim.value = null
+  }
   calc.idYard.value                = row.id
   calc.materialSupplierYard.value = row.company
   calc.materialYard.value          = row.material
@@ -169,7 +174,7 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
     else await saveWicketData({
       ...calc.getBaseSavePayload(), applySharedFenceLaying: true, idYard: null, widthFenceYard: null,
       materialSupplierYard: null, materialYard: null, typeOfCoatingYard: null, colorYard: null,
-      yardTrimCode: null, layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null,
+      yardButtTrimCode: null, yardButtTrimSide: null, yardTrimCode: null, layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null,
     })
     needsSave.value = false
     return true

@@ -32,7 +32,7 @@ async function save(): Promise<boolean> {
   const changed = requested !== savedOrientation
   if (changed) calc.markFillingForRecalculation()
   const clearLaying = changed && String(calc.modelId.value) === '3'
-  const clearedLaying = { facadeButtTrimCode: null, facadeButtTrimSide: null, gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
+  const clearedLaying = { yardButtTrimCode: null, yardButtTrimSide: null, facadeButtTrimCode: null, facadeButtTrimSide: null, gapId: null, gapName: null, numberOfSticks: null, layingFacadeCode: null, layingYardCode: null, gapYardMm: null, numberOfSticksYard: null, yardTrimCode: null }
   saving.value = true
   saveError.value = ''
   calc.raspolozheniyePolotna.value = selected.value
@@ -63,6 +63,9 @@ async function save(): Promise<boolean> {
     calc.layingYardCode.value = null
     calc.gapYardMm.value = null
     calc.numberOfSticksYard.value = null
+    calc.yardButtTrimCode.value = null
+    calc.yardButtTrimSide.value = null
+    calc.yardButtTrim.value = null
     calc.facadeButtTrimCode.value = null
     calc.facadeButtTrimSide.value = null
     calc.facadeButtTrim.value = null

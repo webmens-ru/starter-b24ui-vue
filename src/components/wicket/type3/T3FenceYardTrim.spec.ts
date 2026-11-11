@@ -48,3 +48,30 @@ it('does not calculate a price before the initial calculation', async () => {
   const wrapper = page(); await flushPromises(); await wrapper.get('[data-testid="trim-none"]').setValue(); await flushPromises()
   expect(recalculate).not.toHaveBeenCalled()
 })
+
+it('uses independent yard butt width and automatically confirms two equal cuts', async () => {
+  const calc = useCalculation(); calc.gapName.value = 0; calc.layingFacadeCode.value = 'butt'; calc.thicknessFacade.value = '100'; calc.thicknessYard.value = '120'
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 0, gapMm: 0, quantity: 8, label: 'Любая подпись', buttTrim: { mode: 'both', widthMm: 46, quantity: 2, requiresSide: false } }])
+  const wrapper = page(); await flushPromises()
+  expect(wrapper.text()).toContain('46 мм')
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(true)
+  expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ yardButtTrimCode: 'both', yardButtTrimSide: null }))
+  expect(calc.yardButtTrim.value?.widthMm).toBe(46)
+  expect(calc.facadeButtTrimCode.value).toBeNull()
+})
+it('requires a logical side for single yard butt trimming', async () => {
+  const calc = useCalculation(); calc.gapName.value = 0; calc.layingFacadeCode.value = 'butt'; calc.raspolozheniyePolotna.value = 'horizontal'
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 0, gapMm: 0, quantity: 8, label: '', buttTrim: { mode: 'single', widthMm: 43, quantity: 1, requiresSide: true } }])
+  const wrapper = page(); await flushPromises()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  await wrapper.get('input[value="top"]').setValue()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(true)
+  expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ yardButtTrimCode: 'single', yardButtTrimSide: 'top' }))
+})
+it('blocks an unavailable yard butt layout', async () => {
+  const calc = useCalculation(); calc.gapName.value = 0; calc.layingFacadeCode.value = 'butt'
+  vi.mocked(getFenceGapOptions).mockResolvedValue([{ id: 0, gapMm: 0, quantity: 0, label: '', buttTrim: { mode: 'unavailable', widthMm: 0, quantity: 0, requiresSide: false } }])
+  const wrapper = page(); await flushPromises()
+  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
+  expect(saveWicketData).not.toHaveBeenCalled()
+})

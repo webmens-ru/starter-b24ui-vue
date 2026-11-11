@@ -19,6 +19,9 @@ export interface Type3DrawingSource extends DrawingPipeSource {
   heightTopPart?: unknown
   heightLowerPart?: unknown
   widthSidePart?: unknown
+  yardButtTrimCode?: unknown
+  yardButtTrimSide?: unknown
+  yardButtTrim?: unknown
   facadeButtTrimCode?: unknown
   facadeButtTrimSide?: unknown
   facadeButtTrim?: unknown
@@ -149,19 +152,17 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
   const facadeGap = numberValue(source.gapName, 0)
   const explicitFacadeGap = source.layingFacadeCode === 'butt' || source.layingFacadeCode === 'gap'
     || (source.layingFacadeCode == null && facadeGap > 0)
-  function buttPickets(): Type3Rect[] {
-    const metadata = source.facadeButtTrim
+  function buttPickets(widthMm: number, code: unknown, side: unknown, metadata: unknown): Type3Rect[] {
     if (!metadata || typeof metadata !== 'object') return []
     const trim = metadata as Record<string, unknown>
     const quantity = Number(trim.quantity), edge = Number(trim.widthMm)
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 200 || trim.mode !== source.facadeButtTrimCode) return []
-    const widths = Array<number>(quantity).fill(picketWidth)
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 200 || trim.mode !== code) return []
+    const widths = Array<number>(quantity).fill(widthMm)
     if (trim.mode === 'both') {
-      if (quantity < 2 || !Number.isFinite(edge) || edge <= 0 || edge >= picketWidth) return []
+      if (quantity < 2 || !Number.isFinite(edge) || edge <= 0 || edge >= widthMm) return []
       widths[0] = widths[quantity - 1] = edge
     } else if (trim.mode === 'single') {
-      if (!Number.isFinite(edge) || edge <= 0 || edge >= picketWidth) return []
-      const side = source.facadeButtTrimSide
+      if (!Number.isFinite(edge) || edge <= 0 || edge >= widthMm) return []
       let leading: boolean
       if (horizontal) {
         if (side !== 'top' && side !== 'bottom') return []
@@ -182,7 +183,7 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     })
   }
   const facadePickets = source.layingFacadeCode === 'butt' && source.facadeButtTrimCode != null
-    ? buttPickets() : pickets(count, picketWidth, facadeGap, explicitFacadeGap)
+    ? buttPickets(picketWidth, source.facadeButtTrimCode, source.facadeButtTrimSide, source.facadeButtTrim) : pickets(count, picketWidth, facadeGap, explicitFacadeGap)
   const yardWidth = numberValue(source.thicknessYard, picketWidth, 10, 500)
   const yardGap = source.layingYardCode == null ? facadeGap : numberValue(source.gapYardMm, 0)
   const sharedPositiveGap = facadeGap > 0
@@ -191,7 +192,9 @@ export function buildType3Geometry(source: Type3DrawingSource): Type3Geometry {
     && (source.layingYardCode == null || source.layingYardCode === 'gap')
   // Midpoints of adjacent facade starts put each yard center exactly in a facade gap.
   // Derive the count from the facade so stale saved yard counts cannot add edge pickets.
-  let yardPickets = sharedPositiveGap
+  let yardPickets = yardGap === 0 && source.layingYardCode === 'butt' && source.yardButtTrimCode != null
+    ? buttPickets(yardWidth, source.yardButtTrimCode, source.yardButtTrimSide, source.yardButtTrim)
+    : sharedPositiveGap
     ? facadePickets.slice(0, -1).map((picket, index) => horizontal
       ? { ...picket, y: (picket.y + facadePickets[index + 1]!.y) / 2 }
       : { ...picket, x: (picket.x + facadePickets[index + 1]!.x) / 2 })

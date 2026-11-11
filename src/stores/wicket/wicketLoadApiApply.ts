@@ -125,8 +125,11 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   lockInstaller: 'manufacturer',
   typeLock: 'Тип_1',
   facadeButtTrimCode: null,
+  yardButtTrimCode: null,
   facadeButtTrimSide: null,
+  yardButtTrimSide: null,
   facadeButtTrim: null,
+  yardButtTrim: null,
   layingFacadeCode: null,
   layingYardCode: null,
   yardTrimCode: null,
@@ -170,8 +173,11 @@ export function applyWicketApiFieldMappings(
     if (target) target.value = apiData[key] === 'stretch' || apiData[key] === 'repeat' ? apiData[key] : WICKET_API_FIELD_DEFAULTS[key]
   }
   if (refMap.facadeButtTrimCode) refMap.facadeButtTrimCode.value = ['none', 'both', 'single'].includes(String(apiData.facadeButtTrimCode)) ? apiData.facadeButtTrimCode : null
+  if (refMap.yardButtTrimCode) refMap.yardButtTrimCode.value = ['none', 'both', 'single'].includes(String(apiData.yardButtTrimCode)) ? apiData.yardButtTrimCode : null
   if (refMap.facadeButtTrimSide) refMap.facadeButtTrimSide.value = ['hinge', 'lock', 'top', 'bottom'].includes(String(apiData.facadeButtTrimSide)) ? apiData.facadeButtTrimSide : null
+  if (refMap.yardButtTrimSide) refMap.yardButtTrimSide.value = ['hinge', 'lock', 'top', 'bottom'].includes(String(apiData.yardButtTrimSide)) ? apiData.yardButtTrimSide : null
   if (refMap.facadeButtTrim) refMap.facadeButtTrim.value = refMap.facadeButtTrimCode?.value == null ? null : parseFacadeButtTrim(apiData.facadeButtTrim)
+  if (refMap.yardButtTrim) refMap.yardButtTrim.value = refMap.yardButtTrimCode?.value == null ? null : parseFacadeButtTrim(apiData.yardButtTrim)
   if (refMap.yardTrimCode) refMap.yardTrimCode.value = apiData.yardTrimCode === 'none' || apiData.yardTrimCode === 'edge' ? apiData.yardTrimCode : null
   function set(key: string, val: unknown) {
     if (val === undefined) return
@@ -232,7 +238,7 @@ export function applyWicketApiFieldMappings(
     refMap.paintSelection.value = selection ? { isFixedColor: Boolean(Number(selection.isFixedColor)), requiresColorNote: Boolean(Number(selection.requiresColorNote)), isPaintAvailable: Boolean(Number(selection.isPaintAvailable)) } : null
   }
   for (const [key, value] of Object.entries(apiData)) {
-    if (['yardTrimCode', 'facadeButtTrimCode', 'facadeButtTrimSide', 'facadeButtTrim'].includes(key)) continue
+    if (['yardButtTrimCode', 'yardButtTrimSide', 'yardButtTrim', 'yardTrimCode', 'facadeButtTrimCode', 'facadeButtTrimSide', 'facadeButtTrim'].includes(key)) continue
     if (['paintId', 'paintColorId', 'colorShieldId', 'paintSelection', 'paintSelectionUnavailable'].includes(key)) continue
     if (key === 'isTherePen' || key === 'isTherePenName') continue
     if (key === 'grilleLocation' || key === 'grilleSideCode' || key === 'grilleSideProblem') continue

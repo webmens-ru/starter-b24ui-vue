@@ -8,7 +8,7 @@ import {
   standardTailSections,
 } from './wicketRouteSections'
 
-const needsTrim = (state: WicketSharedNavState): boolean => state.fillSide === 2 && Number(state.gapName) > 0
+const needsTrim = (state: WicketSharedNavState): boolean => state.fillSide === 2 && (Number(state.gapName) > 0 || state.layingFacadeCode === 'butt')
 
 const baseRoute = defineWicketRoute([
   openingSection(),
@@ -49,7 +49,8 @@ filling.validate = state => {
   if (state.fillSide === 2 && (!validGap(state.layingYardCode, yardGap) || yardGap !== state.gapName
     || (state.layingYardCode != null && state.layingFacadeCode != null && state.layingYardCode !== state.layingFacadeCode)
     || (state.gapName! > 0 && Number(state.thicknessFacade) !== Number(state.thicknessYard)))) return { valid: false, errors: ['Материал и укладка двора должны соответствовать фасаду'] }
-  if (needsTrim(state) && state.yardTrimCode !== 'none' && state.yardTrimCode !== 'edge') return { valid: false, errors: ['Не выбрана подрезка планок двора'] }
+  if (state.fillSide === 2 && state.layingFacadeCode === 'butt' && (state.facadeButtTrimCode != null || state.yardButtTrimCode != null) && (state.yardButtTrimCode == null || state.yardButtTrim?.mode === 'unavailable' || (state.yardButtTrimCode === 'single' && !(state.raspolozheniyePolotna === 'horizontal' ? ['top', 'bottom'] : ['hinge', 'lock']).includes(state.yardButtTrimSide ?? '')))) return { valid: false, errors: ['Не выбрана подрезка планок двора'] }
+  if (state.fillSide === 2 && Number(state.gapName) > 0 && state.yardTrimCode !== 'none' && state.yardTrimCode !== 'edge') return { valid: false, errors: ['Не выбрана подрезка планок двора'] }
   return materials
 }
 export const type3Route: WicketRouteDefinition = {

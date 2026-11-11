@@ -161,3 +161,16 @@ it('rejects independently saved yard gap or physical width in gap mode', () => {
   expect(type3Route.validations({ ...shared, gapYardMm: 17 }).get('page2')?.valid).toBe(false)
   expect(type3Route.validations({ ...shared, thicknessYard: '120' }).get('page2')?.valid).toBe(false)
 })
+
+it('routes double-sided butt laying through independent yard trimming', () => {
+  expect(getNextPage('page2_yard_fence', state({ fillSide: 2, layingFacadeCode: 'butt', gapName: 0, facadeButtTrimCode: 'both' }))).toBe('page2_yard_fence_trim')
+})
+
+it('requires yard butt completion for new facade layouts while retaining historical null codes', () => {
+  const base = state({ idFacade: 100, idYard: 101, fillSide: 2, layingFacadeCode: 'butt', layingYardCode: 'butt', gapName: 0, gapYardMm: 0, thicknessFacade: '100', thicknessYard: '120' })
+  const validate = type3Route.sections.find(section => section.menu.page === 'page2')!.validate
+  expect(validate({ ...base, facadeButtTrimCode: 'both', yardButtTrimCode: null }).valid).toBe(false)
+  expect(validate({ ...base, facadeButtTrimCode: null, yardButtTrimCode: null }).valid).toBe(true)
+  expect(validate({ ...base, facadeButtTrimCode: 'both', yardButtTrimCode: 'single', yardButtTrimSide: 'top', raspolozheniyePolotna: 'vertical' }).valid).toBe(false)
+  expect(validate({ ...base, facadeButtTrimCode: 'both', yardButtTrimCode: 'single', yardButtTrimSide: 'lock', raspolozheniyePolotna: 'vertical' }).valid).toBe(true)
+})

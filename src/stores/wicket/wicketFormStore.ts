@@ -287,8 +287,11 @@ const reliefFacadeImage       = ref<string>('')
 const colorFacadeReverseHex   = ref<string>('')
 const colorFacadeReverseImage = ref<string>('')
 const facadeButtTrimCode = ref<FacadeButtTrimCode | null>(null)
+const yardButtTrimCode = ref<FacadeButtTrimCode | null>(null)
 const facadeButtTrimSide = ref<FacadeButtTrimSide | null>(null)
+const yardButtTrimSide = ref<FacadeButtTrimSide | null>(null)
 const facadeButtTrim = ref<FacadeButtTrim | null>(null)
+const yardButtTrim = ref<FacadeButtTrim | null>(null)
 const layingFacadeCode = ref<'butt' | 'gap' | null>(null)
 const layingYardCode = ref<'butt' | 'gap' | null>(null)
 const yardTrimCode = ref<'none' | 'edge' | null>(null)
@@ -395,8 +398,11 @@ const fieldsFilled = ref<number>(0)
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
     facadeButtTrimCode.value = null
+    yardButtTrimCode.value = null
     facadeButtTrimSide.value = null
+    yardButtTrimSide.value = null
     facadeButtTrim.value = null
+    yardButtTrim.value = null
     layingFacadeCode.value = null
     gapId.value = null
     gapName.value = null
@@ -404,6 +410,9 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    yardButtTrimCode.value = null
+    yardButtTrimSide.value = null
+    yardButtTrim.value = null
     yardTrimCode.value = null
     data.value = data.value.filter(block => block.blockCode !== 'yardFenceTrim')
     layingYardCode.value = null
@@ -956,6 +965,7 @@ const fieldsFilled = ref<number>(0)
       colorFacadeReverseHex,
       colorFacadeReverseImage,
       facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
+      yardButtTrimCode, yardButtTrimSide, yardButtTrim,
       gapId,
       gapName,
       numberOfSticks,
@@ -1369,6 +1379,7 @@ const fieldsFilled = ref<number>(0)
     colorFacadeReverseHex,
     colorFacadeReverseImage,
     facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
+    yardButtTrimCode, yardButtTrimSide, yardButtTrim,
     gapId,
     gapName,
     numberOfSticks,
