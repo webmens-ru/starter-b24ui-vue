@@ -205,6 +205,7 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
 
 async function selectRow(row: FenceRow) {
   if (saving.value) return
+  if (String(calc.idFacade.value) !== String(row.id) || Number(calc.thicknessFacade.value) !== Number(row.widthFence)) calc.invalidateFillingPreview('facade')
   needsSave.value = true
   selectedRow.value = row
   if (await persistSelection(row)) await doRecalculate()
@@ -212,6 +213,7 @@ async function selectRow(row: FenceRow) {
 
 async function deselectRow() {
   if (saving.value) return
+  if (calc.idFacade.value) calc.invalidateFillingPreview('facade')
   needsSave.value = true
   selectedRow.value = null
   calc.reliefFacadeImage.value = ''

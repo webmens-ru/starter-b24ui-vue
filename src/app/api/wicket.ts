@@ -519,6 +519,8 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
     notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
     const response: WicketRootMutationResponse = {
       lockVersion: data.data.lockVersion,
+      ...(typeof data.data.fillingFacadeReady === 'boolean' ? { fillingFacadeReady: data.data.fillingFacadeReady } : {}),
+      ...(typeof data.data.fillingYardReady === 'boolean' ? { fillingYardReady: data.data.fillingYardReady } : {}),
       ...(data.data.fillingNeedsRecalculation === undefined ? {} : { fillingNeedsRecalculation: data.data.fillingNeedsRecalculation }),
       ...(data.data.yardMaterialCleared === undefined ? {} : { yardMaterialCleared: data.data.yardMaterialCleared }),
       ...(data.data.warning === undefined ? {} : { warning: data.data.warning }),

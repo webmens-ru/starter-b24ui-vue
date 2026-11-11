@@ -92,16 +92,22 @@ const invalidFacadeButt = computed(() => calc.layingFacadeCode.value === 'butt'
   && calc.facadeButtTrimCode?.value != null && geometry.value.facadePickets.length === 0)
 const invalidYardButt = computed(() => calc.fillSide.value === 2 && calc.layingYardCode.value === 'butt'
   && calc.yardButtTrimCode?.value != null && geometry.value.yardPickets.length === 0)
+const facadeReady = computed(() => !invalidFacadeButt.value
+  && (calc.fillingFacadeReady?.value ?? !calc.fillingNeedsRecalculation?.value))
+const yardReady = computed(() => !invalidYardButt.value
+  && (calc.fillingYardReady?.value ?? !calc.fillingNeedsRecalculation?.value))
 const viewedPickets = computed(() => {
-  if (invalidYardButt.value || invalidFacadeButt.value || calc.fillingNeedsRecalculation?.value || calc.fillSide.value === 0 || !showFill.value) return []
+  if (calc.fillSide.value === 0 || !showFill.value) return []
   if (viewSide.value === 'yard') {
-    return geometry.value.yard.visible ? geometry.value.yardPickets : []
+    return yardReady.value && geometry.value.yard.visible ? geometry.value.yardPickets : []
   }
-  return geometry.value.facadePickets
+  return facadeReady.value ? geometry.value.facadePickets : []
 })
 const oppositePickets = computed(() => {
-  if (invalidYardButt.value || invalidFacadeButt.value || calc.fillingNeedsRecalculation?.value || calc.fillSide.value !== 2 || !showFill.value) return []
-  return viewSide.value === 'street' ? geometry.value.yardPickets : geometry.value.facadePickets
+  if (calc.fillSide.value !== 2 || !showFill.value) return []
+  return viewSide.value === 'street'
+    ? (yardReady.value ? geometry.value.yardPickets : [])
+    : (facadeReady.value ? geometry.value.facadePickets : [])
 })
 const oppositeFill = computed(() => viewSide.value === 'street' ? geometry.value.yard : geometry.value.facade)
 const oppositePatternId = computed(() => viewSide.value === 'street' ? yardPatternId : facadePatternId)
@@ -128,9 +134,9 @@ const picketFill = computed(() => !realisticColors.value
 const oppositePicketFill = computed(() => !realisticColors.value
   ? SCHEMATIC_FILL_COLOR
   : oppositeFill.value.image ? `url(#${oppositePatternId.value})` : oppositeFill.value.color)
-const materialPatterns = computed(() => calc.fillingNeedsRecalculation?.value || calc.fillSide.value === 0 || !realisticColors.value ? [] : [
-  { id: activePatternId.value, image: viewedFill.value.image },
-  ...(calc.fillSide.value === 2 ? [{ id: oppositePatternId.value, image: oppositeFill.value.image }] : []),
+const materialPatterns = computed(() => !realisticColors.value ? [] : [
+  ...(viewedPickets.value.length ? [{ id: activePatternId.value, image: viewedFill.value.image }] : []),
+  ...(oppositePickets.value.length ? [{ id: oppositePatternId.value, image: oppositeFill.value.image }] : []),
 ].filter(pattern => pattern.image))
 const viewBox = computed(() => {
   const { drawing, hinges } = geometry.value

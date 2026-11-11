@@ -104,6 +104,8 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
 
 export interface WicketRootMutationResponse {
   fillingNeedsRecalculation?: boolean
+  fillingFacadeReady?: boolean
+  fillingYardReady?: boolean
   yardMaterialCleared?: boolean
   warning?: string | null
   coverStripFrameColor?: CoverStripFrameColor

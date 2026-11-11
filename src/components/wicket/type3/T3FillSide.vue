@@ -41,6 +41,7 @@ function clearYardSelection() {
 }
 
 function onFillSideChange() {
+  calc.invalidateFillingPreview('yard')
   if (calc.fillSide.value === 1) {
     calc.materialYardGlob.value = null
     clearYardSelection()
@@ -52,6 +53,7 @@ function onFillSideChange() {
 }
 
 function onMaterialFacadeChange() {
+  calc.invalidateFillingPreview('facade')
   clearFacadeSelection()
   if (calc.fillSide.value === 2) {
     calc.materialYardGlob.value = calc.materialFacadeGlob.value
@@ -61,6 +63,7 @@ function onMaterialFacadeChange() {
 }
 
 function onMaterialYardChange() {
+  calc.invalidateFillingPreview('yard')
   clearYardSelection()
   save()
 }

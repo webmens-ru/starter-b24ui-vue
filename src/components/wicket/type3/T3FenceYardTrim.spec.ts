@@ -75,3 +75,50 @@ it('blocks an unavailable yard butt layout', async () => {
   expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
   expect(saveWicketData).not.toHaveBeenCalled()
 })
+
+it('keeps the facade ready during a failed yard trim edit and accepts server readiness on retry', async () => {
+  const calc = useCalculation()
+  calc.fillingFacadeReady.value = calc.fillingYardReady.value = true
+  calc.fillingNeedsRecalculation.value = true
+  calc.yardTrimCode.value = 'none'
+  const wrapper = page(); await flushPromises()
+  expect(calc.fillingYardReady.value).toBe(true)
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
+  await wrapper.get('[data-testid="trim-edge"]').setValue(); await flushPromises()
+  expect(calc.fillingFacadeReady.value).toBe(true)
+  expect(calc.fillingYardReady.value).toBe(false)
+  vi.mocked(saveWicketData).mockImplementationOnce(async () => {
+    calc.beginCoverStripMutation()({ lockVersion: 2, fillingFacadeReady: true, fillingYardReady: true, fillingNeedsRecalculation: false })
+    return undefined as never
+  })
+  expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+  expect(calc.fillingYardReady.value).toBe(true)
+  expect(calc.fillingNeedsRecalculation.value).toBe(false)
+})
+
+it('has matching yard geometry when the successful save restores readiness', async () => {
+  const calc = useCalculation()
+  calc.yardTrimCode.value = 'none'
+  calc.fillingFacadeReady.value = calc.fillingYardReady.value = true
+  const wrapper = page(); await flushPromises()
+  let atAcknowledgement: unknown
+  vi.mocked(saveWicketData).mockImplementationOnce(async () => {
+    atAcknowledgement = [calc.yardTrimCode.value, calc.numberOfSticksYard.value]
+    calc.beginCoverStripMutation()({ lockVersion: 3, fillingFacadeReady: true, fillingYardReady: true })
+    return undefined as never
+  })
+  await wrapper.get('[data-testid="trim-edge"]').setValue(); await flushPromises()
+  expect(calc.fillingYardReady.value).toBe(true)
+  expect(atAcknowledgement).toEqual(['edge', 9])
+})
+it('keeps the edited yard hidden when candidate geometry cannot be refreshed', async () => {
+  const calc = useCalculation()
+  calc.yardTrimCode.value = 'none'
+  calc.fillingFacadeReady.value = calc.fillingYardReady.value = true
+  const wrapper = page(); await flushPromises()
+  vi.mocked(getFenceGapOptions).mockRejectedValueOnce(new Error('options'))
+  await wrapper.get('[data-testid="trim-edge"]').setValue(); await flushPromises()
+  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(calc.fillingYardReady.value).toBe(false)
+  expect(calc.yardTrimCode.value).toBe('none')
+})

@@ -35,6 +35,35 @@ describe('persisted filling recalculation requirement', () => {
     complete({ lockVersion: 5, fillingNeedsRecalculation: true })
     expect(calc.fillingNeedsRecalculation.value).toBe(false)
   })
+  it('loads partial readiness and preserves the facade through yard drafts and acknowledgements', () => {
+    const calc = setup()
+    calc.loadFromApi({ modelId: '3', fillingNeedsRecalculation: true, fillingFacadeReady: true, fillingYardReady: false, lockVersion: 4 })
+    expect(calc.fillingFacadeReady.value).toBe(true)
+    calc.invalidateFillingPreview('yard')
+    expect(calc.fillingFacadeReady.value).toBe(true)
+    expect(calc.fillingYardReady.value).toBe(false)
+    const complete = calc.beginCoverStripMutation()
+    complete({ lockVersion: 5, fillingNeedsRecalculation: true, fillingFacadeReady: true, fillingYardReady: true })
+    expect(calc.fillingYardReady.value).toBe(true)
+    expect(calc.fillingNeedsRecalculation.value).toBe(true)
+    calc.invalidateFillingPreview('facade')
+    expect(calc.fillingFacadeReady.value).toBe(false)
+    expect(calc.fillingYardReady.value).toBe(false)
+    complete({ lockVersion: 6, fillingFacadeReady: true, fillingYardReady: true })
+    expect(calc.fillingFacadeReady.value).toBe(false)
+  })
+  it('keeps omitted metadata nullable and rejects readiness from an older context', () => {
+    const calc = setup()
+    expect(calc.fillingFacadeReady.value).toBeNull()
+    const complete = calc.beginCoverStripMutation()
+    calc.productRowId.value = 8
+    complete({ lockVersion: 9, fillingFacadeReady: true, fillingYardReady: true })
+    expect(calc.fillingFacadeReady.value).toBeNull()
+    calc.loadFromApi({ modelId: '3', fillingFacadeReady: true, fillingYardReady: false })
+    calc.loadFromApi({ modelId: '3' })
+    expect(calc.fillingFacadeReady.value).toBeNull()
+  })
+
   it.each(['1', '2', '4', '5', '6', '7', '8', '9', '10', '11'])('ignores dirty state for model %s', modelId => {
     const calc = setup()
     calc.modelId.value = modelId

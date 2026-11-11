@@ -52,11 +52,19 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
   const coverStripDrafts = ref<CoverStripDraft[]>([])
   const coverStripDescriptions = ref<string[]>([])
   const fillingNeedsRecalculation = ref(false)
+  const fillingFacadeReady = ref<boolean | null>(null)
+  const fillingYardReady = ref<boolean | null>(null)
   let fillingDraftGeneration = 0
+  function invalidateFillingPreview(side: 'facade' | 'yard'): void {
+    if (String(useWicketWizardStore().modelId) !== '3') return
+    fillingDraftGeneration += 1
+    if (side === 'facade') fillingFacadeReady.value = false
+    fillingYardReady.value = false
+  }
   let fillingMetadataVersion = 0
   function markFillingForRecalculation(): void {
     if (String(useWicketWizardStore().modelId) !== '3' || fillSide.value === 0 || (!idFacade.value && !idYard.value)) return
-    fillingDraftGeneration += 1
+    invalidateFillingPreview('facade')
     fillingNeedsRecalculation.value = true
   }
   let configurationGeneration = 0
@@ -73,9 +81,11 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
     return response => {
       if (!current()) return false
       if (!response) return true
-      if (String(context.modelId) === '3' && response.fillingNeedsRecalculation !== undefined && response.lockVersion >= fillingMetadataVersion
+      if (String(context.modelId) === '3' && response.lockVersion >= fillingMetadataVersion
         && fillingGeneration === fillingDraftGeneration) {
-        fillingNeedsRecalculation.value = response.fillingNeedsRecalculation
+        if (response.fillingNeedsRecalculation !== undefined) fillingNeedsRecalculation.value = response.fillingNeedsRecalculation
+        if (typeof response.fillingFacadeReady === 'boolean') fillingFacadeReady.value = response.fillingFacadeReady
+        if (typeof response.fillingYardReady === 'boolean') fillingYardReady.value = response.fillingYardReady
         fillingMetadataVersion = response.lockVersion
       }
       if (response.lockVersion < coverMetadataVersion) return false
@@ -458,6 +468,8 @@ const fieldsFilled = ref<number>(0)
     materialSelectionProblems.value = []
     fillingSaveBlocked.value = false
     fillingNeedsRecalculation.value = false
+    fillingFacadeReady.value = null
+    fillingYardReady.value = null
     fillingDraftGeneration += 1
     fillingMetadataVersion = 0
     coverStripFrameColor.value = null
@@ -835,6 +847,8 @@ const fieldsFilled = ref<number>(0)
     configurationGeneration++
     coverMetadataVersion = typeof apiData.lockVersion === 'number' ? apiData.lockVersion : 0
     fillingNeedsRecalculation.value = String(apiData.modelId ?? useWicketWizardStore().modelId) === '3' && apiData.fillingNeedsRecalculation === true
+    fillingFacadeReady.value = typeof apiData.fillingFacadeReady === 'boolean' ? apiData.fillingFacadeReady : null
+    fillingYardReady.value = typeof apiData.fillingYardReady === 'boolean' ? apiData.fillingYardReady : null
     fillingMetadataVersion = Number(apiData.lockVersion ?? 0)
     coverStripFrameColor.value = (apiData.coverStripFrameColor as CoverStripFrameColor | undefined) ?? null
     coverStrips.value = parseCoverStripSelections(apiData.coverStrips ?? [])
@@ -1259,7 +1273,7 @@ const fieldsFilled = ref<number>(0)
   }
 
   return {
-    fillingNeedsRecalculation, markFillingForRecalculation,
+    fillingNeedsRecalculation, fillingFacadeReady, fillingYardReady, markFillingForRecalculation, invalidateFillingPreview,
     beginCoverStripMutation, coverStripFrameColor, coverStrips, coverStripDrafts, coverStripDescriptions,
     data,
     providesMaterial,

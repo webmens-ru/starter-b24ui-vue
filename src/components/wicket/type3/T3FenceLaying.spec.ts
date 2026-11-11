@@ -195,3 +195,35 @@ it('keeps historical butt quantity and null code until the step is selected agai
   expect(calc.facadeButtTrimCode.value).toBe('both')
   expect(calc.numberOfSticks.value).toBe(10)
 })
+
+it('preserves ready layers when restoring and saving unchanged laying, then hides both on a failed edit', async () => {
+  const calc = useCalculation()
+  calc.gapName.value = 28
+  calc.layingFacadeCode.value = 'gap'
+  calc.fillingFacadeReady.value = calc.fillingYardReady.value = true
+  const wrapper = page()
+  await flushPromises()
+  expect(calc.fillingFacadeReady.value).toBe(true)
+  expect(await wrapper.vm.validateBeforeLeave()).toBe(true)
+  expect(calc.fillingFacadeReady.value).toBe(true)
+  expect(calc.fillingYardReady.value).toBe(true)
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
+  await wrapper.get('[data-testid="laying-butt"]').setValue()
+  await flushPromises()
+  expect(calc.fillingFacadeReady.value).toBe(false)
+  expect(calc.fillingYardReady.value).toBe(false)
+})
+
+it('stages new facade and inherited yard geometry before readiness acknowledgement', async () => {
+  const calc = useCalculation()
+  const wrapper = page(); await flushPromises()
+  let atAcknowledgement: unknown
+  vi.mocked(saveWicketData).mockImplementationOnce(async () => {
+    atAcknowledgement = [calc.gapName.value, calc.layingFacadeCode.value, calc.numberOfSticks.value]
+    calc.beginCoverStripMutation()({ lockVersion: 3, fillingFacadeReady: true, fillingYardReady: false })
+    return undefined as never
+  })
+  await wrapper.get('[data-testid="laying-butt"]').setValue(); await flushPromises()
+  expect(atAcknowledgement).toEqual([0, 'butt', 10])
+  expect(calc.fillingFacadeReady.value).toBe(true)
+})

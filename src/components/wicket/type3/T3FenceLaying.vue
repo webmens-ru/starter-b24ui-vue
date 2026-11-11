@@ -65,8 +65,6 @@ async function persist(): Promise<boolean> {
   try {
     const yardSnapshot = await inheritedYardLaying(calc, mode.value, option.gapMm)
     if (!isCurrent()) return false
-    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, ...yardSnapshot, ...payload })
-    if (!isCurrent()) return false
     applyYardSnapshot(calc, yardSnapshot)
     yardCleared.value = yardSnapshot.idYard === null
     calc.facadeButtTrimCode.value = payload.facadeButtTrimCode
@@ -76,6 +74,8 @@ async function persist(): Promise<boolean> {
     calc.gapId.value = option.gapMm === 0 ? null : option.id
     calc.gapName.value = option.gapMm
     calc.numberOfSticks.value = option.quantity
+    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, ...yardSnapshot, ...payload })
+    if (!isCurrent()) return false
     calc.updateOrCreateBlock('fenceLayingFacade', [
       { paramCode: 'layingMode', name: 'Способ укладки', value: mode.value === 'butt' ? 'Встык' : 'С зазором' },
       { paramCode: 'gapMm', name: 'Зазор, мм', value: String(option.gapMm) },
@@ -99,6 +99,7 @@ async function persist(): Promise<boolean> {
 }
 
 async function changeMode(value: 'butt' | 'gap'): Promise<void> {
+  if (mode.value !== value) calc.invalidateFillingPreview('facade')
   mode.value = value
   trimSide.value = null
   selectedId.value = value === 'butt' ? options.value.find(option => option.gapMm === 0)?.id ?? null : null
@@ -108,12 +109,15 @@ async function changeMode(value: 'butt' | 'gap'): Promise<void> {
   if (valid.value) await persist()
 }
 async function changeTrimSide(side: FacadeButtTrimSide): Promise<void> {
+  if (trimSide.value !== side) calc.invalidateFillingPreview('facade')
   trimSide.value = side
   calc.facadeButtTrimSide.value = side
   if (valid.value) await persist()
 }
 async function changeGap(event: Event): Promise<void> {
-  selectedId.value = Number((event.target as HTMLSelectElement).value) || null
+  const nextId = Number((event.target as HTMLSelectElement).value) || null
+  if (selectedId.value !== nextId) calc.invalidateFillingPreview('facade')
+  selectedId.value = nextId
   if (valid.value) await persist()
 }
 async function validateBeforeLeave(): Promise<boolean> {

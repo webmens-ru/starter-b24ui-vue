@@ -40,22 +40,28 @@ async function persist(): Promise<boolean> {
   saving.value = true
   error.value = ''
   const code = choice.value
+  const previous = { yardTrimCode: calc.yardTrimCode.value, yardButtTrimCode: calc.yardButtTrimCode.value, yardButtTrimSide: calc.yardButtTrimSide.value, yardButtTrim: calc.yardButtTrim.value, numberOfSticksYard: calc.numberOfSticksYard.value, layingYardCode: calc.layingYardCode.value, gapYardMm: calc.gapYardMm.value }
+  let staged = false
   try {
-    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, yardTrimCode: butt.value ? null : code, ...(butt.value ? { yardButtTrimCode: trim.value!.mode === 'unavailable' ? null : trim.value!.mode, yardButtTrimSide: trim.value!.requiresSide ? trimSide.value : null } : {}) })
-    if (!isCurrent()) return false
-    const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true, yardTrimCode: code, widthFenceFacade: calc.thicknessFacade.value, widthFenceYard: calc.thicknessYard.value })
+    const options = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true, yardTrimCode: code, ...(butt.value ? { yardButtTrimCode: trim.value!.mode, yardButtTrimSide: trim.value!.requiresSide ? trimSide.value : null } : {}), widthFenceFacade: calc.thicknessFacade.value, widthFenceYard: calc.thicknessYard.value })
     if (!isCurrent()) return false
     const selected = options.find(option => option.gapMm === calc.gapName.value)
     if (!selected) throw new Error('Нет укладки')
+    staged = true
     if (butt.value) {
       calc.yardButtTrimCode.value = trim.value!.mode === 'unavailable' ? null : trim.value!.mode
       calc.yardButtTrimSide.value = trim.value!.requiresSide ? trimSide.value : null
       calc.yardButtTrim.value = trim.value
       calc.numberOfSticksYard.value = selected.quantity
       calc.yardTrimCode.value = null
-      calc.updateOrCreateBlock('yardFenceTrim', [{ paramCode: 'yardButtTrimCode', name: 'Подрезка планок', value: trim.value!.mode === 'none' ? 'Без подрезки' : trim.value!.mode === 'both' ? 'Две крайние планки' : 'Одна крайняя планка' }], 'Подрезка планок (двор)')
     } else {
     applyYardSnapshot(calc, { layingYardCode: calc.layingYardCode.value, gapYardMm: calc.gapName.value, numberOfSticksYard: selected.quantity, yardTrimCode: code })
+    }
+    await saveWicketData({ ...calc.getBaseSavePayload(), applySharedFenceLaying: true, yardTrimCode: butt.value ? null : code, ...(butt.value ? { yardButtTrimCode: trim.value!.mode === 'unavailable' ? null : trim.value!.mode, yardButtTrimSide: trim.value!.requiresSide ? trimSide.value : null } : {}) })
+    if (!isCurrent()) return false
+    if (butt.value) {
+      calc.updateOrCreateBlock('yardFenceTrim', [{ paramCode: 'yardButtTrimCode', name: 'Подрезка планок', value: trim.value!.mode === 'none' ? 'Без подрезки' : trim.value!.mode === 'both' ? 'Две крайние планки' : 'Одна крайняя планка' }], 'Подрезка планок (двор)')
+    } else {
     calc.updateOrCreateBlock('yardFenceTrim', [{ paramCode: 'yardTrimCode', name: 'Подрезка планок', value: code === 'edge' ? 'С подрезкой' : 'Без подрезки' }], 'Подрезка планок (двор)')
     }
     if (calc.priceRetail.value) {
@@ -67,10 +73,24 @@ async function persist(): Promise<boolean> {
       }
     }
     return true
-  } catch { error.value = 'Не удалось сохранить подрезку. Нажмите «Далее», чтобы повторить.'; return false }
+  } catch {
+    if (staged && isCurrent()) {
+      calc.yardTrimCode.value = previous.yardTrimCode
+      calc.yardButtTrimCode.value = previous.yardButtTrimCode
+      calc.yardButtTrimSide.value = previous.yardButtTrimSide
+      calc.yardButtTrim.value = previous.yardButtTrim
+      calc.numberOfSticksYard.value = previous.numberOfSticksYard
+      calc.layingYardCode.value = previous.layingYardCode
+      calc.gapYardMm.value = previous.gapYardMm
+    }
+    error.value = 'Не удалось сохранить подрезку. Нажмите «Далее», чтобы повторить.'; return false }
   finally { saving.value = false }
 }
-async function select(code: 'none' | 'edge'): Promise<void> { choice.value = code; await persist() }
+async function select(code: 'none' | 'edge'): Promise<void> { if (choice.value !== code) calc.invalidateFillingPreview('yard'); choice.value = code; await persist() }
+function selectTrimSide(side: FacadeButtTrimSide): void {
+  if (trimSide.value !== side) calc.invalidateFillingPreview('yard')
+  trimSide.value = side
+}
 async function validateBeforeLeave(): Promise<boolean> {
   if (saving.value || loading.value) return false
   if (backRequested) { backRequested = false; return true }
@@ -95,7 +115,7 @@ onMounted(() => { calc.setActivePage('page2_yard_fence_trim'); void load() })
       <p v-else-if="trim?.mode === 'both'">Две крайние планки одинаковой ширины: {{ trim.widthMm }} мм.</p>
       <p v-else-if="trim?.mode === 'single'">Одна крайняя планка шириной {{ trim.widthMm }} мм. Выберите сторону подрезки.</p>
       <div v-if="trim?.requiresSide" class="flex justify-center gap-4">
-        <label v-for="side in sides" :key="side.code"><input v-model="trimSide" type="radio" name="yardButtSide" :value="side.code" :disabled="saving" /> {{ side.label }}</label>
+        <label v-for="side in sides" :key="side.code"><input :checked="trimSide === side.code" @change="selectTrimSide(side.code)" type="radio" name="yardButtSide" :value="side.code" :disabled="saving" /> {{ side.label }}</label>
       </div>
     </div>
     <fieldset v-if="!butt" :disabled="loading || saving" class="min-w-0 space-y-4">

@@ -188,6 +188,7 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
 
 async function selectRow(row: FenceRow) {
   if (saving.value) return
+  if (String(calc.idYard.value) !== String(row.id) || Number(calc.thicknessYard.value) !== Number(row.widthFence)) calc.invalidateFillingPreview('yard')
   needsSave.value = true
   selectedRow.value = row
   if (await persistSelection(row)) await doRecalculate()
@@ -195,6 +196,7 @@ async function selectRow(row: FenceRow) {
 
 function deselectRow() {
   if (saving.value) return
+  if (calc.idYard.value) calc.invalidateFillingPreview('yard')
   needsSave.value = true
   selectedRow.value = null
   calc.reliefYardImage.value = ''

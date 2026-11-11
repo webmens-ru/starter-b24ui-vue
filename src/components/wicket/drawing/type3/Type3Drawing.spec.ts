@@ -50,7 +50,7 @@ describe('Type3Drawing', () => {
     wrapper.unmount()
   })
 
-  it.each(['facade', 'yard'])('hides both layers when the %s single butt cut has no side', async side => {
+  it.each(['facade', 'yard'])('hides only the invalid layer when the %s single butt cut has no side', async side => {
     const store = useWicketFormStore()
     store.widthProyema = '900'; store.heightProyema = '2000'; store.shieldType = 'noNet'
     store.fillSide = 2; store.idFacade = 1; store.idYard = 2
@@ -67,7 +67,9 @@ describe('Type3Drawing', () => {
     const wrapper = mount(Type3Drawing)
     for (const yard of [false, true]) {
       if (yard) await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
-      expect(wrapper.findAll('[data-testid="type3-picket"], [data-testid="type3-opposite-picket"]')).toHaveLength(0)
+      const invalidNear = (side === 'yard') === yard
+      expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(invalidNear ? 0 : 6)
+      expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(invalidNear ? 6 : 0)
       expect(wrapper.find('[data-testid="type3-outer-frame"]').exists()).toBe(true)
     }
     wrapper.unmount()
@@ -490,5 +492,34 @@ it.each(['vertical', 'horizontal'] as const)('draws continuous %s near-picket ou
   }
   await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
   expect(wrapper.findAll('[data-testid="type3-picket-outline"]')).toHaveLength(0)
+  wrapper.unmount()
+})
+
+it.each(['vertical', 'horizontal'] as const)('renders the saved %s facade while the yard is pending recalculation', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.fillSide = 2; store.raspolozheniyePolotna = direction
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28
+  store.thicknessFacade = store.thicknessYard = '100'; store.numberOfSticks = direction === 'vertical' ? 6 : 12
+  store.numberOfSticksYard = store.numberOfSticks - 1
+  store.colorFacadeImage = '/saved-facade.png'; store.colorYardImage = '/pending-yard.png'
+  store.fillingNeedsRecalculation = true; store.fillingFacadeReady = true; store.fillingYardReady = false
+  const wrapper = mount(Type3Drawing)
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(store.numberOfSticks)
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(0)
+  expect(wrapper.find('pattern image[href="/saved-facade.png"]').exists()).toBe(true)
+  expect(wrapper.find('pattern image[href="/pending-yard.png"]').exists()).toBe(false)
+  await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(store.numberOfSticks)
+  store.fillingYardReady = true
+  await wrapper.vm.$nextTick()
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(store.numberOfSticksYard)
+  expect(store.fillingNeedsRecalculation).toBe(true)
+  store.fillingFacadeReady = false
+  await wrapper.vm.$nextTick()
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(0)
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(store.numberOfSticksYard)
   wrapper.unmount()
 })
