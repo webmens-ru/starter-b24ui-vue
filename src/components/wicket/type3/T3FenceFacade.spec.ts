@@ -82,3 +82,20 @@ it('retries a facade width change without retaining a stale yard gap', async () 
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ gapName: null, gapYardMm: null, numberOfSticksYard: null }))
   expect(calc.gapYardMm.value).toBeNull()
 })
+
+it('uses profile metadata independently of captions and clears a previous overlay for legacy material', async () => {
+  const calc = useCalculation()
+  calc.idFacade.value = ''; calc.idYard.value = ''
+  const row = { id: 303, company: 'Переименовано', material: 'Произвольное название', widthFence: '100', typeOfCoating: 'Другое имя', color: 'Название без признаков', profileId: 12, profileWidth: 100, profileImage: '/profile.png', minTrimWidth: 35, maxTrimWidth: 65 }
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [row, { ...row, id: 304, profileId: null, profileImage: null }], pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
+  const wrapper = mountPage()
+  await flushPromises()
+  await wrapper.findAll('tbody input')[0]!.setValue(true)
+  await flushPromises()
+  expect(calc.reliefFacadeImage.value).toBe('/profile.png')
+  expect(calc.thicknessFacade.value).toBe('100')
+  await wrapper.findAll('tbody input')[1]!.setValue(true)
+  await flushPromises()
+  expect(calc.reliefFacadeImage.value).toBe('')
+  wrapper.unmount()
+})

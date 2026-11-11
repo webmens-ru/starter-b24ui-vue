@@ -393,3 +393,53 @@ it('shows the two trimmed edge pieces in the rear layer and in the yard view', a
   expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(7)
   wrapper.unmount()
 })
+
+
+it.each(['vertical', 'horizontal'] as const)('overlays each %s picket with its profile above the material on both views', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28
+  store.thicknessFacade = store.thicknessYard = '100'; store.numberOfSticks = direction === 'vertical' ? 6 : 12
+  store.numberOfSticksYard = store.numberOfSticks - 1
+  store.colorFacadeImage = '/street-material.png'; store.colorYardImage = '/yard-material.png'
+  store.reliefFacadeImage = '/street-profile.png'; store.reliefYardImage = '/yard-profile.png'
+  const wrapper = mount(Type3Drawing)
+  for (const side of ['street', 'yard'] as const) {
+    if (side === 'yard') await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    for (const opposite of [false, true]) {
+      const group = wrapper.get(`[data-testid="type3-${opposite ? 'opposite-pickets' : 'pickets'}"]`)
+      const pickets = group.findAll('rect')
+      const images = group.findAll('image')
+      expect(images).toHaveLength(pickets.length)
+      expect(images.length).toBeGreaterThan(0)
+      const expectedSide = (side === 'street') !== opposite ? 'street' : 'yard'
+      images.forEach((image, index) => {
+        expect(image.attributes('href')).toBe(`/${expectedSide}-profile.png`)
+        expect(image.attributes('preserveAspectRatio')).toBe('none')
+        const picket = pickets[index]!
+        if (direction === 'horizontal') {
+          expect(image.attributes('width')).toBe(picket.attributes('height'))
+          expect(image.attributes('height')).toBe(picket.attributes('width'))
+          expect(image.attributes('transform')).toContain('rotate(90)')
+        } else {
+          for (const attr of ['x', 'y', 'width', 'height']) expect(image.attributes(attr)).toBe(picket.attributes(attr))
+        }
+      })
+      expect(group.html().indexOf('<image')).toBeGreaterThan(group.html().lastIndexOf('<rect'))
+      expect(group.attributes('fill')).toMatch(/^url\(#type3-/)
+    }
+  }
+  await wrapper.get('[data-testid="type3-drawing-color-schematic"]').setValue()
+  expect(wrapper.findAll('image[href$="-profile.png"]')).toHaveLength(0)
+  await wrapper.get('[data-testid="type3-drawing-color-realistic"]').setValue()
+  await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
+  expect(wrapper.findAll('image[href$="-profile.png"]')).toHaveLength(0)
+  await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(true)
+  store.fillingNeedsRecalculation = true
+  await wrapper.vm.$nextTick()
+  expect(wrapper.findAll('image[href$="-profile.png"]')).toHaveLength(0)
+  wrapper.unmount()
+})

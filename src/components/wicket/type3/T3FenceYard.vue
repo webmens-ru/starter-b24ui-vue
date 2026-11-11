@@ -97,6 +97,7 @@ function restoreFromCalc(): FenceRow | null {
     company:       calc.materialSupplierYard.value,
     material:      calc.materialYard.value,
     widthFence:    calc.thicknessYard.value,
+    profileImage:  calc.reliefYardImage.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
     color:         calc.colorYard.value,
   }
@@ -113,6 +114,7 @@ async function save(row: FenceRow) {
   calc.thicknessYard.value         = String(row.widthFence)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.colorYard.value             = row.color
+  calc.reliefYardImage.value       = row.profileImage ?? ''
 
   const yardSnapshot = await inheritedYardLaying(calc, inheritedMode.value, inheritedGap.value)
   if (!isCurrent()) throw new Error('Расчёт изменился')
@@ -191,6 +193,7 @@ function deselectRow() {
   if (saving.value) return
   needsSave.value = true
   selectedRow.value = null
+  calc.reliefYardImage.value = ''
   applyYardSnapshot(calc, { idYard: null, widthFenceYard: null, layingYardCode: inheritedMode.value, gapYardMm: inheritedGap.value, numberOfSticksYard: null })
   void persistSelection(null)
 }

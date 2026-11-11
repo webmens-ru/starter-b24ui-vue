@@ -96,6 +96,16 @@ const oppositePickets = computed(() => {
 const oppositeFill = computed(() => viewSide.value === 'street' ? geometry.value.yard : geometry.value.facade)
 const oppositePatternId = computed(() => viewSide.value === 'street' ? yardPatternId : facadePatternId)
 const realisticColors = computed(() => colorMode.value === 'realistic')
+const facadeProfileImage = computed(() => calc.reliefFacadeImage.value)
+const yardProfileImage = computed(() => calc.reliefYardImage.value)
+const viewedProfileImage = computed(() => viewSide.value === 'yard' ? yardProfileImage.value : facadeProfileImage.value)
+const oppositeProfileImage = computed(() => viewSide.value === 'street' ? yardProfileImage.value : facadeProfileImage.value)
+function profileImageRect(picket: { x: number; y: number; width: number; height: number }) {
+  return calc.raspolozheniyePolotna.value === 'horizontal'
+    ? { x: 0, y: 0, width: picket.height, height: picket.width, transform: `translate(${picket.x + picket.width} ${picket.y}) rotate(90)` }
+    : picket
+}
+
 const displayedFrameColor = computed(() => realisticColors.value
   ? geometry.value.frameColor
   : SCHEMATIC_FRAME_COLOR)
@@ -184,6 +194,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       <template #background>
       <g v-if="oppositePickets.length" data-testid="type3-opposite-pickets" :fill="oppositePicketFill" stroke="#30343a" stroke-width="0.7">
         <rect v-for="(picket, index) in oppositePickets" :key="`opposite-picket-${index}`" data-testid="type3-opposite-picket" v-bind="picket" />
+        <template v-if="realisticColors && oppositeProfileImage">
+          <image v-for="(picket, index) in oppositePickets" :key="`opposite-profile-${index}`" v-bind="profileImageRect(picket)" :href="oppositeProfileImage" preserveAspectRatio="none" />
+        </template>
       </g>
       <rect
         v-if="geometry.upperNetArea.visible && geometry.upperNetImage"
@@ -213,6 +226,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
           data-testid="type3-picket"
           v-bind="picket"
         />
+        <template v-if="realisticColors && viewedProfileImage">
+          <image v-for="(picket, index) in viewedPickets" :key="`profile-${index}`" v-bind="profileImageRect(picket)" :href="viewedProfileImage" preserveAspectRatio="none" />
+        </template>
       </g>
       </template></WicketBaseDrawing>
       <rect

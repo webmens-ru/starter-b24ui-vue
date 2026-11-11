@@ -100,6 +100,7 @@ function restoreFromCalc(): FenceRow | null {
     company:       calc.materialSupplierFacade.value,
     material:      calc.materialFacade.value,
     widthFence:    calc.thicknessFacade.value,
+    profileImage:  calc.reliefFacadeImage.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
     color:         calc.colorFacade.value,
   }
@@ -121,6 +122,7 @@ async function save(row: FenceRow) {
   calc.thicknessFacade.value         = String(row.widthFence)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.colorFacade.value             = row.color
+  calc.reliefFacadeImage.value       = row.profileImage ?? ''
 
   calc.updateOrCreateBlock('fillingFacade', [
     { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
@@ -204,6 +206,7 @@ async function deselectRow() {
   if (saving.value) return
   needsSave.value = true
   selectedRow.value = null
+  calc.reliefFacadeImage.value = ''
   calc.idFacade.value = ''
   clearGap()
   applyYardSnapshot(calc, { layingYardCode: null, gapYardMm: null, numberOfSticksYard: null })

@@ -438,7 +438,13 @@ export interface FenceRow {
   typeOfCoatingId?: number | null
   company: string
   material: string
+  /** Effective width, resolved by the API from the linked profile when present. */
   widthFence: string | number
+  profileId?: number | null
+  profileWidth?: number | null
+  profileImage?: string | null
+  minTrimWidth?: number | null
+  maxTrimWidth?: number | null
   typeOfCoating: string
   color: string
   /** camelCase, как в API и в БД dir_filling_fence (цена за единицу) */
