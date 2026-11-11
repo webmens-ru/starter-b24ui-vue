@@ -321,3 +321,51 @@ it.each(['vertical', 'horizontal'] as const)('renders the offset %s yard with fe
   yard.forEach((start, index) => expect(start).toBeCloseTo((facade[index]! + facade[index + 1]!) / 2))
   wrapper.unmount()
 })
+
+it.each(['vertical', 'horizontal'] as const)('shows the opposite %s filling through gaps behind frame and near pickets', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28
+  store.thicknessFacade = store.thicknessYard = '100'; store.numberOfSticks = direction === 'vertical' ? 6 : 12
+  store.numberOfSticksYard = store.numberOfSticks - 1
+  store.colorFacadeHex = '#123456'; store.colorYardHex = '#654321'
+  store.colorFacadeImage = '/street.png'; store.colorYardImage = '/yard.png'
+  const wrapper = mount(Type3Drawing)
+  const axis = direction === 'vertical' ? 'x' : 'y'
+  const size = direction === 'vertical' ? 'width' : 'height'
+  for (const side of ['street', 'yard'] as const) {
+    if (side === 'yard') await wrapper.get('[data-testid="type3-drawing-view-yard"]').setValue()
+    const near = wrapper.findAll('[data-testid="type3-picket"]')
+    const far = wrapper.findAll('[data-testid="type3-opposite-picket"]')
+    expect(near).toHaveLength(side === 'street' ? store.numberOfSticks : store.numberOfSticks - 1)
+    expect(far).toHaveLength(side === 'street' ? store.numberOfSticks - 1 : store.numberOfSticks)
+    const gapCenter = (Number(near[0]!.attributes(axis)) + Number(near[0]!.attributes(size)) + Number(near[1]!.attributes(axis))) / 2
+    expect(far.some(picket => Number(picket.attributes(axis)) < gapCenter && Number(picket.attributes(axis)) + Number(picket.attributes(size)) > gapCenter)).toBe(true)
+    const html = wrapper.html()
+    expect(html.indexOf('data-testid="type3-opposite-pickets"')).toBeLessThan(html.indexOf('data-testid="type3-frame"'))
+    expect(html.indexOf('data-testid="type3-frame"')).toBeLessThan(html.indexOf('data-testid="type3-pickets"'))
+    for (const image of ['/street.png', '/yard.png']) expect(wrapper.find(`pattern image[href="${image}"]`).exists()).toBe(true)
+    const farPattern = wrapper.get('[data-testid="type3-opposite-pickets"]').attributes('fill')
+    expect(farPattern).toMatch(side === 'street' ? /^url\(#type3-yard-/ : /^url\(#type3-facade-/)
+  }
+  await wrapper.get('[data-testid="type3-drawing-color-schematic"]').setValue()
+  expect(wrapper.get('[data-testid="type3-opposite-pickets"]').attributes('fill')).toBe('#bfdbfe')
+  await wrapper.get('[data-testid="type3-drawing-fill-toggle"]').setValue(false)
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(0)
+  expect(wrapper.findAll('[data-testid="type3-picket"]')).toHaveLength(0)
+  wrapper.unmount()
+})
+
+it.each([0, 1] as const)('does not draw a phantom opposite layer for fillSide=%s', fillSide => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'; store.fillSide = fillSide
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.numberOfSticks = 6
+  store.layingYardCode = 'gap'; store.gapYardMm = 28; store.numberOfSticksYard = 5
+  const wrapper = mount(Type3Drawing)
+  expect(wrapper.findAll('[data-testid="type3-opposite-picket"]')).toHaveLength(0)
+  wrapper.unmount()
+})

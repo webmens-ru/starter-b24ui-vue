@@ -88,6 +88,12 @@ const viewedPickets = computed(() => {
   }
   return geometry.value.facadePickets
 })
+const oppositePickets = computed(() => {
+  if (calc.fillSide.value !== 2 || !showFill.value) return []
+  return viewSide.value === 'street' ? geometry.value.yardPickets : geometry.value.facadePickets
+})
+const oppositeFill = computed(() => viewSide.value === 'street' ? geometry.value.yard : geometry.value.facade)
+const oppositePatternId = computed(() => viewSide.value === 'street' ? yardPatternId : facadePatternId)
 const realisticColors = computed(() => colorMode.value === 'realistic')
 const displayedFrameColor = computed(() => realisticColors.value
   ? geometry.value.frameColor
@@ -98,6 +104,13 @@ const picketFill = computed(() => !realisticColors.value
   : viewedFill.value.image
   ? `url(#${activePatternId.value})`
   : viewedFill.value.color)
+const oppositePicketFill = computed(() => !realisticColors.value
+  ? SCHEMATIC_FILL_COLOR
+  : oppositeFill.value.image ? `url(#${oppositePatternId.value})` : oppositeFill.value.color)
+const materialPatterns = computed(() => calc.fillSide.value === 0 || !realisticColors.value ? [] : [
+  { id: activePatternId.value, image: viewedFill.value.image },
+  ...(calc.fillSide.value === 2 ? [{ id: oppositePatternId.value, image: oppositeFill.value.image }] : []),
+].filter(pattern => pattern.image))
 const viewBox = computed(() => {
   const { drawing, hinges } = geometry.value
   const padding = Math.max(0, ...hinges.map(part => Math.max(-part.x, part.x + part.width - drawing.width)))
@@ -125,9 +138,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       aria-label="Чертёж калитки типа 3"
       role="img"
     >
-      <defs v-if="calc.fillSide.value !== 0 && realisticColors && viewedFill.image">
-        <pattern :id="activePatternId" patternUnits="objectBoundingBox" width="1" height="1">
-          <image :href="viewedFill.image" width="1" height="1" preserveAspectRatio="xMidYMid slice" />
+      <defs v-if="materialPatterns.length">
+        <pattern v-for="pattern in materialPatterns" :key="pattern.id" :id="pattern.id" patternUnits="objectBoundingBox" width="1" height="1">
+          <image :href="pattern.image" width="1" height="1" preserveAspectRatio="xMidYMid slice" />
         </pattern>
       </defs>
 
@@ -168,6 +181,9 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       />
       <WicketBaseDrawing :geometry="geometry.base" :orientation="calc.openingOrientation.value" :yard="viewSide === 'yard'" :color="displayedFrameColor" test-prefix="type3">
       <template #background>
+      <g v-if="oppositePickets.length" data-testid="type3-opposite-pickets" :fill="oppositePicketFill" stroke="#30343a" stroke-width="0.7">
+        <rect v-for="(picket, index) in oppositePickets" :key="`opposite-picket-${index}`" data-testid="type3-opposite-picket" v-bind="picket" />
+      </g>
       <rect
         v-if="geometry.upperNetArea.visible && geometry.upperNetImage"
         data-testid="type3-upper-net-background"
