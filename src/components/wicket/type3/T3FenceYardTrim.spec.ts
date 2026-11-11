@@ -7,24 +7,25 @@ import Trim from './T3FenceYardTrim.vue'
 vi.mock('../../../app/api/wicket', async original => ({ ...(await original<typeof import('../../../app/api/wicket')>()), getFenceGapOptions: vi.fn(), saveWicketData: vi.fn(), recalculate: vi.fn() }))
 beforeEach(() => {
   setActivePinia(createPinia()); const calc = useCalculation(); calc.reset()
-  calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'; calc.gapName.value = 28
+  calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'; calc.gapName.value = 28; calc.yardTrimCode.value = 'none'
   vi.mocked(getFenceGapOptions).mockReset().mockImplementation(async payload => [{ id: 1, gapMm: 28, quantity: payload.yardTrimCode === 'edge' ? 9 : 7, label: 'Переписанная подпись', yardEdgeTrimAvailable: true, yardEdgeTrimWidthMm: 40 }])
   vi.mocked(recalculate).mockReset().mockResolvedValue({ priceDealer: '200', priceRetail: '300' } as never)
   vi.mocked(saveWicketData).mockReset().mockResolvedValue(undefined as never)
 })
 function page() { return mount(Trim, { global: { stubs: { B24Button: { props: ['label','disabled'], template: '<button :disabled="disabled">{{ label }}</button>' } } } }) }
-it('requires explicit choice and saves only its code before refreshing normalized count', async () => {
+it('defaults missing choice to saved edge trimming and refreshes normalized count', async () => {
+  useCalculation().yardTrimCode.value = null
   const wrapper = page(); await flushPromises()
-  expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(false)
-  await wrapper.get('[data-testid="trim-edge"]').setValue(); await flushPromises()
+  expect((wrapper.get('[data-testid="trim-edge"]').element as HTMLInputElement).checked).toBe(true)
   expect(saveWicketData).toHaveBeenLastCalledWith({ orderId: 42, productRowId: 7, modelId: '3', manufacturerFacadeId: null, colorFacadeId: null, manufacturerYardId: null, colorYardId: null, reachedStep: 'page2_yard_fence_trim', visitedPages: '["page2_yard_fence_trim"]', applySharedFenceLaying: true, yardTrimCode: 'edge' })
   expect(useCalculation().numberOfSticksYard.value).toBe(9)
 })
 it('retains an unsaved choice and blocks leaving until retry succeeds', async () => {
+  useCalculation().yardTrimCode.value = 'edge'
   vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
   const wrapper = page(); await flushPromises(); await wrapper.get('[data-testid="trim-none"]').setValue(); await flushPromises()
   expect(wrapper.find('[role="alert"]').exists()).toBe(true)
-  expect(useCalculation().yardTrimCode.value).toBeNull()
+  expect(useCalculation().yardTrimCode.value).toBe('edge')
   expect(await (wrapper.vm as unknown as { validateBeforeLeave(): Promise<boolean> }).validateBeforeLeave()).toBe(true)
   expect(useCalculation().yardTrimCode.value).toBe('none')
 })

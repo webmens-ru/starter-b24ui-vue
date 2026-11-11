@@ -11,7 +11,7 @@ const trim = ref<FacadeButtTrim | null>(null)
 const trimSide = ref<FacadeButtTrimSide | null>(calc.yardButtTrimSide.value)
 const sides = computed(() => calc.raspolozheniyePolotna.value === 'horizontal' ? [{ code: 'top' as const, label: 'Сверху' }, { code: 'bottom' as const, label: 'Снизу' }] : [{ code: 'hinge' as const, label: 'Со стороны петель' }, { code: 'lock' as const, label: 'Со стороны замка' }])
 const buttValid = computed(() => !!trim.value && trim.value.mode !== 'unavailable' && (!trim.value.requiresSide || sides.value.some(side => side.code === trimSide.value)))
-const choice = ref<'none' | 'edge' | null>(calc.yardTrimCode.value)
+const choice = ref<'none' | 'edge' | null>(calc.yardTrimCode.value ?? 'edge')
 const available = ref(false)
 const loading = ref(true)
 const saving = ref(false)
@@ -34,6 +34,7 @@ async function load(): Promise<void> {
     }
   } catch { error.value = 'Не удалось проверить подрезку. Повторите загрузку.' }
   finally { loading.value = false }
+  if (isCurrent() && !butt.value && !error.value && available.value && calc.yardTrimCode.value === null) await persist()
 }
 async function persist(): Promise<boolean> {
   if (loading.value || saving.value || (butt.value ? !buttValid.value : choice.value === null || (choice.value === 'edge' && !available.value))) return false

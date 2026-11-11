@@ -36,3 +36,10 @@ it('preserves explicit yard butt trim through unchanged laying snapshots', async
   const calc = useCalculation(); calc.layingFacadeCode.value = calc.layingYardCode.value = 'butt'; calc.gapName.value = calc.gapYardMm.value = 0; calc.yardButtTrimCode.value = 'single'; calc.yardButtTrimSide.value = 'lock'
   expect(await inheritedYardLaying(calc, 'butt', 0)).toMatchObject({ yardButtTrimCode: 'single', yardButtTrimSide: 'lock' })
 })
+it('defaults an unchosen gapped yard to edge trimming and uses its normalized count', async () => {
+  const calc = useCalculation(); calc.thicknessYard.value = '100'
+  vi.mocked(getFenceGapOptions).mockImplementation(async payload => [{ id: 2, gapMm: 28, label: '', quantity: payload.yardTrimCode === 'edge' ? 9 : 7, yardEdgeTrimAvailable: true }])
+  expect(await inheritedYardLaying(calc, 'gap', 28)).toMatchObject({ yardTrimCode: 'edge', numberOfSticksYard: 9 })
+  calc.gapName.value = 28; calc.yardTrimCode.value = 'none'
+  expect(await inheritedYardLaying(calc, 'gap', 28)).toMatchObject({ yardTrimCode: 'none', numberOfSticksYard: 7 })
+})

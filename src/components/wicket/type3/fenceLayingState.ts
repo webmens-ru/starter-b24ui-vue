@@ -39,6 +39,15 @@ export async function inheritedYardLaying(
   if (calc.orderId.value !== owner.orderId || calc.productRowId.value !== owner.productRowId || String(calc.modelId.value) !== String(owner.modelId)) throw new Error('Расчёт изменился')
   const selected = options.find(option => option.gapMm === gap)
   if (!selected) throw new Error('Материал двора не соответствует укладке фасада')
+  if (mode === 'gap' && yardTrimCode === null && selected.yardEdgeTrimAvailable === true) {
+    const trimmedOptions = await getFenceGapOptions({ ...calc.getFullSavePayload(), side: 'yard', includeButt: true,
+      yardTrimCode: 'edge', layingFacadeCode: mode, gapName: gap, layingYardCode: mode, gapYardMm: gap,
+      widthFenceFacade: facadeWidth, widthFenceYard: yardWidth })
+    if (calc.orderId.value !== owner.orderId || calc.productRowId.value !== owner.productRowId || String(calc.modelId.value) !== String(owner.modelId)) throw new Error('Расчёт изменился')
+    const trimmed = trimmedOptions.find(option => option.gapMm === gap)
+    if (!trimmed) throw new Error('Подрезка двора недоступна')
+    return { ...result, yardTrimCode: 'edge', numberOfSticksYard: trimmed.quantity }
+  }
   return { ...result, numberOfSticksYard: selected.quantity }
 }
 

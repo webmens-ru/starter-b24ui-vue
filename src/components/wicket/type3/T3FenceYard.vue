@@ -132,6 +132,7 @@ async function save(row: FenceRow) {
   ], 'Заполнение (двор)')
 
   try {
+    applyYardSnapshot(calc, yardSnapshot)
     await saveWicketData({
       ...calc.getBaseSavePayload(), applySharedFenceLaying: true,
       idYard:                row.id,
