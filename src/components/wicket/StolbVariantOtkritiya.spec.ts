@@ -60,10 +60,113 @@ describe('StolbVariantOtkritiya navigation', () => {
     vi.mocked(getPolozhenieJumper).mockReset().mockResolvedValue({ availablePolozheniyeJumper: [
       { id: 1733, name: 'Любая подпись', placement: 'none', hasJumper: false },
     ] })
-    vi.mocked(getOpeningOptions).mockResolvedValue({ options: [
+    vi.mocked(getOpeningOptions).mockReset().mockResolvedValue({ options: [
       { id: 819, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_02.jpg', opensOutward: true, hingeSide: 'right' },
       { id: 920, name: 'Одинаковая подпись', pathPhoto: '/img/wicket_opening_diagram_04.jpg', opensOutward: false, hingeSide: 'left' },
     ], problems: [] })
+  })
+
+  it('invalidates type3 post changes immediately and preserves laying until save acknowledgement', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'
+    calc.openingOptionId.value = 819
+    calc.fillSide.value = 1
+    calc.idFacade.value = 22
+    calc.gapId.value = 17
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    expect(calc.fillingNeedsRecalculation.value).toBe(false)
+    let finish!: () => void
+    vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { finish = () => resolve({ lockVersion: 1 }) }))
+    await wrapper.get('input[type="radio"][value="1"]').setValue()
+    expect(calc.fillingNeedsRecalculation.value).toBe(true)
+    expect(calc.gapId.value).toBe(17)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({ gapId: null, yardTrimCode: null })
+    finish()
+    await flushPromises()
+    expect(calc.gapId.value).toBeNull()
+    expect(calc.idFacade.value).toBe(22)
+    wrapper.unmount()
+  })
+
+  it.each(['post', 'opening', 'placement', 'jumper'])('invalidates existing type3 laying for a changed %s reference', async field => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = '985'
+    calc.peremichkaPolozheniyeId.value = '1734'
+    calc.jumperPlacement.value = 'above'
+    calc.assortmentJumperId.value = '986'
+    calc.fillSide.value = 1
+    calc.idFacade.value = 22
+    calc.gapId.value = 17
+    const pipe = (id: number) => ({ id, name: 'Любая подпись', profile: { sizeA: 60, sizeB: 40 }, profileProblem: null, disabled: false })
+    vi.mocked(getAssortmentStolb).mockResolvedValue({ assortmentPipe: [pipe(985), pipe(987)] })
+    vi.mocked(getAssortmentJumper).mockResolvedValue({ assortmentJumper: [pipe(986), pipe(988)] })
+    vi.mocked(getPolozhenieJumper).mockResolvedValue({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Любая подпись', placement: 'none', hasJumper: false },
+      { id: 1734, name: 'Любая подпись', placement: 'above', hasJumper: true },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    expect(calc.fillingNeedsRecalculation.value).toBe(false)
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(calc.gapId.value).toBe(17)
+    expect(calc.fillingNeedsRecalculation.value).toBe(false)
+    if (field === 'opening') await wrapper.get('input[type="radio"][value="920"]').setValue()
+    else await wrapper.findAll('select')[field === 'post' ? 0 : field === 'placement' ? 1 : 2]!.setValue(field === 'post' ? '987' : field === 'placement' ? '1733' : '988')
+    expect(calc.fillingNeedsRecalculation.value).toBe(true)
+    await flushPromises()
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({ gapId: null, yardButtTrimSide: null, facadeButtTrimSide: null, layingFacadeCode: null, layingYardCode: null })
+    expect(calc.gapId.value).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('keeps all type3 laying fields for a failed post save and retries the atomic reset', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'
+    calc.openingOptionId.value = 819
+    calc.hasStolby.value = 1
+    calc.stolbId.value = '985'
+    calc.fillSide.value = 1
+    calc.idFacade.value = 22
+    calc.gapId.value = 17
+    calc.numberOfSticksYard.value = 8
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('offline'))
+    await wrapper.get('input[type="radio"][value="0"]').setValue()
+    await flushPromises()
+    expect(calc.fillingNeedsRecalculation.value).toBe(true)
+    expect(calc.gapId.value).toBe(17)
+    expect(calc.numberOfSticksYard.value).toBe(8)
+    expect(wrapper.emitted('next')).toBeUndefined()
+    expect(await validateBeforeLeave(wrapper)).toBe(true)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({ hasStolby: 0, gapId: null, numberOfSticksYard: null })
+    expect(calc.gapId.value).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('preserves laying for a different jumper FK with the same typed placement', async () => {
+    const calc = useCalculation()
+    calc.modelId.value = '3'
+    calc.openingOptionId.value = 819
+    calc.fillSide.value = 1
+    calc.idFacade.value = 22
+    calc.gapId.value = 17
+    vi.mocked(getPolozhenieJumper).mockResolvedValue({ availablePolozheniyeJumper: [
+      { id: 1733, name: 'Первая подпись', placement: 'none', hasJumper: false },
+      { id: 1735, name: 'Другая подпись', placement: 'none', hasJumper: false },
+    ] })
+    const wrapper = mountPipeComponent()
+    await flushPromises()
+    await wrapper.findAll('select')[1]!.setValue('1735')
+    await flushPromises()
+    expect(calc.fillingNeedsRecalculation.value).toBe(false)
+    expect(calc.gapId.value).toBe(17)
+    expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('gapId')
+    wrapper.unmount()
   })
 
   it('loads opening diagrams and arbitrary references from the API', async () => {

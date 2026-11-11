@@ -134,3 +134,59 @@ describe('RazmeryProyema', () => {
     expect(wrapper.emitted('next')).toHaveLength(1)
   })
 })
+
+it('invalidates type3 opening immediately, keeps laying on failed save and clears only after retry acknowledgement', async () => {
+  setActivePinia(createPinia())
+  const calc = useCalculation()
+  calc.reset()
+  calc.orderId.value = 42
+  calc.productRowId.value = 7
+  calc.modelId.value = '3'
+  calc.widthProyema.value = '1000'
+  calc.heightProyema.value = '2000'
+  calc.clearanceProyema.value = '50'
+  calc.fillSide.value = 1
+  calc.idFacade.value = 22
+  calc.gapId.value = 17
+  calc.numberOfSticks.value = 9
+  const wrapper = mountComponent()
+  await flushPromises()
+  expect(calc.fillingNeedsRecalculation.value).toBe(false)
+  await wrapper.get('#width').setValue('1100')
+  expect(calc.fillingNeedsRecalculation.value).toBe(true)
+  expect(calc.gapId.value).toBe(17)
+  vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('offline'))
+  expect(await validateBeforeLeave(wrapper)).toBe(false)
+  expect(calc.gapId.value).toBe(17)
+  expect(await validateBeforeLeave(wrapper)).toBe(true)
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).toMatchObject({ gapId: null, numberOfSticks: null, facadeButtTrimSide: null, yardButtTrimSide: null, yardTrimCode: null })
+  expect(calc.gapId.value).toBeNull()
+  expect(calc.idFacade.value).toBe(22)
+  wrapper.unmount()
+})
+
+it.each(['width', 'height', 'clearance'])('keeps type3 laying on canonical same-value %s and opening condition saves', async field => {
+  setActivePinia(createPinia())
+  const calc = useCalculation()
+  calc.reset()
+  calc.orderId.value = 42
+  calc.productRowId.value = 7
+  calc.modelId.value = '3'
+  calc.widthProyema.value = '1000'
+  calc.heightProyema.value = '2000'
+  calc.clearanceProyema.value = '50'
+  calc.fillSide.value = 1
+  calc.idFacade.value = 22
+  calc.gapId.value = 17
+  const wrapper = mountComponent()
+  await flushPromises()
+  const input = wrapper.get(`#${field}`)
+  await input.setValue(`0${(input.element as HTMLInputElement).value}`)
+  await wrapper.get('input[type="radio"][value="Не готов"]').setValue()
+  await flushPromises()
+  expect(await validateBeforeLeave(wrapper)).toBe(true)
+  expect(calc.fillingNeedsRecalculation.value).toBe(false)
+  expect(calc.gapId.value).toBe(17)
+  expect(vi.mocked(saveWicketData).mock.lastCall?.[0]).not.toHaveProperty('gapId')
+  wrapper.unmount()
+})

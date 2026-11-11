@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useCalculation } from '../../composables/useCalculation'
 import { saveWicketData, recalculate } from '../../app/api/wicket'
 import * as yup from 'yup'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
+import { clearedGeometryLaying, acknowledgeGeometryLayingReset, canonicalGeometryNumber } from './geometryFillingReset'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -11,12 +12,28 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const context = calc.getCurrentProductRowContext()
+let disposed = false
+let initialized = false
+let editVersion = 0
+const saving = ref(false)
+const saveError = ref('')
+const isCurrent = () => !disposed && calc.orderId.value === context.orderId && calc.productRowId.value === context.productRowId && String(calc.modelId.value) === String(context.modelId)
+onBeforeUnmount(() => { disposed = true; if (debounceTimer) clearTimeout(debounceTimer) })
 
 // ─── Поля формы ──────────────────────────────────────────────────────────────
 const width      = ref<string>('')
 const height     = ref<string>('')
 const clearance  = ref<string>('')
 const sostoyaniye = ref<string>('Готов')
+
+const geometry = () => JSON.stringify([width.value, height.value, clearance.value].map(canonicalGeometryNumber))
+let savedGeometry = JSON.stringify([calc.widthProyema.value, calc.heightProyema.value, calc.clearanceProyema.value].map(canonicalGeometryNumber))
+watch([width, height, clearance, sostoyaniye], () => {
+  if (!initialized || !isCurrent()) return
+  ++editVersion
+  if (geometry() !== savedGeometry) calc.markFillingForRecalculation()
+}, { flush: 'sync' })
 
 // ─── Ошибки ──────────────────────────────────────────────────────────────────
 const errWidth     = ref('')
@@ -93,7 +110,14 @@ function buildBlock() {
   ], 'Проем')
 }
 
-async function save() {
+async function save(): Promise<boolean> {
+  if (saving.value || !isCurrent()) return false
+  const version = editVersion
+  const requestGeometry = geometry()
+  const clearLaying = String(calc.modelId.value) === '3' && requestGeometry !== savedGeometry
+  if (clearLaying) calc.markFillingForRecalculation()
+  saving.value = true
+  saveError.value = ''
   syncCalcFields()
   buildBlock()
 
@@ -104,10 +128,18 @@ async function save() {
       heightProyema:      calc.heightProyema.value,
       clearanceProyema:   calc.clearanceProyema.value,
       sostoyaniyeProyema: calc.sostoyaniyeProyema.value,
+      ...(clearLaying ? clearedGeometryLaying : {}),
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
+    if (isCurrent()) saveError.value = 'Не удалось сохранить размеры. Повторите попытку.'
+    return false
+  } finally {
+    saving.value = false
   }
+  if (!isCurrent() || version !== editVersion) return false
+  savedGeometry = requestGeometry
+  if (clearLaying) acknowledgeGeometryLayingReset(calc)
 
   // Для модели 3 (штакетник) пересчёт не выполняется
   if (String(calc.modelId.value) !== '3' && calc.priceRetail.value) {
@@ -119,11 +151,12 @@ async function save() {
         model:              calc.model.value,
         modelId:           calc.modelId.value,
       })
-      calc.updatePriceBlock(result.priceDealer, result.priceRetail)
+      if (isCurrent() && version === editVersion) calc.updatePriceBlock(result.priceDealer, result.priceRetail)
     } catch (e) {
       console.warn('recalculate:', e)
     }
   }
+  return isCurrent() && version === editVersion
 }
 
 async function validateAndSave(): Promise<boolean> {
@@ -132,8 +165,7 @@ async function validateAndSave(): Promise<boolean> {
     clearTimeout(debounceTimer)
     debounceTimer = null
   }
-  await save()
-  return true
+  return await save()
 }
 
 const leaveAttempt = createStepLeaveAttempt(validateAndSave, () => emit('next'))
@@ -154,6 +186,7 @@ onMounted(async () => {
   if (c != null && c !== '') clearance.value = String(c)
   if (s) sostoyaniye.value = String(s)
 
+  initialized = true
   await save()
 })
 </script>
@@ -168,6 +201,7 @@ onMounted(async () => {
       <B24Button label="Далее" color="air-secondary" @click="handleNext" />
     </div>
 
+    <p v-if="saveError" role="alert">{{ saveError }}</p>
     <div class="flex flex-col gap-5" style="padding-inline: 4px;">
 
       <!-- Готовность проема -->

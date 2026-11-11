@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 
 import { useCalculation } from '../../composables/useCalculation'
 import {
@@ -14,6 +14,7 @@ import type { JumperOption, OpeningOption, PipeOption } from '../../app/api/wick
 import { parsePipeProfileDescriptor, type PipeProfileDescriptor, type PipeProfileProblem } from '../../app/api/pipeProfiles'
 import { parseOpeningOrientation } from './openingOrientation'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
+import { clearedGeometryLaying, acknowledgeGeometryLayingReset, canonicalGeometryNumber } from './geometryFillingReset'
 
 const emit = defineEmits<{
   (e: 'next'): void
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 }>()
 
 const calc = useCalculation()
+const saving = ref(false)
+let geometryReady = false
 const context = { orderId: calc.orderId.value, productRowId: calc.productRowId.value, modelId: calc.modelId.value }
 let disposed = false
 let editVersion = 0
@@ -230,6 +233,7 @@ async function onStolbChange() {
 
 async function onOpeningOptionChange() {
   if (!isCurrent() || openingOptionId.value === null || openingProblem.value) return
+  if (canonicalGeometryNumber(openingOptionId.value) === canonicalGeometryNumber(calc.openingOptionId.value)) return
   const version = ++editVersion
   syncOpeningFields()
   ++sortamentRequestVersion
@@ -253,7 +257,13 @@ async function onOpeningOptionChange() {
 
 async function onPolozhenieChange() {
   if (!isCurrent()) return
+  if (canonicalGeometryNumber(peremichkaPolozheniyeId.value) === canonicalGeometryNumber(calc.peremichkaPolozheniyeId.value)) return
   const version = ++editVersion
+  if (selectedJumper.value?.placement === calc.jumperPlacement.value) {
+    syncJumperFields()
+    await save(version)
+    return
+  }
   ++sortamentRequestVersion
   sortamentLoading.value = false
   sortamentError.value = ''
@@ -348,8 +358,23 @@ function isComplete(): boolean {
     && (!showSortament.value || jumperDescriptor.value.profile !== null)
 }
 
+function geometry(): string {
+  const hasJumper = selectedJumper.value?.hasJumper ?? (calc.jumperPlacement.value !== null && calc.jumperPlacement.value !== 'none')
+  return JSON.stringify([
+    postsChoice.value,
+    postsChoice.value === 1 ? canonicalGeometryNumber(stolbId.value) : null,
+    canonicalGeometryNumber(openingOptionId.value),
+    selectedJumper.value?.placement ?? calc.jumperPlacement.value,
+    hasJumper ? canonicalGeometryNumber(assortmentJumperId.value) : null,
+  ])
+}
+let savedGeometry = ''
+watch([postsChoice, stolbId, openingOptionId, peremichkaPolozheniyeId, assortmentJumperId], () => {
+  if (geometryReady && isCurrent() && geometry() !== savedGeometry) calc.markFillingForRecalculation()
+}, { flush: 'sync' })
+
 async function save(version = editVersion): Promise<boolean> {
-  if (!isCurrent() || version !== editVersion) return false
+  if (saving.value || !isCurrent() || version !== editVersion) return false
   saveError.value = ''
   const problem = selectionProblem()
   if (problem) {
@@ -358,6 +383,10 @@ async function save(version = editVersion): Promise<boolean> {
   }
   syncCalcFields()
   buildBlock()
+  const requestGeometry = geometry()
+  const clearLaying = String(calc.modelId.value) === '3' && requestGeometry !== savedGeometry
+  if (clearLaying) calc.markFillingForRecalculation()
+  saving.value = true
 
   try {
     await saveWicketData({
@@ -367,14 +396,19 @@ async function save(version = editVersion): Promise<boolean> {
       openingOptionId:         calc.openingOptionId.value,
       peremichkaPolozheniyeId:   calc.peremichkaPolozheniyeId.value || null,
       assortmentJumperId:        calc.assortmentJumperId.value,
+      ...(clearLaying ? clearedGeometryLaying : {}),
     })
   } catch (e) {
     console.warn('saveWicketData:', e)
     if (isCurrent() && version === editVersion) saveError.value = 'Не удалось сохранить выбранную конфигурацию. Повторите попытку.'
     return false
+  } finally {
+    saving.value = false
   }
 
   if (!isCurrent() || version !== editVersion) return false
+  savedGeometry = requestGeometry
+  if (clearLaying) acknowledgeGeometryLayingReset(calc)
   if (calc.priceRetail.value && isComplete()) {
     try {
       const result = await recalculate({
@@ -436,6 +470,8 @@ onMounted(async () => {
     openingOptionId.value = calc.openingOptionId.value
   }
 
+  savedGeometry = geometry()
+  geometryReady = true
   await Promise.all([loadStolbOptions(), loadOpeningOptions()])
   if (!isCurrent() || mountingVersion !== editVersion) return
 
