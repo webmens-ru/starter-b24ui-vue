@@ -581,4 +581,13 @@ it.each(['vertical', 'horizontal'] as const)('masks all %s picket layers on both
   expect(w.findAll('mask image').length).toBeGreaterThan(0)
   for (const image of w.findAll('mask image')) expect(Number(image.attributes('width'))).toBe(100)
   expect(w.get('mask image').attributes('href')).toBe('/rounded.svg')
+  for (const cap of w.findAll('mask > g > g')) {
+    const image = cap.get('image')
+    const body = cap.get('rect')
+    const imageEnd = direction === 'vertical'
+      ? Number(image.attributes('y')) + Number(image.attributes('height'))
+      : Number(image.attributes('transform')!.match(/translate\(([^ ]+)/)![1]) + Number(image.attributes('height'))
+    expect(Number(body.attributes(direction === 'vertical' ? 'y' : 'x'))).toBeLessThan(imageEnd)
+  }
+
 })

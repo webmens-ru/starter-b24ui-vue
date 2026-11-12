@@ -176,9 +176,11 @@ function capImageRect(picket: { x: number; y: number; width: number; height: num
 }
 function capBodyRect(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
   const { horizontal, cap } = capGeometry(picket, opposite)
+  // Overlap the opaque foot of the cap to avoid a subpixel alpha seam.
+  const bodyStart = Math.max(0, cap - Math.min(4, cap / 4))
   return horizontal
-    ? { x: picket.x + cap, y: picket.y, width: Math.max(0, picket.width - cap), height: picket.height }
-    : { x: picket.x, y: picket.y + cap, width: picket.width, height: Math.max(0, picket.height - cap) }
+    ? { x: picket.x + bodyStart, y: picket.y, width: Math.max(0, picket.width - bodyStart), height: picket.height }
+    : { x: picket.x, y: picket.y + bodyStart, width: picket.width, height: Math.max(0, picket.height - bodyStart) }
 }
 
 const displayedFrameColor = computed(() => realisticColors.value
