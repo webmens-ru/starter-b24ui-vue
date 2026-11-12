@@ -896,7 +896,7 @@ export async function getCoverStrips(): Promise<{ items: CoverStripCatalogItem[]
   return { items: data.data.items }
 }
 
-/** Presentation labels keyed by stable model identity; availability and routes are independent. */
+/** Supported wicket models only (gate catalog entries are excluded); IDs remain stable after renaming. */
 export async function getWicketModelNames(): Promise<Array<{ modelId: string, name: string }>> {
   const { data } = await api.get('/api/dict/wicket-model/get-list')
   return data.data.items

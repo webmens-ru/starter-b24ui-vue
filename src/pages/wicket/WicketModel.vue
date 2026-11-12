@@ -22,6 +22,9 @@ let mounted = true
 let requestGeneration = 0
 
 const modelNames = ref<Record<string, string>>({})
+const availableModelIds = ref<Set<string> | null>(null)
+const catalogLoading = ref(true)
+const catalogFailed = ref(false)
 const modelDefinitions: Array<{ id: string; model: string; route: string; images: string[]; soon?: boolean }> = [
   {
     id: '1',
@@ -91,15 +94,30 @@ const modelDefinitions: Array<{ id: string; model: string; route: string; images
   },
 ]
 
-const models = computed(() => modelDefinitions.map(item => ({ ...item, model: modelNames.value[item.id] ?? item.model })))
-onMounted(async () => {
+const models = computed(() => modelDefinitions
+  .filter(item => availableModelIds.value === null || availableModelIds.value.has(item.id))
+  .map(item => ({ ...item, model: modelNames.value[item.id] ?? item.model })))
+async function loadModelCatalog() {
+  catalogLoading.value = true
+  catalogFailed.value = false
+  errorMessage.value = null
   try {
     const items = await getWicketModelNames()
-    if (mounted) modelNames.value = Object.fromEntries(items.map(item => [item.modelId, item.name]))
+    if (mounted) {
+      modelNames.value = Object.fromEntries(items.map(item => [item.modelId, item.name]))
+      availableModelIds.value = new Set(items.map(item => item.modelId))
+    }
   } catch {
-    // Keep initial display labels if the directory cannot be loaded.
+    if (mounted) {
+      availableModelIds.value = new Set()
+      catalogFailed.value = true
+      errorMessage.value = 'Не удалось загрузить типы калиток. Повторите попытку.'
+    }
+  } finally {
+    if (mounted) catalogLoading.value = false
   }
-})
+}
+onMounted(loadModelCatalog)
 
 const orderIdState = computed(() => parsePositiveDecimalId(route.query.orderId))
 const currentOrderId = computed(() => orderIdState.value.kind === 'valid' ? orderIdState.value.value : null)
@@ -151,7 +169,7 @@ function onImageError(e: Event) {
 }
 
 async function onModelSelect(item: (typeof modelDefinitions)[0]) {
-  if (loading.value || item.soon) return
+  if (catalogLoading.value || !availableModelIds.value?.has(item.id) || loading.value || item.soon) return
   if (orderIdState.value.kind === 'invalid') {
     errorMessage.value = 'Некорректный номер заказа'
     return
@@ -233,6 +251,7 @@ onUnmounted(() => {
             class="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200"
           >
             {{ errorMessage }}
+            <B24Button v-if="catalogFailed" label="Повторить" @click="loadModelCatalog" />
           </div>
 
           <div class="flex flex-wrap justify-center gap-8 sm:gap-10">
@@ -246,7 +265,7 @@ onUnmounted(() => {
                 :title="item.model"
                 class="w-full text-center py-1.5 px-1 text-lg font-semibold rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-air-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
                 :class="item.soon ? 'text-gray-500 no-underline cursor-default' : 'text-blue-600 underline'"
-                :disabled="!!loading || item.soon"
+                :disabled="catalogLoading || !!loading || item.soon"
                 @click="onModelSelect(item)"
               >
                 <span class="block truncate">{{ item.model }}</span>

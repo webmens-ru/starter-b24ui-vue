@@ -30,7 +30,10 @@ describe('WicketModel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    mocks.getWicketModelNames.mockResolvedValue([])
+    mocks.getWicketModelNames.mockResolvedValue(Array.from({ length: 11 }, (_, index) => ({
+      modelId: String(index + 1),
+      name: index === 2 ? 'Калитка «Стандарт» 50/50/штакетник' : `Модель ${index + 1}`,
+    })))
     mocks.route = reactive({ query: { orderId: '42' } })
     mocks.createProductRow.mockResolvedValue({
       productRow: { id: 7, orderId: 42 },
@@ -53,8 +56,50 @@ describe('WicketModel', () => {
     })
   }
 
-  it('делает третий тип доступным без метки «Скоро»', () => {
+  it('disables model selection until the catalog resolves', async () => {
+    let resolveModels!: (value: Array<{modelId: string, name: string}>) => void
+    mocks.getWicketModelNames.mockImplementationOnce(() => new Promise(resolve => { resolveModels = resolve }))
     const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.findAll('button[title]').every(button => button.attributes('disabled') !== undefined)).toBe(true)
+    expect(mocks.createProductRow).not.toHaveBeenCalled()
+    resolveModels([{ modelId: '3', name: 'Калитка' }])
+    await flushPromises()
+    expect(wrapper.findAll('button[title]')).toHaveLength(1)
+    expect(wrapper.find('button[title]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('offers a retry without restoring excluded models after catalog failure', async () => {
+    mocks.getWicketModelNames.mockRejectedValueOnce(new Error('Network failed'))
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.findAll('button[title]')).toHaveLength(0)
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось загрузить')
+    mocks.getWicketModelNames.mockResolvedValueOnce([{ modelId: '3', name: 'Калитка' }])
+    await wrapper.findAll('button').find(button => button.text().includes('Повторить'))!.trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('button[title]')).toHaveLength(1)
+    expect(mocks.createProductRow).not.toHaveBeenCalled()
+  })
+
+  it('shows only the wicket model IDs returned by the catalog', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([{ modelId: '3', name: 'Произвольная подпись' }])
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.findAll('button[title]')).toHaveLength(1)
+    expect(wrapper.findAll('button[title]')[0]!.text()).toContain('Произвольная подпись')
+  })
+
+  it('does not restore gate models from local defaults when the catalog has no wickets', async () => {
+    mocks.getWicketModelNames.mockResolvedValue([])
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.findAll('button[title]')).toHaveLength(0)
+  })
+
+  it('делает третий тип доступным без метки «Скоро»', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
 
     const type3Button = wrapper.findAll('button').find(button => button.text().includes('штакетник'))
 
@@ -195,8 +240,9 @@ describe('WicketModel', () => {
     expect(wrapper.findAll('button[title]').every(button => button.attributes('disabled') === undefined)).toBe(true)
   })
 
-  it('loads model images from the public web root', () => {
+  it('loads model images from the public web root', async () => {
     const wrapper = mountPage()
+    await flushPromises()
     const sources = wrapper.findAll('img').map(image => image.attributes('src'))
 
     expect(sources.length).toBeGreaterThan(0)
@@ -205,6 +251,7 @@ describe('WicketModel', () => {
 
   it('creates a wicket product row and opens the wizard with both ids', async () => {
     const wrapper = mountPage()
+    await flushPromises()
     const type3Button = wrapper.findAll('button').find(button => button.text().includes('штакетник'))!
 
     await type3Button.trigger('click')
@@ -224,6 +271,7 @@ describe('WicketModel', () => {
 
   it('returns through the server-owned URL from the model picker', async () => {
     const wrapper = mountPage()
+    await flushPromises()
 
     await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
 
@@ -250,6 +298,7 @@ describe('WicketModel', () => {
       mocks.route = reactive({ query: testCase.query })
       useCalculation().orderId.value = 99
       const wrapper = mountPage()
+    await flushPromises()
 
       await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
       await flushPromises()
@@ -267,6 +316,7 @@ describe('WicketModel', () => {
       resolveItem = resolve
     }))
     const wrapper = mountPage()
+    await flushPromises()
     await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
     wrapper.unmount()
     const calc = useCalculation()
@@ -290,6 +340,7 @@ describe('WicketModel', () => {
       resolveItem = resolve
     }))
     const wrapper = mountPage()
+    await flushPromises()
     await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
     mocks.route.query.orderId = '43'
     await flushPromises()
@@ -310,6 +361,7 @@ describe('WicketModel', () => {
       resolveItem = resolve
     }))
     const wrapper = mountPage()
+    await flushPromises()
     await wrapper.findAll('button').find(button => button.text().includes('штакетник'))!.trigger('click')
     await wrapper.findAll('button').find(button => button.text().includes('Назад'))!.trigger('click')
 
