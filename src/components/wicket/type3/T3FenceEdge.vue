@@ -59,7 +59,7 @@ defineExpose({ validateBeforeLeave: () => {
       <p v-else-if="selected != null && !options.some(option => Number(option.id) === selected)" role="status">Сохранённый край недоступен для нового выбора. Выберите другой вариант.</p>
       <div class="grid grid-cols-2 gap-3">
         <label v-for="option in options" :key="option.id" class="edge-choice" :class="{ selected: selected === Number(option.id) }">
-          <input v-model="selected" class="sr-only" type="radio" :value="Number(option.id)" :disabled="saving" :name="`edge-${side}`">
+          <input v-model="selected" class="sr-only" type="radio" :value="Number(option.id)" :disabled="saving" :name="`edge-${side}`" @change="persist">
           <img v-if="option.maskFile" :src="option.maskFile" alt="" class="edge-preview">
           <span class="text-sm font-semibold text-center">{{ option.name }}</span>
         </label>

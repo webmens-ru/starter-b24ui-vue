@@ -22,7 +22,7 @@ it.each(['facade', 'yard'] as const)('filters and saves %s by ID without selecti
   const next = w.findAll('button').find(b => b.text() === 'Далее')!
   await next.trigger('click'); await flushPromises()
   expect(saveWicketData).not.toHaveBeenCalled()
-  await w.get('input').setValue()
+  await w.get('input').setValue(); await flushPromises()
   await next.trigger('click'); await flushPromises()
   expect(saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ [side === 'yard' ? 'fenceEdgeYardId' : 'fenceEdgeFacadeId']: 7 }))
   expect(w.emitted('next')).toHaveLength(1)
@@ -34,8 +34,7 @@ it('keeps saved choice after failed persistence and filters horizontal options',
   expect(w.text()).toContain('Второй')
   expect(w.text()).not.toContain('Любое имя')
   vi.mocked(saveWicketData).mockRejectedValueOnce(new Error('network'))
-  await w.get('input').setValue()
-  await w.findAll('button').find(b => b.text() === 'Далее')!.trigger('click'); await flushPromises()
+  await w.get('input').setValue(); await flushPromises()
   expect(c.fenceEdgeFacadeId.value).toBe(7)
   expect(w.emitted('next')).toBeUndefined()
   expect(w.get('[role="alert"]').text()).toContain('Не удалось')
@@ -46,7 +45,7 @@ it('allows returning without a choice and does not save a confirmed selection tw
   const step = w.vm as unknown as { validateBeforeLeave(): boolean | Promise<boolean> }
   expect(await step.validateBeforeLeave()).toBe(true)
   expect(saveWicketData).not.toHaveBeenCalled()
-  await w.get('input').setValue()
+  await w.get('input').setValue(); await flushPromises()
   expect(await step.validateBeforeLeave()).toBe(true)
   expect(await step.validateBeforeLeave()).toBe(true)
   expect(saveWicketData).toHaveBeenCalledTimes(1)

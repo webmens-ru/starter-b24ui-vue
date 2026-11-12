@@ -562,3 +562,23 @@ it.each(['vertical', 'horizontal'] as const)('clips %s trimmed relief without sq
     expect(image.attributes('clip-path')).toMatch(/^url\(#/)
   }
 })
+
+it.each(['vertical', 'horizontal'] as const)('masks all %s picket layers on both sides without squeezing trimmed caps', async direction => {
+  setActivePinia(createPinia())
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'; store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 2
+  store.raspolozheniyePolotna = direction; store.thicknessFacade = store.thicknessYard = '100'
+  store.layingFacadeCode = store.layingYardCode = 'gap'; store.gapName = store.gapYardMm = 28; store.numberOfSticks = direction === 'vertical' ? 7 : 14
+  store.yardTrimCode = 'edge'; store.numberOfSticksYard = store.numberOfSticks - 1
+  store.fenceEdgeOptions = [{ id: 71, name: 'Любое имя', isHorizontal: 1, isVertical: 1, maskFile: '/rounded.svg' }]
+  const w = mount(Type3Drawing)
+  expect(w.get('[data-testid="type3-pickets"]').attributes('mask')).toBeUndefined()
+  store.fenceEdgeFacadeId = store.fenceEdgeYardId = 71
+  await w.vm.$nextTick()
+  for (const opposite of [false, true]) {
+    expect(w.get(`[data-testid="type3-${opposite ? 'opposite-pickets' : 'pickets'}"]`).attributes('mask')).toMatch(/^url\(#/)
+  }
+  expect(w.findAll('mask image').length).toBeGreaterThan(0)
+  for (const image of w.findAll('mask image')) expect(Number(image.attributes('width'))).toBe(100)
+  expect(w.get('mask image').attributes('href')).toBe('/rounded.svg')
+})

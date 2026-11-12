@@ -140,6 +140,47 @@ function profileClipRect(picket: { x: number; y: number; width: number; height: 
   return horizontal ? { x: offset, y: 0, width: picket.height, height: picket.width } : picket
 }
 
+const edgeMaskRatios = ref<Record<string, number>>({})
+function edgeMaskUrl(opposite: boolean): string | null {
+  const yard = (viewSide.value === 'yard') !== opposite
+  const id = yard ? calc.fenceEdgeYardId.value : calc.fenceEdgeFacadeId.value
+  const option = calc.fenceEdgeOptions.value.find(edge => Number(edge.id) === Number(id))
+  if (!option || Number(calc.raspolozheniyePolotna.value === 'horizontal' ? option.isHorizontal : option.isVertical) !== 1) return null
+  return option.maskFile
+}
+watch(() => [edgeMaskUrl(false), edgeMaskUrl(true)], urls => {
+  if (typeof window === 'undefined') return
+  for (const url of new Set(urls)) {
+    if (!url || edgeMaskRatios.value[url]) continue
+    const image = new window.Image()
+    image.onload = () => {
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) edgeMaskRatios.value[url] = image.naturalHeight / image.naturalWidth
+    }
+    image.src = url
+  }
+}, { immediate: true })
+function edgeMaskId(opposite: boolean): string {
+  return `type3-edge-mask-${instanceId}-${opposite ? 'far' : 'near'}`
+}
+function capGeometry(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const { horizontal, width, offset } = profilePlacement(picket, opposite)
+  const length = horizontal ? picket.width : picket.height
+  const cap = Math.min(length, width * (edgeMaskRatios.value[edgeMaskUrl(opposite) ?? ''] ?? 40 / 130))
+  return { horizontal, width, offset, length, cap }
+}
+function capImageRect(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const { horizontal, width, offset, cap } = capGeometry(picket, opposite)
+  return horizontal
+    ? { x: 0, y: 0, width, height: cap, transform: `translate(${picket.x} ${picket.y + width - offset}) rotate(-90)` }
+    : { x: picket.x - offset, y: picket.y, width, height: cap }
+}
+function capBodyRect(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const { horizontal, cap } = capGeometry(picket, opposite)
+  return horizontal
+    ? { x: picket.x + cap, y: picket.y, width: Math.max(0, picket.width - cap), height: picket.height }
+    : { x: picket.x, y: picket.y + cap, width: picket.width, height: Math.max(0, picket.height - cap) }
+}
+
 const displayedFrameColor = computed(() => realisticColors.value
   ? geometry.value.frameColor
   : SCHEMATIC_FRAME_COLOR)
@@ -183,6 +224,19 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       aria-label="Чертёж калитки типа 3"
       role="img"
     >
+      <defs>
+        <template v-for="opposite in [false, true]" :key="String(opposite)">
+          <mask v-if="edgeMaskUrl(opposite)" :id="edgeMaskId(opposite)" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" :x="geometry.fillArea.x" :y="geometry.fillArea.y" :width="geometry.fillArea.width" :height="geometry.fillArea.height" style="mask-type:alpha">
+            <g v-for="(picket, index) in (opposite ? oppositePickets : viewedPickets)" :key="index">
+              <defs><clipPath :id="`${edgeMaskId(opposite)}-${index}`" clipPathUnits="userSpaceOnUse"><rect v-bind="picket" /></clipPath></defs>
+              <g :clip-path="`url(#${edgeMaskId(opposite)}-${index})`">
+                <image :href="edgeMaskUrl(opposite)!" v-bind="capImageRect(picket, opposite)" preserveAspectRatio="none" />
+                <rect v-bind="capBodyRect(picket, opposite)" fill="white" />
+              </g>
+            </g>
+          </mask>
+        </template>
+      </defs>
       <defs v-if="materialPatterns.length">
         <pattern v-for="pattern in materialPatterns" :key="pattern.id" :id="pattern.id" patternUnits="objectBoundingBox" width="1" height="1">
           <image :href="pattern.image" width="1" height="1" preserveAspectRatio="xMidYMid slice" />
@@ -226,7 +280,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
       />
       <WicketBaseDrawing :geometry="geometry.base" :orientation="calc.openingOrientation.value" :yard="viewSide === 'yard'" :color="displayedFrameColor" test-prefix="type3">
       <template #background>
-      <g v-if="oppositePickets.length" data-testid="type3-opposite-pickets" :fill="oppositePicketFill" stroke="#30343a" stroke-width="0.7">
+      <g v-if="oppositePickets.length" data-testid="type3-opposite-pickets" :mask="edgeMaskUrl(true) ? `url(#${edgeMaskId(true)})` : undefined" :fill="oppositePicketFill" stroke="#30343a" stroke-width="0.7">
         <rect v-for="(picket, index) in oppositePickets" :key="`opposite-picket-${index}`" data-testid="type3-opposite-picket" v-bind="picket" />
         <template v-if="realisticColors && oppositeProfileImage">
           <defs><clipPath v-for="(picket, index) in oppositePickets" :id="profileClipId(true, index)" :key="index" clipPathUnits="userSpaceOnUse"><rect v-bind="profileClipRect(picket, true)" /></clipPath></defs>
@@ -255,7 +309,7 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <rect v-if="geometry.rails.vertical.visible" v-bind="geometry.rails.vertical" />
       </g>
       </template><template #foreground>
-      <g data-testid="type3-pickets" :fill="picketFill" stroke="none">
+      <g data-testid="type3-pickets" :mask="edgeMaskUrl(false) ? `url(#${edgeMaskId(false)})` : undefined" :fill="picketFill" stroke="none">
         <rect
           v-for="(picket, index) in viewedPickets"
           :key="`picket-${index}`"
