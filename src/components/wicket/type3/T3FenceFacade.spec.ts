@@ -1,3 +1,4 @@
+import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, it, vi } from 'vitest'
@@ -7,6 +8,7 @@ import T3FenceFacade from './T3FenceFacade.vue'
 
 vi.mock('../../../app/api/wicket', async importOriginal => ({
   ...(await importOriginal<typeof import('../../../app/api/wicket')>()),
+  getFillingAppearanceOptions: vi.fn().mockResolvedValue({ manufacturers: [], colors: [{ id: 8, name: 'Сохранённый цвет', hex: '#123456', image: null }] }),
   getFenceGapOptions: vi.fn(),
   getFenceTable: vi.fn().mockResolvedValue({
     table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 },
@@ -21,6 +23,7 @@ beforeEach(() => {
   calc.orderId.value = 42
   calc.number.value = 42
   calc.productRowId.value = 7
+  calc.colorFacadeId.value = 8; calc.colorFacade.value = 'Сохранённый цвет'; calc.colorFacadeHex.value = '#123456'
   calc.modelId.value = '3'
   calc.widthProyema.value = '1000'
   calc.heightProyema.value = '2000'
@@ -100,17 +103,32 @@ it('uses profile metadata independently of captions and clears a previous overla
   wrapper.unmount()
 })
 
-it('selects a colorless catalog row and clears the previous color snapshot', async () => {
+it('keeps the independently selected color when choosing a catalog row', async () => {
   const calc = useCalculation()
   calc.idYard.value = ''
-  calc.colorFacade.value = 'Сохранённый цвет'
+  calc.colorFacade.value = 'Сохранённый цвет'; calc.colorFacadeHex.value = '#123456'
   vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 901, company: 'Поставщик', material: 'Без цвета', widthFence: 100, typeOfCoating: '' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   const wrapper = mountPage()
   await flushPromises()
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   await flushPromises()
-  expect(calc.colorFacade.value).toBe('')
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 901, colorFacade: null }))
+  expect(calc.colorFacade.value).toBe('Сохранённый цвет')
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 901, colorFacade: 'Сохранённый цвет' }))
   expect(wrapper.findAll('th').some(cell => cell.text() === 'Цвет')).toBe(false)
+  wrapper.unmount()
+})
+
+it('places the color field above the table and persists its independent choice', async () => {
+  const calc = useCalculation()
+  calc.idFacade.value = 100
+  const wrapper = mountPage()
+  await flushPromises()
+  const appearance = wrapper.getComponent(FillingAppearanceFields)
+  expect(appearance.props('showManufacturer')).toBe(false)
+  expect(appearance.props('side')).toBe('facade')
+  expect(wrapper.html().indexOf('appearance-fields')).toBeLessThan(wrapper.html().indexOf('<table'))
+  appearance.vm.$emit('change')
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: 8, colorFacade: 'Сохранённый цвет' }))
   wrapper.unmount()
 })

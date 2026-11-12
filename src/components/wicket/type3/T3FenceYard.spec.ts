@@ -1,3 +1,4 @@
+import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, it, vi } from 'vitest'
@@ -6,12 +7,14 @@ import { useCalculation } from '../../../composables/useCalculation'
 import T3FenceYard from './T3FenceYard.vue'
 vi.mock('../../../app/api/wicket', async original => ({
   ...(await original<typeof import('../../../app/api/wicket')>()),
+  getFillingAppearanceOptions: vi.fn().mockResolvedValue({ manufacturers: [], colors: [{ id: 8, name: 'Сохранённый цвет', hex: '#123456', image: null }] }),
   getFenceTable: vi.fn(), getFenceGapOptions: vi.fn(), saveWicketData: vi.fn(),
 }))
 beforeEach(() => {
   setActivePinia(createPinia())
   const calc = useCalculation(); calc.reset()
   calc.orderId.value = calc.number.value = 42; calc.productRowId.value = 7; calc.modelId.value = '3'
+  calc.colorYardId.value = 8; calc.colorYard.value = 'Сохранённый цвет'; calc.colorYardHex.value = '#123456'
   calc.thicknessFacade.value = '100'; calc.gapName.value = 28; calc.layingFacadeCode.value = 'gap'
   vi.mocked(getFenceTable).mockReset().mockResolvedValue({ table: [{ id: 2, company: 'Любое имя', material: 'Переименовано', widthFence: '100', typeOfCoating: 'Покрытие' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
   vi.mocked(getFenceGapOptions).mockReset().mockResolvedValue([{ id: 3, gapMm: 28, label: 'Имя не используется', quantity: 7 }, { id: 4, gapMm: 0, label: 'Без числа', quantity: 6 }])
@@ -71,5 +74,21 @@ it('uses profile metadata independently of captions and clears a previous overla
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   await flushPromises()
   expect(calc.reliefYardImage.value).toBe('')
+  wrapper.unmount()
+})
+
+it('places the color field above the table and persists its independent choice', async () => {
+  const calc = useCalculation()
+  calc.idYard.value = 100
+  calc.thicknessYard.value = '100'
+  const wrapper = page()
+  await flushPromises()
+  const appearance = wrapper.getComponent(FillingAppearanceFields)
+  expect(appearance.props('showManufacturer')).toBe(false)
+  expect(appearance.props('side')).toBe('yard')
+  expect(wrapper.html().indexOf('appearance-fields')).toBeLessThan(wrapper.html().indexOf('<table'))
+  appearance.vm.$emit('change')
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorYardId: 8, colorYard: 'Сохранённый цвет' }))
   wrapper.unmount()
 })

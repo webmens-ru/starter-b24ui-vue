@@ -4,6 +4,7 @@ import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
 import { reconcileFacadeLaying, inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
+import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
@@ -20,6 +21,7 @@ const yardCleared = ref(false)
 const saving = ref(false)
 const saveError = ref('')
 const needsSave = ref(false)
+const appearanceFields = ref<{ validate: () => boolean } | null>(null)
 async function validateBeforeLeave(): Promise<boolean> {
   if (saving.value) return false
   if (needsSave.value) return persistSelection(selectedRow.value)
@@ -126,9 +128,6 @@ async function save(row: FenceRow) {
   // widthFence сохраняем в поле thicknessFacade (общая колонка ассортимента)
   calc.thicknessFacade.value         = String(row.widthFence)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
-  calc.colorFacade.value             = ''
-  calc.colorFacadeHex.value          = ''
-  calc.colorFacadeImage.value        = ''
   calc.reliefFacadeImage.value       = row.profileImage ?? ''
 
   calc.updateOrCreateBlock('fillingFacade', [
@@ -136,6 +135,7 @@ async function save(row: FenceRow) {
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'fenceWidth', name: 'Ширина штакетника',       value: String(row.widthFence) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет', value: calc.colorFacade.value },
   ], 'Заполнение (фасад)')
 
   try {
@@ -154,7 +154,7 @@ async function save(row: FenceRow) {
       materialFacade:          row.material,
       widthFenceFacade:        String(row.widthFence),
       typeOfCoatingFacade:   row.typeOfCoating,
-      colorFacade:             null,
+      colorFacade:             calc.colorFacade.value,
     })
     if (isCurrent()) {
       applyYardSnapshot(calc, yardSnapshot)
@@ -163,6 +163,12 @@ async function save(row: FenceRow) {
   } catch (e) {
     throw e
   }
+}
+
+async function saveAppearance(): Promise<void> {
+  if (!selectedRow.value || !isCurrent()) return
+  needsSave.value = true
+  if (await persistSelection(selectedRow.value)) await doRecalculate()
 }
 
 async function doRecalculate() {
@@ -232,6 +238,7 @@ async function onContinue() {
     openModal('Вы не заполнили этот блок!')
     return
   }
+  if (appearanceFields.value?.validate?.() === false) return
   if (await validateBeforeLeave()) emit('next')
 }
 
@@ -289,6 +296,16 @@ onMounted(async () => {
         v-model="filters.typeOfCoating"
       />
     </div>
+
+    <FillingAppearanceFields
+      ref="appearanceFields"
+      :model-id="calc.modelId.value"
+      material-group="fence"
+      side="facade"
+      :show-manufacturer="false"
+      :disabled="saving"
+      @change="saveAppearance"
+    />
 
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">

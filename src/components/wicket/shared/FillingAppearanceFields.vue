@@ -10,11 +10,13 @@ import { hasRequiredFillingColor } from './fillingColorValidation'
 type FillingSide = 'facade' | 'yard'
 type SelectValue = string | number | null | undefined
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelId: string | number
   materialGroup: string
   side: FillingSide
-}>()
+  showManufacturer?: boolean
+  disabled?: boolean
+}>(), { showManufacturer: true, disabled: false })
 
 const emit = defineEmits<{
   (event: 'change'): void
@@ -108,7 +110,7 @@ function reconcileSelection(): void {
     sameValue(item.id, selectedManufacturerId.value)
   ))
   const color = options.value.colors.find(item => sameValue(item.id, selectedColorId.value))
-  const manufacturerChanged = setManufacturer(manufacturer)
+  const manufacturerChanged = props.showManufacturer === false ? false : setManufacturer(manufacturer)
   const colorChanged = setColor(color)
   if (manufacturerChanged || colorChanged) emit('change')
 }
@@ -159,8 +161,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="appearance-fields">
-    <label class="appearance-field">
+  <div class="appearance-fields" :class="{ single: showManufacturer === false }">
+    <label v-if="showManufacturer !== false" class="appearance-field">
       <span class="font-semibold">Производитель</span>
       <B24SelectMenu
         data-testid="appearance-manufacturer"
@@ -169,7 +171,7 @@ onBeforeUnmount(() => {
         :items="manufacturerItems"
         placeholder="Не выбран"
         class="w-full"
-        :disabled="loading"
+        :disabled="loading || disabled"
         @update:model-value="onManufacturerChange"
       />
     </label>
@@ -184,7 +186,7 @@ onBeforeUnmount(() => {
         placeholder="Не выбран"
         class="w-full"
         :b24ui="{ content: 'z-50' }"
-        :disabled="loading"
+        :disabled="loading || disabled"
         @update:model-value="onColorChange"
       />
       <span
@@ -212,6 +214,8 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.appearance-fields.single { grid-template-columns: minmax(0, 1fr); max-width: 600px; }
 
 .appearance-field {
   display: flex;

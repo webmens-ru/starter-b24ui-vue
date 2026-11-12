@@ -308,4 +308,19 @@ describe('FillingAppearanceFields', () => {
     expect(calc.colorFacadeId.value).toBe(18)
     expect(calc.colorFacadeImage.value).toBe('/colors/profnastil.webp')
   })
+  it('shows only color for fence without changing the catalog supplier', async () => {
+    const calc = useCalculation()
+    calc.materialSupplierFacade.value = 'Поставщик строки'
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: '3', materialGroup: 'fence', side: 'facade', showManufacturer: false },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    expect(calc.colorFacadeId.value).toBe(8)
+    expect(calc.colorFacade.value).toBe('RAL 8017')
+    expect(calc.materialSupplierFacade.value).toBe('Поставщик строки')
+  })
+
 })

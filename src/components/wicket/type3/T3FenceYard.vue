@@ -4,6 +4,7 @@ import { useCalculation } from '../../../composables/useCalculation'
 import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
 import { inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
+import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { wicketFenceFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
 const emit = defineEmits<{
@@ -19,6 +20,7 @@ onBeforeUnmount(() => { disposed = true })
 const saving = ref(false)
 const saveError = ref('')
 const needsSave = ref(false)
+const appearanceFields = ref<{ validate: () => boolean } | null>(null)
 async function validateBeforeLeave(): Promise<boolean> {
   if (saving.value) return false
   if (needsSave.value) return persistSelection(selectedRow.value)
@@ -116,9 +118,6 @@ async function save(row: FenceRow) {
   calc.formYard.value              = ''
   calc.thicknessYard.value         = String(row.widthFence)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.colorYard.value             = ''
-  calc.colorYardHex.value          = ''
-  calc.colorYardImage.value        = ''
   calc.reliefYardImage.value       = row.profileImage ?? ''
 
   const yardSnapshot = await inheritedYardLaying(calc, inheritedMode.value, inheritedGap.value)
@@ -129,6 +128,7 @@ async function save(row: FenceRow) {
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'fenceWidth', name: 'Ширина штакетника',       value: String(row.widthFence) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
+    { paramCode: 'color', name: 'Цвет', value: calc.colorYard.value },
   ], 'Заполнение (двор)')
 
   try {
@@ -142,12 +142,18 @@ async function save(row: FenceRow) {
       materialYard:           row.material,
       widthFenceYard:         String(row.widthFence),
       typeOfCoatingYard:   row.typeOfCoating,
-      colorYard:             null,
+      colorYard:             calc.colorYard.value,
     })
     if (isCurrent()) applyYardSnapshot(calc, yardSnapshot)
   } catch (e) {
     throw e
   }
+}
+
+async function saveAppearance(): Promise<void> {
+  if (!selectedRow.value || !isCurrent()) return
+  needsSave.value = true
+  if (await persistSelection(selectedRow.value)) await doRecalculate()
 }
 
 async function doRecalculate() {
@@ -214,6 +220,7 @@ async function onContinue() {
     openModal('Вы не заполнили этот блок!')
     return
   }
+  if (appearanceFields.value?.validate?.() === false) return
   if (await validateBeforeLeave()) emit('next')
 }
 
@@ -276,6 +283,16 @@ onMounted(async () => {
         v-model="filters.typeOfCoating"
       />
     </div>
+
+    <FillingAppearanceFields
+      ref="appearanceFields"
+      :model-id="calc.modelId.value"
+      material-group="fence"
+      side="yard"
+      :show-manufacturer="false"
+      :disabled="saving"
+      @change="saveAppearance"
+    />
 
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">

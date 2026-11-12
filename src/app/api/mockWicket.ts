@@ -290,10 +290,10 @@ export async function mockGetFillingAppearanceOptions(
   materialGroup: string,
 ): Promise<FillingAppearanceOptions> {
   await delay(150)
-  if (materialGroup !== 'siding' && materialGroup !== 'profnastil') throw new TypeError('Invalid filling group')
-  const isSiding = materialGroup === 'siding'
+  if (materialGroup !== 'siding' && materialGroup !== 'profnastil' && materialGroup !== 'fence') throw new TypeError('Invalid filling group')
+  const isSiding = materialGroup === 'siding' || materialGroup === 'fence'
   return {
-    manufacturers: isSiding
+    manufacturers: materialGroup === 'fence' ? [] : isSiding
       ? [{ id: 1, name: 'Кровельный центр' }]
       : [{ id: 2, name: 'Металл Профиль' }],
     colors: isSiding
