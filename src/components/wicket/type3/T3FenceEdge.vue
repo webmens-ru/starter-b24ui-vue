@@ -59,18 +59,38 @@ defineExpose({ validateBeforeLeave: () => {
       <p v-else-if="selected != null && !options.some(option => Number(option.id) === selected)" role="status">Сохранённый край недоступен для нового выбора. Выберите другой вариант.</p>
       <div class="grid grid-cols-2 gap-3">
         <label v-for="option in options" :key="option.id" class="edge-choice" :class="{ selected: selected === Number(option.id) }">
-          <input v-model="selected" type="radio" :value="Number(option.id)" :disabled="saving" :name="`edge-${side}`">
+          <input v-model="selected" class="sr-only" type="radio" :value="Number(option.id)" :disabled="saving" :name="`edge-${side}`">
           <img v-if="option.maskFile" :src="option.maskFile" alt="" class="edge-preview">
-          <span>{{ option.name }}</span>
+          <span class="text-sm font-semibold text-center">{{ option.name }}</span>
         </label>
       </div>
     </div>
   </div>
 </template>
 <style scoped>
-.edge-choice { display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; background:white; border:2px solid #e3e5eb; border-radius:12px; cursor:pointer; font-weight:600; }
-.edge-choice.selected { border-color:#3b82f6; background:#eff6ff; box-shadow:0 0 0 3px #dbeafe; }
-.edge-choice input { position:absolute; opacity:0; }
-.edge-choice:focus-within { outline:2px solid #2563eb; outline-offset:3px; }
-.edge-preview { width:130px; height:40px; object-fit:contain; background:#9ca3af; }
+.edge-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.edge-choice:hover { border-color: #93c5fd; }
+.edge-choice.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.edge-choice:has(input:focus-visible) {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+.edge-choice:has(input:disabled) { cursor: default; opacity: 0.6; }
+.edge-preview { width: 130px; height: 40px; object-fit: contain; background: #9ca3af; }
 </style>
