@@ -219,6 +219,7 @@ watch(isMobile, (mobile) => {
 })
 
 const sectionState = computed(() => ({
+  hasFenceEdges: String(calc.modelId.value) === '3' && calc.fenceEdgeOptions.value.some(edge => Number(calc.raspolozheniyePolotna.value === 'horizontal' ? edge.isHorizontal : edge.isVertical) === 1),
   fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
   coverStripDrafts: calc.coverStripDrafts.value,
   modelId: String(calc.modelId.value ?? ''),
@@ -267,6 +268,7 @@ const incompletePages = computed(() =>
 
 function getNavState(): WicketSharedNavState {
   return {
+    hasFenceEdges: String(calc.modelId.value) === '3' && calc.fenceEdgeOptions.value.some(edge => Number(calc.raspolozheniyePolotna.value === 'horizontal' ? edge.isHorizontal : edge.isVertical) === 1),
     fillingNeedsRecalculation: String(calc.modelId.value) === '3' && calc.fillingNeedsRecalculation.value,
     coverStripDrafts: calc.coverStripDrafts.value,
     modelId: String(calc.modelId.value ?? ''),

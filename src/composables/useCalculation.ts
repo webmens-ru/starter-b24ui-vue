@@ -142,7 +142,7 @@ export function useCalculation() {
       thicknessFacade: form.thicknessFacade,
       typeOfCoatingFacade: form.typeOfCoatingFacade,
       colorFacade: form.colorFacade,
-      ...(String(wizard.modelId) === '3' ? { yardButtTrimCode: form.yardButtTrimCode, yardButtTrimSide: form.yardButtTrimSide, facadeButtTrimCode: form.facadeButtTrimCode, facadeButtTrimSide: form.facadeButtTrimSide, layingFacadeCode: form.layingFacadeCode, layingYardCode: form.layingYardCode, yardTrimCode: form.yardTrimCode, gapYardMm: form.gapYardMm, numberOfSticksYard: form.numberOfSticksYard } : {}),
+      ...(String(wizard.modelId) === '3' ? { fenceEdgeFacadeId: form.fenceEdgeFacadeId, fenceEdgeYardId: form.fenceEdgeYardId, yardButtTrimCode: form.yardButtTrimCode, yardButtTrimSide: form.yardButtTrimSide, facadeButtTrimCode: form.facadeButtTrimCode, facadeButtTrimSide: form.facadeButtTrimSide, layingFacadeCode: form.layingFacadeCode, layingYardCode: form.layingYardCode, yardTrimCode: form.yardTrimCode, gapYardMm: form.gapYardMm, numberOfSticksYard: form.numberOfSticksYard } : {}),
       gapId: form.gapId,
       gapName: form.gapName,
       numberOfSticks: form.numberOfSticks,

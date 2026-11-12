@@ -243,7 +243,7 @@ async function fetchWicketData(
   context: ProductRowContext,
   rememberVersion: boolean,
 ): Promise<WicketConfigurationResponse> {
-  const { data } = await api.get(`/api/wicket/type${context.modelId}/get-data`, { params: context })
+  const { data } = await api.get<{ data: WicketConfigurationResponse }>(`/api/wicket/type${context.modelId}/get-data`, { params: context })
   if (rememberVersion) rememberWicketProductRowLockVersion(context, data.data.lockVersion)
   return data.data
 }

@@ -132,6 +132,8 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   yardButtTrim: null,
   layingFacadeCode: null,
   layingYardCode: null,
+  fenceEdgeFacadeId: null,
+  fenceEdgeYardId: null,
   yardTrimCode: null,
   lockSetId: null,
   lockPenColor: '',
@@ -168,6 +170,12 @@ export function applyWicketApiFieldMappings(
   apiData: Record<string, unknown>,
   refMap: Record<string, RefLike>,
 ): void {
+  if (refMap.fenceEdgeOptions) {
+    refMap.fenceEdgeOptions.value = Array.isArray(apiData.fenceEdgeOptions) ? apiData.fenceEdgeOptions : []
+  }
+  for (const key of ['fenceEdgeFacadeId', 'fenceEdgeYardId']) {
+    if (refMap[key]) refMap[key].value = apiData[key] == null ? null : Number(apiData[key])
+  }
   for (const key of ['reliefFacadeAlongMode', 'reliefFacadeAcrossMode', 'reliefYardAlongMode', 'reliefYardAcrossMode']) {
     const target = refMap[key]
     if (target) target.value = apiData[key] === 'stretch' || apiData[key] === 'repeat' ? apiData[key] : WICKET_API_FIELD_DEFAULTS[key]

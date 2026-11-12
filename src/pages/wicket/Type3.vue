@@ -3,6 +3,8 @@ import { type Component } from 'vue'
 import WicketWizardPage from './WicketWizardPage.vue'
 /** Шаги page2–page2_yard: только калитка типа 3 (`components/wicket/type3/`, штакетник 2-сторонний). */
 import FillSide from '../../components/wicket/type3/T3FillSide.vue'
+import FenceFacadeEdge from '../../components/wicket/type3/T3FenceFacadeEdge.vue'
+import FenceYardEdge from '../../components/wicket/type3/T3FenceYardEdge.vue'
 import FenceFacade from '../../components/wicket/type3/T3FenceFacade.vue'
 import FenceFacadeLaying from '../../components/wicket/type3/T3FenceFacadeLaying.vue'
 import FenceYardTrim from '../../components/wicket/type3/T3FenceYardTrim.vue'
@@ -22,6 +24,8 @@ import { type3Route } from './type3Route'
 const stepComponents: Record<string, Component> = {
   page2: FillSide,
   page2_facade_fence: FenceFacade,
+  page2_facade_fence_edge: FenceFacadeEdge,
+  page2_yard_fence_edge: FenceYardEdge,
   page2_yard_fence: FenceYard,
   page2_yard_fence_trim: FenceYardTrim,
   page2_facade_fence_laying: FenceFacadeLaying,

@@ -304,6 +304,9 @@ const facadeButtTrim = ref<FacadeButtTrim | null>(null)
 const yardButtTrim = ref<FacadeButtTrim | null>(null)
 const layingFacadeCode = ref<'butt' | 'gap' | null>(null)
 const layingYardCode = ref<'butt' | 'gap' | null>(null)
+const fenceEdgeFacadeId = ref<number | null>(null)
+const fenceEdgeYardId = ref<number | null>(null)
+const fenceEdgeOptions = ref<import('../../app/api/wicket.types').FenceEdgeOption[]>([])
 const yardTrimCode = ref<'none' | 'edge' | null>(null)
 const gapYardMm = ref<number | null>(null)
 const numberOfSticksYard = ref<number | null>(null)
@@ -407,7 +410,9 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode.value = 'repeat'
     colorFacadeReverseHex.value = ''
     colorFacadeReverseImage.value = ''
+    fenceEdgeFacadeId.value = null
     facadeButtTrimCode.value = null
+    fenceEdgeYardId.value = null
     yardButtTrimCode.value = null
     facadeButtTrimSide.value = null
     yardButtTrimSide.value = null
@@ -420,6 +425,7 @@ const fieldsFilled = ref<number>(0)
   }
 
   function resetYardFilling(): void {
+    fenceEdgeYardId.value = null
     yardButtTrimCode.value = null
     yardButtTrimSide.value = null
     yardButtTrim.value = null
@@ -978,6 +984,7 @@ const fieldsFilled = ref<number>(0)
       reliefFacadeAcrossMode,
       colorFacadeReverseHex,
       colorFacadeReverseImage,
+      fenceEdgeFacadeId, fenceEdgeYardId, fenceEdgeOptions,
       facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
       yardButtTrimCode, yardButtTrimSide, yardButtTrim,
       gapId,
@@ -1392,6 +1399,7 @@ const fieldsFilled = ref<number>(0)
     reliefFacadeAcrossMode,
     colorFacadeReverseHex,
     colorFacadeReverseImage,
+    fenceEdgeFacadeId, fenceEdgeYardId, fenceEdgeOptions,
     facadeButtTrimCode, facadeButtTrimSide, facadeButtTrim, layingFacadeCode, layingYardCode, yardTrimCode, gapYardMm, numberOfSticksYard,
     yardButtTrimCode, yardButtTrimSide, yardButtTrim,
     gapId,

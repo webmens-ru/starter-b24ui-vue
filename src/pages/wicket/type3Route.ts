@@ -16,22 +16,26 @@ const baseRoute = defineWicketRoute([
   shieldSection(),
   canvasSection(),
   fillingSection(
-    ['page2', 'page2_facade_fence', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_trim'],
+    ['page2', 'page2_facade_fence', 'page2_facade_fence_edge', 'page2_facade_fence_laying', 'page2_yard_fence', 'page2_yard_fence_edge', 'page2_yard_fence_trim'],
     (from, state) => {
       if (from === 'page2') return 'page2_facade_fence'
-      if (from === 'page2_facade_fence') return 'page2_facade_fence_laying'
+      if (from === 'page2_facade_fence') return state.hasFenceEdges ? 'page2_facade_fence_edge' : 'page2_facade_fence_laying'
+      if (from === 'page2_facade_fence_edge') return 'page2_facade_fence_laying'
       if (from === 'page2_facade_fence_laying' && state.fillSide === 2) return 'page2_yard_fence'
-      if (from === 'page2_yard_fence' && needsTrim(state)) return 'page2_yard_fence_trim'
+      if (from === 'page2_yard_fence' && state.hasFenceEdges) return 'page2_yard_fence_edge'
+      if ((from === 'page2_yard_fence' || from === 'page2_yard_fence_edge') && needsTrim(state)) return 'page2_yard_fence_trim'
       return undefined
     },
-    from => {
+    (from, state) => {
       if (from === 'page2_facade_fence') return 'page2'
-      if (from === 'page2_facade_fence_laying') return 'page2_facade_fence'
-      if (from === 'page2_yard_fence_trim') return 'page2_yard_fence'
+      if (from === 'page2_facade_fence_laying') return state.hasFenceEdges ? 'page2_facade_fence_edge' : 'page2_facade_fence'
+      if (from === 'page2_facade_fence_edge') return 'page2_facade_fence'
+      if (from === 'page2_yard_fence_trim') return state.hasFenceEdges ? 'page2_yard_fence_edge' : 'page2_yard_fence'
+      if (from === 'page2_yard_fence_edge') return 'page2_yard_fence'
       if (from === 'page2_yard_fence') return 'page2_facade_fence_laying'
       return undefined
     },
-    state => needsTrim(state) ? 'page2_yard_fence_trim' : state.fillSide === 2 ? 'page2_yard_fence' : 'page2_facade_fence_laying',
+    state => needsTrim(state) ? 'page2_yard_fence_trim' : state.fillSide === 2 ? (state.hasFenceEdges ? 'page2_yard_fence_edge' : 'page2_yard_fence') : 'page2_facade_fence_laying',
   ),
   ...standardTailSections(),
 ])

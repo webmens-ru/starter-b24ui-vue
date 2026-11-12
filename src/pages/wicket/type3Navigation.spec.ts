@@ -174,3 +174,13 @@ it('requires yard butt completion for new facade layouts while retaining histori
   expect(validate({ ...base, facadeButtTrimCode: 'both', yardButtTrimCode: 'single', yardButtTrimSide: 'top', raspolozheniyePolotna: 'vertical' }).valid).toBe(false)
   expect(validate({ ...base, facadeButtTrimCode: 'both', yardButtTrimCode: 'single', yardButtTrimSide: 'lock', raspolozheniyePolotna: 'vertical' }).valid).toBe(true)
 })
+
+it('places edge selection after each material and skips it when no applicable edges exist', () => {
+  const s = state({ fillSide: 2, hasFenceEdges: true })
+  expect(getNextPage('page2_facade_fence', s)).toBe('page2_facade_fence_edge')
+  expect(getNextPage('page2_facade_fence_edge', s)).toBe('page2_facade_fence_laying')
+  expect(getPrevPage('page2_facade_fence_laying', s)).toBe('page2_facade_fence_edge')
+  expect(getNextPage('page2_yard_fence', s)).toBe('page2_yard_fence_edge')
+  expect(getPrevPage('page2_yard_fence_edge', s)).toBe('page2_yard_fence')
+  expect(getNextPage('page2_facade_fence', state({ hasFenceEdges: false }))).toBe('page2_facade_fence_laying')
+})

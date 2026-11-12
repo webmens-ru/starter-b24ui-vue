@@ -1,3 +1,4 @@
+export interface FenceEdgeOption { id: number; name: string; isHorizontal: number | boolean; isVertical: number | boolean; maskFile: string | null }
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
 import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
 import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
@@ -63,6 +64,8 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   yardButtTrimSide?: FacadeButtTrimSide | null
   facadeButtTrim?: FacadeButtTrim | null
   yardButtTrim?: FacadeButtTrim | null
+  fenceEdgeFacadeId?: number | null
+  fenceEdgeYardId?: number | null
   yardTrimCode?: 'none' | 'edge' | null
   layingYardCode?: 'butt' | 'gap' | null
   gapYardMm?: number | null
@@ -607,6 +610,9 @@ export interface CoverStripSummary {
   params: { paramCode: string; name: string; value: string; materialItemId: number; pieceIndex: number; parameters: Record<string, unknown>[] }[]
 }
 export interface WicketConfigurationResponse extends Record<string, unknown>, WicketStructureProperties {
+  fenceEdgeFacadeId?: number | null
+  fenceEdgeYardId?: number | null
+  fenceEdgeOptions?: FenceEdgeOption[]
   coverStripFrameColor?: CoverStripFrameColor
   coverStrips?: CoverStripSelection[]
   coverStripSummary?: CoverStripSummary | null
