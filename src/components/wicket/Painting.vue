@@ -36,8 +36,10 @@ const catalogError = ref('')
 const selectedPaint = computed(() => paints.value.find(item => item.id === draftPaintId.value))
 const selectedColor = computed(() => selectedPaint.value?.colors.find(item => item.id === draftColorId.value))
 const customerPainting = computed(() => calc.doesPaintingFrameCode.value === 'customer')
-const individual = computed(() => selectedPaint.value?.isFixedColor === false)
-const requiresNote = computed(() => selectedPaint.value?.requiresColorNote === true)
+const selectedCategory = computed(() => categories.value.find(item => item.id === category.value))
+const paintingBehavior = computed(() => selectedPaint.value ?? selectedCategory.value)
+const individual = computed(() => paintingBehavior.value?.isFixedColor === false)
+const requiresNote = computed(() => paintingBehavior.value?.requiresColorNote === true)
 const primers = computed(() => selectedPaint.value?.primers ?? [])
 const paintItems = computed(() => {
   const groups = new Map<number | null, PaintItem[]>()
@@ -116,7 +118,7 @@ async function saveSelection(): Promise<boolean> {
   const acceptsNote = paint != null && (!paint.isFixedColor || paint.requiresColorNote)
   const editNote = !customerPainting.value && acceptsNote
   if (editNote && paint?.requiresColorNote && !draftNote.value.trim()) {
-    error.value = 'Укажите примечание к цвету краски'
+    error.value = 'Укажите требования к индивидуальной окраске'
     return false
   }
   const note = editNote ? draftNote.value.trim() : preserve ? calc.colorShieldNote.value.trim() : ''
@@ -220,9 +222,9 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
       <label v-if="!individual" class="flex flex-col gap-2"><span class="font-semibold">Цвет рамы</span>
         <B24SelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || saving || !selectedPaint" @update:model-value="onColorChange" />
       </label>
-      <label v-if="individual || requiresNote" class="flex flex-col gap-2"><span class="font-semibold">Примечание к цвету краски <span v-if="requiresNote" class="text-red-600">*</span></span>
-        <textarea class="w-full px-3 py-2 border rounded border-gray-300 bg-white" v-model="draftNote" :disabled="saving" :required="requiresNote" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
-        <span v-if="submitted && requiresNote && !draftNote.trim()" role="alert">Укажите примечание к цвету краски</span>
+      <label v-if="individual || requiresNote" class="flex flex-col gap-2"><span class="font-semibold">Комментарий к окраске <span v-if="requiresNote" class="text-red-600">*</span><span v-else>(необязательно)</span></span>
+        <textarea class="w-full px-3 py-2 border rounded border-gray-300 bg-white" v-model="draftNote" :disabled="saving" :required="requiresNote" :placeholder="requiresNote ? 'Укажите цвет, образец или требования к окраске' : 'При необходимости опишите предоставленную краску'" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
+        <span v-if="submitted && requiresNote && !draftNote.trim()" role="alert">Укажите требования к индивидуальной окраске</span>
       </label>
       <label v-if="selectedPaint" class="flex flex-col gap-2"><span class="font-semibold">Грунтовка (необязательно)</span>
         <B24SelectMenu data-testid="paint-primer" :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)" :items="primerItems" value-key="id" :disabled="saving || !primers.length" @update:model-value="onPrimerChange" />
