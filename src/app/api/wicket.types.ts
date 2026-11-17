@@ -267,6 +267,9 @@ export interface SidingFilters {
 }
 
 export interface SidingRow extends FillingDrawingMetadata {
+  /** Read-only manufacturer inherited from the selected siding type. */
+  manufacturerId?: string | number | null
+  manufacturerName?: string | null
   id: string | number
   sidingFormId?: number
   typeOfCoatingId?: number

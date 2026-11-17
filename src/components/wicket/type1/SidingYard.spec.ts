@@ -47,8 +47,8 @@ const ButtonStub = defineComponent({
 })
 
 const rows: SidingRow[] = [
-  { id: 17, drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
-  { id: 21, drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null, material: 'Доска', form: 'Накатка', typeOfCoating: 'Матовый' },
+  { id: 17, manufacturerId: 4, manufacturerName: 'Двор-Профиль', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
+  { id: 21, manufacturerId: 6, manufacturerName: 'New producer', drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null, material: 'Доска', form: 'Накатка', typeOfCoating: 'Матовый' },
 ]
 
 function mountYard() {
@@ -68,6 +68,27 @@ function mountYard() {
 }
 
 describe('SidingYard', () => {
+  it('uses type-owned manufacturer without a separate manufacturer selector', async () => {
+    const data = rows.map((row, index) => ({ ...row, manufacturerId: index === 0 ? 73 : 74, manufacturerName: 'Renamed producer' }))
+    apiMocks.getSidingTable.mockResolvedValueOnce({ table: data, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
+    const calc = useCalculation()
+    expect(calc.manufacturerYardId.value).toBe(73)
+    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
+    await wrapper.get('[data-testid="appearance-color"]').setValue(9)
+    await flushPromises()
+    expect(apiMocks.saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ manufacturerYardId: 73, materialSupplierYard: 'Renamed producer' }))
+    await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
+    await flushPromises()
+    expect(calc.manufacturerYardId.value).toBe(74)
+    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
+    wrapper.unmount()
+  })
+
   it('ignores a late material catalog response after the product row context changes', async () => {
     let resolve!: (value: unknown) => void
     apiMocks.getSidingTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
@@ -164,7 +185,6 @@ describe('SidingYard', () => {
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
@@ -204,7 +224,6 @@ describe('SidingYard', () => {
     await flushPromises()
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
@@ -219,8 +238,8 @@ describe('SidingYard', () => {
 
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
     expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
-    expect(calc.manufacturerYardId.value).toBeNull()
-    expect(calc.materialSupplierYard.value).toBe('')
+    expect(calc.manufacturerYardId.value).toBe(6)
+    expect(calc.materialSupplierYard.value).toBe('New producer')
     expect(calc.colorYardId.value).toBeNull()
     expect(calc.colorYard.value).toBe('')
     expect(calc.colorYardHex.value).toBe('')

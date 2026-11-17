@@ -291,6 +291,7 @@ function directoryFilterIds(values: string[]): number[] {
   })
 }
 
+/** Returns material rows with the read-only manufacturer FK/name inherited from their siding type. */
 export async function getSidingTable(
   modelId: string | number,
   filters: SidingFilters,

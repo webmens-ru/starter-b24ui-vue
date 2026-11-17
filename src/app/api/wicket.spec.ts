@@ -19,6 +19,14 @@ describe('pipe option response boundary', () => {
 })
 
 describe('material directory relation requests', () => {
+  it('preserves type manufacturer, thickness and linear mass in the siding response', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [{ id: 37, sidingTypeId: 19, manufacturerId: 73, manufacturerName: 'Renamed producer',
+      thickness: '0.4500', weightMp: '1.215180', drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null }], pagination: {} } } })
+    const response = await wicket.getSidingTable('1', { materials: [], form: [], typeOfCoating: [] })
+    expect(response.table[0]).toMatchObject({ id: 37, manufacturerId: 73, manufacturerName: 'Renamed producer', thickness: '0.4500', weightMp: '1.215180' })
+  })
+
   it.each(['siding', 'profnastil', 'coatings'] as const)('normalizes filling profile metadata on %s without dropping material rows', async route => {
     const wicket = await import('./wicket')
     const raw = [

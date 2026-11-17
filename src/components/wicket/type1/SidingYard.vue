@@ -112,6 +112,8 @@ function restoreFromCalc(): SidingRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    manufacturerId: calc.manufacturerYardId.value,
+    manufacturerName: calc.materialSupplierYard.value,
     drawingProfile: calc.fillingProfileYard.value,
     drawingProfileProblem: calc.fillingProfileYardProblem.value,
     material:      calc.materialYard.value,
@@ -195,6 +197,10 @@ async function doRecalculate() {
 async function selectRow(row: SidingRow) {
   const productChanged = !selectedRow.value || String(selectedRow.value.id) !== String(row.id)
   if (productChanged) calc.resetYardFilling()
+  if (row.manufacturerId != null) {
+    calc.manufacturerYardId.value = row.manufacturerId
+    calc.materialSupplierYard.value = row.manufacturerName ?? ''
+  }
   const attempt = appearanceSave.beginRevision()
   selectedRow.value = row
   if (await save(row)) {
@@ -321,6 +327,7 @@ onMounted(async () => {
       ref="appearanceFields"
       :model-id="calc.modelId.value"
       material-group="siding"
+      :show-manufacturer="false"
       side="yard"
       @change="saveAppearance"
     />

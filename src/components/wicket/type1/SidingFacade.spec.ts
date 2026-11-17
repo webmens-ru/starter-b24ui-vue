@@ -48,7 +48,7 @@ const ButtonStub = defineComponent({
 
 const rows: SidingRow[] = [
   {
-    id: 7, drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null,
+    id: 7, manufacturerId: 3, manufacturerName: 'Фасад-Профиль', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null,
     material: 'Бревно',
     form: 'Гладкая',
     typeOfCoating: 'Глянец',
@@ -57,7 +57,7 @@ const rows: SidingRow[] = [
     reliefImage: '/reliefs/log.webp',
   },
   {
-    id: 11, drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null,
+    id: 11, manufacturerId: 6, manufacturerName: 'New producer', drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null,
     material: 'Корабельная доска',
     form: 'Трапеция',
     typeOfCoating: 'Матовый',
@@ -81,6 +81,27 @@ function mountFacade() {
 }
 
 describe('SidingFacade', () => {
+  it('uses type-owned manufacturer without a separate manufacturer selector', async () => {
+    const data = rows.map((row, index) => ({ ...row, manufacturerId: index === 0 ? 73 : 74, manufacturerName: 'Renamed producer' }))
+    apiMocks.getSidingTable.mockResolvedValueOnce({ table: data, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
+    const wrapper = mountFacade()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
+    const calc = useCalculation()
+    expect(calc.manufacturerFacadeId.value).toBe(73)
+    expect(calc.materialSupplierFacade.value).toBe('Renamed producer')
+    await wrapper.get('[data-testid="appearance-color"]').setValue(8)
+    await flushPromises()
+    expect(apiMocks.saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ manufacturerFacadeId: 73, materialSupplierFacade: 'Renamed producer' }))
+    await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
+    await flushPromises()
+    expect(calc.manufacturerFacadeId.value).toBe(74)
+    expect(calc.materialSupplierFacade.value).toBe('Renamed producer')
+    wrapper.unmount()
+  })
+
   it('ignores a late material catalog response after the product row context changes', async () => {
     let resolve!: (value: unknown) => void
     apiMocks.getSidingTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
@@ -173,7 +194,6 @@ describe('SidingFacade', () => {
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
     await flushPromises()
     await wrapper.get('[data-testid="appearance-color"]').setValue('8')
     await flushPromises()
@@ -200,7 +220,6 @@ describe('SidingFacade', () => {
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
     await wrapper.get('[data-testid="appearance-color"]').setValue('8')
     await flushPromises()
 
@@ -215,8 +234,8 @@ describe('SidingFacade', () => {
 
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
     expect(apiMocks.recalculate).toHaveBeenCalledTimes(1)
-    expect(calc.manufacturerFacadeId.value).toBeNull()
-    expect(calc.materialSupplierFacade.value).toBe('')
+    expect(calc.manufacturerFacadeId.value).toBe(6)
+    expect(calc.materialSupplierFacade.value).toBe('New producer')
     expect(calc.colorFacadeId.value).toBeNull()
     expect(calc.colorFacade.value).toBe('')
     expect(calc.colorFacadeHex.value).toBe('')
@@ -224,7 +243,7 @@ describe('SidingFacade', () => {
     const payload = apiMocks.saveWicketData.mock.calls[apiMocks.saveWicketData.mock.calls.length - 1]?.[0]
     expect(payload).toMatchObject({
       idFacade: 11,
-      manufacturerFacadeId: null,
+      manufacturerFacadeId: 6,
       colorFacadeId: null,
       materialFacade: 'Корабельная доска',
       formFacade: 'Трапеция',
@@ -270,7 +289,7 @@ describe('SidingFacade', () => {
     apiMocks.saveWicketData.mockClear()
     apiMocks.recalculate.mockClear()
 
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
     await flushPromises()
 
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
