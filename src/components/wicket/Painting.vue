@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ColorSelectMenu from './shared/ColorSelectMenu.vue'
+import PaintCatalogTable from './shared/PaintCatalogTable.vue'
 import { wicketFailureMessage } from '../../app/wicketFailureMessage'
 import { formatMaterialPrice } from './shared/materialPrice'
 import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
@@ -36,6 +38,14 @@ const catalogError = ref('')
 const selectedPaint = computed(() => paints.value.find(item => item.id === draftPaintId.value))
 const selectedColor = computed(() => selectedPaint.value?.colors.find(item => item.id === draftColorId.value))
 const customerPainting = computed(() => calc.doesPaintingFrameCode.value === 'customer')
+const isCatalogCategory = (item: PaintCategoryItem) => item.isFixedColor && !item.isCustomerSupplied
+const catalogCategories = computed(() => categories.value.filter(isCatalogCategory))
+const categoryCards = computed(() => {
+  const first = catalogCategories.value[0]
+  return categories.value.filter(item => !isCatalogCategory(item) || item.id === first?.id).map(item => ({ ...item, name: isCatalogCategory(item) ? 'Стандарт/не стандарт' : item.name }))
+})
+const tableMode = computed(() => catalogCategories.value.some(item => item.id === category.value))
+const tablePaints = computed(() => paints.value.filter(item => item.isFixedColor && !item.isCustomerSupplied))
 const selectedCategory = computed(() => categories.value.find(item => item.id === category.value))
 const paintingBehavior = computed(() => selectedPaint.value ?? selectedCategory.value)
 const individual = computed(() => paintingBehavior.value?.isFixedColor === false)
@@ -54,7 +64,7 @@ const paintItems = computed(() => {
     ...items.map(item => ({ id: String(item.id), label: materialLabel(item.name, item.priceM2) })),
   ])
 })
-const colorItems = computed(() => (selectedPaint.value?.colors ?? []).map(item => ({ id: String(item.id), label: item.name })))
+const colorItems = computed(() => (selectedPaint.value?.colors ?? []).map(item => ({ id: String(item.id), label: item.label ?? item.name, hex: item.hex })))
 const primerItems = computed(() => [{ id: 'none', label: 'Без грунтовки' }, ...primers.value.map(item => ({ id: String(item.id), label: materialLabel(item.name, item.priceM2) }))])
 function materialLabel(name: string, priceM2: number | null | undefined): string {
   return priceM2 == null ? name : `${name} — ${formatMaterialPrice(priceM2)}/м²`
@@ -65,12 +75,21 @@ function numberId(value: string | number | null): number | null { return value =
 async function onCategoryChange(id: number): Promise<void> {
   if (saving.value || category.value === id) return
   category.value = id
-  if (selectedPaint.value?.paintCategoryId !== id) {
+  if (selectedPaint.value?.paintCategoryId !== id && !(tableMode.value && selectedPaint.value?.isFixedColor && !selectedPaint.value.isCustomerSupplied)) {
     draftPaintId.value = null
     draftColorId.value = null
     draftNote.value = ''
     calc.colorShieldPreviewHex.value = ''
   }
+}
+async function onTableSelect(paintId: number, colorId: number): Promise<void> {
+  if (saving.value || loading.value) return
+  const paint = tablePaints.value.find(item => item.id === paintId)
+  if (!paint?.colors.some(item => item.id === colorId)) return
+  draftPaintId.value = paintId
+  draftColorId.value = colorId
+  if (!paint.requiresColorNote) draftNote.value = ''
+  await save()
 }
 async function onPaintChange(value: string | number | null): Promise<void> {
   if (saving.value) return
@@ -192,7 +211,10 @@ async function load(): Promise<void> {
       draftColorId.value = selectPaintColor(selectedPaint.value.colors, draftColorId.value)
     }
     categories.value = response.paintCategories ?? []
-    category.value = selectedPaint.value?.paintCategoryId ?? categories.value[0]?.id ?? null
+    const initialCategory = categories.value.find(item => item.id === selectedPaint.value?.paintCategoryId)
+    category.value = initialCategory && isCatalogCategory(initialCategory)
+      ? catalogCategories.value[0]?.id ?? null
+      : initialCategory?.id ?? categories.value[0]?.id ?? null
   } catch { if (current()) catalogError.value = 'Не удалось загрузить краски' }
   finally { if (current()) loading.value = false }
 }
@@ -209,18 +231,19 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
     <PaintingProviders :disabled="saving" @change="save" />
     <div v-if="error && customerPainting" role="alert" class="text-red-600">{{ error }}</div>
     <template v-if="!customerPainting">
-      <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-1">
-        <button v-for="item in categories" :key="item.id" type="button" class="paint-category-card" :data-paint-category="item.id" :aria-pressed="category === item.id" :disabled="loading || saving" @click="onCategoryChange(item.id)">{{ item.name }}</button>
+      <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-3 gap-3 p-1">
+        <button v-for="item in categoryCards" :key="item.id" type="button" class="paint-category-card" :data-paint-category="item.id" :aria-pressed="category === item.id" :disabled="loading || saving" @click="onCategoryChange(item.id)">{{ item.name }}</button>
       </div>
       <p v-if="unchangedUnavailable" role="status">Сохранённый выбор недоступен: {{ calc.colorShieldName.value }}. Его можно сохранить без изменений или выбрать новую краску и цвет.</p>
       <p v-if="loading">Загрузка красок…</p>
-      <p v-if="!loading && !paintItems.length" role="status">В этой категории пока нет доступных красок.</p>
+      <p v-if="!loading && !(tableMode ? tablePaints.length : paintItems.length)" role="status">В этой категории пока нет доступных красок.</p>
       <div v-if="error || catalogError" role="alert" class="text-red-600 whitespace-pre-line">{{ error || catalogError }}<B24Button v-if="catalogError" label="Повторить загрузку" :disabled="saving" @click="load" /></div>
-      <label class="flex flex-col gap-2"><span class="font-semibold">Краска</span>
+      <PaintCatalogTable v-if="tableMode" :paints="tablePaints" :paint-id="draftPaintId" :color-id="draftColorId" :disabled="loading || saving" @select="onTableSelect" />
+      <label v-else class="flex flex-col gap-2"><span class="font-semibold">Краска</span>
         <B24SelectMenu data-testid="paint-product" :model-value="draftPaintId == null ? '' : String(draftPaintId)" :items="paintItems" value-key="id" placeholder="Выберите краску" :disabled="loading || saving" @update:model-value="onPaintChange" />
       </label>
-      <label v-if="!individual" class="flex flex-col gap-2"><span class="font-semibold">Цвет рамы</span>
-        <B24SelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || saving || !selectedPaint" @update:model-value="onColorChange" />
+      <label v-if="!tableMode && !individual" class="flex flex-col gap-2"><span class="font-semibold">Цвет рамы</span>
+        <ColorSelectMenu data-testid="paint-color" :model-value="draftColorId == null ? '' : String(draftColorId)" :items="colorItems" value-key="id" placeholder="Выберите цвет" :disabled="loading || saving || !selectedPaint" @update:model-value="onColorChange($event ?? null)" />
       </label>
       <label v-if="individual || requiresNote" class="flex flex-col gap-2"><span class="font-semibold">Комментарий к окраске <span v-if="requiresNote" class="text-red-600">*</span><span v-else>(необязательно)</span></span>
         <textarea class="w-full px-3 py-2 border rounded border-gray-300 bg-white" v-model="draftNote" :disabled="saving" :required="requiresNote" :placeholder="requiresNote ? 'Укажите цвет, образец или требования к окраске' : 'При необходимости опишите предоставленную краску'" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />

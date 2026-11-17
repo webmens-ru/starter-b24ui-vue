@@ -199,7 +199,7 @@ export interface SelectItem {
   name: string
 }
 
-export interface PaintColorItem { id: number; name: string; hex: string | null; image: string | null }
+export interface PaintColorItem { id: number; name: string; label?: string; hex: string | null; image: string | null }
 export interface PaintCategoryItem { id: number; name: string; isFixedColor: boolean; requiresColorNote: boolean; isCustomerSupplied: boolean }
 export interface PaintItem {
   id: number
