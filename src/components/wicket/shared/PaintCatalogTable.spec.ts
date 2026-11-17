@@ -89,3 +89,42 @@ it('retains searchable type selection alongside the live color query', async () 
  expect(w.emitted('select')).toBeUndefined()
  w.unmount()
 })
+
+const sortablePaints: PaintItem[] = [
+ { ...paints[0]!, id: 7, paintTypeName: 'Эмаль', priceM2: 180, colors: [{ ...paints[0]!.colors[0]!, id: 103, name: 'RAL 10010' }] },
+ { ...paints[0]!, id: 8, paintTypeName: 'Порошковая', priceM2: 20, colors: [{ ...paints[0]!.colors[0]!, id: 101, name: 'RAL 1002' }] },
+ { ...paints[0]!, id: 9, paintTypeName: 'Эмаль', priceM2: 162, colors: [{ ...paints[0]!.colors[0]!, id: 102, name: 'RAL 1001' }] },
+ { ...paints[0]!, id: 10, paintTypeName: 'Эмаль', priceM2: null, colors: [{ ...paints[0]!.colors[0]!, id: 104, name: 'RAL 9003' }] },
+ { ...paints[0]!, id: 11, paintTypeName: 'Эмаль', priceM2: 0, colors: [{ ...paints[0]!.colors[0]!, id: 105, name: 'RAL 1003' }] },
+]
+it.each([
+ ['type', [8, 7, 9, 10, 11], [7, 9, 10, 11, 8]],
+ ['color', [9, 8, 11, 10, 7], [7, 10, 11, 8, 9]],
+ ['price', [11, 8, 9, 7, 10], [7, 9, 8, 11, 10]],
+] as const)('sorts %s both ways without changing selected IDs or catalog data', async (column, ascending, descending) => {
+ const w = mount(PaintCatalogTable, { ...stubbed, props: { paints: sortablePaints, paintId: 9, colorId: 102 } })
+ const order = () => w.findAll('[data-paint-checkbox]').map(input => Number(input.attributes('data-paint-checkbox')!.split(':')[0]))
+ await w.get(`[data-paint-sort="${column}"]`).trigger('click')
+ expect(order()).toEqual(ascending)
+ expect(w.get(`[data-paint-sort="${column}"]`).element.closest('th')?.getAttribute('aria-sort')).toBe('ascending')
+ await w.get(`[data-paint-sort="${column}"]`).trigger('click')
+ expect(order()).toEqual(descending)
+ expect(w.get(`[data-paint-sort="${column}"]`).element.closest('th')?.getAttribute('aria-sort')).toBe('descending')
+ expect(w.get<HTMLInputElement>('[data-paint-checkbox="9:102"]').element.checked).toBe(true)
+ expect(sortablePaints.map(paint => paint.id)).toEqual([7, 8, 9, 10, 11])
+ expect(w.emitted('select')).toBeUndefined()
+ w.unmount()
+})
+it('combines sorting with live color filtering and switches columns back to ascending', async () => {
+ const w = mount(PaintCatalogTable, { ...stubbed, props: { paints: sortablePaints, paintId: 9, colorId: 102 } })
+ await w.get('[data-paint-sort="price"]').trigger('click')
+ await w.get('[data-paint-sort="price"]').trigger('click')
+ await w.get('[data-testid="paint-color-filter"]').setValue('100')
+ expect(w.findAll('tbody tr')).toHaveLength(4)
+ await w.get('[data-paint-sort="color"]').trigger('click')
+ expect(w.get('[data-paint-sort="color"]').element.closest('th')?.getAttribute('aria-sort')).toBe('ascending')
+ expect(w.get('[data-paint-sort="price"]').element.closest('th')?.getAttribute('aria-sort')).toBe('none')
+ expect(w.findAll('[data-paint-checkbox]').map(input => input.attributes('data-paint-checkbox'))).toEqual(['9:102', '8:101', '11:105', '7:103'])
+ expect(w.emitted('select')).toBeUndefined()
+ w.unmount()
+})
