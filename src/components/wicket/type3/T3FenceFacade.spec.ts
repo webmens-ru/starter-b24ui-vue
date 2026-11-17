@@ -124,7 +124,7 @@ it('places the color field above the table and persists its independent choice',
   const wrapper = mountPage()
   await flushPromises()
   const appearance = wrapper.getComponent(FillingAppearanceFields)
-  expect(appearance.props('showManufacturer')).toBe(true)
+  expect(appearance.props('showManufacturer')).toBe(false)
   expect(appearance.props('fenceId')).toBe(useCalculation().idFacade.value)
   expect(appearance.props('side')).toBe('facade')
   expect(wrapper.html().indexOf('appearance-fields')).toBeLessThan(wrapper.html().indexOf('<table'))
@@ -146,5 +146,26 @@ it('clears a color outside the new material palette before saving its ID', async
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 902, colorFacadeId: null, colorFacade: '' }))
   expect(wrapper.text()).toContain('Переименованная форма')
   expect(calc.formFacade.value).toBe('Переименованная форма')
+  wrapper.unmount()
+})
+
+
+it('inherits manufacturer FK and caption from the selected material and hides manual manufacturer selection', async () => {
+  const calc = useCalculation()
+  calc.manufacturerFacadeId.value = 99
+  calc.materialSupplierFacade.value = 'Старое название'
+  const row = { id: 999, manufacturerId: 37, manufacturerName: 'Переименовано', company: 'Другое имя', material: 'Материал', widthFence: '100', typeOfCoating: 'Покрытие', profileMarking: 'Профиль 100', price: 1250.5 }
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [row], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  const wrapper = mountPage()
+  await flushPromises()
+  const inputs = wrapper.findAll('tbody input')
+  await inputs[inputs.length - 1]!.setValue(true)
+  await flushPromises()
+  expect(calc.manufacturerFacadeId.value).toBe(37)
+  expect(calc.materialSupplierFacade.value).toBe('Переименовано')
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ manufacturerFacadeId: 37, materialSupplierFacade: 'Переименовано' }))
+  expect(wrapper.findComponent(FillingAppearanceFields).props('showManufacturer')).toBe(false)
+  expect(wrapper.find('thead').text()).toContain('Цена за пог. м')
+  expect(wrapper.text()).toContain('Профиль 100')
   wrapper.unmount()
 })

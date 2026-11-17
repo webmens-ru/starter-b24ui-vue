@@ -76,7 +76,7 @@ describe('material directory relation requests', () => {
     api.post.mockResolvedValue({ data: { data: { table: [] } } })
     await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], typeOfCoating: ['707'] })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', {
-      companies: [], materials: [], widthFence: [], fenceFormCodes: [], manufacturerIds: [], typeOfCoatingIds: [707], page: 1,
+      companies: [], materials: [], widthFence: [], profileIds: [], fenceFormCodes: [], manufacturerIds: [], typeOfCoatingIds: [707], page: 1,
     })
     await wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['808'] })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type6/get-filling-zhalyuzi', {
@@ -418,8 +418,8 @@ describe('profnastil material palettes and forms', () => {
 it('passes fence form codes, manufacturer IDs and the selected palette ID separately from renamed titles', async () => {
   const wicket = await import('./wicket')
   api.post.mockResolvedValue({ data: { data: { table: [] } } })
-  await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], typeOfCoating: [], fenceForm: ['01'], manufacturers: ['37'] })
-  expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', expect.objectContaining({ fenceFormCodes: ['01'], manufacturerIds: [37] }))
+  await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], typeOfCoating: [], fenceForm: ['01'], manufacturers: ['37'], profileIds: ['12'] })
+  expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', expect.objectContaining({ fenceFormCodes: ['01'], manufacturerIds: [37], profileIds: [12] }))
   api.post.mockResolvedValue({ data: { data: { manufacturers: [], colors: [] } } })
   await wicket.getFillingAppearanceOptions('3', 'fence', 96)
   expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-appearance-options', { materialGroupCode: 'fence', fenceId: 96 })

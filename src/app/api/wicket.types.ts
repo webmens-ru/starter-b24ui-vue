@@ -457,6 +457,7 @@ export interface SheetTableResponse {
 }
 
 export interface FenceFilters {
+  profileIds?: string[]
   fenceForm?: string[]
   manufacturers?: string[]
   companies:     string[]
@@ -478,6 +479,7 @@ export interface FenceRow {
   /** Effective width, resolved by the API from the linked profile when present. */
   widthFence: string | number
   profileId?: number | null
+  profileMarking?: string | null
   profileWidth?: number | null
   profileImage?: string | null
   minTrimWidth?: number | null
