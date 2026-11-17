@@ -51,6 +51,7 @@ const rows: SidingRow[] = [
   {
     id: 7, manufacturerId: 3, manufacturerName: 'Фасад-Профиль', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null,
     sidingFormCode: '01', sidingFormTitle: 'Профиль с переименованной подписью',
+    priceM2: '1250.50',
     material: 'Бревно',
     form: 'Гладкая',
     typeOfCoating: 'Глянец',
@@ -104,8 +105,11 @@ describe('SidingFacade', () => {
     calc.fillingProfileYard.value = { kind: 'mp20' }
     const wrapper = mountFacade()
     await flushPromises()
+    expect(wrapper.findAll('tbody tr')[0]?.findAll('td').at(-1)?.text().replace(/\s/g, ' ')).toBe('1 250,50 ₽')
+
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
+    expect(wrapper.findAll('tbody tr')[0]?.findAll('td').at(-1)?.text().replace(/\s/g, ' ')).toBe('1 250,50 ₽')
     expect(calc.fillingProfileFacade.value).toEqual({ kind: 'logSiding' })
     expect(calc.fillingProfileFacadeProblem.value).toBeNull()
     calc.resetFacadeFilling()
@@ -226,7 +230,7 @@ describe('SidingFacade', () => {
       'Форма сайдинга',
       'Тип сайдинга',
       'Тип покрытия',
-      'Цена за пог. м',
+      'Цена за м²',
     ])
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)

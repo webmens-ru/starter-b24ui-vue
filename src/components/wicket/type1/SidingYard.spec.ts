@@ -48,7 +48,7 @@ const ButtonStub = defineComponent({
 })
 
 const rows: SidingRow[] = [
-  { id: 17, manufacturerId: 4, manufacturerName: 'Двор-Профиль', sidingFormCode: '01', sidingFormTitle: 'Профиль с переименованной подписью', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
+  { id: 17, priceM2: '1250.50', manufacturerId: 4, manufacturerName: 'Двор-Профиль', sidingFormCode: '01', sidingFormTitle: 'Профиль с переименованной подписью', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
   { id: 21, manufacturerId: 6, manufacturerName: 'New producer', drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null, material: 'Доска', form: 'Накатка', typeOfCoating: 'Матовый' },
 ]
 
@@ -90,8 +90,11 @@ describe('SidingYard', () => {
     calc.fillingProfileFacade.value = { kind: 'mp20' }
     const wrapper = mountYard()
     await flushPromises()
+    expect(wrapper.findAll('tbody tr')[0]?.findAll('td').at(-1)?.text().replace(/\s/g, ' ')).toBe('1 250,50 ₽')
+
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
+    expect(wrapper.findAll('tbody tr')[0]?.findAll('td').at(-1)?.text().replace(/\s/g, ' ')).toBe('1 250,50 ₽')
     expect(calc.fillingProfileYard.value).toEqual({ kind: 'logSiding' })
     expect(calc.fillingProfileYardProblem.value).toBeNull()
     calc.resetYardFilling()
@@ -216,7 +219,7 @@ describe('SidingYard', () => {
       'Форма сайдинга',
       'Тип сайдинга',
       'Тип покрытия',
-      'Цена за пог. м',
+      'Цена за м²',
     ])
 
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)

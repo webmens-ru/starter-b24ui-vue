@@ -305,7 +305,7 @@ export async function getSidingTable(
     typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
     page,
   })).data.data
-  // Preserve type-derived thickness and kg/m together with material metadata.
+  // Preserve priceM2 (RUB/m²), type-derived thickness and kg/m with material metadata.
   return { ...result, table: result.table.map(row => parseFillingDrawingRow<SidingRow>(row)) }
 }
 

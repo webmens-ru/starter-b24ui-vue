@@ -350,7 +350,7 @@ onMounted(async () => {
             <th scope="col" class="text-left">Форма сайдинга</th>
             <th scope="col" class="text-left">Тип сайдинга</th>
             <th scope="col" class="text-left">Тип покрытия</th>
-            <th scope="col" class="text-right whitespace-nowrap">Цена за пог. м</th>
+            <th scope="col" class="text-right whitespace-nowrap">Цена за м²</th>
           </tr>
         </thead>
         <tbody>
@@ -375,7 +375,7 @@ onMounted(async () => {
             <td>{{ selectedRow.sidingFormTitle ?? '—' }}</td>
             <td>{{ selectedRow.form }}</td>
             <td>{{ selectedRow.typeOfCoating }}</td>
-            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceMp) }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceM2) }}</td>
           </tr>
 
           <tr
@@ -396,7 +396,7 @@ onMounted(async () => {
             <td>{{ row.sidingFormTitle ?? '—' }}</td>
             <td>{{ row.form }}</td>
             <td>{{ row.typeOfCoating }}</td>
-            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceMp) }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceM2) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">

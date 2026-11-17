@@ -286,8 +286,7 @@ export interface SidingRow extends FillingDrawingMetadata {
   coatingHex?: string | null
   coatingImage?: string | null
   reliefImage?: string | null
-  /** Цена сайдинга за погонный метр из справочника. */
-  priceMp?: string | number
+  /** Цена сайдинга за квадратный метр из справочника. */
   priceM2?: string | number
   deliveryTime?: string
   inStock?: string
