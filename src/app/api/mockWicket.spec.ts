@@ -93,3 +93,18 @@ it('returns no mock siding colors without an assigned material', async () => {
   expect((await mockGetFillingAppearanceOptions('siding')).colors).toEqual([])
   expect((await mockGetFillingAppearanceOptions('siding', 999)).colors).toEqual([])
 })
+
+it('uses numeric profnastil form strings independently of drawing profile kinds', async () => {
+  const { mockGetProfnastilFilterOptions, mockGetProfnastilTable } = await import('./mockWicket')
+  expect((await mockGetProfnastilFilterOptions()).profnastilForm).toEqual([
+    { id: '8', name: '8' }, { id: '20', name: '20' },
+  ])
+  for (const [code, kind] of [['8', 'c8'], ['20', 'c20']] as const) {
+    const result = await mockGetProfnastilTable({ profnastilForm: [code], materials: [], typeOfCoating: [] })
+    expect(result.table.length).toBeGreaterThan(0)
+    for (const row of result.table) {
+      expect(row).toMatchObject({ profnastilFormCode: code, profnastilFormTitle: code, drawingProfile: { kind } })
+    }
+  }
+  expect((await mockGetProfnastilTable({ profnastilForm: ['c8'], materials: [], typeOfCoating: [] })).table).toEqual([])
+})
