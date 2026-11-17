@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import '../shared/catalogTable.css'
+import { formatMaterialPrice } from '../shared/materialPrice'
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getLamelTable, saveWicketData, recalculate, type LamelRow, type SidingPagination } from '../../../app/api/wicket'
@@ -282,23 +284,23 @@ onMounted(async () => {
       />
     </div>
 
-    <div v-if="selectedRow" class="max-w-lg">
-      <label class="block text-sm mb-1">Цвет ламелей</label>
+    <div v-if="selectedRow" class="w-full">
+      <label class="block font-semibold mb-2">Цвет ламелей</label>
       <ColorSelectMenu :model-value="selectedColorId" :items="colorItems" placeholder="Выберите цвет" @update:model-value="selectColor" />
       <p v-if="!selectedColorId && calc.colorYard.value" class="text-sm text-gray-500">Сохранённый цвет: {{ calc.colorYard.value }}</p>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-sm">
-        <thead class="sticky top-0 z-[9] bg-gray-100">
+    <div class="catalog-table-container">
+      <table class="catalog-table">
+        <thead class="sticky top-0 z-[9]">
           <tr>
-            <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Производитель материала</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Ширина ламели</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Цвет</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Цена</th>
+            <th scope="col" class="catalog-table-choice">Выбрать</th>
+            <th scope="col" class="text-left">Производитель материала</th>
+            <th scope="col" class="text-left">Материал</th>
+            <th scope="col" class="text-left">Ширина ламели</th>
+            <th scope="col" class="text-left">Тип покрытия</th>
+            <th scope="col" class="text-left">Цвет</th>
+            <th scope="col" class="text-right whitespace-nowrap">Цена за м²</th>
           </tr>
         </thead>
         <tbody>
@@ -308,25 +310,26 @@ onMounted(async () => {
 
           <tr
             v-if="selectedRow && !rows.find(r => r.id === selectedRow!.id)"
-            class="bg-blue-100"
+            class="selected catalog-table-hoverable"
           >
-            <td class="border border-gray-300 px-2 py-1 text-center">
+            <td class="text-center">
               <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.company }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.width }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.colorTitles?.join(', ') || selectedRow.color }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
+            <td>{{ selectedRow.company }}</td>
+            <td class="font-semibold">{{ selectedRow.material }}</td>
+            <td>{{ selectedRow.width }}</td>
+            <td>{{ selectedRow.typeOfCoating }}</td>
+            <td>{{ selectedRow.colorTitles?.join(', ') || selectedRow.color }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.price) }}</td>
           </tr>
 
           <tr
             v-for="row in rows"
             :key="row.id"
-            :class="isSelected(row) ? 'bg-blue-100' : 'hover:bg-gray-50'"
+            class="catalog-table-hoverable"
+            :class="{ selected: isSelected(row) }"
           >
-            <td class="border border-gray-300 px-2 py-1 text-center">
+            <td class="text-center">
               <input
                 type="checkbox"
                 :checked="isSelected(row)"
@@ -334,12 +337,12 @@ onMounted(async () => {
                 @change="isSelected(row) ? deselectRow() : selectRow(row)"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.company }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.width }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.colorTitles?.join(', ') || row.color }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
+            <td>{{ row.company }}</td>
+            <td class="font-semibold">{{ row.material }}</td>
+            <td>{{ row.width }}</td>
+            <td>{{ row.typeOfCoating }}</td>
+            <td>{{ row.colorTitles?.join(', ') || row.color }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.price) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
