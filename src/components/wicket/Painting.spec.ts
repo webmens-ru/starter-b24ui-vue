@@ -189,10 +189,12 @@ describe('separate paint and color', () => {
   expect(useCalculation().getFullSavePayload()).toMatchObject({paintId:2,paintColorId:92})
   w.unmount()
  })
- it('saves a complete numeric pair once when selecting a table row', async () => {
+ it('saves a complete numeric pair once when selecting its checkbox', async () => {
   const c=useCalculation(); c.loadFromApi({paintId:1,paintColorId:91}); const w=render(); await flushPromises()
   expect(saveWicketData).not.toHaveBeenCalled()
-  await w.get('[data-paint-row="3:94"]').trigger('click'); await flushPromises()
+  await w.get('[data-paint-checkbox="3:94"]').trigger('click'); await flushPromises()
+  expect(w.get<HTMLInputElement>('[data-paint-checkbox="3:94"]').element.checked).toBe(true)
+  expect(w.get<HTMLInputElement>('[data-paint-checkbox="1:91"]').element.checked).toBe(false)
   expect(saveWicketData).toHaveBeenCalledTimes(1)
   expect(c.getFullSavePayload()).toMatchObject({paintId:3,paintColorId:94}); w.unmount()
  })
