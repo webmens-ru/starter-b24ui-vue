@@ -2,16 +2,14 @@
 import { computed, ref } from 'vue'
 import type { PaintItem } from '../../../app/api/wicket.types'
 import { formatMaterialPrice } from './materialPrice'
-import ColorSelectMenu from './ColorSelectMenu.vue'
 const props = defineProps<{ paints: PaintItem[]; paintId: number | null; colorId: number | null; disabled?: boolean }>()
 const emit = defineEmits<{ select: [paintId: number, colorId: number] }>()
 const typeFilter = ref('all')
-const colorFilter = ref('all')
+const colorFilter = ref('')
+const colorQuery = computed(() => colorFilter.value.trim().toLocaleLowerCase('ru'))
 const types = computed(() => [...new Map(props.paints.map(paint => [String(paint.paintTypeId ?? 'none'), { id: String(paint.paintTypeId ?? 'none'), label: paint.paintTypeName ?? 'Без типа' }])).values()])
-const colors = computed(() => [...new Map(props.paints.flatMap(paint => paint.colors.map(color => [String(color.id), color] as const))).values()])
 const typeItems = computed(() => [{ id: 'all', label: 'Все типы' }, ...types.value])
-const colorItems = computed(() => [{ id: 'all', label: 'Все цвета' }, ...colors.value.map(color => ({ id: String(color.id), label: color.label ?? color.name, hex: color.hex }))])
-const rows = computed(() => props.paints.flatMap(paint => paint.colors.map(color => ({ paint, color }))).filter(({paint, color}) => (typeFilter.value === 'all' || String(paint.paintTypeId ?? 'none') === typeFilter.value) && (colorFilter.value === 'all' || String(color.id) === colorFilter.value)))
+const rows = computed(() => props.paints.flatMap(paint => paint.colors.map(color => ({ paint, color }))).filter(({paint, color}) => (typeFilter.value === 'all' || String(paint.paintTypeId ?? 'none') === typeFilter.value) && (!colorQuery.value || (color.label ?? color.name).toLocaleLowerCase('ru').includes(colorQuery.value))))
 function select(paintId: number, colorId: number): void {
   if (!props.disabled) emit('select', paintId, colorId)
 }
@@ -24,7 +22,7 @@ function select(paintId: number, colorId: number): void {
         <B24SelectMenu v-model="typeFilter" data-testid="paint-type-filter" :items="typeItems" value-key="id" :search-input="{ placeholder: 'Поиск типа краски' }" class="w-full" :disabled="disabled" />
       </label>
       <label class="flex flex-col gap-2"><span class="font-semibold">Цвет</span>
-        <ColorSelectMenu v-model="colorFilter" data-testid="paint-color-filter" :items="colorItems" :search-input="{ placeholder: 'Поиск цвета' }" :disabled="disabled" />
+        <input v-model="colorFilter" type="search" data-testid="paint-color-filter" placeholder="Часть названия или RAL-кода" class="w-full h-[34px] rounded-md border border-gray-200 bg-white px-3 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" :disabled="disabled" />
       </label>
     </div>
     <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">

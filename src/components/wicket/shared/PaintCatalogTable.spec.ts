@@ -7,7 +7,7 @@ const paints: PaintItem[] = [1, 2].map(id => ({ id, name: `Paint ${id}`, paintCa
 const selectStub = { props: ['modelValue', 'items', 'disabled'], template: `<select :value="modelValue" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)"><option v-for="item in items" :value="item.id">{{ item.label }}</option></select>` }
 const stubbed = { global: { stubs: { B24SelectMenu: selectStub, SelectMenu: selectStub } } }
 describe('paint catalog table', () => {
- it('shows every paint/color pair and filters by IDs without changing selection', async () => {
+ it('filters by type ID and partial color text without changing selection', async () => {
   const w = mount(PaintCatalogTable, { ...stubbed, props: { paints, paintId: 1, colorId: 91 } })
   expect(w.findAll('tbody tr')).toHaveLength(4)
   expect(w.text()).toContain('123')
@@ -48,28 +48,44 @@ describe('paint catalog table', () => {
  })
 })
 
-it('searches color labels before selecting a numeric color filter', async () => {
- const w = mount(PaintCatalogTable, { props: { paints, paintId: 1, colorId: 91 }, attachTo: document.body, global: { plugins: [b24UiPlugin] } })
- await w.get('[data-testid="paint-color-filter"]').trigger('click')
- await flushPromises()
- const popup = new DOMWrapper(document.body)
- await popup.get('input[placeholder="Поиск цвета"]').setValue('92')
- await flushPromises()
- expect(popup.findAll('[role="option"]').map(option => option.text()).join(' ')).toContain('Color 92')
- expect(popup.findAll('[role="option"]').map(option => option.text()).join(' ')).not.toContain('Color 91')
+it('filters table immediately by partial color text without changing the saved selection', async () => {
+ const options = paints.map(paint => ({ ...paint, colors: [
+  { id: 91, name: 'RAL 1000', label: 'RAL 1000 - Зелёно-бежевый', hex: '#112233', image: null },
+  { id: 92, name: 'RAL 1001', label: 'RAL 1001 - Бежевый', hex: '#112233', image: null },
+  { id: 93, name: 'RAL 9003', label: 'RAL 9003 - White', hex: '#ffffff', image: null },
+ ] }))
+ const w = mount(PaintCatalogTable, { ...stubbed, props: { paints: options, paintId: 1, colorId: 93 } })
+ const input = w.get<HTMLInputElement>('input[data-testid="paint-color-filter"]')
+ await input.setValue('  бЕж ')
  expect(w.findAll('tbody tr')).toHaveLength(4)
- const option = popup.findAll('[role="option"]').find(option => option.text().includes('Color 92'))!
- await option.trigger('click'); await flushPromises()
+ expect(w.get('tbody').text()).not.toContain('White')
+ expect(w.emitted('select')).toBeUndefined()
+ await w.get('[data-testid="paint-type-filter"]').setValue('2')
+ expect(w.findAll('tbody tr')).toHaveLength(2)
+ await input.setValue('1001')
+ expect(w.findAll('tbody tr')).toHaveLength(1)
+ await input.setValue('not found')
+ expect(w.findAll('tbody tr')).toHaveLength(0)
+ expect(w.get('[role="status"]').text()).toContain('Нет красок')
+ await input.setValue('')
+ expect(w.findAll('tbody tr')).toHaveLength(3)
+ await w.get('[data-testid="paint-type-filter"]').setValue('all')
+ expect(w.get<HTMLInputElement>('[data-paint-checkbox="1:93"]').element.checked).toBe(true)
+ expect(w.emitted('select')).toBeUndefined()
+ w.unmount()
+})
+
+it('retains searchable type selection alongside the live color query', async () => {
+ const w = mount(PaintCatalogTable, { props: { paints, paintId: 1, colorId: 91 }, attachTo: document.body, global: { plugins: [b24UiPlugin] } })
+ await w.get('input[data-testid="paint-color-filter"]').setValue('92')
  expect(w.findAll('tbody tr')).toHaveLength(2)
  await w.get('[data-testid="paint-type-filter"]').trigger('click'); await flushPromises()
+ const popup = new DOMWrapper(document.body)
  await popup.get('input[placeholder="\u041f\u043e\u0438\u0441\u043a \u0442\u0438\u043f\u0430 \u043a\u0440\u0430\u0441\u043a\u0438"]').setValue('Type 2'); await flushPromises()
  expect(popup.findAll('[role="option"]').map(option => option.text())).toEqual(['Type 2'])
  await popup.get('[role="option"]').trigger('click'); await flushPromises()
  expect(w.findAll('tbody tr')).toHaveLength(1)
  expect(w.get('tbody').text()).toContain('Type 2')
- await w.get('[data-testid="paint-type-filter"]').trigger('click'); await flushPromises()
- await popup.findAll('[role="option"]')[0]!.trigger('click'); await flushPromises()
- expect(w.findAll('tbody tr')).toHaveLength(2)
  expect(w.emitted('select')).toBeUndefined()
  w.unmount()
 })

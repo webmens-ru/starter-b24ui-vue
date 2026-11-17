@@ -326,7 +326,7 @@ describe('separate paint and color', () => {
   vi.mocked(saveWicketData).mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve }))
   await choosePaint(w, '2')
   expect(w.get<HTMLButtonElement>('[data-paint-row="2:91"]').element.disabled).toBe(true)
-  expect(w.get<HTMLSelectElement>('[data-testid="paint-color-filter"]').element.disabled).toBe(true)
+  expect(w.get<HTMLInputElement>('[data-testid="paint-color-filter"]').element.disabled).toBe(true)
   expect(w.get<HTMLFieldSetElement>('fieldset').element.disabled).toBe(true)
   expect(w.findAll('button').find(button => button.text() === 'Далее')?.attributes('disabled')).toBeDefined()
   // Even synthetic emissions from a disabled child must not start an overlapping write.
