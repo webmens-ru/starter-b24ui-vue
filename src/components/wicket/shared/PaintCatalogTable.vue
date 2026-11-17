@@ -2,13 +2,16 @@
 import { computed, ref } from 'vue'
 import type { PaintItem } from '../../../app/api/wicket.types'
 import { formatMaterialPrice } from './materialPrice'
+import ColorSelectMenu from './ColorSelectMenu.vue'
 const props = defineProps<{ paints: PaintItem[]; paintId: number | null; colorId: number | null; disabled?: boolean }>()
 const emit = defineEmits<{ select: [paintId: number, colorId: number] }>()
-const typeFilter = ref('')
-const colorFilter = ref('')
+const typeFilter = ref('all')
+const colorFilter = ref('all')
 const types = computed(() => [...new Map(props.paints.map(paint => [String(paint.paintTypeId ?? 'none'), { id: String(paint.paintTypeId ?? 'none'), label: paint.paintTypeName ?? 'Без типа' }])).values()])
 const colors = computed(() => [...new Map(props.paints.flatMap(paint => paint.colors.map(color => [String(color.id), color] as const))).values()])
-const rows = computed(() => props.paints.flatMap(paint => paint.colors.map(color => ({ paint, color }))).filter(({paint, color}) => (!typeFilter.value || String(paint.paintTypeId ?? 'none') === typeFilter.value) && (!colorFilter.value || String(color.id) === colorFilter.value)))
+const typeItems = computed(() => [{ id: 'all', label: 'Все типы' }, ...types.value])
+const colorItems = computed(() => [{ id: 'all', label: 'Все цвета' }, ...colors.value.map(color => ({ id: String(color.id), label: color.label ?? color.name, hex: color.hex }))])
+const rows = computed(() => props.paints.flatMap(paint => paint.colors.map(color => ({ paint, color }))).filter(({paint, color}) => (typeFilter.value === 'all' || String(paint.paintTypeId ?? 'none') === typeFilter.value) && (colorFilter.value === 'all' || String(color.id) === colorFilter.value)))
 function select(paintId: number, colorId: number): void {
   if (!props.disabled) emit('select', paintId, colorId)
 }
@@ -18,10 +21,10 @@ function select(paintId: number, colorId: number): void {
   <div class="flex flex-col gap-3">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <label class="flex flex-col gap-2"><span class="font-semibold">Тип краски</span>
-        <select v-model="typeFilter" data-testid="paint-type-filter" class="paint-filter" :disabled="disabled"><option value="">Все типы</option><option v-for="type in types" :key="type.id" :value="type.id">{{ type.label }}</option></select>
+        <B24SelectMenu v-model="typeFilter" data-testid="paint-type-filter" :items="typeItems" value-key="id" :search-input="{ placeholder: 'Поиск типа краски' }" class="w-full" :disabled="disabled" />
       </label>
       <label class="flex flex-col gap-2"><span class="font-semibold">Цвет</span>
-        <select v-model="colorFilter" data-testid="paint-color-filter" class="paint-filter" :disabled="disabled"><option value="">Все цвета</option><option v-for="color in colors" :key="color.id" :value="String(color.id)">{{ color.label ?? color.name }}</option></select>
+        <ColorSelectMenu v-model="colorFilter" data-testid="paint-color-filter" :items="colorItems" :search-input="{ placeholder: 'Поиск цвета' }" :disabled="disabled" />
       </label>
     </div>
     <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -43,7 +46,6 @@ function select(paintId: number, colorId: number): void {
 </template>
 
 <style scoped>
-.paint-filter { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; width: 100%; }
 .paint-table th, .paint-table td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
 .paint-table th { background: #f9fafb; font-size: 14px; }
 .paint-table tr.selectable { cursor: pointer; }
