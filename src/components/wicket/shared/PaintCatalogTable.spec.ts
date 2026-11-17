@@ -1,3 +1,4 @@
+import { nextTick, ref, defineComponent } from 'vue'
 import { mount, flushPromises, DOMWrapper } from '@vue/test-utils'
 import b24UiPlugin from '@bitrix24/b24ui-nuxt/vue-plugin'
 import { describe, expect, it } from 'vitest'
@@ -140,3 +141,30 @@ it('combines sorting with live color filtering and switches columns back to asce
   expect(w.emitted('select')).toBeUndefined()
   w.unmount()
  })
+
+it('keeps native checkbox checked when the parent immediately accepts selection', async () => {
+ const paintId = ref<number | null>(null)
+ const colorId = ref<number | null>(null)
+ const host = defineComponent({
+  components: { PaintCatalogTable },
+  setup: () => ({ paints, paintId, colorId, accept: (p: number, c: number) => { paintId.value = p; colorId.value = c } }),
+  template: '<PaintCatalogTable :paints="paints" :paint-id="paintId" :color-id="colorId" @select="accept" />',
+ })
+ const w = mount(host, { ...stubbed, attachTo: document.body })
+ const checkbox = w.get<HTMLInputElement>('[data-paint-checkbox="2:92"]')
+ const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+ checkbox.element.dispatchEvent(click)
+ await nextTick()
+ // Cancelled native activation can revert checked after Vue flush in browsers.
+ expect(click.defaultPrevented).toBe(false)
+ expect(checkbox.element.checked).toBe(true)
+ expect(checkbox.element.closest('tr')?.classList.contains('selected')).toBe(true)
+ checkbox.element.click()
+ await nextTick()
+ expect(checkbox.element.checked).toBe(true)
+ const row = w.get('[data-paint-row="1:91"]')
+ await row.trigger('click')
+ expect(w.get<HTMLInputElement>('[data-paint-checkbox="1:91"]').element.checked).toBe(true)
+ expect(checkbox.element.checked).toBe(false)
+ w.unmount()
+})

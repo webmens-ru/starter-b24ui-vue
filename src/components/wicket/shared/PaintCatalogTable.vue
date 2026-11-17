@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import './catalogTable.css'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { PaintItem } from '../../../app/api/wicket.types'
 import { formatMaterialPrice } from './materialPrice'
 const props = defineProps<{ paints: PaintItem[]; paintId: number | null; colorId: number | null; disabled?: boolean }>()
@@ -42,6 +42,12 @@ function sortBy(column: SortColumn): void {
   sortDirection.value = sortColumn.value === column && sortDirection.value === 'ascending' ? 'descending' : 'ascending'
   sortColumn.value = column
 }
+function selectCheckbox(event: MouseEvent, paintId: number, colorId: number): void {
+  const input = event.currentTarget as HTMLInputElement
+  select(paintId, colorId)
+  // Native checkbox activation must complete; cancelling it can undo Vue's checked update.
+  void nextTick(() => { input.checked = props.paintId === paintId && props.colorId === colorId })
+}
 function select(paintId: number, colorId: number): void {
   if (!props.disabled) emit('select', paintId, colorId)
 }
@@ -68,7 +74,7 @@ function select(paintId: number, colorId: number): void {
         </tr></thead>
         <tbody>
           <tr v-for="{paint, color} in sortedRows" :key="`${paint.id}:${color.id}`" :class="{ selected: paint.id === paintId && color.id === colorId, selectable: !disabled }" @click="select(paint.id, color.id)">
-            <td class="text-center"><input type="checkbox" class="size-5 align-middle accent-blue-600 cursor-pointer disabled:cursor-wait" :data-paint-checkbox="`${paint.id}:${color.id}`" :checked="paint.id === paintId && color.id === colorId" :aria-label="`Выбрать ${paint.paintTypeName ?? 'краску'}, ${paint.paintCategoryName}, ${color.label ?? color.name}`" :disabled="disabled" @click.stop.prevent="select(paint.id, color.id)" /></td>
+            <td class="text-center"><input type="checkbox" class="size-5 align-middle accent-blue-600 cursor-pointer disabled:cursor-wait" :data-paint-checkbox="`${paint.id}:${color.id}`" :checked="paint.id === paintId && color.id === colorId" :aria-label="`Выбрать ${paint.paintTypeName ?? 'краску'}, ${paint.paintCategoryName}, ${color.label ?? color.name}`" :disabled="disabled" @click.stop="selectCheckbox($event, paint.id, color.id)" /></td>
             <td><button type="button" class="text-left w-full" :data-paint-row="`${paint.id}:${color.id}`" :aria-pressed="paint.id === paintId && color.id === colorId" :aria-label="`${paint.paintTypeName ?? 'Без типа'}, ${paint.paintCategoryName}, ${color.label ?? color.name}`" :disabled="disabled" @click.stop="select(paint.id, color.id)"><span class="font-semibold">{{ paint.paintTypeName ?? 'Без типа' }}</span><span class="block text-sm text-gray-500">{{ paint.paintCategoryName }}</span></button></td>
             <td><span class="inline-flex items-center gap-2"><span v-if="color.hex" aria-hidden="true" class="inline-block w-5 h-5 shrink-0 rounded border border-gray-300" :style="{ backgroundColor: color.hex }" />{{ color.label ?? color.name }}</span></td>
             <td class="text-right whitespace-nowrap">{{ paint.priceM2 == null ? '—' : formatMaterialPrice(paint.priceM2) }}</td>
