@@ -312,6 +312,8 @@ export interface ProfnastilFilters {
 }
 
 export interface ProfnastilRow extends FillingDrawingMetadata {
+  /** Read-only producer inherited through profileTypeId. */
+  manufacturerName?: string | null
   profnastilFormCode?: string | null
   profnastilFormTitle?: string | null
   manufacturerId?: number | null
@@ -342,6 +344,9 @@ export interface ProfnastilFormOption {
 }
 
 export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDrawingMetadata {
+  /** Read-only producer inherited from the profile type. */
+  manufacturerId?: number | null
+  manufacturerName?: string | null
   id: number
   colorInputMode: 'list' | 'combobox' | 'none'
   isDoubleSided: boolean

@@ -13,7 +13,7 @@ vi.mock('../../../app/api/wicket', async original => ({
   saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 1 }),
 }))
 const Select = defineComponent({ name: 'B24SelectMenu', props: ['modelValue', 'items'], emits: ['update:modelValue'], setup: () => () => h('div') })
-const row = { id: 17, profileTypeId: 901, typeOfCoatingId: 707, name: 'Любая подпись', material: 'Другой профиль', typeOfCoating: 'Другое покрытие', thickness: 0.45, drawingProfile: { kind: 'c8' as const }, drawingProfileProblem: null }
+const row = { id: 17, manufacturerId: 71, manufacturerName: 'Поставщик', profileTypeId: 901, typeOfCoatingId: 707, name: 'Любая подпись', material: 'Другой профиль', typeOfCoating: 'Другое покрытие', thickness: 0.45, drawingProfile: { kind: 'c8' as const }, drawingProfileProblem: null }
 
 beforeEach(() => {
   setActivePinia(createPinia()); vi.clearAllMocks()
@@ -43,7 +43,7 @@ it.each(['facade', 'yard'] as const)('uses the shared table for %s and saves mat
   wrapper.findAllComponents(Select).slice(-1)[0]!.vm.$emit('update:modelValue', 603)
   await flushPromises()
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining(side === 'facade'
-    ? { idFacade: 17, colorFacadeId: 603 } : { idYard: 17, colorYardId: 603 }))
+    ? { idFacade: 17, colorFacadeId: 603, manufacturerFacadeId: 71 } : { idYard: 17, colorYardId: 603, manufacturerYardId: 71 }))
   expect(side === 'facade' ? calc.idYard.value : calc.idFacade.value).toBe(99)
   wrapper.unmount()
 })
@@ -71,12 +71,11 @@ it.each(['facade', 'yard'] as const)('places %s appearance fields between filter
   else calc.idYard.value = 17
   const wrapper = mount(T2ProfnastilForm, { props: { side, tableMode: true }, global: { stubs: { B24SelectMenu: Select, SelectMenu: Select, FilterDropdown: true } } })
   await flushPromises()
-  const manufacturer = wrapper.findAll('label').find(label => label.text().includes('Производитель'))!
+  expect(wrapper.text()).not.toContain('Производитель')
   const color = wrapper.findAll('label').find(label => label.text().startsWith('Цвет'))!
   const table = wrapper.get('table').element
-  expect(manufacturer.element.compareDocumentPosition(table) & 4).toBe(4)
   expect(color.element.compareDocumentPosition(table) & 4).toBe(4)
   const filter = wrapper.get('filter-dropdown-stub').element
-  expect(filter.compareDocumentPosition(manufacturer.element) & 4).toBe(4)
+  expect(filter.compareDocumentPosition(color.element) & 4).toBe(4)
   wrapper.unmount()
 })

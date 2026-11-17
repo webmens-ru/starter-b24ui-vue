@@ -46,7 +46,7 @@ beforeEach(() => {
   response = {
     profiles: [{ id: 901, name: 'Профиль' }, { id: 902, name: 'Профиль' }],
     coatings: [
-      { id: 707, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 21, thickness: '0.45', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 21, manufacturerId: 71, manufacturerName: 'Любое имя', thickness: '0.45', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
       { id: 707, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
     ],
     manufacturers: [],
@@ -65,7 +65,7 @@ it.each(['context', 'unmount'] as const)('updates profile before awaiting option
   await flushPromises()
   let resolve!: (value: ProfnastilFormOptions) => void
   vi.mocked(getType2ProfnastilFormOptions).mockReturnValueOnce(new Promise(done => { resolve = done }))
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   const calc = useCalculation()
   expect(calc.fillingProfileFacade.value).toEqual({ kind: 'mp10' })
@@ -89,9 +89,9 @@ it('restores profile and thickness variant by IDs despite stale or duplicate nam
   await flushPromises()
   expect(getType2ProfnastilFormOptions).toHaveBeenCalledWith(901, 707)
   const selects = wrapper.findAllComponents(Select)
-  expect(selects[1]?.props('modelValue')).toBe(901)
-  expect(selects[2]?.props('modelValue')).toBe(22)
-  expect(selects[2]?.props('items')).toEqual([
+  expect(selects[0]?.props('modelValue')).toBe(901)
+  expect(selects[1]?.props('modelValue')).toBe(22)
+  expect(selects[1]?.props('items')).toEqual([
     { id: 21, label: 'Любое покрытие — 0.45 мм' }, { id: 22, label: 'Любое покрытие — 0.50 мм' },
   ])
 })
@@ -106,11 +106,11 @@ it.each(['facade', 'yard'] as const)('keeps %s profile selection and reset indep
   opposite.value = { kind: 'mp20' }
   const wrapper = render(side)
   await flushPromises()
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   expect(target.value).toEqual({ kind: 'mp10' })
   expect(opposite.value).toEqual({ kind: 'mp20' })
-  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 902)
+  wrapper.findAllComponents(Select)[0]?.vm.$emit('update:modelValue', 902)
   await flushPromises()
   expect(target.value).toBeNull()
   expect(opposite.value).toEqual({ kind: 'mp20' })
@@ -126,11 +126,11 @@ it('can select yard metadata while a facade catalog request is still pending', a
   await flushPromises()
   let resolve!: (value: ProfnastilFormOptions) => void
   vi.mocked(getType2ProfnastilFormOptions).mockReturnValueOnce(new Promise(done => { resolve = done }))
-  facade.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 22)
+  facade.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 22)
   await flushPromises()
   const yard = render('yard')
   await flushPromises()
-  yard.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  yard.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   expect(calc.fillingProfileYard.value).toEqual({ kind: 'mp10' })
   expect(calc.fillingProfileFacade.value).toEqual({ kind: 'c20' })
@@ -145,7 +145,7 @@ it('can select yard metadata while a facade catalog request is still pending', a
 it('selects a material variant without confusing the shared coating ID', async () => {
   const wrapper = render()
   await flushPromises()
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   const calc = useCalculation()
   expect(calc.idFacade.value).toBe(21)
@@ -154,8 +154,8 @@ it('selects a material variant without confusing the shared coating ID', async (
   expect(calc.thicknessFacade.value).toBe('0.45')
   expect(calc.typeOfCoatingFacade.value).toBe('Любое покрытие')
   expect(saveWicketData).not.toHaveBeenCalled()
-  expect(wrapper.findAllComponents(Select)[3]?.props('items')).toContainEqual({ id: 603, label: 'Цвет - Белый', hex: '#ffffff' })
-  wrapper.findAllComponents(Select)[3]?.vm.$emit('update:modelValue', 603)
+  expect(wrapper.findAllComponents(Select)[2]?.props('items')).toContainEqual({ id: 603, label: 'Цвет - Белый', hex: '#ffffff' })
+  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 603)
   await flushPromises()
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 21, materialFacade: 'Профиль', typeOfCoatingFacade: 'Любое покрытие', colorFacadeId: 603 }))
 })
@@ -163,7 +163,7 @@ it('selects a material variant without confusing the shared coating ID', async (
 it('keeps a chosen dictionary color ID when another color has the same name', async () => {
   const wrapper = render()
   await flushPromises()
-  wrapper.findAllComponents(Select)[3]?.vm.$emit('update:modelValue', 603)
+  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 603)
   await flushPromises()
   expect(useCalculation().colorFacade.value).toBe('Цвет')
   expect(useCalculation().colorFacadeId.value).toBe(603)
@@ -189,7 +189,7 @@ it('hides color for none and saves without a required color', async () => {
   useCalculation().colorFacade.value = ''
   const wrapper = render()
   await flushPromises()
-  expect(wrapper.findAllComponents(Select)).toHaveLength(3)
+  expect(wrapper.findAllComponents(Select)).toHaveLength(2)
   expect(wrapper.findComponent(Input).exists()).toBe(false)
   expect(await validate(wrapper)).toBe(true)
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: null, colorFacade: '' }))
@@ -205,7 +205,7 @@ it.each([603, 999])('does not clear or save historical none color ID %s on hydra
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(await validate(wrapper)).toBe(false)
   expect(wrapper.get('[role="alert"]').text()).toContain('очистить старый цвет')
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(await validate(wrapper)).toBe(false)
@@ -242,7 +242,7 @@ it.each(['list', 'combobox'] as const)('keeps an unavailable saved ID visible in
   expect(await validate(wrapper)).toBe(false)
   expect(useCalculation().colorFacadeId.value).toBe(999)
   const items = mode === 'list'
-    ? wrapper.findAllComponents(Select)[3]!.props('items')
+    ? wrapper.findAllComponents(Select)[2]!.props('items')
     : wrapper.findComponent(Input).props('items')
   expect(items).toContainEqual({ id: 999, label: 'Цвет (недоступен)', disabled: true })
   expect(saveWicketData).not.toHaveBeenCalled()
@@ -292,27 +292,27 @@ it('shows a load error and blocks submission without changing historical state',
   expect(useCalculation().colorFacadeId.value).toBe(603)
 })
 
-it('does not send an incomplete changed material when the manufacturer changes next', async () => {
-  const wrapper = render()
+it.each(['facade', 'yard'] as const)('inherits %s manufacturer only when material changes', async side => {
+  const calc = useCalculation()
+  calc.loadFromApi({ idYard: 22, profileTypeYardId: 901, typeOfCoatingYardId: 707, colorYardId: 603, materialYardGlob: 'Профлист' })
+  calc.manufacturerFacadeId.value = 99
+  calc.manufacturerYardId.value = 98
+  const target = side === 'facade' ? calc.manufacturerFacadeId : calc.manufacturerYardId
+  const opposite = side === 'facade' ? calc.manufacturerYardId : calc.manufacturerFacadeId
+  const wrapper = render(side)
   await flushPromises()
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
-  await flushPromises()
-  wrapper.findAllComponents(Select)[0]?.vm.$emit('update:modelValue', 71)
-  await flushPromises()
+  expect(wrapper.text()).not.toContain('Производитель')
+  expect(target.value).toBe(side === 'facade' ? 99 : 98)
   expect(saveWicketData).not.toHaveBeenCalled()
-  wrapper.findAllComponents(Select)[3]?.vm.$emit('update:modelValue', 603)
+  wrapper.findAllComponents(Select)[1]!.vm.$emit('update:modelValue', 21)
   await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 21, manufacturerFacadeId: 71, colorFacadeId: 603 }))
-})
-
-it('allows an unrelated manufacturer edit while preserving an untouched unavailable color', async () => {
-  useCalculation().colorFacadeId.value = 999
-  const wrapper = render()
+  expect(target.value).toBe(71)
+  expect(opposite.value).toBe(side === 'facade' ? 98 : 99)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  wrapper.findAllComponents(Select)[2]!.vm.$emit('update:modelValue', 603)
   await flushPromises()
-  wrapper.findAllComponents(Select)[0]?.vm.$emit('update:modelValue', 71)
-  await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 22, manufacturerFacadeId: 71, colorFacadeId: 999, colorFacade: 'Цвет' }))
-  expect(await validate(wrapper)).toBe(false)
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ [side === 'facade' ? 'manufacturerFacadeId' : 'manufacturerYardId']: 71 }))
+  wrapper.unmount()
 })
 
 it('uses the same combobox contract on the yard without changing facade color', async () => {
@@ -338,7 +338,7 @@ it('does not treat an unselected material as a broken mode or select a default',
   const wrapper = render()
   await flushPromises()
   expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-  expect(wrapper.findAllComponents(Select)).toHaveLength(3)
+  expect(wrapper.findAllComponents(Select)).toHaveLength(2)
   expect(await validate(wrapper)).toBe(false)
   expect(calc.idFacade.value).toBe('')
   expect(saveWicketData).not.toHaveBeenCalled()
@@ -348,11 +348,9 @@ it('does not save a changed material which disappears on options reload', async 
   const wrapper = render()
   await flushPromises()
   vi.mocked(getType2ProfnastilFormOptions).mockResolvedValueOnce({ ...response, coatings: [] })
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   expect(wrapper.get('[role="alert"]').text()).toContain('материал недоступен')
-  wrapper.findAllComponents(Select)[0]?.vm.$emit('update:modelValue', 71)
-  await flushPromises()
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(await validate(wrapper)).toBe(false)
 })
@@ -362,8 +360,8 @@ it('loads the actual material palette independently of the coating palette', asy
   const wrapper = render()
   await flushPromises()
   expect(getProfnastilColors).toHaveBeenLastCalledWith('2', 22)
-  expect(wrapper.findAllComponents(Select)[3]?.props('items')).toContainEqual({ id: 909, label: 'Палитра материала', hex: null })
-  expect(wrapper.findAllComponents(Select)[3]?.props('items')).not.toContainEqual(expect.objectContaining({ id: 604 }))
+  expect(wrapper.findAllComponents(Select)[2]?.props('items')).toContainEqual({ id: 909, label: 'Палитра материала', hex: null })
+  expect(wrapper.findAllComponents(Select)[2]?.props('items')).not.toContainEqual(expect.objectContaining({ id: 604 }))
   expect(useCalculation().colorFacadeId.value).toBe(603)
   expect(saveWicketData).not.toHaveBeenCalled()
   wrapper.unmount()
@@ -373,10 +371,10 @@ it.each(['none', 'combobox'] as const)('requires the material palette for new %s
   response.coatings.forEach(item => { item.colorInputMode = mode })
   const wrapper = render()
   await flushPromises()
-  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  wrapper.findAllComponents(Select)[1]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
   expect(wrapper.findComponent(Input).exists()).toBe(false)
-  expect(wrapper.findAllComponents(Select)).toHaveLength(4)
+  expect(wrapper.findAllComponents(Select)).toHaveLength(3)
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(await validate(wrapper)).toBe(false)
   wrapper.unmount()

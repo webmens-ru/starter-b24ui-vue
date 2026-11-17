@@ -62,6 +62,23 @@ describe('ProfnastilFacade color contract', () => {
     wrapper.unmount()
   })
 
+  it('inherits manufacturer by profile type ID and keeps it when choosing a color', async () => {
+    apiMocks.getProfnastilTable.mockResolvedValue({
+      table: [{ id: 7, manufacturerId: 4, manufacturerName: 'Производитель типа', drawingProfile: { kind: 'c8' }, drawingProfileProblem: null, name: 'Материал', material: 'Тип', thickness: '0.5', typeOfCoating: 'Покрытие' }],
+      pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 },
+    })
+    const wrapper = mountFacade()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(useCalculation().manufacturerFacadeId.value).toBe(4)
+    expect(useCalculation().materialSupplierFacade.value).toBe('Производитель типа')
+    expect(apiMocks.saveWicketData.mock.lastCall?.[0]).toMatchObject({ manufacturerFacadeId: 4, materialSupplierFacade: 'Производитель типа' })
+    expect(useCalculation().data.value.find(block => block.blockCode === 'fillingFacade')?.params)
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: 'Производитель типа' })
+    wrapper.unmount()
+  })
+
   it('loads colors for the selected material and rejects arbitrary IDs', async () => {
     const wrapper = mountFacade()
     await flushPromises()

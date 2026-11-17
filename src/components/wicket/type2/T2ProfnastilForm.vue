@@ -85,10 +85,7 @@ const selectedMaterialId = computed<number | undefined>(() => {
   return Number.isSafeInteger(value) && value > 0 ? value : undefined
 })
 const fieldBindings = computed(() => ({
-  manufacturerVisible: !props.tableMode || !!selectedMaterialId.value,
   showMaterialSelectors: !props.tableMode,
-  selectedManufacturerId: selectedManufacturerId.value,
-  manufacturerSelectItems: manufacturerSelectItems.value,
   profile: profile.value,
   profileSelectItems: profileSelectItems.value,
   selectedMaterialId: selectedMaterialId.value,
@@ -103,7 +100,6 @@ const fieldBindings = computed(() => ({
   loadError: loadError.value,
   submitted: submitted.value,
   colorValid: colorValid.value,
-  onManufacturerChange,
   onProfileChange: onProfileSelectChange,
   onCoatingChange: onCoatingSelectChange,
   onDictionaryColorChange,
@@ -143,17 +139,12 @@ const colorSettings = computed(() => {
   }
 })
 const colorMode = computed(() => colorSettings.value.mode)
-const manufacturerSelectItems = computed(() => [
-  { id: '', label: 'Не выбран' },
-  ...options.value.manufacturers.map(item => ({ id: item.id, label: item.name })),
-])
 const profileSelectItems = computed(() =>
   options.value.profiles.map(item => ({ id: item.id, label: item.name })),
 )
 const coatingSelectItems = computed(() =>
   options.value.coatings.map(item => ({ id: item.profnastilId, label: `${item.name} — ${item.thickness} мм` })),
 )
-const selectedManufacturerId = computed<string | number>(() => manufacturerId.value ?? '')
 const colorSelectItems = computed(() => {
   const items = options.value.colors.map(item => ({ id: item.id, label: item.label ?? item.name, hex: item.hex }))
   if (dictionaryColorId.value && !allowedColor.value) {
@@ -285,6 +276,7 @@ async function selectTableRow(row: ProfnastilRow): Promise<void> {
   tableError.value = ''
   calc.materialSelectionProblems.value = calc.materialSelectionProblems.value.filter(problem => problem.side !== props.side)
   applyMaterial(material)
+  applyManufacturer(row.manufacturerId, row.manufacturerName)
   if (valid.value) await save()
 }
 
@@ -315,15 +307,11 @@ function clearColor() {
 async function onProfileChange() {
   setDrawingProfile(null)
   coating.value = null
+  applyManufacturer(null, null)
   clearColor()
   if (isFacade.value) calc.idFacade.value = ''
   else calc.idYard.value = ''
   if (await load(profile.value, null)) await save()
-}
-
-async function onManufacturerChange(value: string | number | undefined) {
-  manufacturerId.value = value === '' || value === undefined ? null : value
-  await save()
 }
 
 async function onProfileSelectChange(value: string | number | undefined) {
@@ -351,7 +339,16 @@ async function onCoatingSelectChange(value: string | number | undefined) {
   if (await load(profile.value, coating.value)) await onCoatingChange()
 }
 
+function applyManufacturer(id: number | null | undefined, name: string | null | undefined): void {
+  manufacturerId.value = id ?? null
+  if (isFacade.value) calc.materialSupplierFacade.value = name ?? ''
+  else calc.materialSupplierYard.value = name ?? ''
+}
+
 function applyMaterial(selected: ProfnastilCoatingOption) {
+  if (String(selected.profnastilId) !== String(selectedMaterialId.value)) {
+    applyManufacturer(selected.manufacturerId, selected.manufacturerName)
+  }
   materialPaletteSelection.value = true
   setDrawingProfile(selected)
   const profileName = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''

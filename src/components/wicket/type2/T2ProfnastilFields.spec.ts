@@ -9,7 +9,7 @@ const InputStub = defineComponent({
   template: `<div><div data-selected><slot name="leading" /></div><div v-for="item in items" :key="item.id" data-option><slot name="item-leading" :item="item" />{{item.label}}</div><button data-change @click="$emit('update:modelValue', 2)">Choose</button><button data-create @click="$emit('create', 'Literal text')">Create</button></div>`,
 })
 const render = (comboboxValue: number | string = 1) => mount(Fields, {
-  props: { manufacturerVisible: false, showMaterialSelectors: false, selectedManufacturerId: '', manufacturerSelectItems: [], profile: null, profileSelectItems: [], selectedMaterialId: undefined, coating: null, coatingSelectItems: [], colorMode: 'combobox', dictionaryColorId: undefined, colorSelectItems: [], comboboxValue, printechSelectItems: [{id:1,label:'Полное длинное название цвета',hex:'#123456'}, {id:2,label:'Без HEX'}], loading: false, loadError: '', submitted: false, colorValid: true },
+  props: { showMaterialSelectors: false, profile: null, profileSelectItems: [], selectedMaterialId: undefined, coating: null, coatingSelectItems: [], colorMode: 'combobox', dictionaryColorId: undefined, colorSelectItems: [], comboboxValue, printechSelectItems: [{id:1,label:'Полное длинное название цвета',hex:'#123456'}, {id:2,label:'Без HEX'}], loading: false, loadError: '', submitted: false, colorValid: true },
   global: { stubs: { B24InputMenu: InputStub, InputMenu: InputStub } },
 })
 describe('profnastil color texture menu presentation', () => {

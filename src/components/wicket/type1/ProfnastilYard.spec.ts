@@ -47,8 +47,8 @@ const ButtonStub = defineComponent({
 })
 
 const rows: ProfnastilRow[] = [
-  { id: 17, drawingProfile: { kind: 'c8' }, drawingProfileProblem: null, name: 'Профлист C8, 0,5 мм, Полиэстер', material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
-  { id: 21, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Профлист C10, 0,6 мм, Пурал', material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
+  { id: 17, manufacturerId: 4, manufacturerName: 'Двор-Профиль', drawingProfile: { kind: 'c8' }, drawingProfileProblem: null, name: 'Профлист C8, 0,5 мм, Полиэстер', material: 'Профлист C8', thickness: '0.5', typeOfCoating: 'Полиэстер' },
+  { id: 21, manufacturerId: 5, manufacturerName: 'Другой производитель', drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Профлист C10, 0,6 мм, Пурал', material: 'Профлист C10', thickness: '0.6', typeOfCoating: 'Пурал' },
 ]
 
 function mountYard() {
@@ -126,7 +126,7 @@ describe('ProfnastilYard', () => {
     apiMocks.recalculate.mockResolvedValue({ priceDealer: '900.00', priceRetail: '1200.00' })
   })
 
-  it('saves shared manufacturer and color before the profnastil table', async () => {
+  it('inherits manufacturer from the selected profile type without a separate picker', async () => {
     const wrapper = mountYard()
     await flushPromises()
 
@@ -135,7 +135,7 @@ describe('ProfnastilYard', () => {
     const appearance = wrapper.get('.appearance-fields').element
     expect(appearance.compareDocumentPosition(wrapper.get('table').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
@@ -152,14 +152,35 @@ describe('ProfnastilYard', () => {
     })
     expect(useCalculation().data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
       .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: 'Двор-Профиль' })
+    expect(useCalculation().data.value.find(block => block.blockCode === 'fillingYard')?.params.filter(param => param.paramCode === 'materialManufacturer')).toHaveLength(1)
   })
 
-  it('clears manufacturer and every color field before saving another product', async () => {
+  it('uses the same producer ID after labels change and preserves saved producer on hydration', async () => {
+    const calc = useCalculation()
+    calc.idYard.value = 17
+    calc.manufacturerYardId.value = 88
+    calc.materialSupplierYard.value = 'Исторический производитель'
+    const wrapper = mountYard()
+    await flushPromises()
+    expect(calc.manufacturerYardId.value).toBe(88)
+    expect(calc.materialSupplierYard.value).toBe('Исторический производитель')
+    const renamed = { ...rows[1]!, manufacturerId: 4, manufacturerName: 'Новое имя', material: 'Новое название типа', name: 'Новая подпись' }
+    apiMocks.getProfnastilTable.mockResolvedValue({ table: [renamed], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+    wrapper.unmount()
+    const next = mountYard()
+    await flushPromises()
+    await next.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
+    await flushPromises()
+    expect(apiMocks.saveWicketData.mock.lastCall?.[0]).toMatchObject({ idYard: 21, manufacturerYardId: 4, materialSupplierYard: 'Новое имя' })
+    next.unmount()
+  })
+
+  it('inherits the next type manufacturer and clears every color field before saving another product', async () => {
     const wrapper = mountYard()
     await flushPromises()
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
     apiMocks.saveWicketData.mockClear()
@@ -170,8 +191,8 @@ describe('ProfnastilYard', () => {
     expect(apiMocks.saveWicketData).toHaveBeenCalledTimes(1)
     expect(apiMocks.saveWicketData.mock.lastCall?.[0]).toMatchObject({
       idYard: 21,
-      manufacturerYardId: null,
-      materialSupplierYard: '',
+      manufacturerYardId: 5,
+      materialSupplierYard: 'Другой производитель',
       colorYardId: null,
       colorYard: '',
       colorYardHex: '',
@@ -190,15 +211,15 @@ describe('ProfnastilYard', () => {
     apiMocks.saveWicketData.mockRejectedValueOnce(new Error('network unavailable'))
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
     expect(apiMocks.recalculate).not.toHaveBeenCalled()
     expect(calc.priceRetail.value).toBe('1200.00')
-    expect(calc.manufacturerYardId.value).toBeNull()
-    expect(calc.materialSupplierYard.value).toBe('')
+    expect(calc.manufacturerYardId.value).toBe(4)
+    expect(calc.materialSupplierYard.value).toBe('Двор-Профиль')
     expect(calc.data.value.find(block => block.blockName === 'Заполнение (двор)')?.params)
-      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: '' })
+      .toContainEqual({ paramCode: 'materialManufacturer', name: 'Производитель материала', value: 'Двор-Профиль' })
     expect(wrapper.get('[data-testid="appearance-save-error"]').text()).toContain('Не удалось сохранить')
     warning.mockRestore()
   })
@@ -212,7 +233,7 @@ describe('ProfnastilYard', () => {
     await flushPromises()
     await wrapper.get('tbody input[type="checkbox"]').setValue(true)
     await flushPromises()
-    await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('4')
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
     await flushPromises()
     apiMocks.saveWicketData.mockRejectedValueOnce(new Error('network unavailable'))
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})

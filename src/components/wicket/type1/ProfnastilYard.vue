@@ -192,6 +192,8 @@ async function selectRow(row: ProfnastilRow) {
   if (!selectedRow.value || String(selectedRow.value.id) !== String(row.id)) {
     calc.resetYardFilling()
   }
+  calc.manufacturerYardId.value = row.manufacturerId ?? null
+  calc.materialSupplierYard.value = row.manufacturerName ?? ''
   const attempt = appearanceSave.beginRevision()
   selectedRow.value = row
   if (await save(row)) {
@@ -230,6 +232,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   if (!calc.idYard.value) return null
   return {
     id:            calc.idYard.value,
+    manufacturerId: calc.manufacturerYardId.value === null ? null : Number(calc.manufacturerYardId.value),
+    manufacturerName: calc.materialSupplierYard.value,
     drawingProfile: calc.fillingProfileYard.value,
     drawingProfileProblem: calc.fillingProfileYardProblem.value,
     name:          calc.materialYard.value,
@@ -295,7 +299,7 @@ onMounted(async () => {
       <template #appearance>
         <FillingAppearanceFields
           v-if="selectedRow" ref="appearanceFields" :model-id="calc.modelId.value"
-          :profnastil-id="selectedRow.id" material-group="profnastil" side="yard" @change="saveAppearance"
+          :profnastil-id="selectedRow.id" :show-manufacturer="false" material-group="profnastil" side="yard" @change="saveAppearance"
         />
       </template>
     </ProfnastilMaterialTable>

@@ -150,6 +150,7 @@ function applySelectedColor() {
 
 function buildSummaryParams() {
   const params: { paramCode?: string; name: string; value: string }[] = [
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierFacade.value },
     { paramCode: 'material', name: 'Материал',      value: selectedRow.value?.material ?? '' },
     { paramCode: 'sheetThickness', name: 'Толщина листа', value: String(selectedRow.value?.thickness ?? '') },
     { paramCode: 'coating', name: 'Тип покрытия',  value: selectedRow.value?.typeOfCoating ?? '' },
@@ -185,6 +186,8 @@ async function save(row: ProfnastilRow): Promise<boolean> {
       ...calc.getBaseSavePayload(),
       idFacade:                row.id,
       materialFacadeGlob:     calc.materialFacadeGlob.value,
+      manufacturerFacadeId:   calc.manufacturerFacadeId.value,
+      materialSupplierFacade: calc.materialSupplierFacade.value,
       materialFacade:          row.material,
       thicknessFacade:         String(row.thickness),
       typeOfCoatingFacade:   row.typeOfCoating,
@@ -217,6 +220,8 @@ async function saveColor() {
       ...calc.getBaseSavePayload(),
       idFacade:                calc.idFacade.value || null,
       materialFacadeGlob:     calc.materialFacadeGlob.value,
+      manufacturerFacadeId:   calc.manufacturerFacadeId.value,
+      materialSupplierFacade: calc.materialSupplierFacade.value,
       materialFacade:          calc.materialFacade.value,
       thicknessFacade:         calc.thicknessFacade.value,
       typeOfCoatingFacade:   calc.typeOfCoatingFacade.value,
@@ -266,6 +271,8 @@ async function doRecalculate() {
 }
 
 async function selectRow(row: ProfnastilRow) {
+  calc.manufacturerFacadeId.value = row.manufacturerId ?? null
+  calc.materialSupplierFacade.value = row.manufacturerName ?? ''
   selectedRow.value = row
   clearColor()
   if (await save(row)) {
@@ -275,6 +282,8 @@ async function selectRow(row: ProfnastilRow) {
 }
 
 function deselectRow() {
+  calc.manufacturerFacadeId.value = null
+  calc.materialSupplierFacade.value = ''
   calc.fillingProfileFacade.value = null
   calc.fillingProfileFacadeProblem.value = null
   selectedRow.value = null
@@ -322,6 +331,8 @@ function restoreFromCalc(): ProfnastilRow | null {
   }
   return {
     id:            calc.idFacade.value,
+    manufacturerId: calc.manufacturerFacadeId.value === null ? null : Number(calc.manufacturerFacadeId.value),
+    manufacturerName: calc.materialSupplierFacade.value,
     drawingProfile: calc.fillingProfileFacade.value,
     drawingProfileProblem: calc.fillingProfileFacadeProblem.value,
     name:          calc.materialFacade.value,

@@ -5,10 +5,7 @@ import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 import type { ProfnastilColorMode, ColorInputItem } from './type2ProfnastilForm'
 
 const props = defineProps<{
-  manufacturerVisible: boolean
   showMaterialSelectors: boolean
-  selectedManufacturerId: string | number
-  manufacturerSelectItems: ColorInputItem[]
   profile: number | null | undefined
   profileSelectItems: ColorInputItem[]
   selectedMaterialId: number | undefined
@@ -26,7 +23,6 @@ const props = defineProps<{
 }>()
 const selectedTextureHex = computed(() => validColorHex(props.printechSelectItems.find(item => String(item.id) === String(props.comboboxValue))?.hex))
 const emit = defineEmits<{
-  (event: 'manufacturer-change', value: string | number | undefined): void
   (event: 'profile-change', value: string | number | undefined): void
   (event: 'coating-change', value: string | number | undefined): void
   (event: 'dictionary-color-change', value: number | undefined): void
@@ -37,19 +33,6 @@ const emit = defineEmits<{
 
 <template>
   <div class="profnastil-fields">
-    <label v-if="manufacturerVisible" class="form-field">
-      <span class="font-semibold">Производитель</span>
-      <B24SelectMenu
-        :model-value="selectedManufacturerId"
-        value-key="id"
-        :items="manufacturerSelectItems"
-        placeholder="Не выбран"
-        class="w-full"
-        :disabled="loading"
-        @update:model-value="emit('manufacturer-change', $event)"
-      />
-    </label>
-
     <label v-if="showMaterialSelectors" class="form-field">
       <span class="font-semibold">Тип профиля <span class="text-red-600">*</span></span>
       <B24SelectMenu
