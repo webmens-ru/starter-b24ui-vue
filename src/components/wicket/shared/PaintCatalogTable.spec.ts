@@ -128,3 +128,15 @@ it('combines sorting with live color filtering and switches columns back to asce
  expect(w.emitted('select')).toBeUndefined()
  w.unmount()
 })
+
+ it('shows linked paint category below the type and preserves selection after category rename', async () => {
+  const options = paints.map((p, i) => ({ ...p, name: 'Грунт-эмаль', paintCategoryName: i === 0 ? 'Стандарт' : 'Не стандарт' }))
+  const w = mount(PaintCatalogTable, { ...stubbed, props: { paints: options, paintId: 2, colorId: 92 } })
+  expect(w.get('[data-paint-row="1:91"] .text-gray-500').text()).toBe('Стандарт')
+  expect(w.get('[data-paint-row="2:92"] .text-gray-500').text()).toBe('Не стандарт')
+  await w.setProps({ paints: options.map(p => ({ ...p, paintCategoryName: 'Новая категория' })) })
+  expect(w.get('[data-paint-row="2:92"] .text-gray-500').text()).toBe('Новая категория')
+  expect(w.get<HTMLInputElement>('[data-paint-checkbox="2:92"]').element.checked).toBe(true)
+  expect(w.emitted('select')).toBeUndefined()
+  w.unmount()
+ })
