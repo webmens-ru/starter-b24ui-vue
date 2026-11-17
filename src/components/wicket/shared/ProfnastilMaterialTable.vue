@@ -61,14 +61,13 @@ function goToPage(page: number): void { emit('page', page) }
             <th scope="col" class="catalog-table-choice">Выбрать</th>
             <th scope="col" class="text-left">Форма</th>
             <th scope="col" class="text-left">Тип</th>
-            <th scope="col" class="text-left">Материал</th>
             <th scope="col" class="text-left">Тип покрытия</th>
             <th scope="col" class="text-right whitespace-nowrap">Цена за м²</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -80,7 +79,6 @@ function goToPage(page: number): void { emit('page', page) }
             </td>
             <td>{{ selectedRow.profnastilFormTitle }}</td>
             <td class="font-semibold">{{ selectedRow.material }}</td>
-            <td>{{ selectedRow.name }}</td>
             <td>{{ selectedRow.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceM2) }}</td>
           </tr>
@@ -101,13 +99,12 @@ function goToPage(page: number): void { emit('page', page) }
             </td>
             <td>{{ row.profnastilFormTitle }}</td>
             <td class="font-semibold">{{ row.material }}</td>
-            <td>{{ row.name }}</td>
             <td>{{ row.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceM2) }}</td>
           </tr>
 
           <tr v-if="!loading && rows.length === 0 && !selectedRow">
-            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="5" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

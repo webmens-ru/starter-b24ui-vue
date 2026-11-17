@@ -11,13 +11,14 @@ it('selects by material ID when display names are identical and preserves the sa
     pagination: { page: 1, pageSize: 100, pageCount: 1, totalCount: 1 },
   }, global: { stubs: ['FilterDropdown'] } })
   expect(wrapper.findAll('tbody tr')).toHaveLength(2)
-  expect(wrapper.findAll('thead th')).toHaveLength(6)
+  expect(wrapper.findAll('thead th')).toHaveLength(5)
   expect(wrapper.find('thead').text()).toContain('Тип покрытия')
   expect(wrapper.text()).toContain('Форма С8')
-  expect(wrapper.text()).toContain('Одинаково')
+  expect(wrapper.text()).not.toContain('Одинаково')
+  expect(wrapper.find('thead').text()).not.toContain('Материал')
   expect(wrapper.find('thead').text()).toContain('Форма')
   expect(wrapper.find('thead').text()).toContain('Цена за м²')
-  expect(wrapper.findAll('tbody tr').map(row => row.findAll('td')[5]!.text().replace(/\s/g, ' '))).toEqual(['1 250,50 ₽', '1 250,50 ₽'])
+  expect(wrapper.findAll('tbody tr').map(row => row.findAll('td')[4]!.text().replace(/\s/g, ' '))).toEqual(['1 250,50 ₽', '1 250,50 ₽'])
   expect(wrapper.find('thead').text()).not.toContain('Толщина')
   await wrapper.findAll('tbody input')[1]!.setValue(true)
   expect(wrapper.emitted('select')?.[0]).toEqual([row])
@@ -38,4 +39,15 @@ it('passes model-specific filter URLs and emits coating IDs without using captio
   expect(wrapper.emitted('update:filters')?.[0]).toEqual([{ materials: [], typeOfCoating: ['707'] }])
   await wrapper.setProps({ modelId: '1' })
   expect(filters[2]!.props('url')).toContain('/type1/')
+})
+
+it('spans all five columns for loading and empty states', async () => {
+  const wrapper = mount(ProfnastilMaterialTable, { props: {
+    modelId: '1', rows: [], selectedRow: null, loading: true,
+    filters: { materials: [], typeOfCoating: [] },
+    pagination: { page: 1, pageSize: 100, pageCount: 1, totalCount: 0 },
+  }, global: { stubs: ['FilterDropdown'] } })
+  expect(wrapper.get('tbody td').attributes('colspan')).toBe('5')
+  await wrapper.setProps({ loading: false })
+  expect(wrapper.get('tbody td').attributes('colspan')).toBe('5')
 })
