@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '../shared/catalogTable.css'
 import { formatMaterialPrice } from '../shared/materialPrice'
 import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
@@ -325,15 +326,15 @@ onMounted(async () => {
     />
 
     <!-- Таблица -->
-    <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-sm">
-        <thead class="sticky top-0 z-[9] bg-gray-100">
+    <div class="catalog-table-container">
+      <table class="catalog-table">
+        <thead class="sticky top-0 z-[9]">
           <tr>
-            <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Форма</th>
-            <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
-            <th class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">Цена за пог. м</th>
+            <th scope="col" class="catalog-table-choice">Выбрать</th>
+            <th scope="col" class="text-left">Материал</th>
+            <th scope="col" class="text-left">Форма</th>
+            <th scope="col" class="text-left">Тип покрытия</th>
+            <th scope="col" class="text-right whitespace-nowrap">Цена за пог. м</th>
           </tr>
         </thead>
         <tbody>
@@ -344,9 +345,9 @@ onMounted(async () => {
           <!-- Сохранённая строка (если не попала в отфильтрованный список) -->
           <tr
             v-if="selectedRow && !rows.some(isSelected)"
-            class="bg-blue-100"
+            class="selected catalog-table-hoverable"
           >
-            <td class="border border-gray-300 px-2 py-1 text-center">
+            <td class="text-center">
               <input
                 type="checkbox"
                 checked
@@ -354,18 +355,19 @@ onMounted(async () => {
                 @change="deselectRow"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.form }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceMp) }}</td>
+            <td class="font-semibold">{{ selectedRow.material }}</td>
+            <td>{{ selectedRow.form }}</td>
+            <td>{{ selectedRow.typeOfCoating }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceMp) }}</td>
           </tr>
 
           <tr
             v-for="row in rows"
             :key="row.id"
-            :class="isSelected(row) ? 'bg-blue-100' : 'hover:bg-gray-50'"
+            class="catalog-table-hoverable"
+            :class="{ selected: isSelected(row) }"
           >
-            <td class="border border-gray-300 px-2 py-1 text-center">
+            <td class="text-center">
               <input
                 type="checkbox"
                 :checked="isSelected(row)"
@@ -373,10 +375,10 @@ onMounted(async () => {
                 @change="isSelected(row) ? deselectRow() : selectRow(row)"
               />
             </td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.form }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1 text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceMp) }}</td>
+            <td class="font-semibold">{{ row.material }}</td>
+            <td>{{ row.form }}</td>
+            <td>{{ row.typeOfCoating }}</td>
+            <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceMp) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">

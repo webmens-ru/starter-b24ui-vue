@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import './catalogTable.css'
 import { computed, ref } from 'vue'
 import type { PaintItem } from '../../../app/api/wicket.types'
 import { formatMaterialPrice } from './materialPrice'
@@ -56,8 +57,8 @@ function select(paintId: number, colorId: number): void {
         <input v-model="colorFilter" type="search" data-testid="paint-color-filter" placeholder="Часть названия или RAL-кода" class="w-full h-[34px] rounded-md border border-gray-200 bg-white px-3 text-base placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" :disabled="disabled" />
       </label>
     </div>
-    <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table class="w-full text-left paint-table">
+    <div class="catalog-table-container">
+      <table class="catalog-table paint-table">
         <caption class="sr-only">Выбор краски и цвета. Стоимость материала без работ.</caption>
         <thead><tr>
           <th scope="col" class="text-center w-20">Выбор</th>
@@ -81,11 +82,7 @@ function select(paintId: number, colorId: number): void {
 </template>
 
 <style scoped>
-.paint-table th, .paint-table td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
-.paint-table th { background: #f9fafb; font-size: 14px; }
 .paint-table tr.selectable { cursor: pointer; }
-.paint-table tr.selectable:hover { background: #f0f7ff; }
-.paint-table tr.selected { background: #eff6ff; box-shadow: inset 3px 0 #3b82f6; }
 .paint-table button { cursor: inherit; }
 .paint-table .sort-header { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; }
 .paint-table .sort-header:disabled { cursor: wait; opacity: .6; }
