@@ -423,9 +423,10 @@ describe('wicket root/accessory version flow', () => {
       expect(payload.lockVersion).toBe(serverLockVersion)
       if (url === '/api/wicket/type1/data') {
         rootSavePayload = payload
-        for (const key of ['lockSetId', 'providesLockCode', 'lockInstallerCode', 'lockPenId', 'lockPenColorId']) {
+        for (const key of ['lockSetId', 'providesLockCode', 'lockInstallerCode', 'lockPenId', 'lockPenMaterialItemId', 'lockPenColorId']) {
           if (Object.prototype.hasOwnProperty.call(payload, key)) serverWicket[key] = payload[key]
         }
+        if (Object.prototype.hasOwnProperty.call(payload, 'lockPenMaterialItemId') && payload.lockPenMaterialItemId === null) serverWicket.lockPenId = null;
       } else if (url === '/api/wicket/accessory-composition') {
         compositionWrites += 1
         const postedIds = Array.isArray(payload.lockComponents)
@@ -475,7 +476,7 @@ describe('wicket root/accessory version flow', () => {
       lockSetId: 7,
       providesLockCode: 'manufacturer',
       lockInstallerCode: 'manufacturer',
-      lockPenId: null,
+      lockPenMaterialItemId: null,
       lockPenColorId: null,
     })
     expect(serverWicket).toMatchObject({

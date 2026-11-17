@@ -90,6 +90,7 @@ const fillingPreview = computed(() => yardTwoSides.value
   ? resolveFillingPreview(calc.idYard.value, calc.fillingProfileYard.value, calc.fillingProfileYardProblem.value, showFill.value && calc.fillSide.value !== 0)
   : resolveFillingPreview(calc.idFacade.value, calc.fillingProfileFacade.value, calc.fillingProfileFacadeProblem.value, showFill.value && calc.fillSide.value !== 0))
 const previewError = computed(() => drawingError.value || fillingPreview.value.error)
+const edgingWidth = computed(() => (yardTwoSides.value ? calc.materialYardGlob.value : calc.materialFacadeGlob.value) === 'siding' ? 30 : 0)
 const activeDirection = computed(() => yardTwoSides.value
   ? geometry.value.yardFill.direction
   : geometry.value.fill.direction)
@@ -349,6 +350,7 @@ watch(
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
+          :edging-width="edgingWidth"
           :area="geometry.fillArea"
           :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode"
           :direction="activeDirection"
@@ -426,6 +428,7 @@ watch(
         data-testid="type2-drawing-fill"
       >
         <FillingDrawing
+          :edging-width="edgingWidth"
           :area="geometry.fillArea"
           :relief-along-mode="reliefAlongMode" :relief-across-mode="reliefAcrossMode"
           :direction="activeDirection"

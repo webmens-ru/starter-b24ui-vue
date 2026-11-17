@@ -21,16 +21,19 @@ import { optionPresenceLabel } from '../../app/optionPresence'
 
 /** Поля, которые должны быть строго числами (сравнение с value radio). */
 export const WICKET_API_NUMERIC_KEYS = new Set([
+  'lamelWorkingWidthFacade',
+  'lamelWorkingWidthYard',
   'profileTypeFacadeId',
   'profileTypeYardId',
   'typeOfCoatingFacadeId',
   'typeOfCoatingYardId',
-  'sidingFormFacadeId',
-  'sidingFormYardId',
+  'sidingTypeFacadeId',
+  'sidingTypeYardId',
   'productRowId',
   'openingOptionId',
   'isThereLock',
   'lockPenId',
+  'lockPenMaterialItemId',
   'lockSetId',
   'additionalPenMaterialItemId',
   'additionalPenStreetMaterialItemId',
@@ -102,6 +105,8 @@ const WICKET_NET_PROVIDER_KEYS = new Set([
 ])
 
 export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> = {
+  lamelWorkingWidthFacade: null,
+  lamelWorkingWidthYard: null,
   reliefFacadeAlongMode: 'stretch',
   reliefFacadeAcrossMode: 'repeat',
   reliefYardAlongMode: 'stretch',
@@ -136,6 +141,7 @@ export const WICKET_API_FIELD_DEFAULTS: Record<string, string | number | null> =
   fenceEdgeYardId: null,
   yardTrimCode: null,
   lockSetId: null,
+  lockPenMaterialItemId: null,
   lockPenColor: '',
   lockPenColorId: null,
   penProvided: 'manufacturer',
@@ -170,6 +176,10 @@ export function applyWicketApiFieldMappings(
   apiData: Record<string, unknown>,
   refMap: Record<string, RefLike>,
 ): void {
+  for (const key of ['lamelWorkingWidthFacade', 'lamelWorkingWidthYard']) {
+    const width = Number(apiData[key])
+    if (refMap[key]) refMap[key].value = apiData[key] != null && Number.isFinite(width) && width > 0 ? width : null
+  }
   if (refMap.fenceEdgeOptions) {
     refMap.fenceEdgeOptions.value = Array.isArray(apiData.fenceEdgeOptions) ? apiData.fenceEdgeOptions : []
   }
@@ -190,6 +200,7 @@ export function applyWicketApiFieldMappings(
   function set(key: string, val: unknown) {
     if (val === undefined) return
     let v: unknown
+    if (key === 'lamelWorkingWidthFacade' || key === 'lamelWorkingWidthYard') return
     if (key === 'paintId' || key === 'paintColorId') {
       const id = Number(val)
       v = Number.isSafeInteger(id) && id > 0 ? id : null

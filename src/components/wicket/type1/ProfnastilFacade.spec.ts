@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCalculation } from '../../../composables/useCalculation'
 import ProfnastilFacade from './ProfnastilFacade.vue'
 import form from './ProfnastilFacade.vue?raw'
+import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 
 const apiMocks = vi.hoisted(() => ({
   getProfnastilTable: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock('../../../app/api/wicket', async importOriginal => ({
 
 const SelectMenuStub = defineComponent({
   name: 'B24SelectMenu',
-  props: ['modelValue', 'items', 'disabled'],
+  props: ['modelValue', 'items', 'disabled', 'b24ui'],
   emits: ['update:modelValue'],
   template: `
     <select :value="modelValue ?? ''" :disabled="disabled" @change="$emit('update:modelValue', Number($event.target.value))">
@@ -61,8 +62,43 @@ describe('ProfnastilFacade color contract', () => {
     wrapper.unmount()
   })
 
-  it('layers the color menu above surrounding content', () => {
-    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
+  it('loads colors for the selected material and rejects arbitrary IDs', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(apiMocks.getProfnastilColors).toHaveBeenLastCalledWith('1', 7)
+    apiMocks.saveWicketData.mockClear()
+    wrapper.findComponent(SelectMenuStub).vm.$emit('update:modelValue', 999)
+    await flushPromises()
+    expect(apiMocks.saveWicketData).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('ignores a material palette from the previous product row', async () => {
+    let resolve!: (value: { colors: { id: number; name: string; hex: null; image: null }[] }) => void
+    apiMocks.getProfnastilColors.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const calc = useCalculation()
+    calc.idFacade.value = 7
+    calc.colorFacadeId.value = 8
+    calc.colorFacade.value = 'Исторический цвет'
+    const wrapper = mountFacade()
+    await flushPromises()
+    expect(apiMocks.saveWicketData).not.toHaveBeenCalled()
+    calc.productRowId.value = 99
+    await flushPromises()
+    resolve({ colors: [{ id: 999, name: 'Просроченный цвет', hex: null, image: null }] })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Просроченный цвет')
+    expect(calc.colorFacade.value).toBe('Исторический цвет')
+    wrapper.unmount()
+  })
+
+  it('layers the shared color menu above surrounding content', async () => {
+    const wrapper = mountFacade()
+    await flushPromises()
+    expect(wrapper.getComponent(ColorSelectMenu).getComponent(SelectMenuStub).props('b24ui').content).toContain('z-[1100]')
+    wrapper.unmount()
   })
 
   beforeEach(() => {

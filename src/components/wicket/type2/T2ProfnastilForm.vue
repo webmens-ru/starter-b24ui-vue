@@ -3,6 +3,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import {
   getType2ProfnastilFormOptions,
   getProfnastilTable,
+  getProfnastilColors,
   type ProfnastilRow,
   type SidingPagination,
   saveWicketData,
@@ -24,21 +25,24 @@ const options = ref<ProfnastilFormOptions>({
   colors: [],
 })
 const tableRows = ref<ProfnastilRow[]>([])
-const tableFilters = ref({ materials: [] as string[], typeOfCoating: [] as string[] })
+const tableFilters = ref({ profnastilForm: [] as string[], materials: [] as string[], typeOfCoating: [] as string[] })
 const tablePagination = ref<SidingPagination>({ page: 1, pageSize: 100, pageCount: 1, totalCount: 0 })
 const tableLoading = ref(false)
 const tableError = ref('')
 let tableRevision = 0
 const loading = ref(false)
+const paletteLoading = ref(false)
+let paletteRevision = 0
 const loaded = ref(false)
 const loadError = ref('')
 const selectionEdited = ref(false)
+const materialPaletteSelection = ref(false)
 const submitted = ref(false)
 let requestRevision = 0
 let disposed = false
 const contextKey = computed(() => JSON.stringify([calc.orderId.value, calc.productRowId.value, calc.modelId.value, props.side,
   props.side === 'facade' ? calc.materialFacadeGlob.value : calc.materialYardGlob.value]))
-onBeforeUnmount(() => { disposed = true; requestRevision++; tableRevision++ })
+onBeforeUnmount(() => { disposed = true; requestRevision++; tableRevision++; paletteRevision++ })
 
 const isFacade = computed(() => props.side === 'facade')
 const profile = computed({
@@ -95,7 +99,7 @@ const fieldBindings = computed(() => ({
   colorSelectItems: colorSelectItems.value,
   comboboxValue: comboboxValue.value,
   printechSelectItems: printechSelectItems.value,
-  loading: loading.value,
+  loading: loading.value || paletteLoading.value,
   loadError: loadError.value,
   submitted: submitted.value,
   colorValid: colorValid.value,
@@ -107,6 +111,23 @@ const fieldBindings = computed(() => ({
   onCustomColorCreate,
 }))
 const selectedMaterial = computed(() => options.value.coatings.find(item => String(item.profnastilId) === String(selectedMaterialId.value)))
+async function loadPalette(): Promise<void> {
+  const revision = ++paletteRevision
+  const context = contextKey.value
+  const materialId = selectedMaterialId.value
+  const current = () => !disposed && revision === paletteRevision && context === contextKey.value && materialId === selectedMaterialId.value
+  paletteLoading.value = true
+  options.value.colors = []
+  try {
+    const result = await getProfnastilColors(calc.modelId.value, materialId)
+    if (current()) options.value.colors = result.colors
+  } catch {
+    if (current()) loadError.value = 'Не удалось загрузить палитру материала.'
+  } finally {
+    if (current()) paletteLoading.value = false
+  }
+}
+watch([contextKey, selectedMaterialId], () => { void loadPalette() }, { immediate: true })
 const selectionDiagnostic = computed(() => calc.materialSelectionProblems.value
   .filter(problem => problem.side === props.side).map(problem => problem.message).join(' ')
   || (selectedMaterialId.value && profile.value == null ? 'Не удалось восстановить связи материала. Выберите профиль и покрытие заново.' : '')
@@ -114,6 +135,7 @@ const selectionDiagnostic = computed(() => calc.materialSelectionProblems.value
     ? 'Сохранённый материал недоступен. Выберите профиль и покрытие заново.' : ''))
 const colorSettings = computed(() => {
   if (!selectedMaterial.value) return { mode: null, error: '' }
+  if (materialPaletteSelection.value) return { mode: 'list' as const, error: '' }
   try {
     return { mode: getProfnastilColorMode(selectedMaterial.value.colorInputMode), error: '' }
   } catch (error) {
@@ -133,7 +155,7 @@ const coatingSelectItems = computed(() =>
 )
 const selectedManufacturerId = computed<string | number>(() => manufacturerId.value ?? '')
 const colorSelectItems = computed(() => {
-  const items = options.value.colors.map(item => ({ id: item.id, label: item.name }))
+  const items = options.value.colors.map(item => ({ id: item.id, label: item.label ?? item.name, hex: item.hex }))
   if (dictionaryColorId.value && !allowedColor.value) {
     return [...items, { id: dictionaryColorId.value, label: `${colorName.value || `Цвет #${dictionaryColorId.value}`} (недоступен)`, disabled: true }]
   }
@@ -170,7 +192,7 @@ const colorValid = computed(() => colorMode.value === 'none'
   ? !hasColorId.value && colorName.value.trim() === ''
   : hasColorId.value ? allowedColor.value : colorMode.value === 'combobox' && colorName.value.trim() !== '')
 const valid = computed(() =>
-  loaded.value && !loading.value && !diagnostic.value
+  loaded.value && !loading.value && !paletteLoading.value && !diagnostic.value
   && profile.value !== null
   && selectedMaterial.value !== undefined
   && colorMode.value !== null && colorValid.value,
@@ -185,7 +207,7 @@ async function load(profileValue: number | null, coatingValue: number | null) {
   try {
     const result = await getType2ProfnastilFormOptions(profileValue ?? undefined, coatingValue ?? undefined)
     if (!current()) return false
-    options.value = result
+    options.value = { ...result, colors: options.value.colors }
     loaded.value = true
     return true
   } catch (error) {
@@ -198,6 +220,7 @@ async function load(profileValue: number | null, coatingValue: number | null) {
 }
 
 watch(contextKey, () => {
+  materialPaletteSelection.value = false
   requestRevision++
   options.value = { profiles: [], coatings: [], manufacturers: [], colors: [] }
   tableRows.value = []
@@ -329,6 +352,7 @@ async function onCoatingSelectChange(value: string | number | undefined) {
 }
 
 function applyMaterial(selected: ProfnastilCoatingOption) {
+  materialPaletteSelection.value = true
   setDrawingProfile(selected)
   const profileName = options.value.profiles.find(item => Number(item.id) === profile.value)?.name ?? ''
   if (isFacade.value) {
@@ -393,11 +417,8 @@ async function onPrintechColorChange(value: number | string | null) {
   }
 }
 
-async function onCustomColorCreate(value: string) {
-  selectionEdited.value = true
-  clearColor()
-  colorName.value = String(value).trim()
-  if (valid.value) await save()
+async function onCustomColorCreate(_value: string): Promise<void> {
+  // Historical custom captions remain readable; new choices require a material color ID.
 }
 
 async function onDictionaryColorChange(value: number | undefined) {

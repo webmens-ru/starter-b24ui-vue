@@ -3,10 +3,17 @@ import type { FillingDirection } from './fillingDrawingTypes'
 export type ReliefMode = 'stretch' | 'repeat'
 export interface ImageDimensions { width: number; height: number }
 
+/** A 1×N strip stores the transverse profile on its vertical source axis. */
+export function isVerticalReliefStrip(source: ImageDimensions): boolean {
+  return source.width === 1 && source.height > 1
+}
+
 export function reliefLayout(area: ImageDimensions, source: ImageDimensions, direction: FillingDirection, along: ReliefMode, across: ReliefMode): ImageDimensions {
   const localWidth = direction === 'vertical' ? area.width : area.height
   const localHeight = direction === 'vertical' ? area.height : area.width
-  return { width: across === 'stretch' ? localWidth : source.width, height: along === 'stretch' ? localHeight : source.height }
+  const transverse = isVerticalReliefStrip(source) ? source.height : source.width
+  const longitudinal = isVerticalReliefStrip(source) ? source.width : source.height
+  return { width: across === 'stretch' ? localWidth : transverse, height: along === 'stretch' ? localHeight : longitudinal }
 }
 
 export function svgDimensions(source: string): ImageDimensions | null {

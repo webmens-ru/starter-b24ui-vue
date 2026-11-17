@@ -35,7 +35,8 @@ const SelectMenuStub = defineComponent({
 
 const FilterDropdownStub = defineComponent({
   name: 'FilterDropdown',
-  props: ['label'],
+  props: ['label', 'dataKey', 'modelValue'],
+  emits: ['update:modelValue'],
   template: '<button class="filter-stub">{{ label }}</button>',
 })
 
@@ -47,7 +48,7 @@ const ButtonStub = defineComponent({
 })
 
 const rows: SidingRow[] = [
-  { id: 17, manufacturerId: 4, manufacturerName: 'Двор-Профиль', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
+  { id: 17, manufacturerId: 4, manufacturerName: 'Двор-Профиль', sidingFormCode: '01', sidingFormTitle: 'Профиль с переименованной подписью', drawingProfile: { kind: 'logSiding' }, drawingProfileProblem: null, material: 'Бревно', form: 'Гладкая', typeOfCoating: 'Глянец' },
   { id: 21, manufacturerId: 6, manufacturerName: 'New producer', drawingProfile: { kind: 'shipLap' }, drawingProfileProblem: null, material: 'Доска', form: 'Накатка', typeOfCoating: 'Матовый' },
 ]
 
@@ -68,27 +69,6 @@ function mountYard() {
 }
 
 describe('SidingYard', () => {
-  it('uses type-owned manufacturer without a separate manufacturer selector', async () => {
-    const data = rows.map((row, index) => ({ ...row, manufacturerId: index === 0 ? 73 : 74, manufacturerName: 'Renamed producer' }))
-    apiMocks.getSidingTable.mockResolvedValueOnce({ table: data, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
-    const wrapper = mountYard()
-    await flushPromises()
-    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
-    await flushPromises()
-    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
-    const calc = useCalculation()
-    expect(calc.manufacturerYardId.value).toBe(73)
-    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
-    await wrapper.get('[data-testid="appearance-color"]').setValue(9)
-    await flushPromises()
-    expect(apiMocks.saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ manufacturerYardId: 73, materialSupplierYard: 'Renamed producer' }))
-    await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
-    await flushPromises()
-    expect(calc.manufacturerYardId.value).toBe(74)
-    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
-    wrapper.unmount()
-  })
-
   it('ignores a late material catalog response after the product row context changes', async () => {
     let resolve!: (value: unknown) => void
     apiMocks.getSidingTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
@@ -154,6 +134,60 @@ describe('SidingYard', () => {
     apiMocks.recalculate.mockReset()
   })
 
+  it('uses type-owned manufacturer without a separate manufacturer selector', async () => {
+    const data = rows.map((row, index) => ({ ...row, manufacturerId: index === 0 ? 73 : 74, manufacturerName: 'Renamed producer' }))
+    apiMocks.getSidingTable.mockResolvedValueOnce({ table: data, pagination: { page: 1, pageSize: 100, totalCount: 2, pageCount: 1 } })
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="appearance-manufacturer"]').exists()).toBe(false)
+    const calc = useCalculation()
+    expect(calc.manufacturerYardId.value).toBe(73)
+    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
+    await wrapper.get('[data-testid="appearance-color"]').setValue(9)
+    await flushPromises()
+    expect(apiMocks.saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ manufacturerYardId: 73, materialSupplierYard: 'Renamed producer' }))
+    await wrapper.findAll('tbody input[type="checkbox"]')[1]!.setValue(true)
+    await flushPromises()
+    expect(calc.manufacturerYardId.value).toBe(74)
+    expect(calc.materialSupplierYard.value).toBe('Renamed producer')
+    wrapper.unmount()
+  })
+
+  it('loads colors for the selected yard siding ID', async () => {
+    const wrapper = mountYard()
+    await flushPromises()
+    await wrapper.get('tbody input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenLastCalledWith('1', 'siding', 17)
+    wrapper.unmount()
+  })
+
+  it('displays explicit siding form titles and keeps string codes separate from siding types', async () => {
+    const wrapper = mountYard()
+    await flushPromises()
+    expect(wrapper.findAll('tbody tr')[0]?.findAll('td')[2]?.text()).toBe('Профиль с переименованной подписью')
+    expect(wrapper.findAll('tbody tr')[1]?.findAll('td')[2]?.text()).toBe('—')
+    const filter = wrapper.findAllComponents(FilterDropdownStub).find(item => item.props('dataKey') === 'sidingForm')!
+    filter.vm.$emit('update:modelValue', ['01'])
+    await flushPromises()
+    expect(apiMocks.getSidingTable).toHaveBeenLastCalledWith('1', expect.objectContaining({ sidingForm: ['01'], form: [] }), 1)
+    wrapper.unmount()
+  })
+
+  it('uses all six columns for loading and empty states', async () => {
+    let resolve!: (value: unknown) => void
+    apiMocks.getSidingTable.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const wrapper = mountYard()
+    expect(wrapper.get('tbody td').attributes('colspan')).toBe('6')
+    resolve({ table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 } })
+    await flushPromises()
+    expect(wrapper.get('tbody td').text()).toBe('Нет данных')
+    expect(wrapper.get('tbody td').attributes('colspan')).toBe('6')
+    wrapper.unmount()
+  })
+
   it('shows appearance fields before the material table after selecting a row', async () => {
     const wrapper = mountYard()
     await flushPromises()
@@ -172,13 +206,15 @@ describe('SidingYard', () => {
 
     expect(wrapper.findAll('.filter-stub').map(item => item.text())).toEqual([
       'Материал',
-      'Форма',
+      'Форма сайдинга',
+      'Тип сайдинга',
       'Тип покрытия',
     ])
     expect(wrapper.findAll('thead th').map(item => item.text())).toEqual([
       'Выбрать',
       'Материал',
-      'Форма',
+      'Форма сайдинга',
+      'Тип сайдинга',
       'Тип покрытия',
       'Цена за пог. м',
     ])

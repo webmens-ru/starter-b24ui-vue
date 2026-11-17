@@ -23,6 +23,15 @@ describe('useCalculation', () => {
     apiMocks.saveWicketAccessoryComposition.mockReset()
   })
 
+  it('loads and saves canonical primary-handle IDs without reinterpreting the legacy ID namespace', () => {
+    calc.loadFromApi({ lockPenId: 7, lockPenMaterialItemId: '100007', lockPenColorId: 91 })
+    expect(calc.lockPenMaterialItemId.value).toBe(100007)
+    expect(calc.getFullSavePayload()).toMatchObject({ lockPenMaterialItemId: 100007, lockPenColorId: 91 })
+    expect(calc.getFullSavePayload()).not.toHaveProperty('lockPenId')
+    calc.reset()
+    expect(calc.lockPenMaterialItemId.value).toBeNull()
+  })
+
   it('keeps preview separate from saved color and clears it when resetting or loading another selection', () => {
     calc.colorShieldHex.value = '#315c2b'
     calc.colorShieldPreviewHex.value = ''
@@ -461,7 +470,7 @@ describe('useCalculation', () => {
       expect(savedPayload).toMatchObject({ penProvidedCode: 'manufacturer', penInstalledCode: 'customer' })
       expect(savedPayload).not.toHaveProperty('penProvided')
       expect(savedPayload).not.toHaveProperty('penInstalled')
-      expect(savedPayload).toMatchObject({ lockPenId: null, lockPenColorId: null })
+      expect(savedPayload).toMatchObject({ lockPenMaterialItemId: null, lockPenColorId: null })
       expect(savedPayload).toMatchObject({
         lockSetId: 101,
         providesLockCode: 'customer',
@@ -732,7 +741,7 @@ describe('useCalculation', () => {
         orderId: 42,
         modelId: '2',
         reachedStep: 'page12',
-        lockPenId: null,
+        lockPenMaterialItemId: null,
         lockPenColorId: null,
         lockSetId: 7,
         providesLockCode: 'customer',

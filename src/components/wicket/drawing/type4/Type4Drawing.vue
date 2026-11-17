@@ -44,7 +44,7 @@ function netTile(net: { area: { width: number; height: number }; image: string; 
 }
 const yardMaterial = computed(() => yard.value && calc.fillSide.value === 2)
 const hasFill = computed(() => showFill.value && calc.fillSide.value !== 0 && Boolean(yardMaterial.value ? calc.idYard.value : calc.idFacade.value))
-const lamellaWidth = computed(() => yardMaterial.value ? calc.thicknessYard.value : calc.thicknessFacade.value)
+const lamellaWidth = computed(() => yardMaterial.value ? calc.lamelWorkingWidthYard.value : calc.lamelWorkingWidthFacade.value)
 const fillingError = computed(() => {
   if (error.value || !hasFill.value) return ''
   try {
@@ -62,7 +62,10 @@ const fillingProps = computed(() => ({
   image: schematic.value ? '' : yardMaterial.value ? calc.colorYardImage.value : reverse.value ? calc.colorFacadeReverseImage.value : calc.colorFacadeImage.value,
   coatingColor: schematic.value || reverse.value ? '' : yardMaterial.value ? calc.coatingYardHex.value : calc.coatingFacadeHex.value,
   coatingImage: schematic.value || reverse.value ? '' : yardMaterial.value ? calc.coatingYardImage.value : calc.coatingFacadeImage.value,
-  reliefImage: '', appearanceMode: schematic.value ? 'solid' as const : 'coating' as const,
+  reliefImage: schematic.value || reverse.value ? '' : yardMaterial.value ? calc.reliefYardImage.value : calc.reliefFacadeImage.value,
+  reliefAlongMode: yardMaterial.value ? calc.reliefYardAlongMode.value : calc.reliefFacadeAlongMode.value,
+  reliefAcrossMode: yardMaterial.value ? calc.reliefYardAcrossMode.value : calc.reliefFacadeAcrossMode.value,
+  appearanceMode: schematic.value ? 'solid' as const : 'coating' as const,
   idPrefix: `type4-fill-${id}-${yard.value ? 'yard' : 'street'}`,
 }))
 const frontFrame = computed(() => yard.value ? g.value.innerFrames.yard : g.value.innerFrames.street)
@@ -91,13 +94,13 @@ const viewBox = computed(() => {
               </template>
             </g>
             <g data-testid="type4-back-inner-frame" :data-face="backFrame.face" :data-depth="backFrame.depth" :fill="frameColor" stroke="#000" stroke-width="1">
-              <rect v-for="(part, index) in backFrame.parts" :key="index" v-bind="part" />
+              <polygon v-for="(part, index) in backFrame.parts" :key="index" :points="part.points" />
             </g>
             <LamellaFillingDrawing v-if="hasFill" v-bind="fillingProps" />
           </template>
           <template #inner>
             <g data-testid="type4-inner-frame" :data-face="frontFrame.face" :data-depth="frontFrame.depth" :fill="frameColor" stroke="#000" stroke-width="1">
-              <rect v-for="(part, index) in frontFrame.parts" :key="index" v-bind="part" />
+              <polygon v-for="(part, index) in frontFrame.parts" :key="index" :points="part.points" />
               <rect v-for="(part, index) in g.rails" :key="`rail-${index}`" data-testid="type4-subtype-rail" v-bind="part" />
             </g>
           </template>

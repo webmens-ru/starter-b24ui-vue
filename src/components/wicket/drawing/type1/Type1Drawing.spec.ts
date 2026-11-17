@@ -470,3 +470,29 @@ describe('Type1Drawing', () => {
     }
   })
  })
+
+
+describe('siding perimeter edging', () => {
+  it('adds a 30 mm frame only for the stable siding group on both views', async () => {
+    const group = c.materialFacadeGlob.value
+    const title = c.materialFacade.value
+    const sides = c.fillSide.value
+    c.materialFacadeGlob.value = 'siding'
+    c.fillSide.value = 1
+    const wrapper = mount(Type1Drawing)
+    try {
+      expect(wrapper.findAll('[data-testid="siding-edging"] rect')).toHaveLength(4)
+      expect(wrapper.get('[data-testid="siding-edging"]').attributes('data-face-width')).toBe('30')
+      const points = wrapper.get('[data-testid="siding-edging"] rect').attributes('x')
+      expect(wrapper.get('[data-testid="siding-edging"] rect').attributes('width')).toBe('30')
+      c.materialFacade.value = 'Произвольная подпись'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.get('[data-testid="siding-edging"] rect').attributes('x')).toBe(points)
+      await wrapper.get('[data-testid="type1-view-yard"]').setValue()
+      expect(wrapper.findAll('[data-testid="siding-edging"] rect')).toHaveLength(4)
+      c.materialFacadeGlob.value = 'profnastil'
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('[data-testid="siding-edging"]').exists()).toBe(false)
+    } finally { wrapper.unmount(); c.materialFacadeGlob.value = group; c.materialFacade.value = title; c.fillSide.value = sides }
+  })
+})

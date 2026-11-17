@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h } from 'vue'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { getType2ProfnastilFormOptions, saveWicketData } from '../../../app/api/wicket'
+import { getType2ProfnastilFormOptions, getProfnastilColors, saveWicketData } from '../../../app/api/wicket'
 import type { ProfnastilFormOptions } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import T2ProfnastilForm from './T2ProfnastilForm.vue'
@@ -10,6 +10,7 @@ import T2ProfnastilForm from './T2ProfnastilForm.vue'
 vi.mock('../../../app/api/wicket', async original => ({
   ...(await original<typeof import('../../../app/api/wicket')>()),
   getType2ProfnastilFormOptions: vi.fn(),
+  getProfnastilColors: vi.fn(),
   saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 1 }),
 }))
 
@@ -21,7 +22,7 @@ const Select = defineComponent({
 })
 const Input = defineComponent({
   name: 'B24InputMenu',
-  props: ['modelValue', 'items', 'disabled', 'valueKey'],
+  props: ['modelValue', 'items', 'disabled', 'valueKey', 'createItem'],
   emits: ['update:modelValue', 'create'],
   setup: () => () => h('div'),
 })
@@ -49,9 +50,10 @@ beforeEach(() => {
       { id: 707, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
     ],
     manufacturers: [],
-    colors: [{ id: 604, name: 'Цвет', hex: '#000000', image: null }, { id: 603, name: 'Цвет', hex: '#ffffff', image: null }],
+    colors: [{ id: 604, name: 'Цвет', hex: '#000000', image: null }, { id: 603, name: 'Цвет', label: 'Цвет - Белый', hex: '#ffffff', image: null }],
   }
   vi.mocked(getType2ProfnastilFormOptions).mockResolvedValue(response)
+  vi.mocked(getProfnastilColors).mockImplementation(async () => ({ colors: response.colors }))
 })
 
 function render(side: 'facade' | 'yard' = 'facade') {
@@ -152,6 +154,7 @@ it('selects a material variant without confusing the shared coating ID', async (
   expect(calc.thicknessFacade.value).toBe('0.45')
   expect(calc.typeOfCoatingFacade.value).toBe('Любое покрытие')
   expect(saveWicketData).not.toHaveBeenCalled()
+  expect(wrapper.findAllComponents(Select)[3]?.props('items')).toContainEqual({ id: 603, label: 'Цвет - Белый', hex: '#ffffff' })
   wrapper.findAllComponents(Select)[3]?.vm.$emit('update:modelValue', 603)
   await flushPromises()
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 21, materialFacade: 'Профиль', typeOfCoatingFacade: 'Любое покрытие', colorFacadeId: 603 }))
@@ -162,6 +165,7 @@ it('keeps a chosen dictionary color ID when another color has the same name', as
   await flushPromises()
   wrapper.findAllComponents(Select)[3]?.vm.$emit('update:modelValue', 603)
   await flushPromises()
+  expect(useCalculation().colorFacade.value).toBe('Цвет')
   expect(useCalculation().colorFacadeId.value).toBe(603)
   expect(useCalculation().colorFacadeHex.value).toBe('#ffffff')
 })
@@ -203,7 +207,8 @@ it.each([603, 999])('does not clear or save historical none color ID %s on hydra
   expect(wrapper.get('[role="alert"]').text()).toContain('очистить старый цвет')
   wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
   await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 21, colorFacadeId: null, colorFacade: '' }))
+  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(await validate(wrapper)).toBe(false)
 })
 
 it.each([undefined, 'broken', 'Глянец'])(
@@ -243,25 +248,25 @@ it.each(['list', 'combobox'] as const)('keeps an unavailable saved ID visible in
   expect(saveWicketData).not.toHaveBeenCalled()
 })
 
-it('selects duplicate-label combobox options by ID and keeps created text separate', async () => {
+it('selects duplicate-label historical combobox options by ID and rejects new free text', async () => {
   response.coatings.forEach(item => { item.colorInputMode = 'combobox' })
   const wrapper = render()
   await flushPromises()
   const input = wrapper.findComponent(Input)
   expect(input.props('valueKey')).toBe('id')
+  expect(input.props('createItem')).toBe(false)
   expect(input.props('modelValue')).toBe(603)
   input.vm.$emit('update:modelValue', 604)
   await flushPromises()
   expect(useCalculation().colorFacadeId.value).toBe(604)
   expect(useCalculation().colorFacadeHex.value).toBe('#000000')
+  vi.mocked(saveWicketData).mockClear()
   input.vm.$emit('create', 'Цвет')
   await flushPromises()
-  expect(useCalculation().colorFacadeId.value).toBeNull()
-  expect(useCalculation().colorFacadeHex.value).toBe('')
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: null, colorFacade: 'Цвет' }))
-  input.vm.$emit('create', '603')
-  await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: null, colorFacade: '603' }))
+  expect(useCalculation().colorFacadeId.value).toBe(604)
+  expect(useCalculation().colorFacadeHex.value).toBe('#000000')
+  expect(saveWicketData).not.toHaveBeenCalled()
+
 })
 
 it('allows custom text with no dictionary options and does not write on load', async () => {
@@ -317,7 +322,8 @@ it('uses the same combobox contract on the yard without changing facade color', 
   await flushPromises()
   wrapper.findComponent(Input).vm.$emit('create', 'Особый цвет двора')
   await flushPromises()
-  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idYard: 22, colorYardId: null, colorYard: 'Особый цвет двора' }))
+  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(useCalculation().colorYardId.value).toBe(603)
   expect(useCalculation().colorFacadeId.value).toBe(603)
   expect(useCalculation().colorFacade.value).toBe('Цвет')
 })
@@ -349,4 +355,29 @@ it('does not save a changed material which disappears on options reload', async 
   await flushPromises()
   expect(saveWicketData).not.toHaveBeenCalled()
   expect(await validate(wrapper)).toBe(false)
+})
+
+it('loads the actual material palette independently of the coating palette', async () => {
+  vi.mocked(getProfnastilColors).mockResolvedValue({ colors: [{ id: 909, name: 'Палитра материала', hex: null, image: null }] })
+  const wrapper = render()
+  await flushPromises()
+  expect(getProfnastilColors).toHaveBeenLastCalledWith('2', 22)
+  expect(wrapper.findAllComponents(Select)[3]?.props('items')).toContainEqual({ id: 909, label: 'Палитра материала', hex: null })
+  expect(wrapper.findAllComponents(Select)[3]?.props('items')).not.toContainEqual(expect.objectContaining({ id: 604 }))
+  expect(useCalculation().colorFacadeId.value).toBe(603)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it.each(['none', 'combobox'] as const)('requires the material palette for new %s coating selections', async mode => {
+  response.coatings.forEach(item => { item.colorInputMode = mode })
+  const wrapper = render()
+  await flushPromises()
+  wrapper.findAllComponents(Select)[2]?.vm.$emit('update:modelValue', 21)
+  await flushPromises()
+  expect(wrapper.findComponent(Input).exists()).toBe(false)
+  expect(wrapper.findAllComponents(Select)).toHaveLength(4)
+  expect(saveWicketData).not.toHaveBeenCalled()
+  expect(await validate(wrapper)).toBe(false)
+  wrapper.unmount()
 })

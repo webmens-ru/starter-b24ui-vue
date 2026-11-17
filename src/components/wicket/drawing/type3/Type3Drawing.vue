@@ -7,6 +7,7 @@ const SCHEMATIC_FILL_COLOR = '#bfdbfe'
 <script setup lang="ts">
 import WicketBaseDrawing from '../WicketBaseDrawing.vue'
 import { computed, ref, watch } from 'vue'
+import { imageDimensions, isVerticalReliefStrip } from '../fillings/reliefLayout'
 
 import { useCalculation } from '../../../../composables/useCalculation'
 import { resolveJumperPresentation } from '../jumperGeometry'
@@ -116,6 +117,19 @@ const facadeProfileImage = computed(() => calc.reliefFacadeImage.value)
 const yardProfileImage = computed(() => calc.reliefYardImage.value)
 const viewedProfileImage = computed(() => viewSide.value === 'yard' ? yardProfileImage.value : facadeProfileImage.value)
 const oppositeProfileImage = computed(() => viewSide.value === 'street' ? yardProfileImage.value : facadeProfileImage.value)
+const verticalProfileStrips = ref<Record<string, boolean>>({})
+watch(() => [facadeProfileImage.value, yardProfileImage.value], async (sources, _, cleanup) => {
+  const controller = new AbortController()
+  cleanup(() => controller.abort())
+  await Promise.all([...new Set(sources.filter(Boolean))].map(async source => {
+    const dimensions = await imageDimensions(source, controller.signal)
+    if (!controller.signal.aborted) verticalProfileStrips.value[source] = dimensions != null && isVerticalReliefStrip(dimensions)
+  }))
+}, { immediate: true })
+function stripViewport(picket: { x: number; y: number; width: number; height: number }, opposite: boolean) {
+  const { transform: _, ...rect } = profileImageRect(picket, opposite)
+  return rect
+}
 function profileClipId(opposite: boolean, index: number): string {
   return `type3-profile-clip-${instanceId}-${opposite ? 'far' : 'near'}-${index}`
 }
@@ -286,7 +300,14 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         <rect v-for="(picket, index) in oppositePickets" :key="`opposite-picket-${index}`" data-testid="type3-opposite-picket" v-bind="picket" />
         <template v-if="realisticColors && oppositeProfileImage">
           <defs><clipPath v-for="(picket, index) in oppositePickets" :id="profileClipId(true, index)" :key="index" clipPathUnits="userSpaceOnUse"><rect v-bind="profileClipRect(picket, true)" /></clipPath></defs>
-          <image v-for="(picket, index) in oppositePickets" :key="`opposite-profile-${index}`" v-bind="profileImageRect(picket, true)" :clip-path="`url(#${profileClipId(true, index)})`" :href="oppositeProfileImage" preserveAspectRatio="none" />
+          <template v-for="(picket, index) in oppositePickets" :key="`relief-${index}`">
+            <g v-if="verticalProfileStrips[oppositeProfileImage]" :transform="profileImageRect(picket, true).transform" :clip-path="`url(#${profileClipId(true, index)})`">
+              <svg data-testid="type3-relief-strip" v-bind="stripViewport(picket, true)" overflow="hidden">
+                <image :href="oppositeProfileImage" :width="profileImageRect(picket, true).height" :height="profileImageRect(picket, true).width" :transform="`translate(0 ${profileImageRect(picket, true).height}) rotate(-90)`" preserveAspectRatio="none" />
+              </svg>
+            </g>
+            <image v-else :key="`opposite-profile-${index}`" v-bind="profileImageRect(picket, true)" :clip-path="`url(#${profileClipId(true, index)})`" :href="oppositeProfileImage" preserveAspectRatio="none" />
+          </template>
         </template>
       </g>
       <rect
@@ -320,7 +341,14 @@ const jumperPresentation = computed(() => resolveJumperPresentation(
         />
         <template v-if="realisticColors && viewedProfileImage">
           <defs><clipPath v-for="(picket, index) in viewedPickets" :id="profileClipId(false, index)" :key="index" clipPathUnits="userSpaceOnUse"><rect v-bind="profileClipRect(picket, false)" /></clipPath></defs>
-          <image v-for="(picket, index) in viewedPickets" :key="`profile-${index}`" v-bind="profileImageRect(picket)" :clip-path="`url(#${profileClipId(false, index)})`" :href="viewedProfileImage" preserveAspectRatio="none" />
+          <template v-for="(picket, index) in viewedPickets" :key="`relief-${index}`">
+            <g v-if="verticalProfileStrips[viewedProfileImage]" :transform="profileImageRect(picket, false).transform" :clip-path="`url(#${profileClipId(false, index)})`">
+              <svg data-testid="type3-relief-strip" v-bind="stripViewport(picket, false)" overflow="hidden">
+                <image :href="viewedProfileImage" :width="profileImageRect(picket, false).height" :height="profileImageRect(picket, false).width" :transform="`translate(0 ${profileImageRect(picket, false).height}) rotate(-90)`" preserveAspectRatio="none" />
+              </svg>
+            </g>
+            <image v-else :key="`profile-${index}`" v-bind="profileImageRect(picket)" :clip-path="`url(#${profileClipId(false, index)})`" :href="viewedProfileImage" preserveAspectRatio="none" />
+          </template>
         </template>
         <g fill="none" stroke="#30343a" stroke-width="0.7">
           <rect v-for="(picket, index) in viewedPickets" :key="`outline-${index}`"

@@ -45,6 +45,7 @@ function syncCalcFields() {
       calc.typeLock.value = ''
       calc.lockSetId.value = null
       calc.lockPenId.value = null
+      calc.lockPenMaterialItemId.value = null
       calc.lockPenColor.value = ''
       calc.lockPenColorId.value = null
     }
@@ -54,6 +55,7 @@ function syncCalcFields() {
     calc.typeLock.value      = ''
     calc.lockSetId.value    = null
     calc.lockPenId.value    = null
+    calc.lockPenMaterialItemId.value = null
     calc.lockPenColor.value = ''
     calc.lockPenColorId.value = null
   }
@@ -84,6 +86,7 @@ async function save() {
     lockSetId: calc.lockSetId.value,
     typeLock: calc.typeLock.value,
     lockPenId: calc.lockPenId.value,
+    lockPenMaterialItemId: calc.lockPenMaterialItemId.value,
     lockPenColor: calc.lockPenColor.value,
     lockPenColorId: calc.lockPenColorId.value,
   }
@@ -98,6 +101,7 @@ async function save() {
       providesLock: hasLockSet ? (calc.providesLock.value || null) : null,
       lockInstaller: hasLockSet ? (calc.lockInstaller.value || null) : null,
       lockPenId: hasLockSet ? calc.lockPenId.value : null,
+      lockPenMaterialItemId: hasLockSet ? calc.lockPenMaterialItemId.value : null,
       lockPenColorId: hasLockSet ? calc.lockPenColorId.value : null,
     })
   } catch (e) {
@@ -108,6 +112,7 @@ async function save() {
     calc.lockSetId.value = previous.lockSetId
     calc.typeLock.value = previous.typeLock
     calc.lockPenId.value = previous.lockPenId
+    calc.lockPenMaterialItemId.value = previous.lockPenMaterialItemId
     calc.lockPenColor.value = previous.lockPenColor
     calc.lockPenColorId.value = previous.lockPenColorId
     presence.value = previous.isThereLock

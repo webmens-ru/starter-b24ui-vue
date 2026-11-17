@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { colorMenuUi, validColorHex } from '../shared/colorMenuPresentation'
+import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 import type { ProfnastilColorMode, ColorInputItem } from './type2ProfnastilForm'
 
-defineProps<{
+const props = defineProps<{
   manufacturerVisible: boolean
   showMaterialSelectors: boolean
   selectedManufacturerId: string | number
@@ -21,6 +24,7 @@ defineProps<{
   submitted: boolean
   colorValid: boolean
 }>()
+const selectedTextureHex = computed(() => validColorHex(props.printechSelectItems.find(item => String(item.id) === String(props.comboboxValue))?.hex))
 const emit = defineEmits<{
   (event: 'manufacturer-change', value: string | number | undefined): void
   (event: 'profile-change', value: string | number | undefined): void
@@ -76,13 +80,12 @@ const emit = defineEmits<{
 
     <label v-if="colorMode === 'list'" class="form-field">
       <span class="font-semibold">Цвет <span class="text-red-600">*</span></span>
-      <B24SelectMenu
+      <ColorSelectMenu
         :model-value="dictionaryColorId"
         value-key="id"
         :items="colorSelectItems"
         placeholder="Выберите цвет"
         class="w-full"
-        :b24ui="{ content: 'z-50' }"
         :disabled="loading || !!loadError"
         @update:model-value="emit('dictionary-color-change', $event === undefined ? undefined : Number($event))"
       />
@@ -95,14 +98,22 @@ const emit = defineEmits<{
         :model-value="comboboxValue"
         value-key="id"
         :items="printechSelectItems"
-        create-item="always"
-        placeholder="Выберите или введите название"
+        :create-item="false"
+        placeholder="Выберите цвет материала"
         class="w-full"
         :disabled="loading || !!loadError"
-        :content="{ side: 'bottom', align: 'start', sideOffset: 4, avoidCollisions: false }"
+        :b24ui="{ ...colorMenuUi, base: selectedTextureHex ? 'ps-10' : undefined }"
+        :content="{ side: 'bottom', align: 'start', sideOffset: 4, avoidCollisions: true }"
         @update:model-value="emit('printech-color-change', $event)"
         @create="emit('custom-color-create', $event)"
-      />
+      >
+        <template v-if="selectedTextureHex" #leading>
+          <span data-color-swatch aria-hidden="true" class="inline-block size-4 shrink-0 border border-black/20" :style="{ backgroundColor: selectedTextureHex, borderRadius: '50%', width: '14px', height: '14px' }" />
+        </template>
+        <template #item-leading="{ item }">
+          <span v-if="validColorHex(item.hex)" data-color-swatch aria-hidden="true" class="inline-block size-4 shrink-0 border border-black/20" :style="{ backgroundColor: validColorHex(item.hex), borderRadius: '50%', width: '14px', height: '14px' }" />
+        </template>
+      </B24InputMenu>
       <span v-if="submitted && !colorValid" class="text-sm text-red-600">Укажите цвет или текстуру</span>
     </label>
   </div>

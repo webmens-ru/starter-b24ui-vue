@@ -56,6 +56,24 @@ describe('LockType', () => {
     apiMocks.recalculate.mockResolvedValue({ priceDealer: 0, priceRetail: 0 })
   })
 
+  it('preserves a migrated primary handle on mount and clears it only for a changed lock set', async () => {
+    calc.lockSetId.value = 7
+    calc.lockPenMaterialItemId.value = 100007
+    calc.lockPenId.value = 7
+    calc.lockPenColorId.value = 91
+    const wrapper = mountLockType()
+    await flushPromises()
+    expect(calc.lockPenMaterialItemId.value).toBe(100007)
+    expect(calc.lockPenColorId.value).toBe(91)
+    expect(apiMocks.getPensByLock).not.toHaveBeenCalled()
+    await wrapper.findAll('input[type="radio"]')[1]!.setValue()
+    await flushPromises()
+    expect(calc.lockPenMaterialItemId.value).toBeNull()
+    expect(calc.lockPenColorId.value).toBeNull()
+    expect(apiMocks.saveWicketData).toHaveBeenCalledWith(expect.objectContaining({ lockPenMaterialItemId: null }))
+    wrapper.unmount()
+  })
+
   it('shows kit cost separately from installation and hides unavailable financial fields', async () => {
     apiMocks.getLocks.mockResolvedValue({ items: [{ ...lockSet7, price: 1250.5 }, { ...lockSet8, price: 0 }] })
     const wrapper = mountLockType()

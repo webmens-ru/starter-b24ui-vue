@@ -139,7 +139,7 @@ describe('ProfnastilYard', () => {
     await wrapper.get('[data-testid="appearance-color"]').setValue('9')
     await flushPromises()
 
-    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'profnastil')
+    expect(apiMocks.getFillingAppearanceOptions).toHaveBeenCalledWith('1', 'profnastil', 17)
     const payload = apiMocks.saveWicketData.mock.lastCall?.[0]
     expect(payload).toMatchObject({
       idYard: 17,

@@ -2,6 +2,7 @@
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getLamelTable, saveWicketData, recalculate, type LamelRow, type SidingPagination } from '../../../app/api/wicket'
+import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 import T4FilterDropdown from './T4FilterDropdown.vue'
 import { wicketLamelFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -43,6 +44,8 @@ async function loadTable(page = currentPage.value) {
   try {
     const result = await getLamelTable(calc.modelId.value, filters, page)
     rows.value        = result.table
+    const selected = result.table.find(row => String(row.id) === String(calc.idYard.value))
+    if (selected) selectedRow.value = selected
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
@@ -63,19 +66,50 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
-// Восстановление при загрузке данных (редактирование): id_yard может появиться после монтирования
-watch(() => calc.idYard.value, async (val) => {
-  if (!val) return
-  const saved = restoreFromCalc()
-  if (saved && !selectedRow.value) {
-    selectedRow.value = saved
-    try {
-      await save(saved)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
+// Hydration restores the snapshot without writing it back to the server.
+watch(() => calc.idYard.value, async () => {
+  if (String(selectedRow.value?.id ?? '') !== String(calc.idYard.value ?? '')) {
+    selectedRow.value = rows.value.find(row => String(row.id) === String(calc.idYard.value)) ?? restoreFromCalc()
+    if (selectedRow.value && !selectedRow.value.colors) await loadSelectedPalette()
   }
 }, { immediate: true })
+
+async function loadSelectedPalette() {
+  const selectedId = calc.idYard.value
+  if (!selectedId) return
+  try {
+    const result = await getLamelTable(calc.modelId.value, {
+      companies: [], materials: [], width: [], typeOfCoating: [], colors: [], materialIds: [selectedId],
+    }, 1)
+    if (String(calc.idYard.value) !== String(selectedId)) return
+    const selected = result.table.find(row => String(row.id) === String(selectedId))
+    if (selected) selectedRow.value = selected
+  } catch (error) {
+    console.warn('Не удалось загрузить палитру сохранённого материала:', error)
+  }
+}
+
+const colorItems = computed(() => {
+  const palette = selectedRow.value?.colors ?? []
+  const currentId = calc.colorYardId.value
+  if (currentId !== null && currentId !== '' && !palette.some(color => String(color.id) === String(currentId))) {
+    return [...palette, { id: currentId, label: calc.colorYard.value || 'Сохранённый цвет', disabled: true }]
+  }
+  return palette
+})
+const selectedColorId = computed(() => calc.colorYardId.value ?? undefined)
+
+async function selectColor(value: string | number | undefined) {
+  const row = selectedRow.value
+  const color = row?.colors?.find(item => String(item.id) === String(value))
+  if (!row || !color) return
+  calc.colorYardId.value = color.id
+  calc.colorYard.value = color.label
+  calc.colorYardHex.value = color.hex ?? ''
+  calc.colorYardImage.value = color.image ?? ''
+  await save(row)
+  await doRecalculate()
+}
 
 function restoreFromCalc(): LamelRow | null {
   if (!calc.idYard.value) return null
@@ -83,27 +117,37 @@ function restoreFromCalc(): LamelRow | null {
     id:            calc.idYard.value,
     company:       calc.materialSupplierYard.value,
     material:      calc.materialYard.value,
-    width:         calc.thicknessYard.value,
+    width:         calc.lamelWorkingWidthYard.value ?? '',
+    workingWidth: calc.lamelWorkingWidthYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
     color:         calc.colorYard.value,
   }
 }
 
+function applyDrawingMetadata(row: LamelRow) {
+  const width = Number(row.workingWidth)
+  calc.lamelWorkingWidthYard.value = row.workingWidth != null && Number.isFinite(width) && width > 0 ? width : null
+  calc.reliefYardImage.value = row.reliefImage ?? ''
+  calc.reliefYardAlongMode.value = row.reliefAlongMode ?? 'stretch'
+  calc.reliefYardAcrossMode.value = row.reliefAcrossMode ?? 'repeat'
+}
+
 async function save(row: LamelRow) {
+  applyDrawingMetadata(row)
   calc.idYard.value                = row.id
   calc.materialSupplierYard.value = row.company
   calc.materialYard.value          = row.material
   calc.formYard.value              = ''
   calc.thicknessYard.value         = String(row.width)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.colorYard.value             = row.color
+  // Colour labels are presentation snapshots; the FK is selected independently.
 
   calc.updateOrCreateBlock('fillingYard', [
     { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'lamellaWidth', name: 'Ширина ламели',           value: String(row.width) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
-    { paramCode: 'color', name: 'Цвет',                    value: row.color },
+    { paramCode: 'color', name: 'Цвет',                    value: calc.colorYard.value },
   ], 'Заполнение (двор)')
 
   try {
@@ -113,9 +157,9 @@ async function save(row: LamelRow) {
       materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
       materialSupplierYard: row.company,
       materialYard:           row.material,
-      widthLamelYard:         String(row.width),
       typeOfCoatingYard:   row.typeOfCoating,
-      colorYard:             row.color,
+      colorYard:             calc.colorYard.value,
+      colorYardId:           calc.colorYardId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -139,14 +183,29 @@ async function doRecalculate() {
 }
 
 async function selectRow(row: LamelRow) {
+  const current = calc.colorYardId.value
+  const validColor = row.colors?.find(color => String(color.id) === String(current))
+  calc.colorYardId.value = validColor?.id ?? null
+  calc.colorYard.value = validColor?.label ?? ''
+  calc.colorYardHex.value = validColor?.hex ?? ''
+  calc.colorYardImage.value = validColor?.image ?? ''
+  applyDrawingMetadata(row)
   selectedRow.value = row
+  calc.idYard.value = row.id
+  if (!validColor) return
   await save(row)
   await doRecalculate()
 }
 
 function deselectRow() {
   selectedRow.value = null
+  calc.lamelWorkingWidthYard.value = null
+  calc.reliefYardImage.value = ''
   calc.idYard.value = ''
+  calc.colorYardId.value = null
+  calc.colorYard.value = ''
+  calc.colorYardHex.value = ''
+  calc.colorYardImage.value = ''
 }
 
 function isSelected(row: LamelRow) {
@@ -156,6 +215,10 @@ function isSelected(row: LamelRow) {
 function onContinue() {
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
+    return
+  }
+  if (!calc.colorYardId.value && !calc.colorYard.value) {
+    openModal('Выберите цвет ламелей!')
     return
   }
   emit('next')
@@ -219,6 +282,12 @@ onMounted(async () => {
       />
     </div>
 
+    <div v-if="selectedRow" class="max-w-lg">
+      <label class="block text-sm mb-1">Цвет ламелей</label>
+      <ColorSelectMenu :model-value="selectedColorId" :items="colorItems" placeholder="Выберите цвет" @update:model-value="selectColor" />
+      <p v-if="!selectedColorId && calc.colorYard.value" class="text-sm text-gray-500">Сохранённый цвет: {{ calc.colorYard.value }}</p>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
         <thead class="sticky top-0 z-[9] bg-gray-100">
@@ -248,7 +317,7 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.width }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.colorTitles?.join(', ') || selectedRow.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
           </tr>
 
@@ -269,7 +338,7 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.width }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ row.colorTitles?.join(', ') || row.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
           </tr>
 

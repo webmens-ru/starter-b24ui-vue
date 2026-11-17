@@ -216,6 +216,7 @@ const accessorySelections = ref<AccessorySelections>({ lockComponents: [], skud:
 const typeLock      = ref<string>('Тип_1')
 const lockSetId    = ref<number | null>(null)
 const lockPenId    = ref<number | null>(null)
+const lockPenMaterialItemId = ref<number | null>(null)
 const lockPenColor = ref<string>('')
 const lockPenColorId = ref<number | null>(null)
 const lockComponentIds = ref<number[]>([])
@@ -276,12 +277,13 @@ const idFacade                = ref<string | number>('')
 const materialSelectionProblems = ref<Array<{ side: 'facade' | 'yard'; reason: string; message: string }>>([])
 const profileTypeFacadeId = ref<number | null>(null)
 const typeOfCoatingFacadeId = ref<number | null>(null)
-const sidingFormFacadeId = ref<number | null>(null)
+const sidingTypeFacadeId = ref<number | null>(null)
 const manufacturerFacadeId    = ref<string | number | null>(null)
 const colorFacadeId           = ref<string | number | null>(null)
 const materialSupplierFacade = ref<string>('')
 const materialFacade          = ref<string>('')
 const formFacade              = ref<string>('')
+const lamelWorkingWidthFacade = ref<number | null>(null)
 const thicknessFacade         = ref<string>('')
 const typeOfCoatingFacade   = ref<string>('')
 const colorFacade             = ref<string>('')
@@ -318,12 +320,13 @@ const numberOfSticks           = ref<number | null>(null)
 const idYard                = ref<string | number>('')
 const profileTypeYardId = ref<number | null>(null)
 const typeOfCoatingYardId = ref<number | null>(null)
-const sidingFormYardId = ref<number | null>(null)
+const sidingTypeYardId = ref<number | null>(null)
 const manufacturerYardId    = ref<string | number | null>(null)
 const colorYardId           = ref<string | number | null>(null)
 const materialSupplierYard = ref<string>('')
 const materialYard          = ref<string>('')
 const formYard              = ref<string>('')
+const lamelWorkingWidthYard = ref<number | null>(null)
 const thicknessYard         = ref<string>('')
 const typeOfCoatingYard   = ref<string>('')
 const colorYard             = ref<string>('')
@@ -391,7 +394,7 @@ const fieldsFilled = ref<number>(0)
     fillingProfileFacadeProblem.value = null
     profileTypeFacadeId.value = null
     typeOfCoatingFacadeId.value = null
-    sidingFormFacadeId.value = null
+    sidingTypeFacadeId.value = null
     idFacade.value = ''
     manufacturerFacadeId.value = null
     colorFacadeId.value = null
@@ -399,6 +402,7 @@ const fieldsFilled = ref<number>(0)
     materialFacade.value = ''
     formFacade.value = ''
     thicknessFacade.value = ''
+    lamelWorkingWidthFacade.value = null
     typeOfCoatingFacade.value = ''
     colorFacade.value = ''
     colorFacadeHex.value = ''
@@ -438,7 +442,7 @@ const fieldsFilled = ref<number>(0)
     fillingProfileYardProblem.value = null
     profileTypeYardId.value = null
     typeOfCoatingYardId.value = null
-    sidingFormYardId.value = null
+    sidingTypeYardId.value = null
     idYard.value = ''
     manufacturerYardId.value = null
     colorYardId.value = null
@@ -446,6 +450,7 @@ const fieldsFilled = ref<number>(0)
     materialYard.value = ''
     formYard.value = ''
     thicknessYard.value = ''
+    lamelWorkingWidthYard.value = null
     typeOfCoatingYard.value = ''
     colorYard.value = ''
     colorYardHex.value = ''
@@ -548,6 +553,7 @@ const fieldsFilled = ref<number>(0)
     typeLock.value = 'Тип_1'
     lockSetId.value = null
     lockPenId.value = null
+    lockPenMaterialItemId.value = null
     lockPenColor.value = ''
     lockPenColorId.value = null
     lockComponentIds.value = []
@@ -927,6 +933,7 @@ const fieldsFilled = ref<number>(0)
       typeLock,
       lockSetId,
       lockPenId,
+      lockPenMaterialItemId,
       lockPenColor,
       lockPenColorId,
     lockComponentIds,
@@ -966,13 +973,14 @@ const fieldsFilled = ref<number>(0)
       materialSelectionProblems,
       profileTypeFacadeId,
       typeOfCoatingFacadeId,
-      sidingFormFacadeId,
+      sidingTypeFacadeId,
       manufacturerFacadeId,
       colorFacadeId,
       materialSupplierFacade,
       materialFacade,
       formFacade,
       thicknessFacade,
+      lamelWorkingWidthFacade,
       typeOfCoatingFacade,
       colorFacade,
       colorFacadeHex,
@@ -993,13 +1001,14 @@ const fieldsFilled = ref<number>(0)
       idYard,
       profileTypeYardId,
       typeOfCoatingYardId,
-      sidingFormYardId,
+      sidingTypeYardId,
       manufacturerYardId,
       colorYardId,
       materialSupplierYard,
       materialYard,
       formYard,
       thicknessYard,
+      lamelWorkingWidthYard,
       typeOfCoatingYard,
       colorYard,
       colorYardHex,
@@ -1340,6 +1349,7 @@ const fieldsFilled = ref<number>(0)
     typeLock,
     lockSetId,
     lockPenId,
+    lockPenMaterialItemId,
     lockPenColor,
     lockPenColorId,
     lockComponentIds,
@@ -1381,13 +1391,14 @@ const fieldsFilled = ref<number>(0)
     materialSelectionProblems,
     profileTypeFacadeId,
     typeOfCoatingFacadeId,
-    sidingFormFacadeId,
+    sidingTypeFacadeId,
     manufacturerFacadeId,
     colorFacadeId,
     materialSupplierFacade,
     materialFacade,
     formFacade,
     thicknessFacade,
+    lamelWorkingWidthFacade,
     typeOfCoatingFacade,
     colorFacade,
     colorFacadeHex,
@@ -1408,13 +1419,14 @@ const fieldsFilled = ref<number>(0)
     idYard,
     profileTypeYardId,
     typeOfCoatingYardId,
-    sidingFormYardId,
+    sidingTypeYardId,
     manufacturerYardId,
     colorYardId,
     materialSupplierYard,
     materialYard,
     formYard,
     thicknessYard,
+    lamelWorkingWidthYard,
     typeOfCoatingYard,
     colorYard,
     colorYardHex,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
+import { getFillingAppearanceOptions, getFenceTable, saveWicketData, recalculate, type FenceRow, type SidingPagination } from '../../../app/api/wicket'
 import { inheritedYardLaying, applyYardSnapshot } from './fenceLayingState'
 import T3FilterDropdown from './T3FilterDropdown.vue'
 import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
@@ -46,6 +46,8 @@ const fenceFilterDataUrl = computed(() => wicketFenceFilterDataUrl(calc.modelId.
 
 const filters = reactive({
   companies:     [] as string[],
+  fenceForm: [] as string[],
+  manufacturers: [] as string[],
   materials:     [] as string[],
   widthFence:    [] as string[],
   typeOfCoating: [] as string[],
@@ -55,20 +57,25 @@ const rows         = ref<FenceRow[]>([])
 const selectedRow  = ref<FenceRow | null>(null)
 const tableLoading = ref(false)
 const currentPage  = ref(1)
+let tableRevision = 0
 const pagination   = ref<SidingPagination>({ page: 1, pageSize: 100, totalCount: 0, pageCount: 1 })
 
 async function loadTable(page = currentPage.value) {
+  const revision = ++tableRevision
+  const current = () => isCurrent() && revision === tableRevision
   tableLoading.value = true
   try {
     const result = await getFenceTable(calc.modelId.value, { ...filters, widthFence: widthLocked.value ? [String(calc.thicknessFacade.value)] : filters.widthFence }, page)
+    if (!current()) return
     rows.value        = result.table
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
+    if (!current()) return
     console.warn('getFenceTable недоступен:', e)
     rows.value = []
   } finally {
-    tableLoading.value = false
+    if (current()) tableLoading.value = false
   }
 }
 
@@ -95,6 +102,8 @@ function restoreFromCalc(): FenceRow | null {
   if (!calc.idYard.value || (widthLocked.value && Number(calc.thicknessYard.value) !== Number(calc.thicknessFacade.value))) return null
   return {
     id:            calc.idYard.value,
+    fenceFormName: calc.formYard.value,
+    manufacturerId: calc.manufacturerYardId.value == null ? null : Number(calc.manufacturerYardId.value),
     company:       calc.materialSupplierYard.value,
     material:      calc.materialYard.value,
     widthFence:    calc.thicknessYard.value,
@@ -113,9 +122,10 @@ async function save(row: FenceRow) {
     calc.yardButtTrim.value = null
   }
   calc.idYard.value                = row.id
-  calc.materialSupplierYard.value = row.company
+  if (row.manufacturerId != null && calc.manufacturerYardId.value == null) calc.manufacturerYardId.value = row.manufacturerId
+  if (!calc.manufacturerYardId.value) calc.materialSupplierYard.value = row.company
   calc.materialYard.value          = row.material
-  calc.formYard.value              = ''
+  calc.formYard.value              = row.fenceFormName ?? ''
   calc.thicknessYard.value         = String(row.widthFence)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.reliefYardImage.value       = row.profileImage ?? ''
@@ -124,7 +134,7 @@ async function save(row: FenceRow) {
   if (!isCurrent()) throw new Error('Расчёт изменился')
 
   calc.updateOrCreateBlock('fillingYard', [
-    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
+    { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierYard.value },
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'fenceWidth', name: 'Ширина штакетника',       value: String(row.widthFence) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
@@ -138,7 +148,7 @@ async function save(row: FenceRow) {
       idYard:                row.id,
       ...yardSnapshot,
       materialYardGlob:     calc.materialYardGlob.value ?? calc.materialFacadeGlob.value,
-      materialSupplierYard: row.company,
+      materialSupplierYard: calc.materialSupplierYard.value,
       materialYard:           row.material,
       widthFenceYard:         String(row.widthFence),
       typeOfCoatingYard:   row.typeOfCoating,
@@ -193,8 +203,25 @@ async function persistSelection(row: FenceRow | null): Promise<boolean> {
   }
 }
 
+let selectionRevision = 0
 async function selectRow(row: FenceRow) {
   if (saving.value) return
+  const revision = ++selectionRevision
+  if (String(calc.idYard.value) !== String(row.id)) {
+    try {
+      const options = await getFillingAppearanceOptions(calc.modelId.value, 'fence', row.id)
+      if (!isCurrent() || revision !== selectionRevision) return
+      if (!options.colors.some(color => String(color.id) === String(calc.colorYardId.value))) {
+        calc.colorYardId.value = null
+        calc.colorYard.value = ''
+        calc.colorYardHex.value = ''
+        calc.colorYardImage.value = ''
+      }
+    } catch {
+      if (isCurrent() && revision === selectionRevision) saveError.value = 'Не удалось загрузить палитру материала. Повторите выбор.'
+      return
+    }
+  }
   if (String(calc.idYard.value) !== String(row.id) || Number(calc.thicknessYard.value) !== Number(row.widthFence)) calc.invalidateFillingPreview('yard')
   needsSave.value = true
   selectedRow.value = row
@@ -260,14 +287,20 @@ onMounted(async () => {
       <T3FilterDropdown
         label="Производитель материала"
         :url="fenceFilterDataUrl"
-        data-key="company"
-        v-model="filters.companies"
+        data-key="manufacturer"
+        v-model="filters.manufacturers"
       />
       <T3FilterDropdown
         label="Материал"
         :url="fenceFilterDataUrl"
         data-key="material"
         v-model="filters.materials"
+      />
+      <T3FilterDropdown
+        label="Форма"
+        :url="fenceFilterDataUrl"
+        data-key="fenceForm"
+        v-model="filters.fenceForm"
       />
       <T3FilterDropdown
         v-if="!widthLocked"
@@ -285,11 +318,12 @@ onMounted(async () => {
     </div>
 
     <FillingAppearanceFields
+      v-if="selectedRow"
       ref="appearanceFields"
       :model-id="calc.modelId.value"
       material-group="fence"
+      :fence-id="selectedRow.id"
       side="yard"
-      :show-manufacturer="false"
       :disabled="saving"
       @change="saveAppearance"
     />
@@ -301,6 +335,7 @@ onMounted(async () => {
             <th class="border border-gray-300 px-2 py-1 text-left">Выбрать</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Производитель материала</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Материал</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">Форма</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Ширина штакетника</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Тип покрытия</th>
             <th class="border border-gray-300 px-2 py-1 text-left">Цена</th>
@@ -308,7 +343,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="7" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -320,6 +355,7 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.fenceFormName ?? '—' }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.widthFence }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
@@ -340,13 +376,14 @@ onMounted(async () => {
             </td>
             <td class="border border-gray-300 px-2 py-1">{{ row.company }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ row.fenceFormName ?? '—' }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.widthFence }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="7" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

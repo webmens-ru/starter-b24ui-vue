@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import MaterialFillingDrawing from '../fillings/MaterialFillingDrawing.vue'
 import type { FillingVisualProps } from '../fillings/fillingDrawingTypes'
 import { buildLamellae } from './type4Geometry'
-const props = defineProps<FillingVisualProps & { lamellaWidth: unknown }>()
+const props = defineProps<FillingVisualProps & { lamellaWidth: unknown; reliefAlongMode?: 'stretch' | 'repeat'; reliefAcrossMode?: 'stretch' | 'repeat' }>()
 const lamellae = computed(() => buildLamellae(props.area, props.lamellaWidth, props.direction))
 </script>
 <template>

@@ -3,13 +3,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h } from 'vue'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { useCalculation } from '../../../composables/useCalculation'
-import { getProfnastilTable, getType2ProfnastilFormOptions, saveWicketData } from '../../../app/api/wicket'
+import { getProfnastilTable, getType2ProfnastilFormOptions, getProfnastilColors, saveWicketData } from '../../../app/api/wicket'
 import T2ProfnastilForm from './T2ProfnastilForm.vue'
 import ProfnastilMaterialTable from '../shared/ProfnastilMaterialTable.vue'
 
 vi.mock('../../../app/api/wicket', async original => ({
   ...(await original<typeof import('../../../app/api/wicket')>()),
-  getProfnastilTable: vi.fn(), getType2ProfnastilFormOptions: vi.fn(),
+  getProfnastilTable: vi.fn(), getType2ProfnastilFormOptions: vi.fn(), getProfnastilColors: vi.fn(),
   saveWicketData: vi.fn().mockResolvedValue({ lockVersion: 1 }),
 }))
 const Select = defineComponent({ name: 'B24SelectMenu', props: ['modelValue', 'items'], emits: ['update:modelValue'], setup: () => () => h('div') })
@@ -20,6 +20,7 @@ beforeEach(() => {
   const calc = useCalculation(); calc.reset()
   calc.orderId.value = 42; calc.productRowId.value = 7; calc.modelId.value = '2'
   calc.materialFacadeGlob.value = 'profnastil'; calc.materialYardGlob.value = 'profnastil'
+  vi.mocked(getProfnastilColors).mockResolvedValue({ colors: [{ id: 603, name: 'Цвет', hex: '#ffffff', image: null }] })
   vi.mocked(getProfnastilTable).mockResolvedValue({ table: [row], pagination: { page: 1, pageSize: 100, pageCount: 1, totalCount: 1 } })
   vi.mocked(getType2ProfnastilFormOptions).mockResolvedValue({
     profiles: [{ id: 901, name: 'Переименованный профиль' }],

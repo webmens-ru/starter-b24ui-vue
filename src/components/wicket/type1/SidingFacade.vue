@@ -38,6 +38,7 @@ const sidingFilterDataUrl = computed(() => wicketSidingFilterDataUrl(calc.modelI
 const filters = reactive({
   materials:      [] as string[],
   form:           [] as string[],
+  sidingForm:     [] as string[],
   typeOfCoating:  [] as string[],
 })
 
@@ -132,7 +133,7 @@ async function save(row: SidingRow): Promise<boolean> {
   const descriptor = parseFillingDrawingDescriptor(row.drawingProfile, row.drawingProfileProblem)
   calc.fillingProfileFacade.value = descriptor.profile
   calc.fillingProfileFacadeProblem.value = descriptor.problem
-  calc.sidingFormFacadeId.value = row.sidingFormId ?? null
+  calc.sidingTypeFacadeId.value = row.sidingTypeId ?? null
   calc.typeOfCoatingFacadeId.value = row.typeOfCoatingId ?? null
   calc.profileTypeFacadeId.value = null
   calc.idFacade.value                = row.id
@@ -171,7 +172,7 @@ function updateSummary(row: SidingRow): void {
   calc.updateOrCreateBlock('fillingFacade', [
     { paramCode: 'materialManufacturer', name: 'Производитель материала', value: calc.materialSupplierFacade.value },
     { paramCode: 'material', name: 'Материал',                value: row.material },
-    { paramCode: 'form', name: 'Форма',                   value: row.form },
+    { paramCode: 'form', name: 'Тип сайдинга',                   value: row.form },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
     { paramCode: 'color', name: 'Цвет',                    value: calc.colorFacade.value },
   ], 'Заполнение (фасад)')
@@ -306,7 +307,13 @@ onMounted(async () => {
         v-model="filters.materials"
       />
       <FilterDropdown
-        label="Форма"
+        label="Форма сайдинга"
+        :url="sidingFilterDataUrl"
+        data-key="sidingForm"
+        v-model="filters.sidingForm"
+      />
+      <FilterDropdown
+        label="Тип сайдинга"
         :url="sidingFilterDataUrl"
         data-key="form"
         v-model="filters.form"
@@ -325,6 +332,7 @@ onMounted(async () => {
       :model-id="calc.modelId.value"
       material-group="siding"
       :show-manufacturer="false"
+      :siding-id="selectedRow.id"
       side="facade"
       @change="saveAppearance"
     />
@@ -336,14 +344,15 @@ onMounted(async () => {
           <tr>
             <th scope="col" class="catalog-table-choice">Выбрать</th>
             <th scope="col" class="text-left">Материал</th>
-            <th scope="col" class="text-left">Форма</th>
+            <th scope="col" class="text-left">Форма сайдинга</th>
+            <th scope="col" class="text-left">Тип сайдинга</th>
             <th scope="col" class="text-left">Тип покрытия</th>
             <th scope="col" class="text-right whitespace-nowrap">Цена за пог. м</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="tableLoading">
-            <td colspan="5" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <!-- Сохранённая строка (если не попала в отфильтрованный список) -->
@@ -360,6 +369,7 @@ onMounted(async () => {
               />
             </td>
             <td class="font-semibold">{{ selectedRow.material }}</td>
+            <td>{{ selectedRow.sidingFormTitle ?? '—' }}</td>
             <td>{{ selectedRow.form }}</td>
             <td>{{ selectedRow.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceMp) }}</td>
@@ -380,13 +390,14 @@ onMounted(async () => {
               />
             </td>
             <td class="font-semibold">{{ row.material }}</td>
+            <td>{{ row.sidingFormTitle ?? '—' }}</td>
             <td>{{ row.form }}</td>
             <td>{{ row.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceMp) }}</td>
           </tr>
 
           <tr v-if="!tableLoading && rows.length === 0 && !selectedRow">
-            <td colspan="5" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

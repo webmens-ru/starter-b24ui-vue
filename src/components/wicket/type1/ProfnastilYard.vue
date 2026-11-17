@@ -35,6 +35,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 const filters = reactive({
+  profnastilForm: [] as string[],
   materials: [] as string[],
   typeOfCoating: [] as string[],
 })
@@ -108,10 +109,10 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.fillingProfileYardProblem.value = descriptor.problem
   calc.profileTypeYardId.value = row.profileTypeId ?? null
   calc.typeOfCoatingYardId.value = row.typeOfCoatingId ?? null
-  calc.sidingFormYardId.value = null
+  calc.sidingTypeYardId.value = null
   calc.idYard.value                = row.id
   calc.materialYard.value          = row.material
-  calc.formYard.value              = ''
+  calc.formYard.value              = row.profnastilFormTitle ?? ''
   calc.thicknessYard.value         = String(row.thickness)
   calc.typeOfCoatingYard.value   = row.typeOfCoating
   calc.coatingYardHex.value        = row.coatingHex ?? ''
@@ -247,13 +248,8 @@ watch(() => calc.idYard.value, async (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
-    const attempt = appearanceSave.beginRevision()
     selectedRow.value = saved
-    try {
-      if (await save(saved)) appearanceSave.recordSuccess(attempt)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
+    appearanceSave.resetToCurrent()
   }
 }, { immediate: true })
 
@@ -299,7 +295,7 @@ onMounted(async () => {
       <template #appearance>
         <FillingAppearanceFields
           v-if="selectedRow" ref="appearanceFields" :model-id="calc.modelId.value"
-          material-group="profnastil" side="yard" @change="saveAppearance"
+          :profnastil-id="selectedRow.id" material-group="profnastil" side="yard" @change="saveAppearance"
         />
       </template>
     </ProfnastilMaterialTable>

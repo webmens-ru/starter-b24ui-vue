@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { fillingSideCountLabel, hasInvalidFillingSideCountSelection, isFillingSideCount, fillingSideCountOptions } from '../../../app/fillingSideCounts'
-import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel, fillingMaterialGroupOptions } from '../../../app/fillingMaterialGroups'
+import { fillingSideCountLabel, isFillingSideCount } from '../../../app/fillingSideCounts'
+import { hasInvalidFillingGroupSelection, fillingMaterialGroupLabel } from '../../../app/fillingMaterialGroups'
 import { participantRoleLabel } from '../../../app/participantRoles'
 import MaterialProvider from '../MaterialProvider.vue'
 import { saveNoFilling } from '../saveNoFilling'
@@ -15,10 +15,6 @@ const emit = defineEmits<{
 
 const calc = useCalculation()
 defineExpose({ validateBeforeLeave: () => !calc.fillingSaveBlocked.value })
-
-const fillSideOptions = fillingSideCountOptions()
-
-const materialOptions = fillingMaterialGroupOptions(['lamella'])
 
 function clearFacadeSelection() {
   calc.idFacade.value = ''
@@ -40,45 +36,27 @@ function clearYardSelection() {
   calc.colorYard.value = ''
 }
 
-function onFillSideChange() {
-  if (calc.fillSide.value === 1) {
-    calc.materialYardGlob.value = null
-    clearYardSelection()
-  } else if (!hasInvalidFillingGroupSelection(null, calc.materialYardGlob.value)) {
-    calc.materialYardGlob.value = calc.materialFacadeGlob.value
-    clearYardSelection()
-  }
-  save()
-}
-
-function onMaterialFacadeChange() {
-  clearFacadeSelection()
-  if (calc.fillSide.value === 2) {
-    calc.materialYardGlob.value = calc.materialFacadeGlob.value
-    clearYardSelection()
-  }
-  save()
-}
-
-function onMaterialYardChange() {
+function normalizeSelection() {
+  if (calc.materialFacadeGlob.value !== 'lamella') clearFacadeSelection()
+  calc.fillSide.value = 1
+  calc.materialFacadeGlob.value = 'lamella'
+  calc.materialYardGlob.value = null
   clearYardSelection()
-  save()
 }
 
 async function save() {
   if (await saveNoFilling(calc)) return
+  normalizeSelection()
   const params = [
     { paramCode: 'fillingProvider', name: 'Материал заполнения', value: participantRoleLabel('provide', calc.providesMaterial.value) },
     { paramCode: 'sideCount', name: 'Сторона заполнения',          value: fillingSideCountLabel(calc.fillSide.value) },
     { paramCode: 'facadeGroup', name: 'Материал заполнения (фасад)', value: fillingMaterialGroupLabel(calc.materialFacadeGlob.value) },
   ]
-  if (calc.fillSide.value === 2) {
-    params.push({ paramCode: 'yardGroup', name: 'Материал заполнения (двор)', value: fillingMaterialGroupLabel(calc.materialYardGlob.value) })
-  }
   calc.updateOrCreateBlock('filling', params, 'Заполнение')
 
   await saveWicketData({
     ...calc.getBaseSavePayload(),
+    idFacade: calc.idFacade.value || null,
     providesMaterial: calc.providesMaterial.value,
     fillingOrientationCode: calc.raspolozheniyePolotna.value,
     fillSide:                calc.fillSide.value,
@@ -122,16 +100,6 @@ async function save() {
 onMounted(async () => {
   calc.setActivePage('page2')
   if (calc.fillSide.value === 0) { calc.clearFilling(); await save(); return }
-  if (hasInvalidFillingGroupSelection(calc.materialFacadeGlob.value, calc.materialYardGlob.value)
-    || hasInvalidFillingSideCountSelection(calc.fillSide.value)) return
-  if (calc.fillSide.value === null) calc.fillSide.value = 1
-  // Дефолт материала «Ламель» (единственная опция) — выставляем, если ещё не выбран
-  if (!calc.materialFacadeGlob.value) {
-    calc.materialFacadeGlob.value = 'lamella'
-  }
-  if (calc.fillSide.value === 2 && !calc.materialYardGlob.value) {
-    calc.materialYardGlob.value = 'lamella'
-  }
   await save()
 })
 </script>
@@ -151,74 +119,13 @@ onMounted(async () => {
     <!-- Группы карточек -->
     <div v-if="calc.fillSide.value !== 0" class="flex flex-col gap-6 mt-4">
 
-      <!-- Сторона заполнения -->
       <div>
         <h2 class="text-center text-xl font-semibold mb-3">Сторона заполнения</h2>
-        <div class="option-grid">
-          <label
-            v-for="opt in fillSideOptions"
-            :key="opt.value"
-            class="lock-card"
-          >
-            <input
-              v-model="calc.fillSide.value"
-              name="fillingSideCount"
-              type="radio"
-              :value="opt.value"
-              class="sr-only"
-              @change="onFillSideChange"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
-        </div>
+        <p class="fixed-selection" data-testid="lamella-side-count">{{ fillingSideCountLabel(1) }}</p>
       </div>
-
-      <!-- Материал заполнения (фасад) -->
       <div>
-        <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (фасад)</h2>
-        <div class="option-grid">
-          <label
-            v-for="opt in materialOptions"
-            :key="opt.value"
-            class="lock-card"
-          >
-            <input
-              v-model="calc.materialFacadeGlob.value"
-              type="radio"
-              :value="opt.value"
-              class="sr-only"
-              @change="onMaterialFacadeChange"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Материал заполнения (двор) — только при "Две стороны" -->
-      <div v-if="calc.fillSide.value === 2">
-        <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения (двор)</h2>
-        <div class="option-grid">
-          <label
-            v-for="opt in materialOptions"
-            :key="opt.value"
-            class="lock-card"
-          >
-            <input
-              v-model="calc.materialYardGlob.value"
-              type="radio"
-              :value="opt.value"
-              class="sr-only"
-              @change="onMaterialYardChange"
-            />
-            <div class="card-content">
-              <span class="block text-sm font-semibold text-center">{{ opt.label }}</span>
-            </div>
-          </label>
-        </div>
+        <h2 class="text-center text-xl font-semibold mb-3">Материал заполнения</h2>
+        <p class="fixed-selection" data-testid="lamella-material">{{ fillingMaterialGroupLabel('lamella') }}</p>
       </div>
 
     </div>
@@ -226,42 +133,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.option-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 4px;
-}
-
-@media (min-width: 640px) {
-  .option-grid {
-    grid-template-columns: repeat(2, 1fr);
-    min-width: 350px;
-    max-width: 600px;
-    margin-inline: auto;
-  }
-}
-
-.lock-card {
-  cursor: pointer;
-  border: 2px solid #e5e7eb;
+.fixed-selection {
+  max-width: 600px;
+  margin-inline: auto;
+  padding: 16px;
+  border: 2px solid #3b82f6;
   border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-
-.lock-card:hover {
-  border-color: #93c5fd;
-}
-
-.lock-card:has(input[type="radio"]:checked) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   background: #eff6ff;
-}
-
-.card-content {
-  padding: 12px;
+  text-align: center;
+  font-weight: 600;
 }
 </style>

@@ -50,9 +50,20 @@ describe('material directory relation requests', () => {
     const wicket = await import('./wicket')
     api.post.mockResolvedValue({ data: { data: { table: [], pagination: { page: 1, pageSize: 100, totalCount: 0, pageCount: 1 } } } })
     await wicket.getSidingTable('2', { materials: ['Текстовый поиск'], form: ['901'], typeOfCoating: ['707'] })
-    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-siding', { materials: ['Текстовый поиск'], sidingFormIds: [901], typeOfCoatingIds: [707], page: 1 })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-siding', { materials: ['Текстовый поиск'], sidingTypeIds: [901], sidingFormCodes: [], typeOfCoatingIds: [707], page: 1 })
     await wicket.getProfnastilTable('2', { materials: ['602'], typeOfCoating: ['707'] })
-    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-profnastil', { profileTypeIds: [602], typeOfCoatingIds: [707], page: 1 })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-profnastil', { profileTypeIds: [602], profnastilFormCodes: [], typeOfCoatingIds: [707], page: 1 })
+  })
+
+  it('preserves siding form codes including leading zeroes independently from titles', async () => {
+    const wicket = await import('./wicket')
+    api.post.mockResolvedValue({ data: { data: { table: [{ id: 37, sidingFormCode: '01', sidingFormTitle: 'Новая подпись' }], pagination: {} } } })
+    const response = await wicket.getSidingTable('2', { materials: [], form: [], sidingForm: ['01', 'ship-lap'], typeOfCoating: [] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filling-siding', { materials: [], sidingTypeIds: [], sidingFormCodes: ['01', 'ship-lap'], typeOfCoatingIds: [], page: 1 })
+    expect(response.table[0]).toMatchObject({ sidingFormCode: '01', sidingFormTitle: 'Новая подпись' })
+    api.post.mockResolvedValue({ data: { data: { sidingForm: [{ id: '01', name: 'Новая подпись' }] } } })
+    expect(await wicket.getFilterOptions('/api/wicket/type2/get-filter-data-siding', 'sidingForm')).toEqual({ sidingForm: [{ id: '01', name: 'Новая подпись' }] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type2/get-filter-data-siding', { type: 'sidingForm' })
   })
 
   it('rejects display names rather than converting them into numeric identifiers', async () => {
@@ -65,7 +76,7 @@ describe('material directory relation requests', () => {
     api.post.mockResolvedValue({ data: { data: { table: [] } } })
     await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], typeOfCoating: ['707'] })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', {
-      companies: [], materials: [], widthFence: [], typeOfCoatingIds: [707], page: 1,
+      companies: [], materials: [], widthFence: [], fenceFormCodes: [], manufacturerIds: [], typeOfCoatingIds: [707], page: 1,
     })
     await wicket.getZhalyuziTable('6', { companies: [], materials: [], thickness: [], colors: [], typeOfCoating: ['808'] })
     expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type6/get-filling-zhalyuzi', {
@@ -144,6 +155,15 @@ describe('wicket accessory composition API', () => {
       '/api/wicket/type1/get-filling-appearance-options',
       { materialGroupCode: 'siding' },
     )
+  })
+
+  it('scopes siding appearance by material ID without affecting other groups', async () => {
+    api.post.mockResolvedValue({ data: { data: { manufacturers: [], colors: [] } } })
+    const { getFillingAppearanceOptions } = await import('./wicket')
+    await getFillingAppearanceOptions(1, 'siding', 7)
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/get-filling-appearance-options', { materialGroupCode: 'siding', sidingId: 7 })
+    await getFillingAppearanceOptions(1, 'profnastil', 7)
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/get-filling-appearance-options', { materialGroupCode: 'profnastil', profnastilId: 7 })
   })
 
   it('loads the canonical composition from the exact endpoint', async () => {
@@ -382,4 +402,25 @@ describe('background price calculation', () => {
       expect(listener).not.toHaveBeenCalled()
     } finally { unsubscribe() }
   })
+})
+
+describe('profnastil material palettes and forms', () => {
+  it('passes stable form codes and the selected material ID', async () => {
+    api.post.mockResolvedValue({ data: { data: { table: [], colors: [] } } })
+    const wicket = await import('./wicket')
+    await wicket.getProfnastilTable(1, { materials: [], typeOfCoating: [], profnastilForm: ['c8'] })
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/get-filling-profnastil', { profileTypeIds: [], typeOfCoatingIds: [], profnastilFormCodes: ['c8'], page: 1 })
+    await wicket.getProfnastilColors(1, 71)
+    expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type1/get-profnastil-colors', { profnastilId: 71 })
+  })
+})
+
+it('passes fence form codes, manufacturer IDs and the selected palette ID separately from renamed titles', async () => {
+  const wicket = await import('./wicket')
+  api.post.mockResolvedValue({ data: { data: { table: [] } } })
+  await wicket.getFenceTable('3', { companies: [], materials: [], widthFence: [], typeOfCoating: [], fenceForm: ['01'], manufacturers: ['37'] })
+  expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-fence', expect.objectContaining({ fenceFormCodes: ['01'], manufacturerIds: [37] }))
+  api.post.mockResolvedValue({ data: { data: { manufacturers: [], colors: [] } } })
+  await wicket.getFillingAppearanceOptions('3', 'fence', 96)
+  expect(api.post).toHaveBeenLastCalledWith('/api/wicket/type3/get-filling-appearance-options', { materialGroupCode: 'fence', fenceId: 96 })
 })

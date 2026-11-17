@@ -575,6 +575,55 @@ describe('WicketWizardPage mobile summary', () => {
     expect(mocks.recalculate).not.toHaveBeenCalled()
   })
 
+
+  it('preserves a migrated universal handle and its color during lock-set wizard hydration', async () => {
+    mocks.route.query = { orderId: '42', productRowId: '7' }
+    mocks.loadWicketData.mockResolvedValue({
+      orderId: 42,
+      productRowId: 7,
+      modelId: '1',
+      lockSetId: 9,
+      lockPenId: 81,
+      lockPenMaterialItemId: 100081,
+      lockPenColorId: 82,
+      lockPenColor: 'Старый цвет',
+      priceRetail: '19978.49',
+      activePage: 'page12',
+      reachedStep: 'page12',
+      visitedPages: ['page7', 'page_lock_type', 'page12'],
+    })
+    mocks.getLocks.mockResolvedValue({
+      items: [{
+        id: 9,
+        marking: 'Комплект из каталога',
+        imageUrls: [],
+        components: [{ id: 91, name: 'Корпус замка', imageUrls: [] }],
+      }],
+    })
+
+    mountPage({ page7: EmptyStep, page12: defineComponent({ template: '<div>Итого</div>' }) })
+    await flushPromises()
+
+    const calc = useCalculation()
+    expect(calc.activePage.value).toBe('page12')
+    expect(calc.typeLock.value).toBe('Комплект из каталога')
+    expect(calc.lockPenMaterialItemId.value).toBe(100081)
+    expect(calc.lockPenId.value).toBe(81)
+    expect(calc.lockPenColorId.value).toBe(82)
+    expect(calc.lockPenColor.value).toBe('Старый цвет')
+    expect(calc.data.value.find(block => block.blockName === 'Замок')?.params).toContainEqual({
+      paramCode: 'lockType', name: 'Тип замка',
+      value: 'Комплект из каталога',
+    })
+    expect(calc.data.value.flatMap(block => block.params)).not.toContainEqual({
+      paramCode: 'penColor', name: 'Цвет ручки',
+      value: 'Старый цвет',
+    })
+    expect(mocks.getLocks).toHaveBeenCalledTimes(1)
+    expect(mocks.saveWicketData).not.toHaveBeenCalled()
+    expect(mocks.recalculate).not.toHaveBeenCalled()
+  })
+
   it('keeps the wicket load usable when the lock-set catalog is temporarily unavailable', async () => {
     mocks.route.query = { orderId: '42', productRowId: '7' }
     mocks.loadWicketData.mockResolvedValue({

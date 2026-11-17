@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { imageDimensions, reliefLayout, svgDimensions } from './reliefLayout'
 
 describe('uploaded relief units', () => {
+  it('uses the long axis of a one-pixel vertical strip across the material', () => {
+    const source = { width: 1, height: 295 }
+    expect(reliefLayout({ width: 700, height: 1500 }, source, 'vertical', 'stretch', 'repeat')).toEqual({ width: 295, height: 1500 })
+    expect(reliefLayout({ width: 700, height: 1500 }, source, 'horizontal', 'stretch', 'repeat')).toEqual({ width: 295, height: 700 })
+    expect(reliefLayout({ width: 700, height: 1500 }, source, 'vertical', 'repeat', 'repeat')).toEqual({ width: 295, height: 1 })
+    expect(reliefLayout({ width: 700, height: 1500 }, { width: 1, height: 1 }, 'vertical', 'repeat', 'repeat')).toEqual({ width: 1, height: 1 })
+  })
   it('isolates malformed and external sources without rejecting the live preview', async () => {
     expect(await imageDimensions('http://[bad', new AbortController().signal)).toBeNull()
     expect(await imageDimensions('https://external.invalid/relief.svg', new AbortController().signal)).toBeNull()

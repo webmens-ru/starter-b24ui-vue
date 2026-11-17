@@ -119,6 +119,7 @@ export function useCalculation() {
       providesLock: form.providesLock || null,
       lockInstaller: form.lockInstaller || null,
       lockPenId: form.lockPenId,
+      lockPenMaterialItemId: form.lockPenMaterialItemId,
       lockPenColorId: form.lockPenColorId,
       isTherePen: form.isTherePen,
       isTherePenName: form.isTherePenName,

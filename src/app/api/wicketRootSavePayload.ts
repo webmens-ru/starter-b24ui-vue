@@ -69,6 +69,10 @@ export function canonicalizeWicketRootSavePayload(
   void _fillingProfileYard
   void _fillingProfileYardProblem
 
+  delete canonicalPayload.lamelWorkingWidthFacade
+  delete canonicalPayload.lamelWorkingWidthYard
+  delete canonicalPayload.widthLamelFacade
+  delete canonicalPayload.widthLamelYard
   delete canonicalPayload.fillingFacadeReady
   delete canonicalPayload.fillingYardReady
   delete canonicalPayload.fillingNeedsRecalculation
@@ -131,6 +135,10 @@ export function canonicalizeWicketRootSavePayload(
     if (!explicit && (value === undefined || value === null || value === '')) continue
     if (!isParticipantRole(value)) throw new TypeError(`Некорректная роль: ${codeKey}`)
     canonicalPayload[codeKey] = value
+  }
+  if (Object.prototype.hasOwnProperty.call(canonicalPayload, 'lockPenMaterialItemId')) {
+    delete canonicalPayload.lockPenId
+    return { ...canonicalPayload, ...(canonicalPayload.lockPenMaterialItemId == null ? { lockPenColorId: null } : {}) }
   }
   return {
     ...canonicalPayload,

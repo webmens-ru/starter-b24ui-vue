@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 import { ref, reactive, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { parseFillingDrawingDescriptor } from '../../../app/api/fillingDrawingProfiles'
@@ -37,6 +38,7 @@ function openModal(msg: string, title = 'Внимание') {
 }
 
 const filters = reactive({
+  profnastilForm: [] as string[],
   materials: [] as string[],
   typeOfCoating: [] as string[],
 })
@@ -69,7 +71,7 @@ const selectedColor = computed<ProfnastilColorOption | undefined>(() =>
 )
 
 const colorSelectItems = computed(() =>
-  colors.value.map((c) => ({ id: c.id, label: c.name })),
+  colors.value.map((c) => ({ id: c.id, label: c.label ?? c.name, hex: c.hex })),
 )
 
 async function loadTable(page = currentPage.value) {
@@ -92,16 +94,24 @@ async function loadTable(page = currentPage.value) {
   }
 }
 
+let colorRevision = 0
 async function loadColors() {
+  const revision = ++colorRevision
+  const context = catalogContext.value
+  const materialId = selectedRow.value?.id
+  const current = () => !disposed && revision === colorRevision && context === catalogContext.value && materialId === selectedRow.value?.id
+  colors.value = []
   colorLoading.value = true
   try {
-    const result = await getProfnastilColors(calc.modelId.value)
+    const result = await getProfnastilColors(calc.modelId.value, materialId)
+    if (!current()) return
     colors.value = result.colors
   } catch (e) {
+    if (!current()) return
     console.warn('getProfnastilColors недоступен:', e)
     colors.value = []
   } finally {
-    colorLoading.value = false
+    if (current()) colorLoading.value = false
   }
 }
 
@@ -156,10 +166,10 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.fillingProfileFacadeProblem.value = descriptor.problem
   calc.profileTypeFacadeId.value = row.profileTypeId ?? null
   calc.typeOfCoatingFacadeId.value = row.typeOfCoatingId ?? null
-  calc.sidingFormFacadeId.value = null
+  calc.sidingTypeFacadeId.value = null
   calc.idFacade.value                = row.id
   calc.materialFacade.value          = row.material
-  calc.formFacade.value              = ''
+  calc.formFacade.value              = row.profnastilFormTitle ?? ''
   calc.thicknessFacade.value         = String(row.thickness)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
   calc.coatingFacadeHex.value        = row.coatingHex ?? ''
@@ -190,8 +200,14 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   }
 }
 
+function chooseColor(id: number | null | undefined): void {
+  if (colorLoading.value || !colors.value.some(color => color.id === id)) return
+  selectedColorId.value = id ?? null
+  void saveColor()
+}
+
 async function saveColor() {
-  if (!selectedRow.value) return
+  if (!selectedRow.value || colorLoading.value || !selectedColor.value) return
   applySelectedColor()
   const attempt = appearanceSave.beginSave()
   calc.updateOrCreateBlock('fillingFacade', buildSummaryParams(), 'Заполнение (фасад)')
@@ -284,7 +300,8 @@ async function validateStep(): Promise<boolean> {
     openModal('Вы не заполнили этот блок!')
     return false
   }
-  if (!hasRequiredFillingColor(selectedColorId.value, calc.colorFacade.value)) {
+  if (!hasRequiredFillingColor(selectedColorId.value, calc.colorFacade.value)
+    || colorLoading.value || !colors.value.some(color => color.id === selectedColorId.value)) {
     openModal('Вы не выбрали цвет!')
     return false
   }
@@ -319,18 +336,16 @@ function restoreFromCalc(): ProfnastilRow | null {
   }
 }
 
-watch(() => calc.idFacade.value, async (val) => {
+watch(() => calc.idFacade.value, (val) => {
   if (!val) return
   const saved = restoreFromCalc()
   if (saved && !selectedRow.value) {
     selectedRow.value = saved
-    try {
-      if (await save(saved)) appearanceSave.resetToCurrent()
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
+    appearanceSave.resetToCurrent()
   }
 }, { immediate: true })
+
+watch([catalogContext, () => selectedRow.value?.id], () => { void loadColors() })
 
 onMounted(async () => {
   calc.setActivePage('page2_facade_profnastil')
@@ -372,15 +387,14 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-2">
       <label class="font-semibold">Цвет</label>
-      <B24SelectMenu
+      <ColorSelectMenu
         :model-value="selectedColorId ?? undefined"
         value-key="id"
         :items="colorSelectItems"
         placeholder="Выберите цвет"
-        :b24ui="{ content: 'z-50' }"
         :disabled="!selectedRow || colorLoading"
         class="w-full"
-        @update:model-value="(id) => { selectedColorId = id ?? null; saveColor() }"
+        @update:model-value="chooseColor($event === undefined ? undefined : Number($event))"
       />
       <span v-if="colorLoading" class="text-xs text-gray-400">Загрузка цветов...</span>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ColorSelectMenu from './shared/ColorSelectMenu.vue'
 import { formatMaterialPrice } from './shared/materialPrice'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getCoverStrips, recalculate, saveWicketData } from '../../app/api/wicket'
@@ -206,7 +207,7 @@ onMounted(async () => {
         </div>
         <div v-for="definition in itemFor(row.materialItemId)?.orderParameters.filter(def => def.code === 'color' && def.dataType === 'color') ?? []" :key="definition.attributeId" class="flex flex-col gap-2">
           <label :for="`cover-strip-color-${index}-${definition.attributeId}`" class="font-semibold">{{ definition.name }}</label>
-          <B24SelectMenu :b24ui="selectMenuUi" :content="{ align: 'start' }"
+          <ColorSelectMenu
             :id="`cover-strip-color-${index}-${definition.attributeId}`" data-color
             :model-value="row.parameters.find(p => p.attributeId === definition.attributeId)?.colorId ?? undefined"
             :items="definition.values" value-key="id" placeholder="Выберите цвет"

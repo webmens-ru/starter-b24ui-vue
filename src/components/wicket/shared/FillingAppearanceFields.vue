@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ColorSelectMenu from './ColorSelectMenu.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   getFillingAppearanceOptions,
@@ -13,6 +14,9 @@ type SelectValue = string | number | null | undefined
 const props = withDefaults(defineProps<{
   modelId: string | number
   materialGroup: string
+  sidingId?: string | number | null
+  fenceId?: string | number | null
+  profnastilId?: string | number | null
   side: FillingSide
   showManufacturer?: boolean
   disabled?: boolean
@@ -25,6 +29,7 @@ const emit = defineEmits<{
 const calc = useCalculation()
 const options = ref<FillingAppearanceOptions>({ manufacturers: [], colors: [] })
 const loading = ref(false)
+const optionsReady = ref(false)
 const submitted = ref(false)
 let loadVersion = 0
 
@@ -44,7 +49,9 @@ const selectedColorName = computed(() => (
   props.side === 'facade' ? calc.colorFacade.value : calc.colorYard.value
 ))
 const colorValid = computed(() => (
-  hasRequiredFillingColor(selectedColorId.value, selectedColorName.value)
+  optionsReady.value
+    && options.value.colors.some(item => sameValue(item.id, selectedColorId.value))
+    && hasRequiredFillingColor(selectedColorId.value, selectedColorName.value)
 ))
 
 const manufacturerItems = computed(() => [
@@ -54,7 +61,7 @@ const manufacturerItems = computed(() => [
 
 const colorItems = computed(() => [
   { id: '', label: 'Не выбран' },
-  ...options.value.colors.map(item => ({ id: item.id, label: item.name })),
+  ...options.value.colors.map(item => ({ id: item.id, label: item.label ?? item.name, hex: item.hex })),
 ])
 
 function sameValue(left: SelectValue, right: SelectValue): boolean {
@@ -115,29 +122,43 @@ function reconcileSelection(): void {
   if (manufacturerChanged || colorChanged) emit('change')
 }
 
-async function loadOptions(): Promise<void> {
+const appearanceContext = computed(() => [props.modelId, props.materialGroup,
+  props.materialGroup === 'siding' ? props.sidingId : props.materialGroup === 'profnastil' ? props.profnastilId : props.materialGroup === 'fence' ? props.fenceId : null,
+  calc.orderId.value, calc.productRowId.value] as const)
+
+async function loadOptions(materialChanged: boolean): Promise<void> {
   const version = ++loadVersion
+  const context = appearanceContext.value
+  const current = () => version === loadVersion && context === appearanceContext.value
   loading.value = true
+  optionsReady.value = false
+  options.value = { manufacturers: [], colors: [] }
   try {
-    const loaded = await getFillingAppearanceOptions(props.modelId, props.materialGroup)
-    if (version !== loadVersion) return
+    const materialId = props.materialGroup === 'siding' ? props.sidingId : props.materialGroup === 'fence' ? props.fenceId : props.profnastilId
+    const loaded = materialId != null
+      ? await getFillingAppearanceOptions(props.modelId, props.materialGroup, materialId)
+      : await getFillingAppearanceOptions(props.modelId, props.materialGroup)
+    if (!current()) return
     options.value = loaded
-    reconcileSelection()
+    optionsReady.value = true
+    if (materialChanged) reconcileSelection()
   } catch (error) {
-    if (version !== loadVersion) return
+    if (!current()) return
     options.value = { manufacturers: [], colors: [] }
     console.warn('Варианты оформления заполнения недоступны:', error)
   } finally {
-    if (version === loadVersion) loading.value = false
+    if (current()) loading.value = false
   }
 }
 
 function onManufacturerChange(value: SelectValue): void {
+  if (!optionsReady.value || loading.value) return
   const selected = options.value.manufacturers.find(item => sameValue(item.id, value))
   if (setManufacturer(selected)) emit('change')
 }
 
 function onColorChange(value: SelectValue): void {
+  if (!optionsReady.value || loading.value) return
   const selected = options.value.colors.find(item => sameValue(item.id, value))
   if (setColor(selected)) emit('change')
 }
@@ -150,8 +171,18 @@ function validate(): boolean {
 defineExpose({ validate })
 
 watch(
-  () => [props.modelId, props.materialGroup] as const,
-  loadOptions,
+  appearanceContext,
+  (context, previous) => {
+    const sameProduct = previous !== undefined
+      && sameValue(context[3], previous[3])
+      && sameValue(context[4], previous[4])
+    const materialChanged = sameProduct && (
+      !sameValue(context[0], previous[0])
+      || context[1] !== previous[1]
+      || !sameValue(context[2], previous[2])
+    )
+    void loadOptions(materialChanged)
+  },
   { immediate: true },
 )
 
@@ -171,22 +202,21 @@ onBeforeUnmount(() => {
         :items="manufacturerItems"
         placeholder="Не выбран"
         class="w-full"
-        :disabled="loading || disabled"
+        :disabled="loading || !optionsReady || disabled"
         @update:model-value="onManufacturerChange"
       />
     </label>
 
     <label class="appearance-field">
       <span class="font-semibold">Цвет</span>
-      <B24SelectMenu
+      <ColorSelectMenu
         data-testid="appearance-color"
         :model-value="selectedColorId"
         value-key="id"
         :items="colorItems"
         placeholder="Не выбран"
         class="w-full"
-        :b24ui="{ content: 'z-50' }"
-        :disabled="loading || disabled"
+        :disabled="loading || !optionsReady || disabled"
         @update:model-value="onColorChange"
       />
       <span

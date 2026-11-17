@@ -2,7 +2,7 @@ import FillingAppearanceFields from '../shared/FillingAppearanceFields.vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { getFenceGapOptions, getFenceTable, saveWicketData } from '../../../app/api/wicket'
+import { getFillingAppearanceOptions, getFenceGapOptions, getFenceTable, saveWicketData } from '../../../app/api/wicket'
 import { useCalculation } from '../../../composables/useCalculation'
 import T3FenceFacade from './T3FenceFacade.vue'
 
@@ -124,11 +124,27 @@ it('places the color field above the table and persists its independent choice',
   const wrapper = mountPage()
   await flushPromises()
   const appearance = wrapper.getComponent(FillingAppearanceFields)
-  expect(appearance.props('showManufacturer')).toBe(false)
+  expect(appearance.props('showManufacturer')).toBe(true)
+  expect(appearance.props('fenceId')).toBe(useCalculation().idFacade.value)
   expect(appearance.props('side')).toBe('facade')
   expect(wrapper.html().indexOf('appearance-fields')).toBeLessThan(wrapper.html().indexOf('<table'))
   appearance.vm.$emit('change')
   await flushPromises()
   expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ colorFacadeId: 8, colorFacade: 'Сохранённый цвет' }))
+  wrapper.unmount()
+})
+
+it('clears a color outside the new material palette before saving its ID', async () => {
+  const calc = useCalculation()
+  calc.idYard.value = ''
+  vi.mocked(getFenceTable).mockResolvedValueOnce({ table: [{ id: 902, company: 'Производитель', material: 'Переименованный материал', fenceFormCode: '01', fenceFormName: 'Переименованная форма', widthFence: 100, typeOfCoating: '' }], pagination: { page: 1, pageSize: 100, totalCount: 1, pageCount: 1 } })
+  const wrapper = mountPage()
+  await flushPromises()
+  vi.mocked(getFillingAppearanceOptions).mockResolvedValueOnce({ manufacturers: [], colors: [{ id: 9, name: 'Другой цвет', hex: '#ffffff', image: null }] })
+  await wrapper.findAll('tbody input')[1]!.setValue(true)
+  await flushPromises()
+  expect(saveWicketData).toHaveBeenLastCalledWith(expect.objectContaining({ idFacade: 902, colorFacadeId: null, colorFacade: '' }))
+  expect(wrapper.text()).toContain('Переименованная форма')
+  expect(calc.formFacade.value).toBe('Переименованная форма')
   wrapper.unmount()
 })

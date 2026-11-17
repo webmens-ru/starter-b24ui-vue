@@ -12,7 +12,7 @@ interface PenItem {
   marking: string
   price?: number | null
   canUseFrameColor: boolean
-  colors: { id: number; name: string }[]
+  colors: { id: number; name: string; label?: string }[]
   imageUrls?: string[]
 }
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()

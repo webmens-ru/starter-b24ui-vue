@@ -2,6 +2,7 @@
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useCalculation } from '../../../composables/useCalculation'
 import { getLamelTable, saveWicketData, recalculate, type LamelRow, type SidingPagination } from '../../../app/api/wicket'
+import ColorSelectMenu from '../shared/ColorSelectMenu.vue'
 import T4FilterDropdown from './T4FilterDropdown.vue'
 import { wicketLamelFilterDataUrl } from '../shared/wicketMaterialApiPaths'
 
@@ -43,6 +44,8 @@ async function loadTable(page = currentPage.value) {
   try {
     const result = await getLamelTable(calc.modelId.value, filters, page)
     rows.value        = result.table
+    const selected = result.table.find(row => String(row.id) === String(calc.idFacade.value))
+    if (selected) selectedRow.value = selected
     pagination.value  = result.pagination
     currentPage.value = result.pagination.page
   } catch (e) {
@@ -63,19 +66,50 @@ watch(filters, () => {
   loadTable(1)
 }, { deep: true })
 
-// Восстановление при загрузке данных (редактирование): id_facade может появиться после монтирования
-watch(() => calc.idFacade.value, async (val) => {
-  if (!val) return
-  const saved = restoreFromCalc()
-  if (saved && !selectedRow.value) {
-    selectedRow.value = saved
-    try {
-      await save(saved)
-    } catch (e) {
-      console.warn('saveWicketData при восстановлении:', e)
-    }
+// Hydration restores the snapshot without writing it back to the server.
+watch(() => calc.idFacade.value, async () => {
+  if (String(selectedRow.value?.id ?? '') !== String(calc.idFacade.value ?? '')) {
+    selectedRow.value = rows.value.find(row => String(row.id) === String(calc.idFacade.value)) ?? restoreFromCalc()
+    if (selectedRow.value && !selectedRow.value.colors) await loadSelectedPalette()
   }
 }, { immediate: true })
+
+async function loadSelectedPalette() {
+  const selectedId = calc.idFacade.value
+  if (!selectedId) return
+  try {
+    const result = await getLamelTable(calc.modelId.value, {
+      companies: [], materials: [], width: [], typeOfCoating: [], colors: [], materialIds: [selectedId],
+    }, 1)
+    if (String(calc.idFacade.value) !== String(selectedId)) return
+    const selected = result.table.find(row => String(row.id) === String(selectedId))
+    if (selected) selectedRow.value = selected
+  } catch (error) {
+    console.warn('Не удалось загрузить палитру сохранённого материала:', error)
+  }
+}
+
+const colorItems = computed(() => {
+  const palette = selectedRow.value?.colors ?? []
+  const currentId = calc.colorFacadeId.value
+  if (currentId !== null && currentId !== '' && !palette.some(color => String(color.id) === String(currentId))) {
+    return [...palette, { id: currentId, label: calc.colorFacade.value || 'Сохранённый цвет', disabled: true }]
+  }
+  return palette
+})
+const selectedColorId = computed(() => calc.colorFacadeId.value ?? undefined)
+
+async function selectColor(value: string | number | undefined) {
+  const row = selectedRow.value
+  const color = row?.colors?.find(item => String(item.id) === String(value))
+  if (!row || !color) return
+  calc.colorFacadeId.value = color.id
+  calc.colorFacade.value = color.label
+  calc.colorFacadeHex.value = color.hex ?? ''
+  calc.colorFacadeImage.value = color.image ?? ''
+  await save(row)
+  await doRecalculate()
+}
 
 function restoreFromCalc(): LamelRow | null {
   if (!calc.idFacade.value) return null
@@ -83,13 +117,23 @@ function restoreFromCalc(): LamelRow | null {
     id:            calc.idFacade.value,
     company:       calc.materialSupplierFacade.value,
     material:      calc.materialFacade.value,
-    width:         calc.thicknessFacade.value,
+    width:         calc.lamelWorkingWidthFacade.value ?? '',
+    workingWidth: calc.lamelWorkingWidthFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
     color:         calc.colorFacade.value,
   }
 }
 
+function applyDrawingMetadata(row: LamelRow) {
+  const width = Number(row.workingWidth)
+  calc.lamelWorkingWidthFacade.value = row.workingWidth != null && Number.isFinite(width) && width > 0 ? width : null
+  calc.reliefFacadeImage.value = row.reliefImage ?? ''
+  calc.reliefFacadeAlongMode.value = row.reliefAlongMode ?? 'stretch'
+  calc.reliefFacadeAcrossMode.value = row.reliefAcrossMode ?? 'repeat'
+}
+
 async function save(row: LamelRow) {
+  applyDrawingMetadata(row)
   calc.idFacade.value                = row.id
   calc.materialSupplierFacade.value = row.company
   calc.materialFacade.value          = row.material
@@ -97,14 +141,14 @@ async function save(row: LamelRow) {
   // width сохраняем в поле thicknessFacade (общая колонка ассортимента)
   calc.thicknessFacade.value         = String(row.width)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
-  calc.colorFacade.value             = row.color
+  // Colour labels are presentation snapshots; the FK is selected independently.
 
   calc.updateOrCreateBlock('fillingFacade', [
     { paramCode: 'materialManufacturer', name: 'Производитель материала', value: row.company },
     { paramCode: 'material', name: 'Материал',                value: row.material },
     { paramCode: 'lamellaWidth', name: 'Ширина ламели',           value: String(row.width) },
     { paramCode: 'coating', name: 'Тип покрытия',            value: row.typeOfCoating },
-    { paramCode: 'color', name: 'Цвет',                    value: row.color },
+    { paramCode: 'color', name: 'Цвет',                    value: calc.colorFacade.value },
   ], 'Заполнение (фасад)')
 
   try {
@@ -114,9 +158,9 @@ async function save(row: LamelRow) {
       materialFacadeGlob:     calc.materialFacadeGlob.value,
       materialSupplierFacade: row.company,
       materialFacade:          row.material,
-      widthLamelFacade:        String(row.width),
       typeOfCoatingFacade:   row.typeOfCoating,
-      colorFacade:             row.color,
+      colorFacade:             calc.colorFacade.value,
+      colorFacadeId:           calc.colorFacadeId.value,
     })
   } catch (e) {
     console.warn('saveWicketData недоступен:', e)
@@ -140,14 +184,29 @@ async function doRecalculate() {
 }
 
 async function selectRow(row: LamelRow) {
+  const current = calc.colorFacadeId.value
+  const validColor = row.colors?.find(color => String(color.id) === String(current))
+  calc.colorFacadeId.value = validColor?.id ?? null
+  calc.colorFacade.value = validColor?.label ?? ''
+  calc.colorFacadeHex.value = validColor?.hex ?? ''
+  calc.colorFacadeImage.value = validColor?.image ?? ''
+  applyDrawingMetadata(row)
   selectedRow.value = row
+  calc.idFacade.value = row.id
+  if (!validColor) return
   await save(row)
   await doRecalculate()
 }
 
 function deselectRow() {
   selectedRow.value = null
+  calc.lamelWorkingWidthFacade.value = null
+  calc.reliefFacadeImage.value = ''
   calc.idFacade.value = ''
+  calc.colorFacadeId.value = null
+  calc.colorFacade.value = ''
+  calc.colorFacadeHex.value = ''
+  calc.colorFacadeImage.value = ''
 }
 
 function isSelected(row: LamelRow) {
@@ -157,6 +216,10 @@ function isSelected(row: LamelRow) {
 function onContinue() {
   if (!selectedRow.value) {
     openModal('Вы не заполнили этот блок!')
+    return
+  }
+  if (!calc.colorFacadeId.value && !calc.colorFacade.value) {
+    openModal('Выберите цвет ламелей!')
     return
   }
   emit('next')
@@ -220,6 +283,12 @@ onMounted(async () => {
       />
     </div>
 
+    <div v-if="selectedRow" class="max-w-lg">
+      <label class="block text-sm mb-1">Цвет ламелей</label>
+      <ColorSelectMenu :model-value="selectedColorId" :items="colorItems" placeholder="Выберите цвет" @update:model-value="selectColor" />
+      <p v-if="!selectedColorId && calc.colorFacade.value" class="text-sm text-gray-500">Сохранённый цвет: {{ calc.colorFacade.value }}</p>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-sm">
         <thead class="sticky top-0 z-[9] bg-gray-100">
@@ -249,7 +318,7 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.width }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.color }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ selectedRow.colorTitles?.join(', ') || selectedRow.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ selectedRow.price ?? '' }}</td>
           </tr>
 
@@ -270,7 +339,7 @@ onMounted(async () => {
             <td class="border border-gray-300 px-2 py-1">{{ row.material }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.width }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.typeOfCoating }}</td>
-            <td class="border border-gray-300 px-2 py-1">{{ row.color }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ row.colorTitles?.join(', ') || row.color }}</td>
             <td class="border border-gray-300 px-2 py-1">{{ row.price ?? '' }}</td>
           </tr>
 

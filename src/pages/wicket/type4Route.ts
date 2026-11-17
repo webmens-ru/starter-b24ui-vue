@@ -7,7 +7,7 @@ export const type4Route = defineWicketRoute([
   postsSection(),
   shieldSection(),
   canvasSection(),
-  fixedFillingSection('page2_facade_lamel', 'page2_yard_lamel'),
+  fixedFillingSection('page2_facade_lamel'),
   ...standardTailSections(),
 ])
 export type Type4NavState = WicketSharedNavState

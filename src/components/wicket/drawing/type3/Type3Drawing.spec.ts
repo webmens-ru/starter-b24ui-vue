@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useWicketFormStore } from '../../../../stores/wicket/wicketFormStore'
@@ -590,4 +590,23 @@ it.each(['vertical', 'horizontal'] as const)('masks all %s picket layers on both
     expect(Number(body.attributes(direction === 'vertical' ? 'y' : 'x'))).toBeLessThan(imageEnd)
   }
 
+})
+
+it.each(['vertical', 'horizontal'] as const)('rotates a 1×profile SVG strip for %s pickets while keeping outer clips', async direction => {
+  setActivePinia(createPinia())
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['<svg width="1" height="100" xmlns="http://www.w3.org/2000/svg"/>'], { type: 'image/svg+xml' }) }))
+  const store = useWicketFormStore()
+  store.hasStolby = 0; store.jumperPlacement = 'none'
+  store.widthProyema = '1000'; store.heightProyema = '2000'; store.fillSide = 1
+  store.raspolozheniyePolotna = direction
+  store.layingFacadeCode = 'gap'; store.gapName = 28
+  store.thicknessFacade = '100'; store.numberOfSticks = direction === 'vertical' ? 6 : 12
+  store.reliefFacadeImage = '/strip.svg'
+  const wrapper = mount(Type3Drawing)
+  await flushPromises()
+  const strip = wrapper.get('[data-testid="type3-relief-strip"]')
+  expect(strip.get('image').attributes('transform')).toContain('rotate(-90)')
+  expect(strip.element.parentElement?.getAttribute('clip-path')).toMatch(/^url\(#/)
+  expect(wrapper.findAll('[data-testid="type3-picket-outline"]').length).toBeGreaterThan(0)
+  wrapper.unmount(); vi.unstubAllGlobals()
 })

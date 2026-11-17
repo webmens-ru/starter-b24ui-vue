@@ -300,22 +300,25 @@ export async function getSidingTable(
   const result: SidingTableResponse = isMock ? await mockGetSidingTable(filters, page)
     : (await api.post(`/api/wicket/type${modelId}/get-filling-siding`, {
     materials: filters.materials,
-    sidingFormIds: directoryFilterIds(filters.form),
+    sidingTypeIds: directoryFilterIds(filters.form),
+    sidingFormCodes: filters.sidingForm ?? [],
     typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
     page,
   })).data.data
-  return { ...result, table: result.table.map(parseFillingDrawingRow) }
+  // Preserve type-derived thickness and kg/m together with material metadata.
+  return { ...result, table: result.table.map(row => parseFillingDrawingRow<SidingRow>(row)) }
 }
 
 export async function getFillingAppearanceOptions(
   modelId: string | number,
   materialGroup: string,
+  materialId?: string | number | null,
 ): Promise<FillingAppearanceOptions> {
   if (materialGroup !== 'siding' && materialGroup !== 'profnastil' && materialGroup !== 'fence') throw new TypeError('Некорректная группа заполнения')
-  if (isMock) return mockGetFillingAppearanceOptions(materialGroup)
+  if (isMock) return mockGetFillingAppearanceOptions(materialGroup, materialId)
   const { data } = await api.post(
     `/api/wicket/type${modelId}/get-filling-appearance-options`,
-    { materialGroupCode: materialGroup },
+    { materialGroupCode: materialGroup, ...(materialId == null ? {} : materialGroup === 'siding' ? { sidingId: materialId } : materialGroup === 'profnastil' ? { profnastilId: materialId } : { fenceId: materialId }) },
   )
   return data.data
 }
@@ -328,6 +331,7 @@ export async function getProfnastilTable(
   const result: ProfnastilTableResponse = isMock ? await mockGetProfnastilTable(filters, page)
     : await api.post(`/api/wicket/type${modelId}/get-filling-profnastil`, {
     profileTypeIds: directoryFilterIds(filters.materials),
+    profnastilFormCodes: filters.profnastilForm ?? [],
     typeOfCoatingIds: directoryFilterIds(filters.typeOfCoating),
     page,
   }).then(({ data }) => data.data ?? data)
@@ -343,9 +347,10 @@ export async function getProfnastilTable(
 
 export async function getProfnastilColors(
   modelId: string | number,
+  profnastilId?: string | number | null,
 ): Promise<{ colors: ProfnastilColorOption[] }> {
-  if (isMock) return mockGetProfnastilColors()
-  const { data } = await api.post(`/api/wicket/type${modelId}/get-profnastil-colors`)
+  if (isMock) return mockGetProfnastilColors(profnastilId)
+  const { data } = await api.post(`/api/wicket/type${modelId}/get-profnastil-colors`, { profnastilId: profnastilId ?? null })
   return data.data
 }
 
@@ -451,7 +456,7 @@ export async function getFenceTable(
 ): Promise<Required<import('./wicket.types').FenceTableResponse>> {
   const { typeOfCoating, companies, materials, widthFence } = filters
   const { data } = await api.post(`/api/wicket/type${modelId}/get-filling-fence`, {
-    companies, materials, widthFence, typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
+    companies, materials, widthFence, fenceFormCodes: filters.fenceForm ?? [], manufacturerIds: directoryFilterIds(filters.manufacturers ?? []), typeOfCoatingIds: directoryFilterIds(typeOfCoating), page,
   })
   const result: import('./wicket.types').FenceTableResponse = data.data ?? data
   const table = result.table ?? []
@@ -657,18 +662,18 @@ export async function getLocks(modelId: number): Promise<{
   return data.data
 }
 
-/** Ручки, совместимые с выбранным комплектом замка (dir_pen_lock). */
-export async function getPensByLock(lockSetId: number): Promise<{
-  items: Array<{ id: number; marking: string; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+/** @deprecated Отдельный выбор ручек отключён; API возвращает пустой список. Старые ссылки сохраняются в заказах. */
+export async function getPensByLock(lockSetId: number, modelId?: number): Promise<{
+  items: Array<{ id: number; materialItemId?: number; marking: string; name?: string; colors: { id: number; name: string; label?: string; hex?: string | null; image?: string | null }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetPensByLock(lockSetId)
-  const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lockSetId } })
+  const { data } = await api.get('/api/dict/pen/get-by-lock', { params: { lockSetId, ...(modelId == null ? {} : { modelId }) } })
   return data.data
 }
 
 /** Список дополнительных ручек (скоб) из dir_additional_pen. */
 export async function getAdditionalPens(modelId?: number | string, mountingType?: 'welding' | 'threaded'): Promise<{
-  items: Array<{ materialItemId: number; marking: string; canUseFrameColor: boolean; price?: number | null; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string }[]; imageUrls?: string[] }>
+  items: Array<{ materialItemId: number; marking: string; canUseFrameColor: boolean; price?: number | null; priceManufacture?: number; squarePaint?: number; heightMode?: 'fixed' | 'wicket'; height?: number | null; colors: { id: number; name: string; label?: string }[]; imageUrls?: string[] }>
 }> {
   if (isMock) return mockGetAdditionalPens()
   const params = { ...(modelId == null || modelId === '' ? {} : { modelId }), ...(mountingType == null ? {} : { mountingType }) }

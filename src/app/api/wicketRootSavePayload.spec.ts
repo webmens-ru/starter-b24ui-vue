@@ -81,3 +81,15 @@ it('persists jumper FK and numeric posts but strips server-derived behavior and 
     expect(payload).not.toHaveProperty(key)
   }
 })
+it('keeps universal primary-handle references separate from legacy numeric IDs', () => {
+  expect(canonicalizeWicketRootSavePayload({ orderId:42,productRowId:7,modelId:'1', lockPenMaterialItemId: 7, lockPenId: 7, lockPenColorId: 91 }))
+    .toMatchObject({ lockPenMaterialItemId: 7, lockPenColorId: 91 })
+  expect(canonicalizeWicketRootSavePayload({ orderId:42,productRowId:7,modelId:'1', lockPenMaterialItemId: 7, lockPenId: 7 })).not.toHaveProperty('lockPenId')
+  expect(canonicalizeWicketRootSavePayload({ orderId:42,productRowId:7,modelId:'1', lockPenMaterialItemId: null, lockPenColorId: 91 }))
+    .toMatchObject({ lockPenMaterialItemId: null, lockPenColorId: null })
+})
+
+it('strips response-owned lamella widths and retired width snapshots', () => {
+  const payload = canonicalizeWicketRootSavePayload({ orderId: 42, productRowId: 7, modelId: '4', lamelWorkingWidthFacade: 77, lamelWorkingWidthYard: 100, widthLamelFacade: '77', widthLamelYard: '100' })
+  for (const key of ['lamelWorkingWidthFacade', 'lamelWorkingWidthYard', 'widthLamelFacade', 'widthLamelYard']) expect(payload).not.toHaveProperty(key)
+})

@@ -6,7 +6,7 @@ import type { ProfnastilRow, SidingPagination } from '../../../app/api/wicket'
 import FilterDropdown from '../type1/FilterDropdown.vue'
 import { wicketProfnastilFilterDataUrl } from './wicketMaterialApiPaths'
 
-type Filters = { materials: string[]; typeOfCoating: string[] }
+type Filters = { profnastilForm?: string[]; materials: string[]; typeOfCoating: string[] }
 const props = defineProps<{
   modelId: string | number
   rows: ProfnastilRow[]
@@ -36,8 +36,10 @@ function goToPage(page: number): void { emit('page', page) }
 <template>
   <div class="flex flex-col gap-3">
     <div class="flex gap-2 flex-wrap bg-gray-50 py-2 px-1 rounded border border-gray-200">
+      <FilterDropdown label="Форма" :url="profnastilFilterDataUrl" data-key="profnastilForm"
+        :model-value="filters.profnastilForm ?? []" @update:model-value="updateFilter('profnastilForm', $event)" />
       <FilterDropdown
-        label="Материал"
+        label="Тип"
         :url="profnastilFilterDataUrl"
         data-key="material"
         :model-value="filters.materials" @update:model-value="updateFilter('materials', $event)"
@@ -57,6 +59,8 @@ function goToPage(page: number): void { emit('page', page) }
         <thead class="sticky top-0 z-[9]">
           <tr>
             <th scope="col" class="catalog-table-choice">Выбрать</th>
+            <th scope="col" class="text-left">Форма</th>
+            <th scope="col" class="text-left">Тип</th>
             <th scope="col" class="text-left">Материал</th>
             <th scope="col" class="text-left">Тип покрытия</th>
             <th scope="col" class="text-right whitespace-nowrap">Цена за м²</th>
@@ -64,7 +68,7 @@ function goToPage(page: number): void { emit('page', page) }
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="4" class="text-center py-4 text-gray-400">Загрузка...</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Загрузка...</td>
           </tr>
 
           <tr
@@ -74,7 +78,9 @@ function goToPage(page: number): void { emit('page', page) }
             <td class="text-center">
               <input type="checkbox" checked class="accent-blue-600" @change="deselectRow" />
             </td>
+            <td>{{ selectedRow.profnastilFormTitle }}</td>
             <td class="font-semibold">{{ selectedRow.material }}</td>
+            <td>{{ selectedRow.name }}</td>
             <td>{{ selectedRow.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(selectedRow.priceM2) }}</td>
           </tr>
@@ -93,13 +99,15 @@ function goToPage(page: number): void { emit('page', page) }
                 @change="isSelected(row) ? deselectRow() : selectRow(row)"
               />
             </td>
+            <td>{{ row.profnastilFormTitle }}</td>
             <td class="font-semibold">{{ row.material }}</td>
+            <td>{{ row.name }}</td>
             <td>{{ row.typeOfCoating }}</td>
             <td class="text-right whitespace-nowrap">{{ formatMaterialPrice(row.priceM2) }}</td>
           </tr>
 
           <tr v-if="!loading && rows.length === 0 && !selectedRow">
-            <td colspan="4" class="text-center py-4 text-gray-400">Нет данных</td>
+            <td colspan="6" class="text-center py-4 text-gray-400">Нет данных</td>
           </tr>
         </tbody>
       </table>

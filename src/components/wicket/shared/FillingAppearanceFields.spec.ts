@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCalculation } from '../../../composables/useCalculation'
 import FillingAppearanceFields from './FillingAppearanceFields.vue'
-import form from './FillingAppearanceFields.vue?raw'
+import ColorSelectMenu from './ColorSelectMenu.vue'
 
 const apiMocks = vi.hoisted(() => ({
   getFillingAppearanceOptions: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('../../../app/api/wicket', async importOriginal => ({
 
 const SelectMenuStub = defineComponent({
   name: 'B24SelectMenu',
-  props: ['modelValue', 'items'],
+  props: ['modelValue', 'items', 'b24ui'],
   emits: ['update:modelValue'],
   template: `
     <select
@@ -38,14 +38,151 @@ const sidingOptions = {
     { id: 4, name: 'Двор-Профиль' },
   ],
   colors: [
-    { id: 8, name: 'RAL 8017', hex: '#442F29', image: '/colors/8017.webp' },
+    { id: 8, name: 'RAL 8017', label: 'RAL 8017 - Коричневый', hex: '#442F29', image: '/colors/8017.webp' },
     { id: 9, name: 'RAL 9003', hex: '#F4F4F4', image: '/colors/9003.webp' },
   ],
 }
 
 describe('FillingAppearanceFields', () => {
-  it('layers the color menu above surrounding content', () => {
-    expect(form).toContain(`:b24ui="{ content: 'z-50' }"`)
+  it('reloads a siding palette by ID and ignores an older material response', async () => {
+    const pending = new Map<number, (value: typeof sidingOptions) => void>()
+    apiMocks.getFillingAppearanceOptions.mockImplementation((_model, _group, id) => new Promise(resolve => pending.set(id, resolve)))
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade', sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await wrapper.setProps({ sidingId: 11 })
+    expect([...pending.keys()]).toEqual([7, 11])
+    pending.get(11)!({ manufacturers: [], colors: [sidingOptions.colors[1]!] })
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    pending.get(7)!(sidingOptions)
+    await flushPromises()
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).not.toContain('Коричневый')
+    expect(useCalculation().colorFacadeId.value).toBe(9)
+    wrapper.unmount()
+  })
+
+  it('reloads a profnastil palette by ID and ignores an older material response', async () => {
+    const pending = new Map<number, (value: typeof sidingOptions) => void>()
+    apiMocks.getFillingAppearanceOptions.mockImplementation((_model, _group, id) => new Promise(resolve => pending.set(id, resolve)))
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'profnastil', side: 'facade', profnastilId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await wrapper.setProps({ profnastilId: 11 })
+    expect([...pending.keys()]).toEqual([7, 11])
+    pending.get(11)!({ manufacturers: [], colors: [sidingOptions.colors[1]!] })
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    pending.get(7)!(sidingOptions)
+    await flushPromises()
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).not.toContain('Коричневый')
+    expect(useCalculation().colorFacadeId.value).toBe(9)
+    wrapper.unmount()
+  })
+
+  it('reloads a fence palette by ID and ignores an older material response', async () => {
+    const pending = new Map<number, (value: typeof sidingOptions) => void>()
+    apiMocks.getFillingAppearanceOptions.mockImplementation((_model, _group, id) => new Promise(resolve => pending.set(id, resolve)))
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'fence', side: 'facade', fenceId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await wrapper.setProps({ fenceId: 11 })
+    expect([...pending.keys()]).toEqual([7, 11])
+    pending.get(11)!({ manufacturers: [], colors: [sidingOptions.colors[1]!] })
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('9')
+    pending.get(7)!(sidingOptions)
+    await flushPromises()
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).not.toContain('Коричневый')
+    expect(useCalculation().colorFacadeId.value).toBe(9)
+    wrapper.unmount()
+  })
+
+  it('refreshes another product without changing its historical color', async () => {
+    const calc = useCalculation()
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade', sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    apiMocks.getFillingAppearanceOptions.mockResolvedValue({ manufacturers: [], colors: [] })
+    calc.productRowId.value = 902
+    await flushPromises()
+    expect(calc.colorFacadeId.value).toBe(8)
+    expect(wrapper.emitted('change')).toHaveLength(1)
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(false)
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).not.toContain('RAL')
+    wrapper.unmount()
+  })
+
+  it.each(['facade', 'yard'] as const)('preserves historical %s appearance on initial empty palette without autosave', async side => {
+    const calc = useCalculation()
+    const colorId = side === 'facade' ? calc.colorFacadeId : calc.colorYardId
+    const colorName = side === 'facade' ? calc.colorFacade : calc.colorYard
+    colorId.value = 81
+    colorName.value = 'Исторический цвет'
+    apiMocks.getFillingAppearanceOptions.mockResolvedValue({ manufacturers: [], colors: [] })
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side, sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    expect(colorId.value).toBe(81)
+    expect(colorName.value).toBe('Исторический цвет')
+    expect(wrapper.emitted('change')).toBeUndefined()
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('clears a color outside the palette after an explicit siding material change', async () => {
+    const calc = useCalculation()
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade', sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    await wrapper.get('[data-testid="appearance-color"]').setValue('8')
+    apiMocks.getFillingAppearanceOptions.mockResolvedValue({ manufacturers: [], colors: [sidingOptions.colors[1]!] })
+    await wrapper.setProps({ sidingId: 11 })
+    await flushPromises()
+    expect(calc.colorFacadeId.value).toBeNull()
+    expect(calc.colorFacade.value).toBe('')
+    expect(wrapper.emitted('change')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it('does not persist an empty palette after a failed request', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    apiMocks.getFillingAppearanceOptions.mockRejectedValue(new Error('offline'))
+    const calc = useCalculation()
+    calc.colorFacadeId.value = 8
+    calc.colorFacade.value = 'RAL 8017'
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade', sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    expect(calc.colorFacadeId.value).toBe(8)
+    expect(wrapper.emitted('change')).toBeUndefined()
+    expect((wrapper.vm as unknown as { validate: () => boolean }).validate()).toBe(false)
+    wrapper.unmount()
+    warn.mockRestore()
+  })
+
+  it('layers the shared color menu above surrounding content and preserves palette HEX values', async () => {
+    const wrapper = mount(FillingAppearanceFields, {
+      props: { modelId: 1, materialGroup: 'siding', side: 'facade', sidingId: 7 },
+      global: { stubs: { B24SelectMenu: SelectMenuStub, SelectMenu: SelectMenuStub } },
+    })
+    await flushPromises()
+    const color = wrapper.getComponent(ColorSelectMenu)
+    expect(color.getComponent(SelectMenuStub).props('b24ui').content).toContain('z-[1100]')
+    expect(color.props('items')).toContainEqual(expect.objectContaining({ id: 8, hex: '#442F29' }))
+    wrapper.unmount()
   })
 
   beforeEach(() => {
@@ -102,6 +239,8 @@ describe('FillingAppearanceFields', () => {
     })
     await flushPromises()
 
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).toContain('RAL 8017 - Коричневый')
+    expect(wrapper.get('[data-testid="appearance-color"]').text()).toContain('RAL 9003')
     await wrapper.get('[data-testid="appearance-manufacturer"]').setValue('3')
     await wrapper.get('[data-testid="appearance-color"]').setValue('8')
 

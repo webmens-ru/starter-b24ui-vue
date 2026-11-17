@@ -26,17 +26,17 @@ describe('type4Navigation', () => {
       it('Одна сторона → page_painting (пропуск yard)', () => {
         expect(getNextPage('page2_facade_lamel', state({ fillSide: 1 }))).toBe('page_painting')
       })
-      it('Две стороны → page2_yard_lamel', () => {
+      it('старое двойное заполнение не открывает второй слой', () => {
         expect(getNextPage('page2_facade_lamel', state({
           fillSide: 2,
           materialYardGlob: 'lamella',
-        }))).toBe('page2_yard_lamel')
+        }))).toBe('page_painting')
       })
     })
 
     describe('page2_yard_lamel → page_painting', () => {
       it('yard_lamel → page_painting', () => {
-        expect(getNextPage('page2_yard_lamel', state())).toBe('page_painting')
+        expect(getNextPage('page2_yard_lamel', state())).toBeNull()
       })
     })
 
@@ -77,7 +77,7 @@ describe('type4Navigation', () => {
 
     describe('yard → facade', () => {
       it('page2_yard_lamel → page2_facade_lamel', () => {
-        expect(getPrevPage('page2_yard_lamel', state())).toBe('page2_facade_lamel')
+        expect(getPrevPage('page2_yard_lamel', state())).toBeNull()
       })
     })
 
@@ -85,11 +85,11 @@ describe('type4Navigation', () => {
       it('Одна сторона → page2_facade_lamel', () => {
         expect(getPrevPage('page_painting', state({ fillSide: 1 }))).toBe('page2_facade_lamel')
       })
-      it('Две стороны → page2_yard_lamel', () => {
+      it('старое двойное заполнение не открывает второй слой', () => {
         expect(getPrevPage('page_painting', state({
           fillSide: 2,
           materialYardGlob: 'lamella',
-        }))).toBe('page2_yard_lamel')
+        }))).toBe('page2_facade_lamel')
       })
     })
 

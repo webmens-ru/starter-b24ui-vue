@@ -48,7 +48,7 @@ describe('mock wicket filling API', () => {
   })
 
   it('возвращает справочники внешнего вида отдельно от строк сайдинга', async () => {
-    await expect(mockGetFillingAppearanceOptions('siding')).resolves.toEqual({
+    await expect(mockGetFillingAppearanceOptions('siding', 1)).resolves.toEqual({
       manufacturers: expect.arrayContaining([
         expect.objectContaining({ id: expect.any(Number), name: expect.any(String) }),
       ]),
@@ -87,4 +87,9 @@ it('mock preserves per-piece review across painting, reload and independent ackn
   expect((await mockLoadWicketData(78, 803)).coverStrips).toEqual(result.coverStrips)
   const same = await mockSaveWicketData({ ...base, paintId: 1, paintColorId: 92 })
   expect(same.coverStripFrameColor?.token).toBe(changed.coverStripFrameColor?.token)
+})
+
+it('returns no mock siding colors without an assigned material', async () => {
+  expect((await mockGetFillingAppearanceOptions('siding')).colors).toEqual([])
+  expect((await mockGetFillingAppearanceOptions('siding', 999)).colors).toEqual([])
 })

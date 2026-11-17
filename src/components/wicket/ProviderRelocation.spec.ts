@@ -19,7 +19,7 @@ const fillingComponents = import.meta.glob<{ default: Component }>('./type*/*Fil
 const cases = Object.entries(fillingComponents).map(([path, component]) => [path.match(/type(\d+)/)![1]!, component.default] as const)
 
 describe('material provider in filling', () => {
-  it.each(cases.filter(([id]) => Number(id) <= 5))('type %s does not guess invalid yard group when selecting Double', async (modelId, component) => {
+  it.each(cases.filter(([id]) => Number(id) <= 5 && id !== '4'))('type %s does not guess invalid yard group when selecting Double', async (modelId, component) => {
     const calc = useCalculation()
     calc.modelId.value = modelId
     calc.fillSide.value = 1
@@ -35,7 +35,7 @@ describe('material provider in filling', () => {
     expect(recalculate).not.toHaveBeenCalled()
     wrapper.unmount()
   })
-  it.each(cases.filter(([id]) => Number(id) <= 5))('type %s can edit provider without trying to calculate an unresolved count', async (modelId, component) => {
+  it.each(cases.filter(([id]) => Number(id) <= 5 && id !== '4'))('type %s can edit provider without trying to calculate an unresolved count', async (modelId, component) => {
     const calc = useCalculation()
     calc.modelId.value = modelId
     calc.fillSide.value = ''
@@ -49,7 +49,7 @@ describe('material provider in filling', () => {
     expect(recalculate).not.toHaveBeenCalled()
     wrapper.unmount()
   })
-  it.each(cases)('type %s does not repair or autosave an invalid stored side count on mount', async (modelId, component) => {
+  it.each(cases.filter(([id]) => id !== '4'))('type %s does not repair or autosave an invalid stored side count on mount', async (modelId, component) => {
     const calc = useCalculation()
     calc.modelId.value = modelId
     calc.fillSide.value = ''
@@ -170,7 +170,7 @@ describe('material provider in filling', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     wrapper.unmount()
   })
-  it.each(cases.filter(([id]) => id !== '2'))('type %s does not repair or autosave an invalid stored group on mount', async (modelId, component) => {
+  it.each(cases.filter(([id]) => id !== '2' && id !== '4'))('type %s does not repair or autosave an invalid stored group on mount', async (modelId, component) => {
     setActivePinia(createPinia())
     const calc = useCalculation()
     calc.orderId.value = 42

@@ -30,13 +30,16 @@ export function buildLamellae(area: BaseRect, widthValue: unknown, direction: 'h
 export function buildType4Geometry(source: Type4Source) {
   const shared = buildRetainedFrameGeometry(source, 50)
   const { central } = shared
+  const x = central.x + 0.5, y = central.y + 0.5
+  const width = central.width - 1, height = central.height - 1
+  const right = x + width, bottom = y + height
+  const points = (vertices: number[][]): string => vertices.map(point => point.join(',')).join(' ')
+  // Bounds retain the full long-point cut length; each end has a 15 mm mitre.
   const innerFrame = [
-    // Detail 5: two horizontal pipes per physical face.
-    rect(central.x + 0.5, central.y, central.width - 1, 15),
-    rect(central.x + 0.5, central.y + central.height - 15, central.width - 1, 15),
-    // Detail 4: two vertical pipes per physical face.
-    rect(central.x, central.y + 15.5, 15, central.height - 31),
-    rect(central.x + central.width - 15, central.y + 15.5, 15, central.height - 31),
+    { ...rect(x, y, width, 15), points: points([[x, y], [right, y], [right - 15, y + 15], [x + 15, y + 15]]) },
+    { ...rect(x, bottom - 15, width, 15), points: points([[x, bottom], [x + 15, bottom - 15], [right - 15, bottom - 15], [right, bottom]]) },
+    { ...rect(x, y, 15, height), points: points([[x, y], [x + 15, y + 15], [x + 15, bottom - 15], [x, bottom]]) },
+    { ...rect(right - 15, y, 15, height), points: points([[right, y], [right, bottom], [right - 15, bottom - 15], [right - 15, y + 15]]) },
   ]
   // The two perimeters coincide in elevation; their depth stack is 15 + 20 + 15 mm.
   const innerFrames = {

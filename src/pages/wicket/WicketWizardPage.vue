@@ -146,9 +146,9 @@ async function initCalculation(): Promise<void> {
       ? {
           ...coherentState.wicketData,
           typeLock: selectedLock.marking,
-          lockPenId: null,
-          lockPenColorId: null,
-          lockPenColor: '',
+          ...(coherentState.wicketData.lockPenMaterialItemId == null
+            ? { lockPenId: null, lockPenColorId: null, lockPenColor: '' }
+            : {}),
         }
       : coherentState.wicketData)
     calc.orderId.value = context.orderId

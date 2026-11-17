@@ -5,7 +5,7 @@ export function getProfnastilColorMode(mode: unknown): ProfnastilColorMode {
   throw new Error('Некорректный режим цвета покрытия. Проверьте настройки справочника.')
 }
 
-export interface ColorInputItem { id: string | number; label: string }
+export interface ColorInputItem { id: string | number; label: string; hex?: string | null }
 
 export function getPrintechSelectItems(items: ColorInputItem[], currentValue: string): ColorInputItem[] {
   const customValue = currentValue.trim()

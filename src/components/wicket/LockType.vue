@@ -43,6 +43,7 @@ function syncSelectionToCalc() {
   calc.lockSetId.value = selectedLockId.value
   calc.typeLock.value = selectedLock.value?.marking ?? ''
   calc.lockPenId.value = null
+  calc.lockPenMaterialItemId.value = null
   calc.lockPenColorId.value = null
   calc.lockPenColor.value = ''
 }
@@ -79,6 +80,10 @@ async function save() {
   const previous = {
     lockSetId: calc.lockSetId.value,
     typeLock: calc.typeLock.value,
+    lockPenMaterialItemId: calc.lockPenMaterialItemId.value,
+    lockPenId: calc.lockPenId.value,
+    lockPenColorId: calc.lockPenColorId.value,
+    lockPenColor: calc.lockPenColor.value,
   }
   syncSelectionToCalc()
   updateLockBlock()
@@ -90,6 +95,7 @@ async function save() {
       providesLock: calc.providesLock.value || null,
       lockInstaller: calc.lockInstaller.value || null,
       lockPenId: calc.lockPenId.value,
+      lockPenMaterialItemId: calc.lockPenMaterialItemId.value,
       lockPenColorId: calc.lockPenColorId.value,
     })
   } catch (e) {
@@ -97,6 +103,10 @@ async function save() {
     try {
       calc.lockSetId.value = previous.lockSetId
       calc.typeLock.value = previous.typeLock
+      calc.lockPenMaterialItemId.value = previous.lockPenMaterialItemId
+      calc.lockPenId.value = previous.lockPenId
+      calc.lockPenColorId.value = previous.lockPenColorId
+      calc.lockPenColor.value = previous.lockPenColor
       selectedLockId.value = previous.lockSetId
       await nextTick()
       updateLockBlock()
@@ -133,9 +143,11 @@ onMounted(async () => {
     calc.lockSetId.value = savedLockSetId
     selectedLockId.value = savedLockSetId
     calc.typeLock.value = savedLock.marking
-    calc.lockPenId.value = null
-    calc.lockPenColorId.value = null
-    calc.lockPenColor.value = ''
+    if (calc.lockPenMaterialItemId.value == null) {
+      calc.lockPenId.value = null
+      calc.lockPenColorId.value = null
+      calc.lockPenColor.value = ''
+    }
     updateLockBlock()
   }
   await nextTick()

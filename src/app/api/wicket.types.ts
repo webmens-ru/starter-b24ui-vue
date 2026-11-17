@@ -78,6 +78,7 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
   colorShieldId?: number | null
   providesPrimer?: string | null
   /** Null for a customer-provided set; providesLockCode preserves its presence. */
+  lockPenMaterialItemId?: number | null
   additionalPenMaterialItemId?: number | null
   additionalPenStreetMaterialItemId?: number | null
   additionalPenYardMaterialItemId?: number | null
@@ -257,10 +258,11 @@ export interface FilterOptions {
 
 export interface FillingAppearanceOptions {
   manufacturers: Array<{ id: number; name: string }>
-  colors: Array<{ id: number; name: string; hex: string | null; image: string | null }>
+  colors: Array<{ id: number; name: string; label?: string; hex: string | null; image: string | null }>
 }
 
 export interface SidingFilters {
+  sidingForm?: string[]
   materials: string[]
   form: string[]
   typeOfCoating: string[]
@@ -270,8 +272,13 @@ export interface SidingRow extends FillingDrawingMetadata {
   /** Read-only manufacturer inherited from the selected siding type. */
   manufacturerId?: string | number | null
   manufacturerName?: string | null
+  /** Физические параметры выбранного типа; масса в кг/пог. м. */
+  thickness?: string | number
+  weightMp?: string | number
   id: string | number
-  sidingFormId?: number
+  sidingTypeId?: number
+  sidingFormCode?: string | null
+  sidingFormTitle?: string | null
   typeOfCoatingId?: number
   material: string
   form: string
@@ -299,11 +306,16 @@ export interface SidingTableResponse {
 }
 
 export interface ProfnastilFilters {
+  profnastilForm?: string[]
   materials:  string[]
   typeOfCoating: string[]
 }
 
 export interface ProfnastilRow extends FillingDrawingMetadata {
+  profnastilFormCode?: string | null
+  profnastilFormTitle?: string | null
+  manufacturerId?: number | null
+  manufacturer?: string | null
   id: string | number
   profileTypeId?: number
   typeOfCoatingId?: number
@@ -341,6 +353,7 @@ export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDr
 }
 
 export interface ProfnastilColorOption extends ProfnastilFormOption {
+  label?: string
   id: number
   hex: string | null
   image: string | null
@@ -440,6 +453,8 @@ export interface SheetTableResponse {
 }
 
 export interface FenceFilters {
+  fenceForm?: string[]
+  manufacturers?: string[]
   companies:     string[]
   materials:     string[]
   widthFence:    string[]
@@ -447,6 +462,11 @@ export interface FenceFilters {
 }
 
 export interface FenceRow {
+  fenceFormCode?: string | null
+  fenceFormName?: string | null
+  thickness?: string | number | null
+  manufacturerId?: number | null
+  manufacturerName?: string | null
   id: string | number
   typeOfCoatingId?: number | null
   company: string
@@ -488,6 +508,8 @@ export interface FenceGapOption {
 }
 
 export interface LamelFilters {
+  materialIds?: (string | number)[]
+  lamelTypeIds?: (string | number)[]
   companies:     string[]
   materials:     string[]
   width:         string[]
@@ -496,6 +518,16 @@ export interface LamelFilters {
 }
 
 export interface LamelRow {
+  colors?: Array<{ id: string | number; name: string; label: string; notes?: string | null; hex?: string | null; image?: string | null }>
+  colorTitles?: string[]
+  lamelTypeId?: string | number | null
+  lamelTypeName?: string | null
+  lamelTypeMarking?: string | null
+  manufacturerId?: string | number | null
+  reliefImage?: string | null
+  reliefAlongMode?: 'stretch' | 'repeat'
+  reliefAcrossMode?: 'stretch' | 'repeat'
+  workingWidth?: string | number | null
   id: string | number
   company: string
   material: string
@@ -539,6 +571,8 @@ export interface WicketStructureProperties {
 
 /** Ответ get-data: данные расчёта + этапы навигации (для режима редактирования). */
 export interface WicketGetDataResponse extends WicketStructureProperties, ParticipantRoleProperties, FillingGroupProperties, FillingSideCountProperties, FillingOrientationProperties, FrameSubtypeProperties, GrilleSideProperties {
+  readonly lamelWorkingWidthFacade?: number | null
+  readonly lamelWorkingWidthYard?: number | null
   grilleSideProblem?: GrilleSideProblem | null
   frameSubtypeProblem?: FrameSubtypeProblem | null
   fillingOrientationProblem?: FillingOrientationProblem | null
@@ -550,6 +584,7 @@ export interface WicketGetDataResponse extends WicketStructureProperties, Partic
   visitedPages: string[]
   activePage: string
   /** Null for a customer-provided set; providesLockCode preserves its presence. */
+  lockPenMaterialItemId?: number | null
   additionalPenMaterialItemId?: number | null
   additionalPenStreetMaterialItemId?: number | null
   additionalPenYardMaterialItemId?: number | null
@@ -604,7 +639,7 @@ export interface CoverStripCatalogItem {
   article: string
   price: number
   attributes: Record<string, string | number | boolean | null>
-  orderParameters: { attributeId: number; code: string; name: string; dataType: string; required: boolean; values: { id: number; label: string }[] }[]
+  orderParameters: { attributeId: number; code: string; name: string; dataType: string; required: boolean; values: { id: number; label: string; hex?: string | null }[] }[]
 }
 
 export interface CoverStripSummary {
