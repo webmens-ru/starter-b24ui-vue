@@ -771,13 +771,14 @@ const fieldsFilled = ref<number>(0)
           'page2',
           'page2_facade_profnastil',
           'page_painting',
+          'page_priming',
           'page9',
           'page_lock_type',
           'page10',
           'page_cover_strip',
           'page12',
         ]
-      : ['page7', 'page5', 'page3', 'page6', 'page2', 'page_painting', 'page9', 'page10', 'page_cover_strip', 'page12']
+      : ['page7', 'page5', 'page3', 'page6', 'page2', 'page_painting', 'page_priming', 'page9', 'page10', 'page_cover_strip', 'page12']
     const visited: string[] = []
     let active = 'page7'
 
@@ -813,6 +814,10 @@ const fieldsFilled = ref<number>(0)
           break
         case 'page7':
           completed = numGt(widthProyema.value as string | number, 0) && numGt(heightProyema.value as string | number, 0)
+          break
+        case 'page_priming':
+          // Primer is optional; it must not block restoring a completed order.
+          completed = true
           break
         case 'page9':
           completed = isThereLock.value !== null

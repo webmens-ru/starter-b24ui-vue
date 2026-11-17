@@ -7,6 +7,8 @@ import { useCalculation } from '../../composables/useCalculation'
 import WicketWizardPage from './WicketWizardPage.vue'
 import page from './WicketWizardPage.vue?raw'
 import type { WicketRouteDefinition } from './wicketRoute'
+import { type1Route } from './type1Route'
+import WicketMenu from '../../components/WicketMenu.vue'
 
 const mocks = vi.hoisted(() => ({
   route: { path: '/wicket/type1', query: {} as Record<string, unknown> } as {
@@ -423,6 +425,19 @@ describe('WicketWizardPage mobile summary', () => {
     mocks.getMaterialItems.mockResolvedValue([])
     mocks.getLocks.mockResolvedValue({ items: [] })
     Reflect.deleteProperty(window, '_PARAMS_')
+  })
+
+  it('keeps the painting menu section active while showing primer', async () => {
+    const wrapper = mountPage({ page7: EmptyStep, page_priming: EmptyStep })
+    await flushPromises()
+    await wrapper.setProps({ route: type1Route })
+    const calc = useCalculation()
+    calc.setActivePage('page_priming')
+    await flushPromises()
+
+    expect(wrapper.findComponent(WicketMenu).props('activePage')).toBe('page_painting')
+    expect(calc.activePage.value).toBe('page_priming')
+    wrapper.unmount()
   })
 
   it('starts below the application header', () => {

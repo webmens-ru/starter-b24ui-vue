@@ -61,7 +61,7 @@ describe('defineWicketRoute', () => {
     ])
     expect(route.next('page6', state)).toBe('page_painting')
     expect(route.next('page3', state)).toBe('page6')
-    expect(route.prev('page9', state)).toBe('page_painting')
+    expect(route.prev('page9', state)).toBe('page_priming')
   })
   it('строит меню и линейные переходы из одного массива разделов', () => {
     const route = defineWicketRoute([

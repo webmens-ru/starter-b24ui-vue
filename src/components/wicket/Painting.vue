@@ -3,7 +3,7 @@ import ColorSelectMenu from './shared/ColorSelectMenu.vue'
 import PaintCatalogTable from './shared/PaintCatalogTable.vue'
 import { wicketFailureMessage } from '../../app/wicketFailureMessage'
 import { formatMaterialPrice } from './shared/materialPrice'
-import { participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
+import { isParticipantRole, participantRoleLabel, participantRoleOptions } from '../../app/participantRoles'
 import { withoutSummaryBlock } from '../../app/summaryCodes'
 import PaintingProviders from './PaintingProviders.vue'
 import ProviderChoice from './ProviderChoice.vue'
@@ -13,6 +13,8 @@ import { getColorShield, recalculate, saveWicketData } from '../../app/api/wicke
 import type { PaintItem, PaintCategoryItem } from '../../app/api/wicket.types'
 import { selectPaintColor } from './paintSelection'
 import { createStepLeaveAttempt } from './stepLeaveAttempt'
+const props = withDefaults(defineProps<{ mode?: 'paint' | 'primer' }>(), { mode: 'paint' })
+const primerStep = computed(() => props.mode === 'primer')
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 const calc = useCalculation()
 const contextKey = () => `${calc.orderId.value}:${calc.productRowId.value}:${calc.modelId.value}`
@@ -28,6 +30,8 @@ const categories = ref<PaintCategoryItem[]>([])
 const category = ref<number | null>(null)
 const draftPaintId = ref<number | null>(calc.paintId.value)
 const draftColorId = ref<number | null>(calc.paintColorId.value)
+const draftPrimerId = ref<number | null>(calc.primerId.value)
+const draftPrimerProvider = ref(calc.providesPrimer.value)
 const loading = ref(true)
 const saving = ref(false)
 let pendingSave: Promise<boolean> | null = null
@@ -101,7 +105,7 @@ async function onPaintChange(value: string | number | null): Promise<void> {
 async function onColorChange(value: string | number | null): Promise<void> { if (saving.value) return; draftColorId.value = numberId(value); await save() }
 async function onPrimerChange(value: string | number | null): Promise<void> {
   if (saving.value) return
-  calc.primerId.value = value === 'none' ? null : numberId(value)
+  draftPrimerId.value = value === 'none' ? null : numberId(value)
   await save()
 }
 function syncSummary(): void {
@@ -143,14 +147,16 @@ async function saveSelection(): Promise<boolean> {
   const note = editNote ? draftNote.value.trim() : preserve ? calc.colorShieldNote.value.trim() : ''
   const paintId = preserve ? calc.paintId.value : draftPaintId.value
   const paintColorId = preserve ? calc.paintColorId.value : paint?.isFixedColor ? draftColorId.value : null
-  const primer = primers.value.find(item => item.id === calc.primerId.value)
+  const primer = primers.value.find(item => item.id === (primerStep.value ? draftPrimerId.value : calc.primerId.value))
   const primerId = preserve ? calc.primerId.value : primer?.id ?? null
   const applyResponse = calc.beginCoverStripMutation()
   try {
     const response = await saveWicketData({
       ...calc.getBaseSavePayload(),
       providesPaintCode: preserve ? calc.providesPaintCode.value : paint?.isCustomerSupplied ? 'customer' : 'manufacturer',
-      providesPrimerCode: calc.providesPrimerCode.value,
+      providesPrimerCode: primerStep.value && !preserve
+        ? isParticipantRole(draftPrimerProvider.value) ? draftPrimerProvider.value : null
+        : calc.providesPrimerCode.value,
       doesPaintingFrameCode: calc.doesPaintingFrameCode.value,
       doesAssembly: calc.doesAssembly.value,
       paintId, paintColorId, primerId,
@@ -169,12 +175,13 @@ async function saveSelection(): Promise<boolean> {
       calc.providesPaint.value = paint.isCustomerSupplied ? 'customer' : 'manufacturer'
       calc.primerId.value = primerId
       calc.primerName.value = primer?.name ?? ''
+      if (primerStep.value) calc.providesPrimer.value = draftPrimerProvider.value
     }
     calc.colorShieldPreviewHex.value = null
     syncSummary()
     error.value = ''
   } catch (cause) {
-    if (current()) error.value = wicketFailureMessage(cause, 'Не удалось сохранить окраску')
+    if (current()) error.value = wicketFailureMessage(cause, primerStep.value ? 'Не удалось сохранить грунтовку' : 'Не удалось сохранить окраску')
     return false
   }
   if (calc.priceRetail.value && !calc.coverStrips.value.some(row => row.requiresColorConfirmation)) {
@@ -218,19 +225,21 @@ async function load(): Promise<void> {
   } catch { if (current()) catalogError.value = 'Не удалось загрузить краски' }
   finally { if (current()) loading.value = false }
 }
-onMounted(async () => { calc.setActivePage('page_painting'); await load() })
+onMounted(async () => { calc.setActivePage(primerStep.value ? 'page_priming' : 'page_painting'); await load() })
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="sticky-header-fill sticky top-0 z-10 pb-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
       <B24Button label="Назад" color="air-secondary" :disabled="saving" @click="!saving && emit('back')" />
-      <span class="text-2xl font-bold flex-1 text-center">Окраска</span>
+      <span class="text-2xl font-bold flex-1 text-center">{{ primerStep ? 'Грунтовка' : 'Окраска' }}</span>
       <B24Button label="Далее" color="air-secondary" :disabled="saving || (loading && !customerPainting)" @click="next" />
     </div>
-    <PaintingProviders :disabled="saving" @change="save" />
+    <PaintingProviders v-if="!primerStep" :disabled="saving" @change="save" />
     <div v-if="error && customerPainting" role="alert" class="text-red-600">{{ error }}</div>
+    <p v-if="primerStep && customerPainting">Окраску выполняет заказчик. Выбор грунтовки не требуется.</p>
     <template v-if="!customerPainting">
+      <template v-if="!primerStep">
       <div role="group" aria-label="Категория краски" class="grid grid-cols-2 lg:grid-cols-3 gap-3 p-1">
         <button v-for="item in categoryCards" :key="item.id" type="button" class="paint-category-card" :data-paint-category="item.id" :aria-pressed="category === item.id" :disabled="loading || saving" @click="onCategoryChange(item.id)">{{ item.name }}</button>
       </div>
@@ -249,11 +258,15 @@ onMounted(async () => { calc.setActivePage('page_painting'); await load() })
         <textarea class="w-full px-3 py-2 border rounded border-gray-300 bg-white" v-model="draftNote" :disabled="saving" :required="requiresNote" :placeholder="requiresNote ? 'Укажите цвет, образец или требования к окраске' : 'При необходимости опишите предоставленную краску'" maxlength="1000" rows="3" :aria-invalid="submitted && requiresNote && !draftNote.trim()" @change="save" />
         <span v-if="submitted && requiresNote && !draftNote.trim()" role="alert">Укажите требования к индивидуальной окраске</span>
       </label>
-      <label v-if="selectedPaint" class="flex flex-col gap-2"><span class="font-semibold">Грунтовка (необязательно)</span>
-        <B24SelectMenu data-testid="paint-primer" :model-value="calc.primerId.value == null ? 'none' : String(calc.primerId.value)" :items="primerItems" value-key="id" :disabled="saving || !primers.length" @update:model-value="onPrimerChange" />
+      </template>
+      <p v-if="primerStep && loading">Загрузка грунтовок…</p>
+      <div v-if="primerStep && (error || catalogError)" role="alert" class="text-red-600 whitespace-pre-line">{{ error || catalogError }}<B24Button v-if="catalogError" label="Повторить загрузку" :disabled="saving" @click="load" /></div>
+      <p v-if="primerStep && !loading && !selectedPaint">Сначала выберите краску на предыдущем шаге.</p>
+      <label v-if="primerStep && selectedPaint" class="flex flex-col gap-2"><span class="font-semibold">Грунтовка (необязательно)</span>
+        <B24SelectMenu data-testid="paint-primer" :model-value="draftPrimerId == null ? 'none' : String(draftPrimerId)" :items="primerItems" value-key="id" :disabled="loading || saving || !primers.length" @update:model-value="onPrimerChange" />
         <span v-if="!primers.length">Для выбранной краски совместимые грунтовки не заданы.</span>
       </label>
-      <ProviderChoice name="providesPrimer" v-if="calc.primerId.value != null" v-model="calc.providesPrimer.value" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading || saving" @change="save" />
+      <ProviderChoice name="providesPrimer" v-if="primerStep && draftPrimerId != null" v-model="draftPrimerProvider" title="Поставщик грунтовки" :options="primerProviders" :disabled="loading || saving" @change="save" />
     </template>
   </div>
 </template>

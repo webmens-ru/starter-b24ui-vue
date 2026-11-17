@@ -294,6 +294,7 @@ describe('wicketFormStore accessory composition', () => {
       'page6',
       'page2',
       'page_painting',
+      'page_priming',
       'page9',
       'page10',
       'page_cover_strip',

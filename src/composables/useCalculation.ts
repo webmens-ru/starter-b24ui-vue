@@ -51,7 +51,7 @@ export function useCalculation() {
       orderId,
       productRowId,
       modelId,
-      reachedStep: wizard.activePage,
+      reachedStep: wizard.activePage === 'page_priming' ? 'page_painting' : wizard.activePage,
       visitedPages: JSON.stringify(wizard.visitedPages),
       manufacturerFacadeId: form.manufacturerFacadeId,
       colorFacadeId: form.colorFacadeId,

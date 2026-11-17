@@ -117,7 +117,11 @@ export function canvasSection(): WicketRouteSection {
 }
 
 export function paintingSection(): WicketRouteSection {
-  return section('page_painting', 'Окраска', 'painting')
+  const result = section('page_painting', 'Окраска', 'painting', ['page_painting', 'page_priming'])
+  result.next = from => from === 'page_painting' ? 'page_priming' : undefined
+  result.prev = from => from === 'page_priming' ? 'page_painting' : undefined
+  result.last = () => 'page_priming'
+  return result
 }
 
 export function lockSection(): WicketRouteSection {

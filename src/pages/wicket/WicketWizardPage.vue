@@ -256,6 +256,8 @@ const sectionValidations = computed(() =>
   props.route.validations(sectionState.value),
 )
 
+const activeMenuPage = computed(() => props.route.sections.find(section => section.pages.includes(activePage.value))?.menu.page ?? activePage.value)
+
 const menuItems = computed(() =>
   props.route.menu(sectionState.value),
 )
@@ -526,7 +528,7 @@ async function goBack(): Promise<void> {
         <div class="flex-1 py-2">
           <WicketMenu
             :menu-items="menuItems"
-            :active-page="activePage"
+            :active-page="activeMenuPage"
             :visited-pages="visitedPages"
             :is-page-accessible="isPageAccessible"
             :incomplete-pages="incompletePages"
@@ -558,7 +560,7 @@ async function goBack(): Promise<void> {
           <div class="flex-1 py-2">
             <WicketMenu
               :menu-items="menuItems"
-              :active-page="activePage"
+              :active-page="activeMenuPage"
               :visited-pages="visitedPages"
               :is-page-accessible="isPageAccessible"
               :incomplete-pages="incompletePages"

@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { isPaintingComplete, laterWizardStep, mergeVisitedPages, visitedPagesUpTo } from './wicketStepProgress'
 
 describe('wicketStepProgress', () => {
+  it('orders primer between paint and lock without unlocking later pages', () => {
+    expect(laterWizardStep('page_priming', 'page_painting')).toBe('page_priming')
+    expect(laterWizardStep('page_priming', 'page9')).toBe('page9')
+    expect(visitedPagesUpTo('page_priming', [])).toEqual(['page7', 'page5', 'page3', 'page6', 'page2', 'page_painting', 'page_priming'])
+  })
   it('maps legacy manufacturing progress to opening without unlocking subsequent steps', () => {
     expect(visitedPagesUpTo('page1', ['page1'])).toEqual(['page7'])
     expect(laterWizardStep('page1', 'page7')).toBe('page7')

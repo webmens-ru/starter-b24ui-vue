@@ -680,6 +680,17 @@ describe('useCalculation', () => {
   })
 
   describe('getBaseSavePayload', () => {
+    it('saves the primer substep under the existing painting server stage', () => {
+      calc.number.value = 42
+      calc.productRowId.value = 7
+      calc.modelId.value = '1'
+      calc.setActivePage('page_priming')
+
+      expect(calc.getBaseSavePayload().reachedStep).toBe('page_painting')
+      expect(calc.activePage.value).toBe('page_priming')
+      expect(JSON.parse(calc.getBaseSavePayload().visitedPages)).toContain('page_priming')
+    })
+
     it('возвращает orderId, productRowId, modelId, reachedStep, visitedPages', () => {
       calc.number.value = 42
       calc.productRowId.value = 7
