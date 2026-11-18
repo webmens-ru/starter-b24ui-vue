@@ -10,6 +10,7 @@ describe('filling group property boundary', () => {
       expect(isFillingMaterialGroup(code)).toBe(true)
       expect(fillingMaterialGroupLabel(code)).not.toBe(code)
     }
+    expect(fillingMaterialGroupLabel('profnastil')).toBe('Профнастил')
     expect(isFillingMaterialGroup('Сайдинг')).toBe(false)
     expect(fillingMaterialGroupLabel('unknown')).toBe('')
   })

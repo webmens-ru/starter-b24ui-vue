@@ -4,7 +4,7 @@ export type FillingMaterialGroupSelection = FillingMaterialGroup | '' | null
 export type FillingSide = 'facade' | 'yard'
 
 const labels: Record<FillingMaterialGroup, string> = {
-  siding: 'Сайдинг', profnastil: 'Профлист', fence: 'Штакетник', lamella: 'Ламель',
+  siding: 'Сайдинг', profnastil: 'Профнастил', fence: 'Штакетник', lamella: 'Ламель',
   spSiding: 'SP сайдинг', louver: 'Жалюзи', sheet: 'Лист',
 }
 
