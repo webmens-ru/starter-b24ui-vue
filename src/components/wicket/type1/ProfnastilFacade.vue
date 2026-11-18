@@ -173,7 +173,6 @@ async function save(row: ProfnastilRow): Promise<boolean> {
   calc.formFacade.value              = row.profnastilFormTitle ?? ''
   calc.thicknessFacade.value         = String(row.thickness)
   calc.typeOfCoatingFacade.value   = row.typeOfCoating
-  calc.coatingFacadeHex.value        = row.coatingHex ?? ''
   calc.coatingFacadeImage.value      = row.coatingImage ?? ''
   calc.reliefFacadeImage.value       = row.reliefImage ?? ''
     calc.reliefFacadeAlongMode.value = row.reliefAlongMode ?? 'stretch'
@@ -292,7 +291,6 @@ function deselectRow() {
   calc.materialFacade.value = ''
   calc.thicknessFacade.value = ''
   calc.typeOfCoatingFacade.value = ''
-  calc.coatingFacadeHex.value = ''
   calc.coatingFacadeImage.value = ''
   calc.reliefFacadeImage.value = ''
   appearanceSave.resetToCurrent()
@@ -339,7 +337,6 @@ function restoreFromCalc(): ProfnastilRow | null {
     material:      calc.materialFacade.value,
     thickness:     calc.thicknessFacade.value,
     typeOfCoating: calc.typeOfCoatingFacade.value,
-    coatingHex:    calc.coatingFacadeHex.value,
     coatingImage:  calc.coatingFacadeImage.value,
     reliefImage:   calc.reliefFacadeImage.value,
     reliefAlongMode: calc.reliefFacadeAlongMode.value,

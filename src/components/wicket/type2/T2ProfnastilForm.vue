@@ -325,7 +325,6 @@ function applyMaterial(selected: ProfnastilCoatingOption) {
     calc.typeOfCoatingFacade.value = selected.name
     calc.idFacade.value = selected.profnastilId
     calc.thicknessFacade.value = String(selected.thickness)
-    calc.coatingFacadeHex.value = selected.coatingHex ?? ''
     calc.coatingFacadeImage.value = selected.coatingImage ?? ''
     calc.reliefFacadeImage.value = selected.reliefImage ?? ''
     calc.reliefFacadeAlongMode.value = selected.reliefAlongMode ?? 'stretch'
@@ -335,7 +334,6 @@ function applyMaterial(selected: ProfnastilCoatingOption) {
     calc.typeOfCoatingYard.value = selected.name
     calc.idYard.value = selected.profnastilId
     calc.thicknessYard.value = String(selected.thickness)
-    calc.coatingYardHex.value = selected.coatingHex ?? ''
     calc.coatingYardImage.value = selected.coatingImage ?? ''
     calc.reliefYardImage.value = selected.reliefImage ?? ''
     calc.reliefYardAlongMode.value = selected.reliefAlongMode ?? 'stretch'

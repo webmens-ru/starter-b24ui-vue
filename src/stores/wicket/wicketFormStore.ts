@@ -289,7 +289,6 @@ const typeOfCoatingFacade   = ref<string>('')
 const colorFacade             = ref<string>('')
 const colorFacadeHex          = ref<string>('')
 const colorFacadeImage        = ref<string>('')
-const coatingFacadeHex        = ref<string>('')
 const coatingFacadeImage      = ref<string>('')
 const reliefFacadeAlongMode = ref<'stretch' | 'repeat'>('stretch')
 const reliefFacadeAcrossMode = ref<'stretch' | 'repeat'>('repeat')
@@ -332,7 +331,6 @@ const typeOfCoatingYard   = ref<string>('')
 const colorYard             = ref<string>('')
 const colorYardHex          = ref<string>('')
 const colorYardImage        = ref<string>('')
-const coatingYardHex        = ref<string>('')
 const coatingYardImage      = ref<string>('')
 const reliefYardImage       = ref<string>('')
 
@@ -407,7 +405,6 @@ const fieldsFilled = ref<number>(0)
     colorFacade.value = ''
     colorFacadeHex.value = ''
     colorFacadeImage.value = ''
-    coatingFacadeHex.value = ''
     coatingFacadeImage.value = ''
     reliefFacadeImage.value = ''
     reliefFacadeAlongMode.value = 'stretch'
@@ -455,7 +452,6 @@ const fieldsFilled = ref<number>(0)
     colorYard.value = ''
     colorYardHex.value = ''
     colorYardImage.value = ''
-    coatingYardHex.value = ''
     coatingYardImage.value = ''
     reliefYardImage.value = ''
     reliefYardAlongMode.value = 'stretch'
@@ -990,7 +986,6 @@ const fieldsFilled = ref<number>(0)
       colorFacade,
       colorFacadeHex,
       colorFacadeImage,
-      coatingFacadeHex,
       coatingFacadeImage,
       reliefFacadeImage,
       reliefFacadeAlongMode,
@@ -1018,7 +1013,6 @@ const fieldsFilled = ref<number>(0)
       colorYard,
       colorYardHex,
       colorYardImage,
-      coatingYardHex,
       coatingYardImage,
       reliefYardImage,
       reliefYardAlongMode,
@@ -1408,7 +1402,6 @@ const fieldsFilled = ref<number>(0)
     colorFacade,
     colorFacadeHex,
     colorFacadeImage,
-    coatingFacadeHex,
     coatingFacadeImage,
     reliefFacadeImage,
     reliefFacadeAlongMode,
@@ -1436,7 +1429,6 @@ const fieldsFilled = ref<number>(0)
     colorYard,
     colorYardHex,
     colorYardImage,
-    coatingYardHex,
     coatingYardImage,
     reliefYardImage,
     reliefYardAlongMode,

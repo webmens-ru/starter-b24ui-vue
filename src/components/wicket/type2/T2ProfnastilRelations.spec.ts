@@ -46,8 +46,8 @@ beforeEach(() => {
   response = {
     profiles: [{ id: 901, name: 'Профиль' }, { id: 902, name: 'Профиль' }],
     coatings: [
-      { id: 707, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 21, manufacturerId: 71, manufacturerName: 'Любое имя', thickness: '0.45', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
-      { id: 707, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null },
+      { id: 707, drawingProfile: { kind: 'mp10' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 21, manufacturerId: 71, manufacturerName: 'Любое имя', thickness: '0.45', isDoubleSided: true, coatingImage: null, reliefImage: null },
+      { id: 707, drawingProfile: { kind: 'c20' }, drawingProfileProblem: null, name: 'Любое покрытие', profnastilId: 22, thickness: '0.50', isDoubleSided: true, coatingImage: null, reliefImage: null },
     ],
     manufacturers: [],
     colors: [{ id: 604, name: 'Цвет', hex: '#000000', image: null }, { id: 603, name: 'Цвет', label: 'Цвет - Белый', hex: '#ffffff', image: null }],

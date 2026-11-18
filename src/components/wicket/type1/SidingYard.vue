@@ -120,7 +120,6 @@ function restoreFromCalc(): SidingRow | null {
     material:      calc.materialYard.value,
     form:          calc.formYard.value,
     typeOfCoating: calc.typeOfCoatingYard.value,
-    coatingHex:    calc.coatingYardHex.value,
     coatingImage:  calc.coatingYardImage.value,
     reliefImage:   calc.reliefYardImage.value,
     reliefAlongMode: calc.reliefYardAlongMode.value,
@@ -140,7 +139,6 @@ async function save(row: SidingRow): Promise<boolean> {
   calc.materialYard.value          = row.material
   calc.formYard.value              = row.form
   calc.typeOfCoatingYard.value   = row.typeOfCoating
-  calc.coatingYardHex.value        = row.coatingHex ?? ''
   calc.coatingYardImage.value      = row.coatingImage ?? ''
   calc.reliefYardImage.value       = row.reliefImage ?? ''
     calc.reliefYardAlongMode.value = row.reliefAlongMode ?? 'stretch'

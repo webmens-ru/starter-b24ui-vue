@@ -109,9 +109,7 @@ const displayedFillImage = computed(() => {
   if (yardTwoSides.value) return geometry.value.yardFill.image
   return reverseFacade.value ? geometry.value.fill.reverseImage : geometry.value.fill.image
 })
-const displayedCoatingColor = computed(() => realisticColors.value && !reverseFacade.value
-  ? (yardTwoSides.value ? (calc.coatingYardHex?.value ?? '') : (calc.coatingFacadeHex?.value ?? ''))
-  : '')
+const displayedCoatingColor = ''
 const displayedCoatingImage = computed(() => realisticColors.value && !reverseFacade.value
   ? (yardTwoSides.value ? (calc.coatingYardImage?.value ?? '') : (calc.coatingFacadeImage?.value ?? ''))
   : '')

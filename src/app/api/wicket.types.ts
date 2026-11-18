@@ -283,7 +283,6 @@ export interface SidingRow extends FillingDrawingMetadata {
   material: string
   form: string
   typeOfCoating: string
-  coatingHex?: string | null
   coatingImage?: string | null
   reliefImage?: string | null
   /** Цена сайдинга за квадратный метр из справочника. */
@@ -324,7 +323,6 @@ export interface ProfnastilRow extends FillingDrawingMetadata {
   material: string
   thickness: string | number
   typeOfCoating: string
-  coatingHex?: string | null
   coatingImage?: string | null
   reliefImage?: string | null
   /** camelCase, как в API и в БД dir_filling_profnastil */
@@ -350,7 +348,6 @@ export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDr
   isDoubleSided: boolean
   profnastilId: number
   thickness: string | number
-  coatingHex: string | null
   coatingImage: string | null
   reliefImage: string | null
 }

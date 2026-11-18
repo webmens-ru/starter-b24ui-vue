@@ -59,7 +59,6 @@ describe('Type 2 historical siding correction', () => {
     calc.colorFacade.value = 'Старый цвет фасада'
     calc.colorFacadeHex.value = '#111111'
     calc.colorFacadeImage.value = '/old-facade.webp'
-    calc.coatingFacadeHex.value = '#222222'
     calc.coatingFacadeImage.value = '/old-facade-coating.webp'
     calc.reliefFacadeImage.value = '/old-facade-relief.webp'
     calc.idYard.value = 2
@@ -69,7 +68,6 @@ describe('Type 2 historical siding correction', () => {
     calc.colorYard.value = 'Старый цвет двора'
     calc.colorYardHex.value = '#333333'
     calc.colorYardImage.value = '/old-yard.webp'
-    calc.coatingYardHex.value = '#444444'
     calc.coatingYardImage.value = '/old-yard-coating.webp'
     calc.reliefYardImage.value = '/old-yard-relief.webp'
 
@@ -88,7 +86,6 @@ describe('Type 2 historical siding correction', () => {
       color: calc.colorFacade.value,
       colorHex: calc.colorFacadeHex.value,
       colorImage: calc.colorFacadeImage.value,
-      coatingHex: calc.coatingFacadeHex.value,
       coatingImage: calc.coatingFacadeImage.value,
       reliefImage: calc.reliefFacadeImage.value,
     }).toEqual({
@@ -99,7 +96,6 @@ describe('Type 2 historical siding correction', () => {
       color: '',
       colorHex: '',
       colorImage: '',
-      coatingHex: '',
       coatingImage: '',
       reliefImage: '',
     })
@@ -111,7 +107,6 @@ describe('Type 2 historical siding correction', () => {
       color: calc.colorYard.value,
       colorHex: calc.colorYardHex.value,
       colorImage: calc.colorYardImage.value,
-      coatingHex: calc.coatingYardHex.value,
       coatingImage: calc.coatingYardImage.value,
       reliefImage: calc.reliefYardImage.value,
     }).toEqual({
@@ -122,7 +117,6 @@ describe('Type 2 historical siding correction', () => {
       color: 'Старый цвет двора',
       colorHex: '#333333',
       colorImage: '/old-yard.webp',
-      coatingHex: '#444444',
       coatingImage: '/old-yard-coating.webp',
       reliefImage: '/old-yard-relief.webp',
     })

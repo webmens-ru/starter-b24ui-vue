@@ -24,7 +24,7 @@ const previewError=computed(()=>drawingError.value||fillingPreview.value.error)
 const activeDirection=computed(()=>yardTwoSides.value?g.value.yardFill.direction:g.value.fill.direction)
 const fillColor=computed(()=>real.value?(yardTwoSides.value?g.value.yardFill.color:reverse.value?g.value.fill.reverseColor:g.value.fill.color):'#bfdbfe')
 const fillImage=computed(()=>real.value?(yardTwoSides.value?g.value.yardFill.image:reverse.value?g.value.fill.reverseImage:g.value.fill.image):'')
-const coatingColor=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardHex?.value??''):(calc.coatingFacadeHex?.value??'')):'')
+const coatingColor = ''
 const coatingImage=computed(()=>real.value&&!reverse.value?(yardTwoSides.value?(calc.coatingYardImage?.value??''):(calc.coatingFacadeImage?.value??'')):'')
 const reliefImage=computed(()=>yardTwoSides.value?(calc.reliefYardImage?.value??''):(calc.reliefFacadeImage?.value??''))
 const reliefAlongMode=computed(()=>yardTwoSides.value?calc.reliefYardAlongMode?.value:calc.reliefFacadeAlongMode?.value)

@@ -55,7 +55,7 @@ const fillingProps = computed(() => ({
   area: g.value.fillingArea, direction: g.value.direction ?? 'vertical',
   color: schematic.value ? '#bfdbfe' : yardMaterial.value ? calc.colorYardHex.value : reverse.value ? calc.colorFacadeReverseHex.value : calc.colorFacadeHex.value,
   image: schematic.value ? '' : yardMaterial.value ? calc.colorYardImage.value : reverse.value ? calc.colorFacadeReverseImage.value : calc.colorFacadeImage.value,
-  coatingColor: schematic.value || reverse.value ? '' : yardMaterial.value ? calc.coatingYardHex.value : calc.coatingFacadeHex.value,
+  coatingColor: '',
   coatingImage: schematic.value || reverse.value ? '' : yardMaterial.value ? calc.coatingYardImage.value : calc.coatingFacadeImage.value,
   reliefImage: '', appearanceMode: schematic.value ? 'solid' as const : 'coating' as const,
   idPrefix: `${props.typePrefix}-fill-${id}-${yard.value ? 'yard' : 'street'}`,

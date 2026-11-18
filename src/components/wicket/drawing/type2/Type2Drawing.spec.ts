@@ -223,6 +223,15 @@ describe('Type2Drawing', () => {
     calc.peremichkaSortamentName.value = ''
     calc.jumperProfile.value = null
   })
+  it('uses palette HEX while ignoring historical coating HEX metadata', () => {
+    calc.colorFacadeHex.value = '#123456'
+    calc.coatingFacadeHex.value = '#ABCDEF'
+    const wrapper = mount(Type2Drawing)
+    expect(wrapper.get('[data-testid="filling-surface"]').attributes('fill')).toBe('#123456')
+    expect(wrapper.find('[data-testid="filling-color-coating"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="filling-coating"]').exists()).toBe(false)
+    expect(wrapper.html()).not.toContain('#ABCDEF')
+  })
   it('рисует адаптивный SVG по текущим размерам формы', async () => {
     const wrapper = mount(Type2Drawing)
     const svg = wrapper.get('[data-testid="type2-drawing-svg"]')

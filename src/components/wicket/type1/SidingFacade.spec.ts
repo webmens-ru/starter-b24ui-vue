@@ -55,7 +55,6 @@ const rows: SidingRow[] = [
     material: 'Бревно',
     form: 'Гладкая',
     typeOfCoating: 'Глянец',
-    coatingHex: '#AABBCC',
     coatingImage: '/coatings/gloss.webp',
     reliefImage: '/reliefs/log.webp',
   },

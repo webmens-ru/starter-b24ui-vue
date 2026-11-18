@@ -278,7 +278,6 @@ export async function mockGetSidingTable(filters: SidingFilters, page = 1): Prom
     material: row.material,
     form: row.form,
     typeOfCoating: row.typeOfCoating,
-    coatingHex: row.coatingHex,
     coatingImage: row.coatingImage,
     reliefImage: row.reliefImage,
     drawingProfile: row.drawingProfile,

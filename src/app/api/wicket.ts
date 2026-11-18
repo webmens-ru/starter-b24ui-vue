@@ -370,7 +370,6 @@ export async function getType2ProfnastilFormOptions(
             profnastilId: 1,
             isDoubleSided: false,
             thickness: '0.45',
-            coatingHex: null,
             coatingImage: null,
             reliefImage: null,
             reliefAlongMode: 'stretch',
