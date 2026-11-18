@@ -368,7 +368,6 @@ export async function getType2ProfnastilFormOptions(
             id: 1,
             name: 'Глянец',
             profnastilId: 1,
-            colorInputMode: 'list',
             isDoubleSided: false,
             thickness: '0.45',
             coatingHex: null,

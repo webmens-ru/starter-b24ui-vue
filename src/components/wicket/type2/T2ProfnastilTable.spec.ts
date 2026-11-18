@@ -24,7 +24,7 @@ beforeEach(() => {
   vi.mocked(getProfnastilTable).mockResolvedValue({ table: [row], pagination: { page: 1, pageSize: 100, pageCount: 1, totalCount: 1 } })
   vi.mocked(getType2ProfnastilFormOptions).mockResolvedValue({
     profiles: [{ id: 901, name: 'Переименованный профиль' }],
-    coatings: [{ id: 707, profnastilId: 17, name: 'Переименованное покрытие', thickness: 0.45, colorInputMode: 'list', isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null, drawingProfile: { kind: 'c8' }, drawingProfileProblem: null }],
+    coatings: [{ id: 707, profnastilId: 17, name: 'Переименованное покрытие', thickness: 0.45, isDoubleSided: true, coatingHex: null, coatingImage: null, reliefImage: null, drawingProfile: { kind: 'c8' }, drawingProfileProblem: null }],
     manufacturers: [], colors: [{ id: 603, name: 'Цвет', hex: '#ffffff', image: null }],
   })
 })

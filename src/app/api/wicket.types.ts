@@ -347,7 +347,6 @@ export interface ProfnastilCoatingOption extends ProfnastilFormOption, FillingDr
   manufacturerId?: number | null
   manufacturerName?: string | null
   id: number
-  colorInputMode: 'list' | 'combobox' | 'none'
   isDoubleSided: boolean
   profnastilId: number
   thickness: string | number
