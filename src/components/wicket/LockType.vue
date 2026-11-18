@@ -189,7 +189,7 @@ onMounted(async () => {
               image-height="160px"
             />
             <span class="block text-sm font-semibold text-center mt-2">{{ lock.marking }}</span>
-            <span v-if="lock.price !== undefined" class="block mt-2 text-center text-sm font-semibold" :data-lock-price="lock.id">Стоимость комплекта: {{ formatMaterialPrice(lock.price) }}</span>
+            <span v-if="lock.price !== undefined" class="block mt-2 text-center text-sm font-semibold" :data-lock-price="lock.id">Цена комплекта: {{ formatMaterialPrice(lock.price) }}</span>
             <button type="button" class="lock-description-button" :data-description-id="lock.id" @click.stop.prevent="openDescription(lock)">Описание</button>
           </div>
         </label>

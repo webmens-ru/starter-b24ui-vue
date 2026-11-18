@@ -297,11 +297,11 @@ onBeforeUnmount(() => {
           role="menuitem"
           tabindex="-1"
           class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-          :aria-label="`Открыть детализацию стоимости товарной позиции ${productRow.id}`"
+          :aria-label="`Открыть детализацию цены товарной позиции ${productRow.id}`"
           :disabled="disabled"
           @click="selectCostDetails"
         >
-          Открыть детализацию стоимости
+          Открыть детализацию цены
         </button>
         <a
           v-if="pdfUrl"

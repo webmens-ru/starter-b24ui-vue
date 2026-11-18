@@ -185,7 +185,7 @@ describe('ProductRowTableRows', () => {
     await openActions(wrapper); await wrapper.get('[aria-label="Редактировать товарную позицию 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Пересчитать товарную позицию 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Копировать товарную позицию 7"]').trigger('click')
-    await openActions(wrapper); await wrapper.get('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').trigger('click')
+    await openActions(wrapper); await wrapper.get('[aria-label="Открыть детализацию цены товарной позиции 7"]').trigger('click')
     await openActions(wrapper); await wrapper.get('[aria-label="Удалить товарную позицию 7"]').trigger('click')
     expect(wrapper.emitted('delete')).toBeUndefined()
     await wrapper.get('[aria-label="Подтвердить удаление товарной позиции 7"]').trigger('click')

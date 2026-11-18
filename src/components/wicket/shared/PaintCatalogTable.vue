@@ -17,7 +17,7 @@ const sortDirection = ref<'ascending' | 'descending'>('ascending')
 const sortHeaders: { code: SortColumn; label: string; right?: boolean }[] = [
   { code: 'type', label: 'Тип краски' },
   { code: 'color', label: 'Цвет' },
-  { code: 'price', label: 'Стоимость, ₽/м²', right: true },
+  { code: 'price', label: 'Цена, ₽/м²', right: true },
 ]
 const collator = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' })
 const sortedRows = computed(() => {
@@ -65,7 +65,7 @@ function select(paintId: number, colorId: number): void {
     </div>
     <div class="catalog-table-container">
       <table class="catalog-table paint-table">
-        <caption class="sr-only">Выбор краски и цвета. Стоимость материала без работ.</caption>
+        <caption class="sr-only">Выбор краски и цвета. Цена материала без работ.</caption>
         <thead><tr>
           <th scope="col" class="text-center w-20">Выбор</th>
           <th v-for="header in sortHeaders" :key="header.code" scope="col" :class="{ 'text-right': header.right }" :aria-sort="sortColumn === header.code ? sortDirection : 'none'">
@@ -83,7 +83,7 @@ function select(paintId: number, colorId: number): void {
       </table>
       <p v-if="!rows.length" role="status" class="p-4 text-gray-500">Нет красок по выбранным фильтрам.</p>
     </div>
-    <p class="text-sm text-gray-500">Стоимость материала без работ. Выберите краску и цвет флажком или нажатием на строку.</p>
+    <p class="text-sm text-gray-500">Цена материала без работ. Выберите краску и цвет флажком или нажатием на строку.</p>
   </div>
 </template>
 

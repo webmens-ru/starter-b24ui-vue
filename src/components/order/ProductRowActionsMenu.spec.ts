@@ -105,12 +105,12 @@ describe('ProductRowActionsMenu', () => {
   it('shows the cost details action only when the server provides its URL', async () => {
     const row = makeProductRow()
     const hidden = await openMenu(row)
-    expect(hidden.find(`[aria-label="Открыть детализацию стоимости товарной позиции ${row.id}"]`).exists()).toBe(false)
+    expect(hidden.find(`[aria-label="Открыть детализацию цены товарной позиции ${row.id}"]`).exists()).toBe(false)
 
     const visible = await openMenu(row, {
       costDetailsUrl: '/order-cost-details?order_id=42&productRowId=7',
     })
-    const action = visible.get(`[aria-label="Открыть детализацию стоимости товарной позиции ${row.id}"]`)
+    const action = visible.get(`[aria-label="Открыть детализацию цены товарной позиции ${row.id}"]`)
     await action.trigger('click')
 
     expect(visible.emitted('openCostDetails')).toEqual([[]])

@@ -155,7 +155,7 @@ function save(): Promise<boolean> {
     } catch {
       if (!persisted) restorePersistedSelection()
       error.value = persisted
-        ? 'Ручки сохранены, но не удалось обновить стоимость. Повторите попытку.'
+        ? 'Ручки сохранены, но не удалось обновить цену. Повторите попытку.'
         : 'Не удалось сохранить ручки. Повторите попытку.'
       return false
     }

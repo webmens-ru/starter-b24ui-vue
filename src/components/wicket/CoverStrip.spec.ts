@@ -85,7 +85,7 @@ it('keeps saved choices when recalculation fails', async () => {
   const wrapper = await setup(); useCalculation().priceRetail.value = '100'
   await click(wrapper, 'Добавить нащельник'); await wrapper.find('[data-material]').setValue('11'); await flushPromises()
   expect(useCalculation().coverStrips.value[0]?.materialItemId).toBe(11)
-  expect(wrapper.text()).toContain('сохранены, но не удалось обновить стоимость')
+  expect(wrapper.text()).toContain('сохранены, но не удалось обновить цену')
 })
 it('retains draft on remount and uses stable IDs after catalog captions change', async () => {
   const wrapper = await setup(); await click(wrapper, 'Добавить нащельник'); await wrapper.find('[data-material]').setValue('10'); await flushPromises(); wrapper.unmount()

@@ -625,7 +625,7 @@ describe('ProductRowsPage', () => {
     await flushPromises()
 
     await openProductRowActions(wrapper, 7)
-    await wrapper.get('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').trigger('click')
+    await wrapper.get('[aria-label="Открыть детализацию цены товарной позиции 7"]').trigger('click')
 
     expect(mocks.navigateTop).toHaveBeenCalledWith(
       '/order-cost-details?order_id=42&productRowId=7',
@@ -747,7 +747,7 @@ describe('ProductRowsPage', () => {
     await flushPromises()
     await openProductRowActions(wrapper, 7)
 
-    expect(wrapper.find('[aria-label="Открыть детализацию стоимости товарной позиции 7"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Открыть детализацию цены товарной позиции 7"]').exists()).toBe(false)
   })
 
   it.each([
