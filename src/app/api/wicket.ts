@@ -523,6 +523,8 @@ export async function saveWicketData(payload: WicketSavePayload): Promise<Wicket
     notifyWicketProductRowLockVersionAdvanced(context, lockVersion, data.data.lockVersion)
     const response: WicketRootMutationResponse = {
       lockVersion: data.data.lockVersion,
+      ...(data.data.fenceEdgeFacadeId === undefined ? {} : { fenceEdgeFacadeId: data.data.fenceEdgeFacadeId == null ? null : Number(data.data.fenceEdgeFacadeId) }),
+      ...(data.data.fenceEdgeYardId === undefined ? {} : { fenceEdgeYardId: data.data.fenceEdgeYardId == null ? null : Number(data.data.fenceEdgeYardId) }),
       ...(typeof data.data.fillingFacadeReady === 'boolean' ? { fillingFacadeReady: data.data.fillingFacadeReady } : {}),
       ...(typeof data.data.fillingYardReady === 'boolean' ? { fillingYardReady: data.data.fillingYardReady } : {}),
       ...(data.data.fillingNeedsRecalculation === undefined ? {} : { fillingNeedsRecalculation: data.data.fillingNeedsRecalculation }),

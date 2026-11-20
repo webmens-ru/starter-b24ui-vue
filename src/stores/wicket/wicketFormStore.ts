@@ -86,6 +86,8 @@ export const useWicketFormStore = defineStore('wicket-form', () => {
         if (response.fillingNeedsRecalculation !== undefined) fillingNeedsRecalculation.value = response.fillingNeedsRecalculation
         if (typeof response.fillingFacadeReady === 'boolean') fillingFacadeReady.value = response.fillingFacadeReady
         if (typeof response.fillingYardReady === 'boolean') fillingYardReady.value = response.fillingYardReady
+        if (response.fenceEdgeFacadeId !== undefined) fenceEdgeFacadeId.value = response.fenceEdgeFacadeId
+        if (response.fenceEdgeYardId !== undefined) fenceEdgeYardId.value = response.fenceEdgeYardId
         fillingMetadataVersion = response.lockVersion
       }
       if (response.lockVersion < coverMetadataVersion) return false

@@ -6,7 +6,13 @@ const props = defineProps<{ side: 'facade' | 'yard' }>()
 const emit = defineEmits<{ next: []; back: [] }>()
 const calc = useCalculation()
 const field = computed(() => props.side === 'yard' ? calc.fenceEdgeYardId : calc.fenceEdgeFacadeId)
-const options = computed(() => calc.fenceEdgeOptions.value.filter(edge => Number(calc.raspolozheniyePolotna.value === 'horizontal' ? edge.isHorizontal : edge.isVertical) === 1))
+const materialId = computed(() => Number(props.side === 'yard' ? calc.idYard.value : calc.idFacade.value))
+const options = computed(() => {
+  const orientation = calc.raspolozheniyePolotna.value
+  if (orientation !== 'horizontal' && orientation !== 'vertical') return []
+  return calc.fenceEdgeOptions.value.filter(edge => (edge.materialIds ?? []).some(id => Number(id) === materialId.value)
+    && Number(orientation === 'horizontal' ? edge.isHorizontal : edge.isVertical) === 1)
+})
 const selected = ref<number | null>(field.value.value == null ? null : Number(field.value.value))
 const saving = ref(false)
 const error = ref('')
@@ -18,12 +24,12 @@ const owner = calc.getCurrentProductRowContext()
 const current = () => !disposed && calc.orderId.value === owner.orderId && calc.productRowId.value === owner.productRowId && String(calc.modelId.value) === String(owner.modelId)
 async function persist(): Promise<boolean> {
   if (saving.value || !current()) return false
+  if (selected.value != null && selected.value === Number(field.value.value)) return true
   if (!options.value.length) return true
   if (!options.value.some(option => Number(option.id) === selected.value)) {
     error.value = 'Выберите край штакетника.'
     return false
   }
-  if (Number(field.value.value) === selected.value) return true
   saving.value = true
   error.value = ''
   try {
@@ -55,8 +61,8 @@ defineExpose({ validateBeforeLeave: () => {
     </div>
     <div class="max-w-[600px] mx-auto">
       <p v-if="error" role="alert" class="text-red-600 mb-4">{{ error }}</p>
-      <p v-if="!options.length">Для выбранного направления нет доступных вариантов края.</p>
-      <p v-else-if="selected != null && !options.some(option => Number(option.id) === selected)" role="status">Сохранённый край недоступен для нового выбора. Выберите другой вариант.</p>
+      <p v-if="!options.length">Для выбранного типа штакетника и направления нет доступных форм края.</p>
+      <p v-if="selected != null && !options.some(option => Number(option.id) === selected)" role="status">Сохранённый край недоступен для нового выбора. Можно оставить его в этом заказе или выбрать другой вариант.</p>
       <div class="grid grid-cols-2 gap-3">
         <label v-for="option in options" :key="option.id" class="edge-choice" :class="{ selected: selected === Number(option.id) }">
           <input v-model="selected" class="sr-only" type="radio" :value="Number(option.id)" :disabled="saving" :name="`edge-${side}`" @change="persist">

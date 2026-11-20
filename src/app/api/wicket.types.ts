@@ -1,4 +1,4 @@
-export interface FenceEdgeOption { id: number; name: string; isHorizontal: number | boolean; isVertical: number | boolean; maskFile: string | null }
+export interface FenceEdgeOption { width?: number | null; materialIds?: number[]; id: number; name: string; isHorizontal: number | boolean; isVertical: number | boolean; maskFile: string | null }
 import type { OrderTotals, ProductRowContext, ProductRowSummary } from './productRows.types'
 import type { FillingDrawingMetadata } from './fillingDrawingProfiles'
 import type { ParticipantRole, ParticipantRoleField } from '../participantRoles'
@@ -107,6 +107,8 @@ export interface WicketSavePayload extends ProductRowContext, ParticipantRolePro
 }
 
 export interface WicketRootMutationResponse {
+  fenceEdgeFacadeId?: number | null
+  fenceEdgeYardId?: number | null
   fillingNeedsRecalculation?: boolean
   fillingFacadeReady?: boolean
   fillingYardReady?: boolean
